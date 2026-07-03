@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agnes AI Studio</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">Agnes AI Studio</div>
+      <button id="newConversation" title="新建会话">+</button>
+      <input id="search" placeholder="搜索会话" />
+      <div id="conversations" class="list"></div>
+    </aside>
+    <main class="workspace">
+      <nav class="tabs">
+        <button data-tab="chat" class="active">聊天</button>
+        <button data-tab="image">图片</button>
+        <button data-tab="video">视频</button>
+        <button data-tab="favorites">收藏</button>
+        <button data-tab="settings">设置</button>
+      </nav>
+
+      <section id="chat" class="panel active">
+        <div id="messages" class="messages"></div>
+        <form id="chatForm" class="composer">
+          <textarea id="chatInput" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
+          <button type="button" id="stopChat" title="停止">■</button>
+          <button type="submit">发送</button>
+        </form>
+      </section>
+
+      <section id="image" class="panel split">
+        <form id="imageForm" class="control">
+          <textarea name="prompt" placeholder="图片 Prompt" required></textarea>
+          <input name="negative_prompt" placeholder="反向提示词" />
+          <input id="imageAttachmentInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden />
+          <button type="button" id="pickImageAttachment" class="attach-button">上传参考图</button>
+          <div id="imageAttachmentPreview" class="attachment-preview empty"></div>
+          <select name="size"><option>1024x768</option><option>768x1024</option><option>1024x1024</option><option>1152x768</option><option>768x1152</option></select>
+          <select name="ratio"><option>1:1</option><option>16:9</option><option>9:16</option><option>3:2</option><option>2:3</option></select>
+          <input name="n" type="number" min="1" max="4" value="1" />
+          <button type="submit">生成图片</button>
+          <button type="button" id="refreshImages">刷新图库</button>
+        </form>
+        <div class="library">
+          <div id="imageStatus" class="status-line"></div>
+          <div id="images" class="grid"></div>
+        </div>
+      </section>
+
+      <section id="video" class="panel split">
+        <form id="videoForm" class="control">
+          <textarea name="prompt" placeholder="视频 Prompt" required></textarea>
+          <input name="image" placeholder="图生视频图片 URL（可选）" />
+          <select name="ratio"><option>16:9</option><option>9:16</option><option>1:1</option></select>
+          <select name="duration"><option>5</option><option>10</option></select>
+          <button type="submit">提交视频任务</button>
+          <button type="button" id="refreshVideos">刷新列表</button>
+        </form>
+        <div class="library">
+          <div id="videoStatus" class="status-line"></div>
+          <div id="videos" class="list"></div>
+        </div>
+      </section>
+
+      <section id="favorites" class="panel">
+        <div id="favoriteList" class="list"></div>
+      </section>
+
+      <section id="settings" class="panel">
+        <form id="settingsForm" class="control narrow">
+          <select name="theme"><option value="system">跟随系统</option><option value="dark">深色</option><option value="light">浅色</option></select>
+          <select name="language"><option>zh-CN</option><option>en-US</option></select>
+          <select name="fontSize"><option value="medium">中</option><option value="small">小</option><option value="large">大</option></select>
+          <button type="submit">保存设置</button>
+        </form>
+      </section>
+    </main>
+    <dialog id="imagePreview" class="preview-dialog">
+      <button type="button" id="closePreview" title="关闭">×</button>
+      <img id="previewImage" alt="图片预览" />
+      <div id="previewActions" class="actions"></div>
+    </dialog>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

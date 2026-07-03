@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 5%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 9%;
+  --card-foreground: 0 0% 98%;
+  --muted: 220 3% 13%;
+  --muted-foreground: 0 0% 64%;
+  --border: 220 5% 22%;
+  --primary: 163 82% 35%;
+  --primary-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+button, input, textarea, select {
+  letter-spacing: 0;
+}

@@ -1,0 +1,46 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+export interface RuntimeConfig {
+  agnesApiKeyConfigured: boolean;
+  agnesApiBaseUrl: string;
+  agnesMode: "mock" | "real";
+}
+
+/** 读取项目根目录的 .env 文件，并把其中变量补充到 process.env。 */
+export function loadEnv(root = process.cwd()): void {
+  const file = path.join(root, ".env");
+  let content = "";
+  try {
+    content = readFileSync(file, "utf8");
+  } catch {
+    return;
+  }
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const index = line.indexOf("=");
+    if (index <= 0) continue;
+    const key = line.slice(0, index).trim();
+    let value = line.slice(index + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] ??= value;
+  }
+}
+
+/** 汇总当前运行配置，方便前端或日志判断 Agnes 是真实模式还是模拟模式。 */
+export function getRuntimeConfig(): RuntimeConfig {
+  const hasKey = Boolean(process.env.AGNES_API_KEY);
+  const rawBaseUrl = process.env.AGNES_API_BASE_URL ?? "https://apihub.agnes-ai.com";
+  const agnesApiBaseUrl = rawBaseUrl === "https://agnes-ai.com/api" || rawBaseUrl === "https://www.agnes-ai.com/api"
+    ? "https://apihub.agnes-ai.com"
+    : rawBaseUrl;
+  return {
+    agnesApiKeyConfigured: hasKey,
+    agnesApiBaseUrl,
+    agnesMode: hasKey && process.env.AGNES_USE_REAL_API !== "false" ? "real" : "mock",
+  };
+}
