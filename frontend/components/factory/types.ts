@@ -10,17 +10,32 @@ import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import type { AITypeFieldConfig, AIConfirmPayload } from "@/components/shared/ai-generate-dialog";
 
 /** 工厂实体类型（用于卡片图标 / 资产类型分发）。 */
-export type FactoryEntityType = "character" | "scene" | "prop";
+export type FactoryEntityType = "character" | "scene" | "prop" | "storyboard" | "video" | "audio" | "clip";
 
-/** 工厂实体最基础的形状（包含主键 / 项目 id / 名称 / 引用次数）。 */
+/**
+ * 工厂实体最基础的形状。
+ *
+ * 三个工厂（character/scene/prop）有 name；
+ * 分镜/视频/音频的"主标题"在 description/title 上，
+ * 因此 name 字段是可选的。父组件渲染卡片时必须用 `getEntityLabel(entity)` 取显示名。
+ */
 export interface FactoryEntity {
   id: string;
-  name: string;
+  /** 主标题（角色/场景/道具）。分镜/视频/音频可能没有。 */
+  name?: string;
+  /** 备选主标题，例如分镜 description、视频 title、音频 name。 */
+  title?: string;
+  description?: string;
   project_id?: string;
   /** 资产被引用次数（缓存字段，可选）。 */
   usage_count?: number;
   /** 软删除时间戳，仅回收站列表会使用到。 */
   deleted_at?: string;
+}
+
+/** 统一取实体显示名：name > title > description > "未命名"。 */
+export function getEntityLabel(entity: { name?: string; title?: string; description?: string }, fallback = "未命名"): string {
+  return (entity.name && entity.name.trim()) || (entity.title && entity.title.trim()) || (entity.description && entity.description.trim().slice(0, 40)) || fallback;
 }
 
 /** 通用筛选选项。 */
@@ -32,7 +47,7 @@ export interface FilterOption {
 /** 单个统计卡配置。 */
 export interface StatCardConfig {
   label: string;
-  value: number;
+  value: number | string;
   icon?: React.ComponentType<{ className?: string }>;
   color?: "emerald" | "blue" | "purple" | "orange";
 }

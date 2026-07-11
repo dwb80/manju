@@ -19,5 +19,6 @@ export type {
   StatCardConfig,
   CardActions,
 } from "./types";
+export { getEntityLabel } from "./types";
 export type { CopyToProjectDialogProps } from "@/components/shared/copy-to-project-dialog";
 export type { VersionHistoryDialogProps } from "@/components/shared/version-history-dialog";

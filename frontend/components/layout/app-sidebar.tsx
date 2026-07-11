@@ -18,6 +18,7 @@ import {
   Rocket,
   ChevronDown,
   ChevronRight,
+  Scissors,
 } from "lucide-react";
 
 /**
@@ -58,6 +59,7 @@ const MENU_GROUPS: MenuGroup[] = [
       { id: "storyboard", name: "分镜导演台", icon: Film, href: "/storyboards" },
       { id: "video-production", name: "视频生产线", icon: Video, href: "/video-production" },
       { id: "audio", name: "音频中心", icon: Music, href: "/audio" },
+      { id: "clip", name: "剪辑中心", icon: Scissors, href: "/clips" },
     ],
   },
   {

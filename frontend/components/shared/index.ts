@@ -51,3 +51,7 @@ export type { AssetTemplate, TemplateEntityType, TemplateSelectorProps } from '.
 // 跨项目复制资产弹窗（三厂共用：任务14）
 export { CopyToProjectDialog } from './copy-to-project-dialog';
 export type { CopyToProjectDialogProps } from './copy-to-project-dialog';
+
+// 模块间引用选择器（分镜→场景、视频→分镜、音频→角色）
+export { EntityPicker } from './entity-picker';
+export type { EntityPickerProps } from './entity-picker';

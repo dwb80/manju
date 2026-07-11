@@ -176,8 +176,8 @@ export interface Prop extends BaseEntity {
 
 // ==================== 资产版本管理（任务12：统一版本管理） ====================
 
-/** 三厂共性：资产实体类型。 */
-export type AssetEntityType = "character" | "scene" | "prop";
+/** 三厂共性：资产实体类型（任务 12 扩展支持分镜/视频/音频/剪辑的版本管理）。 */
+export type AssetEntityType = "character" | "scene" | "prop" | "storyboard" | "video" | "audio" | "clip";
 
 /** 版本变更类型。 */
 export type AssetVersionChangeType = "create" | "update" | "restore";

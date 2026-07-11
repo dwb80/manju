@@ -2,6 +2,13 @@
  * 通用模块 CRUD Hook
  *
  * 提供模块数据的加载、创建、更新、删除操作的统一封装。
+ *
+ * ⚠️ 已废弃（DEPRECATED）：
+ * - 业务数据模块（角色/场景/道具/分镜/视频/音频/剪辑）请统一使用
+ *   `useFactoryEntity` + `<FactoryCRUDPage>` 组合，详见 `@/components/factory`。
+ * - 本 hook 仅保留给"系统级配置类"模块（如 ModelCenter）使用，
+ *   因为这些模块没有 project_id 维度，不适合套用工厂模型。
+ * - 新模块请勿引用。
  */
 
 import { useState, useEffect, useCallback } from "react";

@@ -34,6 +34,7 @@ import { toast } from "@/components/common/toast";
 import { clearApiCache } from "@/lib/api-client";
 import { useFactoryEntity } from "./useFactoryEntity";
 import type { FactoryCRUDPageProps, FactoryEntity, FactoryEntityType, FilterOption } from "./types";
+import { getEntityLabel } from "./types";
 
 const DEFAULT_GRID_CLASS = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
 
@@ -217,14 +218,14 @@ function RecycleBinRow<TEntity extends FactoryEntity>({
       </button>
       <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-[#2a2a2a]">
         {image ? (
-          <img src={image} alt={item.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          <img src={image} alt={getEntityLabel(item)} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
         ) : (
-          <span className="text-xs text-[#888]">{item.name?.slice(0, 2) || entityLabel.slice(0, 2)}</span>
+          <span className="text-xs text-[#888]">{getEntityLabel(item).slice(0, 2) || entityLabel.slice(0, 2)}</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 text-sm text-white truncate">
-          {item.name}
+          {getEntityLabel(item)}
         </div>
         <div className="text-xs text-[#666] truncate">
           {metaLabel}: {deletedAt ? new Date(deletedAt).toLocaleString() : "—"}
@@ -499,7 +500,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
           // ignore: 使用实体上的 usage_count
         }
       }
-      setDeleteConfirm({ id: item.id, name: item.name, usageCount });
+      setDeleteConfirm({ id: item.id, name: getEntityLabel(item), usageCount });
     },
     [fetchUsage],
   );
@@ -667,7 +668,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   const handlePermanentDeleteOne = useCallback(
     async (item: TEntity) => {
       if (!permanentDelete) return;
-      const target = { id: item.id, name: item.name };
+      const target = { id: item.id, name: getEntityLabel(item) };
       setPermanentDeleteConfirm(null);
       await permanentDelete([target.id]);
       setDeletedItems((prev) => prev.filter((it) => it.id !== target.id));
@@ -802,7 +803,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                     onClick={() => {
                       // 弹出"历史"列表前，要求先选择一个资产（避免一次性展示所有资产）
                       if (items.length === 1) {
-                        setVersionHistory({ id: items[0].id, name: items[0].name });
+                        setVersionHistory({ id: items[0].id, name: getEntityLabel(items[0]) });
                         return;
                       }
                       // 多资产时通过"提示选择"占位：让用户从卡片里点 "历史" 按钮
@@ -864,7 +865,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                   onToggleSelect: () => toggleSelect(item.id),
                   onEdit: () => openEdit(item),
                   onDelete: () => requestDelete(item),
-                  onViewHistory: fetchVersions ? () => setVersionHistory({ id: item.id, name: item.name }) : undefined,
+                  onViewHistory: fetchVersions ? () => setVersionHistory({ id: item.id, name: getEntityLabel(item) }) : undefined,
                   onCopyToProjects: copyToProjects ? () => setCopyDialogItem(item) : undefined,
                 }),
               )}
@@ -962,7 +963,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                 // 简单搜索过滤
                 const q = searchQuery.toLowerCase();
                 const filtered = q
-                  ? deletedItems.filter((it) => it.name.toLowerCase().includes(q))
+                  ? deletedItems.filter((it) => getEntityLabel(it).toLowerCase().includes(q))
                   : deletedItems;
                 if (filtered.length === 0) {
                   return (
@@ -1015,7 +1016,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                           selected={selectedIds.has(item.id)}
                           onToggleSelect={() => toggleSelect(item.id)}
                           onRestore={() => handleRestoreOne(item)}
-                          onPermanentDelete={() => setPermanentDeleteConfirm({ id: item.id, name: item.name })}
+                          onPermanentDelete={() => setPermanentDeleteConfirm({ id: item.id, name: getEntityLabel(item) })}
                         />
                       ))}
                     </div>
@@ -1108,7 +1109,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
         <CopyToProjectDialog
           isOpen={copyDialogItem !== null}
           onClose={() => setCopyDialogItem(null)}
-          sourceItem={copyDialogItem ? { id: copyDialogItem.id, name: copyDialogItem.name, project_id: copyDialogItem.project_id } : null}
+          sourceItem={copyDialogItem ? { id: copyDialogItem.id, name: getEntityLabel(copyDialogItem), project_id: copyDialogItem.project_id } : null}
           entityLabel={entityLabel}
           onConfirm={handleCopyConfirm}
         />
