@@ -6,80 +6,103 @@ import {
   Upload,
   FileJson,
   FileText,
+  FileCode,
+  FileType,
   Film,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { exportScript, importScript, detectFormat } from '@/lib/script-format'
+import type { ScriptFormat } from '@/lib/script-format'
 
 interface ImportExportDialogProps {
   isOpen: boolean
   onClose: () => void
-  onExport: (format: 'json' | 'markdown' | 'fdx') => Promise<void>
-  onImport: (projectId: string, jsonData: string) => Promise<void>
-  projectId?: string
+  editorJson?: any
+  title?: string
+  onExport?: (format: ScriptFormat, content: string, filename: string) => void
+  onImport?: (editorJson: any) => void
 }
 
 export function ImportExportDialog({
   isOpen,
   onClose,
+  editorJson,
+  title = '剧本',
   onExport,
   onImport,
-  projectId,
 }: ImportExportDialogProps) {
   const [mode, setMode] = useState<'export' | 'import'>('export')
-  const [selectedFormat, setSelectedFormat] = useState<'json' | 'markdown' | 'fdx'>('json')
+  const [selectedFormat, setSelectedFormat] = useState<ScriptFormat>('json')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [importError, setImportError] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [detectedFormat, setDetectedFormat] = useState<ScriptFormat | null>(null)
+
+  const exportFormats: {
+    format: ScriptFormat
+    icon: React.ReactNode
+    label: string
+    description: string
+  }[] = [
+    {
+      format: 'json',
+      icon: <FileJson className="h-4 w-4" />,
+      label: 'JSON 格式',
+      description: '保留完整结构，可重新导入',
+    },
+    {
+      format: 'txt',
+      icon: <FileText className="h-4 w-4" />,
+      label: 'TXT 纯文本',
+      description: '通用纯文本格式',
+    },
+    {
+      format: 'markdown',
+      icon: <FileType className="h-4 w-4" />,
+      label: 'Markdown',
+      description: '带格式的轻量标记语言',
+    },
+    {
+      format: 'html',
+      icon: <FileCode className="h-4 w-4" />,
+      label: 'HTML 网页',
+      description: '可直接在浏览器打开预览',
+    },
+    {
+      format: 'fdx',
+      icon: <Film className="h-4 w-4" />,
+      label: 'Final Draft (.fdx)',
+      description: '专业剧本软件格式',
+    },
+  ]
 
   const handleExport = async () => {
-    setIsLoading(true)
-    setImportError(null)
-    try {
-      // 目前只支持JSON格式
-      if (selectedFormat !== 'json') {
-        setImportError('目前仅支持JSON格式导出')
-        return
-      }
-      await onExport('json')
-      onClose()
-    } catch (error) {
-      setImportError((error as Error).message)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleImport = async () => {
-    if (!selectedFile) return
-    if (!projectId) {
-      setImportError('缺少项目ID，无法导入')
+    if (!editorJson) {
+      setErrorMsg('没有可导出的内容')
       return
     }
-
     setIsLoading(true)
-    setImportError(null)
+    setErrorMsg(null)
     try {
-      // 只支持JSON格式导入
-      if (!selectedFile.name.endsWith('.json')) {
-        setImportError('目前仅支持JSON格式导入')
-        return
+      const { content, filename, mimeType } = exportScript(editorJson, selectedFormat, title)
+      
+      if (onExport) {
+        onExport(selectedFormat, content, filename)
+      } else {
+        // 直接下载
+        const blob = new Blob(['\ufeff' + content], { type: mimeType })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        a.click()
+        URL.revokeObjectURL(url)
       }
-
-      // 读取文件内容
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        try {
-          const jsonData = e.target?.result as string
-          await onImport(projectId, jsonData)
-          onClose()
-        } catch (error) {
-          setImportError((error as Error).message)
-        }
-      }
-      reader.readAsText(selectedFile)
+      
+      onClose()
     } catch (error) {
-      setImportError((error as Error).message)
+      setErrorMsg((error as Error).message)
     } finally {
       setIsLoading(false)
     }
@@ -89,14 +112,43 @@ export function ImportExportDialog({
     const file = e.target.files?.[0]
     if (file) {
       setSelectedFile(file)
+      const fmt = detectFormat(file.name)
+      setDetectedFormat(fmt)
+      if (fmt) {
+        setSelectedFormat(fmt)
+      }
+      setErrorMsg(null)
     }
   }
+
+  const handleImport = async () => {
+    if (!selectedFile) return
+
+    setIsLoading(true)
+    setErrorMsg(null)
+    try {
+      const text = await selectedFile.text()
+      const doc = importScript(text, selectedFormat)
+      
+      if (onImport) {
+        onImport(doc)
+      }
+      
+      onClose()
+    } catch (error) {
+      setErrorMsg((error as Error).message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const acceptFormats = '.json,.txt,.md,.markdown,.html,.htm,.fdx'
 
   if (!isOpen) return null
 
   return (
     <div className="import-export-dialog fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-[#1a1a1a] rounded-lg border border-white/10 w-full max-w-md p-4">
+      <div className="bg-[#1a1a1a] rounded-lg border border-white/10 w-full max-w-lg p-4">
         {/* 标题 */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-white">
@@ -117,7 +169,10 @@ export function ImportExportDialog({
           <Button
             variant={mode === 'export' ? 'secondary' : 'ghost'}
             size="sm"
-            onClick={() => setMode('export')}
+            onClick={() => {
+              setMode('export')
+              setErrorMsg(null)
+            }}
             className="flex-1"
           >
             <Download className="h-4 w-4 mr-1" />
@@ -126,7 +181,10 @@ export function ImportExportDialog({
           <Button
             variant={mode === 'import' ? 'secondary' : 'ghost'}
             size="sm"
-            onClick={() => setMode('import')}
+            onClick={() => {
+              setMode('import')
+              setErrorMsg(null)
+            }}
             className="flex-1"
           >
             <Upload className="h-4 w-4 mr-1" />
@@ -138,38 +196,37 @@ export function ImportExportDialog({
         {mode === 'export' && (
           <div className="space-y-3">
             <div className="text-sm text-[#888] mb-2">选择导出格式：</div>
-            <div className="grid gap-2">
-              <FormatButton
-                format="json"
-                selected={selectedFormat === 'json'}
-                onClick={() => setSelectedFormat('json')}
-                icon={<FileJson className="h-4 w-4" />}
-                label="JSON 格式"
-                description="保留完整结构信息"
-              />
-              <FormatButton
-                format="markdown"
-                selected={selectedFormat === 'markdown'}
-                onClick={() => setSelectedFormat('markdown')}
-                icon={<FileText className="h-4 w-4" />}
-                label="Markdown 格式"
-                description="易于阅读和编辑"
-              />
-              <FormatButton
-                format="fdx"
-                selected={selectedFormat === 'fdx'}
-                onClick={() => setSelectedFormat('fdx')}
-                icon={<Film className="h-4 w-4" />}
-                label="Final Draft 格式"
-                description="专业剧本格式"
-              />
+            <div className="grid gap-2 max-h-[320px] overflow-y-auto pr-1">
+              {exportFormats.map((item) => (
+                <button
+                  key={item.format}
+                  onClick={() => setSelectedFormat(item.format)}
+                  className={`flex items-start gap-3 p-3 rounded border transition-colors text-left ${
+                    selectedFormat === item.format
+                      ? 'border-emerald-500 bg-emerald-500/10'
+                      : 'border-white/10 hover:bg-white/5'
+                  }`}
+                >
+                  <div className="text-[#888] mt-0.5">{item.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-white">{item.label}</div>
+                    <div className="text-xs text-[#666] mt-0.5">{item.description}</div>
+                  </div>
+                  {selectedFormat === item.format && (
+                    <div className="text-emerald-400 text-xs">✓</div>
+                  )}
+                </button>
+              ))}
             </div>
+            {errorMsg && (
+              <div className="text-xs text-red-400">{errorMsg}</div>
+            )}
             <Button
               onClick={handleExport}
-              disabled={isLoading}
-              className="w-full mt-4"
+              disabled={isLoading || !editorJson}
+              className="w-full mt-2"
             >
-              {isLoading ? '导出中...' : '导出'}
+              {isLoading ? '导出中...' : '导出文件'}
             </Button>
           </div>
         )}
@@ -178,71 +235,63 @@ export function ImportExportDialog({
         {mode === 'import' && (
           <div className="space-y-3">
             <div className="text-sm text-[#888] mb-2">
-              选择要导入的JSON文件：
+              选择要导入的文件：
             </div>
             <div className="border border-white/10 rounded p-3">
               <input
                 type="file"
-                accept=".json"
+                accept={acceptFormats}
                 onChange={handleFileChange}
                 className="w-full text-sm text-[#888]"
               />
               {selectedFile && (
                 <div className="mt-2 text-sm text-white">
                   已选择: {selectedFile.name}
+                  {detectedFormat && (
+                    <span className="text-[#888] ml-2">
+                      (格式: {detectedFormat.toUpperCase()})
+                    </span>
+                  )}
                 </div>
               )}
             </div>
-            <div className="text-xs text-[#666]">
-              目前仅支持JSON格式导入
+
+            <div className="text-sm text-[#888] mb-2">
+              文件格式：
             </div>
-            {importError && (
-              <div className="text-xs text-red-400">
-                {importError}
-              </div>
+            <div className="grid grid-cols-5 gap-1">
+              {exportFormats.map((item) => (
+                <button
+                  key={item.format}
+                  onClick={() => setSelectedFormat(item.format)}
+                  className={`py-2 px-1 text-xs rounded border transition-colors ${
+                    selectedFormat === item.format
+                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
+                      : 'border-white/10 text-[#888] hover:bg-white/5'
+                  }`}
+                  title={item.label}
+                >
+                  {item.format.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            <div className="text-xs text-[#666]">
+              支持格式: JSON / TXT / Markdown / HTML / Final Draft (.fdx)
+            </div>
+            {errorMsg && (
+              <div className="text-xs text-red-400">{errorMsg}</div>
             )}
             <Button
               onClick={handleImport}
-              disabled={isLoading || !selectedFile || !projectId}
-              className="w-full mt-4"
+              disabled={isLoading || !selectedFile}
+              className="w-full mt-2"
             >
-              {isLoading ? '导入中...' : '导入'}
+              {isLoading ? '导入中...' : '导入文件'}
             </Button>
           </div>
         )}
       </div>
     </div>
-  )
-}
-
-function FormatButton({
-  format,
-  selected,
-  onClick,
-  icon,
-  label,
-  description,
-}: {
-  format: string
-  selected: boolean
-  onClick: () => void
-  icon: React.ReactNode
-  label: string
-  description: string
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-start gap-3 p-2 rounded border transition-colors ${selected
-        ? 'border-emerald-500 bg-emerald-500/10'
-        : 'border-white/10 hover:bg-white/5'
-        }`}
-    >
-      <div className="text-[#888]">{icon}</div>
-      <div className="flex-1 text-left">
-        <div className="text-sm font-medium text-white">{label}</div>
-        <div className="text-xs text-[#666]">{description}</div>
-      </div>
-    </button>
   )
 }

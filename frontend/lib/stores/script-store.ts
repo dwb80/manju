@@ -36,6 +36,8 @@ interface ScriptScene {
   description?: string
   notes?: string
   status: string
+  /** 工厂同步后的资产 ID */
+  assetId?: string
   created_at: string
   updated_at: string
 }
@@ -46,6 +48,16 @@ interface ScriptCharacter {
   assetId?: string
   description?: string
   color: string
+  thumbnail?: string
+}
+
+interface ScriptProp {
+  id: string
+  name: string
+  assetId?: string
+  description?: string
+  category?: string
+  color?: string
   thumbnail?: string
 }
 
@@ -64,6 +76,7 @@ interface ScriptState {
   episodes: ScriptEpisode[]
   scenes: ScriptScene[]
   characters: ScriptCharacter[]
+  props: ScriptProp[]
   versions: ScriptVersion[]
   selectedEpisode: string | null
   selectedScene: string | null
@@ -84,7 +97,11 @@ interface ScriptState {
   selectEpisode: (id: string | null) => void
   selectScene: (id: string | null) => void
   addCharacter: (character: ScriptCharacter) => void
+  updateCharacter: (id: string, data: Partial<ScriptCharacter>) => void
   removeCharacter: (id: string) => void
+  addProp: (prop: ScriptProp) => void
+  updateProp: (id: string, data: Partial<ScriptProp>) => void
+  removeProp: (id: string) => void
   loadVersions: () => Promise<void>
   restoreVersion: (versionId: string) => Promise<void>
   deleteVersion: (versionId: string) => Promise<void>
@@ -102,6 +119,7 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
   episodes: [],
   scenes: [],
   characters: [],
+  props: [],
   versions: [],
   selectedEpisode: null,
   selectedScene: null,
@@ -498,9 +516,33 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
     set({ characters: [...get().characters, character] })
   },
 
+  // 更新角色（剧本中心侧）
+  updateCharacter: (id: string, data: Partial<ScriptCharacter>) => {
+    set({
+      characters: get().characters.map((c) => (c.id === id ? { ...c, ...data } : c)),
+    })
+  },
+
   // 移除角色
   removeCharacter: (id: string) => {
     set({ characters: get().characters.filter((c) => c.id !== id) })
+  },
+
+  // 添加道具
+  addProp: (prop: ScriptProp) => {
+    set({ props: [...get().props, prop] })
+  },
+
+  // 更新道具（剧本中心侧）
+  updateProp: (id: string, data: Partial<ScriptProp>) => {
+    set({
+      props: get().props.map((p) => (p.id === id ? { ...p, ...data } : p)),
+    })
+  },
+
+  // 移除道具
+  removeProp: (id: string) => {
+    set({ props: get().props.filter((p) => p.id !== id) })
   },
 
   // 加载版本历史
@@ -595,6 +637,7 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
       episodes: [],
       scenes: [],
       characters: [],
+      props: [],
       versions: [],
       selectedEpisode: null,
       selectedScene: null,
@@ -612,6 +655,7 @@ export type {
   ScriptEpisode,
   ScriptScene,
   ScriptCharacter,
+  ScriptProp,
   ScriptVersion,
   ScriptState,
 }

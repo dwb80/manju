@@ -4,22 +4,25 @@
  * 项目中心模块
  *
  * 功能：
- * - 项目列表展示
+ * - 项目管理（连接后端 API）
  * - 新建/编辑项目对话框（含必填验证）
  * - 删除项目确认
  * - 跳转到剧本中心（显示已有剧本或创建新剧本）
+ * - 操作栏增加"剧本"按钮
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, FileText, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Eye, RefreshCw, Loader2 } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import { ModuleToolbar, SearchInput, FilterSelect, EmptyState, Pagination } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { FormDialog, type FormFieldConfig } from "@/components/ui/form-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { useProjectStore } from "@/lib/stores/project-store";
-import { projects as initialProjects } from "@/lib/mock-data";
+import { listProjects, createProject as createProjectApi, updateProject as updateProjectApi, deleteProject as deleteProjectApi } from "@/services/project.service";
+import { listScripts } from "@/services/module.service";
+import { clearApiCache } from "@/lib/api-client";
 import type { Project } from "@/lib/app-types";
 
 /** 项目表单字段配置 */
@@ -70,8 +73,10 @@ export function ProjectsCenterPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  // 项目列表状态（支持本地增删改）
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  // 项目数据状态
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // 对话框状态
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -80,19 +85,68 @@ export function ProjectsCenterPage() {
 
   // 删除确认状态
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 查看详情状态
   const [viewingProject, setViewingProject] = useState<Project | null>(null);
+
+  // 每个项目下的剧本数量缓存
+  const [scriptCounts, setScriptCounts] = useState<Record<string, number>>({});
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   const statusOptions = [
+    { value: "", label: "全部状态" },
     { value: "active", label: "进行中" },
     { value: "completed", label: "已完成" },
     { value: "archived", label: "已归档" },
   ];
+
+  // 加载项目
+  const reloadProjects = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const data = await listProjects();
+      setProjects(data);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "加载项目失败";
+      console.error("加载项目失败:", err);
+      setLoadError(msg);
+      setProjects([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 初始加载
+  useEffect(() => {
+    reloadProjects();
+  }, [reloadProjects]);
+
+  // 加载所有项目下的剧本数量
+  const reloadScriptCounts = useCallback(async () => {
+    if (projects.length === 0) return;
+    const counts: Record<string, number> = {};
+    // 并行拉取每个项目的剧本列表
+    await Promise.all(
+      projects.map(async (p) => {
+        try {
+          const scripts = await listScripts(p.id);
+          counts[p.id] = Array.isArray(scripts) ? scripts.length : 0;
+        } catch {
+          counts[p.id] = 0;
+        }
+      })
+    );
+    setScriptCounts(counts);
+  }, [projects]);
+
+  useEffect(() => {
+    reloadScriptCounts();
+  }, [reloadScriptCounts]);
 
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
@@ -104,7 +158,7 @@ export function ProjectsCenterPage() {
     });
   }, [projects, searchQuery, statusFilter]);
 
-  // 分页后的项目列表
+  // 分页后的项目
   const paginatedProjects = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredProjects.slice(start, start + pageSize);
@@ -131,75 +185,79 @@ export function ProjectsCenterPage() {
   };
 
   // 跳转到剧本中心
-  const handleOpenScripts = (project: Project) => {
-    // 设置全局选中的项目ID
+  // 方案 A（软约束）：1 项目 = 1 主剧本
+  // - 拉取该项目的剧本列表
+  // - 有：取最近编辑的剧本（按 updated_at 倒序）直接进编辑器
+  // - 无：跳到剧本中心列表并自动打开导入对话框
+  const [openingScriptFor, setOpeningScriptFor] = useState<string | null>(null);
+  const handleOpenScripts = async (project: Project) => {
     setSelectedProjectId(project.id);
-    // 跳转到剧本中心（/scripts 会根据已有剧本情况重定向）
-    // - 如果该项目已有剧本，跳转到第一个剧本的编辑器（显示已有剧本信息）
-    // - 如果没有剧本，显示剧本中心列表页（可创建新剧本）
-    router.push("/scripts");
+    setOpeningScriptFor(project.id);
+    try {
+      const list = await listScripts(project.id);
+      if (Array.isArray(list) && list.length > 0) {
+        const primary = [...list].sort((a: any, b: any) => {
+          const ta = new Date(a.updated_at || 0).getTime();
+          const tb = new Date(b.updated_at || 0).getTime();
+          return tb - ta;
+        })[0];
+        router.push(`/scripts/${primary.id}`);
+      } else {
+        router.push(`/scripts?projectId=${project.id}&action=import`);
+      }
+    } catch (err) {
+      console.error("打开剧本失败:", err);
+      router.push(`/scripts?projectId=${project.id}&action=import`);
+    } finally {
+      setOpeningScriptFor(null);
+    }
   };
 
-  // 保存项目（新建或编辑） - 本地模拟操作
+  // 保存项目（新建或编辑）
   const handleSave = async (values: Record<string, string | number | string[]>) => {
     setIsSaving(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
+      const payload = {
+        name: String(values.name || ""),
+        category: String(values.category || ""),
+        status: String(values.status || "active"),
+        owner: String(values.owner || ""),
+        description: String(values.description || ""),
+        episode_count: Number(values.episode_count || 0),
+        due_date: String(values.due_date || ""),
+      };
       if (editingProject) {
-        // 编辑模式：更新现有项目
-        setProjects((prev) =>
-          prev.map((p) =>
-            p.id === editingProject.id
-              ? {
-                  ...p,
-                  name: String(values.name || p.name),
-                  category: String(values.category || p.category),
-                  status: String(values.status || p.status),
-                  owner: String(values.owner || p.owner),
-                  episode_count: Number(values.episode_count || 0),
-                  due_date: String(values.due_date || p.due_date),
-                  description: String(values.description || p.description),
-                  updated_at: new Date().toISOString(),
-                }
-              : p
-          )
-        );
+        await updateProjectApi(editingProject.id, payload);
       } else {
-        // 新建模式：创建新项目
-        const newProject: Project = {
-          id: `proj-${Date.now()}`,
-          name: String(values.name || ""),
-          category: String(values.category || ""),
-          status: String(values.status || "active"),
-          description: String(values.description || ""),
-          episode_count: Number(values.episode_count || 0),
-          owner: String(values.owner || ""),
-          due_date: String(values.due_date || ""),
-          is_default: false,
-          is_pinned: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          storage_path: `/projects/${Date.now()}`,
-          storage_mode: "managed",
-          archived_at: "",
-        };
-        setProjects((prev) => [newProject, ...prev]);
+        await createProjectApi(payload as any, "managed");
       }
-
       setIsFormOpen(false);
       setEditingProject(null);
+      clearApiCache();
+      await reloadProjects();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "保存失败";
+      alert(`保存失败：${msg}`);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // 确认删除 - 本地模拟操作
+  // 确认删除
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setProjects((prev) => prev.filter((p) => p.id !== deleteConfirm.id));
-    setDeleteConfirm(null);
+    setIsDeleting(true);
+    try {
+      await deleteProjectApi(deleteConfirm.id);
+      setDeleteConfirm(null);
+      clearApiCache();
+      await reloadProjects();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "删除失败";
+      alert(`删除失败：${msg}`);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -222,6 +280,15 @@ export function ProjectsCenterPage() {
               options={statusOptions}
               placeholder="状态筛选"
             />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={reloadProjects}
+              disabled={isLoading}
+              title="刷新"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            </Button>
           </>
         }
         right={
@@ -232,8 +299,13 @@ export function ProjectsCenterPage() {
         }
       />
 
-      {/* 项目列表 - 移除标题文字 */}
       <PageCard>
+        {loadError && (
+          <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            加载项目失败：{loadError}（请确认后端服务已启动）
+          </div>
+        )}
+
         {filteredProjects.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -249,62 +321,82 @@ export function ProjectsCenterPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedProjects.map((project) => (
-                  <tr key={project.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {project.is_pinned && (
-                          <span className="px-1.5 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">
-                            置顶
-                          </span>
-                        )}
-                        <span className="font-medium text-white">{project.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{project.category}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs ${project.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
-                        project.status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-gray-500/20 text-gray-400'
-                        }`}>
-                        {project.status === 'active' ? '进行中' : project.status === 'completed' ? '已完成' : '已归档'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#888] hidden lg:table-cell">{project.owner}</td>
-                    <td className="px-4 py-3 text-sm text-[#888] hidden sm:table-cell">{project.episode_count}集</td>
-                    <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">
-                      {project.due_date ? new Date(project.due_date).toLocaleDateString() : "-"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center gap-1 justify-end">
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenScripts(project)} title="剧本">
-                          <FileText className="h-4 w-4 text-emerald-400" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleView(project)} title="查看">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(project)} title="编辑">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm({ id: project.id, name: project.name })} title="删除">
-                          <Trash2 className="h-4 w-4 text-red-400" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {paginatedProjects.map((project) => {
+                  const scriptCount = scriptCounts[project.id] ?? 0;
+                  return (
+                    <tr key={project.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {project.is_pinned && (
+                            <span className="px-1.5 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">
+                              置顶
+                            </span>
+                          )}
+                          <span className="font-medium text-white">{project.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{project.category}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded text-xs ${project.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
+                          project.status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                          {project.status === 'active' ? '进行中' : project.status === 'completed' ? '已完成' : '已归档'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[#888] hidden lg:table-cell">{project.owner}</td>
+                      <td className="px-4 py-3 text-sm text-[#888] hidden sm:table-cell">{project.episode_count}集</td>
+                      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">
+                        {project.due_date ? new Date(project.due_date).toLocaleDateString() : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenScripts(project)}
+                            disabled={openingScriptFor === project.id}
+                            title={scriptCount > 0 ? "打开主剧本" : "创建剧本"}
+                            className="gap-1 px-2"
+                          >
+                            {openingScriptFor === project.id ? (
+                              <Loader2 className="h-4 w-4 text-emerald-400 animate-spin" />
+                            ) : (
+                              <FileText className="h-4 w-4 text-emerald-400" />
+                            )}
+                            <span className="text-xs text-emerald-400 whitespace-nowrap">
+                              {openingScriptFor === project.id ? "加载中…" : "打开剧本"}
+                            </span>
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleView(project)} title="查看">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(project)} title="编辑">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm({ id: project.id, name: project.name })} title="删除">
+                            <Trash2 className="h-4 w-4 text-red-400" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         ) : (
           <EmptyState
             type="no-results"
-            title="未找到项目"
-            description="尝试调整搜索条件或创建新项目"
-            action={{
-              label: "新建项目",
-              onClick: handleCreate,
-            }}
+            title={loadError ? "无法加载项目" : isLoading ? "加载中..." : "未找到项目"}
+            description={loadError ? "请确认后端服务已启动" : "尝试调整搜索条件或创建新项目"}
+            action={
+              loadError
+                ? { label: "重试", onClick: reloadProjects }
+                : !isLoading
+                ? { label: "新建项目", onClick: handleCreate }
+                : undefined
+            }
           />
         )}
 
@@ -317,7 +409,10 @@ export function ProjectsCenterPage() {
               totalItems={filteredProjects.length}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
             />
           </div>
         )}
@@ -390,6 +485,7 @@ export function ProjectsCenterPage() {
               <DetailRow label="截止日期" value={
                 viewingProject.due_date ? new Date(viewingProject.due_date).toLocaleDateString() : "-"
               } />
+              <DetailRow label="剧本数量" value={`${scriptCounts[viewingProject.id] ?? 0} 个`} />
               <DetailRow label="创建时间" value={new Date(viewingProject.created_at).toLocaleString()} />
               <DetailRow label="更新时间" value={new Date(viewingProject.updated_at).toLocaleString()} />
               <div className="md:col-span-2">
@@ -423,3 +519,4 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+

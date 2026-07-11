@@ -34,13 +34,17 @@ type ProjectClipInput = {
   episode?: number;
   scene?: string;
   shot?: string;
+  name?: string;
   title?: string;
+  description?: string;
+  thumbnail_url?: string;
   source_video_url?: string;
   duration?: number;
   in_point?: string;
   out_point?: string;
   order_index?: number;
   status?: string;
+  tags?: string[];
   notes?: string;
 };
 
@@ -178,13 +182,15 @@ export async function batchUpdateProjectStoryboards(ctx: AppContext, projectId: 
 export async function listProjectClips(ctx: AppContext, projectId: string): Promise<ProjectClip[]> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   const items = await ctx.projectClips.findMany({ project_id: projectId } as Partial<ProjectClip>, { sort: "asc" });
-  return items.sort((left, right) =>
-    left.episode - right.episode ||
-    left.order_index - right.order_index ||
-    left.scene.localeCompare(right.scene, "zh-Hans", { numeric: true }) ||
-    left.shot.localeCompare(right.shot, "zh-Hans", { numeric: true }) ||
-    left.created_at.localeCompare(right.created_at)
-  );
+  return items
+    .filter((item) => !item.deleted_at)
+    .sort((left, right) =>
+      left.episode - right.episode ||
+      left.order_index - right.order_index ||
+      left.scene.localeCompare(right.scene, "zh-Hans", { numeric: true }) ||
+      left.shot.localeCompare(right.shot, "zh-Hans", { numeric: true }) ||
+      left.created_at.localeCompare(right.created_at)
+    );
 }
 
 /** 创建剪辑条目，可直接绑定某条分镜的视频作为素材。 */
@@ -200,13 +206,17 @@ export async function createProjectClip(ctx: AppContext, projectId: string, inpu
     episode: clampNumber(input.episode, storyboard?.episode ?? 1, 1, 999),
     scene: input.scene?.trim() || storyboard?.scene || "",
     shot: input.shot?.trim() || storyboard?.shot || "",
+    name: input.name?.trim() || input.title?.trim() || "未命名剪辑",
     title: input.title?.trim() || storyboard?.title || "未命名剪辑",
+    description: input.description?.trim() || "",
+    thumbnail_url: input.thumbnail_url?.trim() || "",
     source_video_url: input.source_video_url?.trim() || storyboard?.video_url || "",
     duration: clampNumber(input.duration, storyboard?.duration ?? 5, 1, 3600),
     in_point: input.in_point?.trim() || "00:00:00",
     out_point: input.out_point?.trim() || "",
     order_index: clampNumber(input.order_index, 0, 0, 99999),
     status: normalizeProjectClipStatus(input.status),
+    tags: Array.isArray(input.tags) ? input.tags : [],
     notes: input.notes?.trim() ?? "",
     created_at: now,
     updated_at: now,
@@ -241,6 +251,14 @@ export async function deleteProjectClip(ctx: AppContext, projectId: string, clip
   const existing = await ctx.projectClips.findById(clipId);
   if (!existing || existing.project_id !== projectId) throw new Error("project clip not found");
   await ctx.projectClips.delete(clipId);
+}
+
+/** 软删除剪辑（设置 deleted_at），可在 5 秒内撤销或从回收站恢复。 */
+export async function softDeleteProjectClip(ctx: AppContext, projectId: string, clipId: string): Promise<void> {
+  const existing = await ctx.projectClips.findById(clipId);
+  if (!existing || existing.project_id !== projectId) throw new Error("project clip not found");
+  const now = nowIso();
+  await ctx.projectClips.update(clipId, { deleted_at: now, updated_at: now } as Partial<ProjectClip>);
 }
 
 /** 从已有视频分镜同步剪辑清单，跳过已经绑定过的分镜。 */

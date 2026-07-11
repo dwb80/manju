@@ -7,7 +7,7 @@
  * 核心流程：导入/创作剧本 → AI分析提取角色/场景/道具文字描述 → 确认后流转到各工厂
  */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -24,6 +24,7 @@ import {
   X,
   Loader2,
   CheckCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import {
@@ -98,7 +99,15 @@ export function DialogOverlay({
   );
 }
 
-export function ScriptsCenterPage() {
+export function ScriptsCenterPage({
+  initialProjectId,
+  initialAction,
+}: {
+  /** 从项目中心跳转过来时携带的 projectId，组件 mount 时自动选中 */
+  initialProjectId?: string;
+  /** 自动行为：import = 自动打开导入对话框 */
+  initialAction?: string;
+} = {}) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -129,7 +138,11 @@ export function ScriptsCenterPage() {
   const [isTransferring, setIsTransferring] = useState(false);
 
   // 从 store 获取选中的项目ID
-  const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
+  const storeProjectId = useProjectStore((state) => state.selectedProjectId);
+  const setStoreProjectId = useProjectStore((s) => s.setSelectedProjectId);
+
+  // 有效选中项目：URL > store
+  const selectedProjectId = initialProjectId || storeProjectId;
 
   // 根据 selectedProjectId 加载剧本数据
   const [scripts, setScripts] = useState<Script[]>([]);
@@ -143,7 +156,7 @@ export function ScriptsCenterPage() {
     setIsLoading(true);
     try {
       const data = await listScripts(selectedProjectId);
-      setScripts(data);
+      setScripts(data as unknown as Script[]);
     } catch (err) {
       console.error("Failed to load scripts:", err);
     } finally {
@@ -154,6 +167,27 @@ export function ScriptsCenterPage() {
   useEffect(() => {
     reloadScripts();
   }, [selectedProjectId]);
+
+  // 方案 A（软约束）：组件 mount 时根据 URL 参数自动设置项目 + 打开导入
+  // - initialProjectId 存在时同步到 store（只一次）
+  // - initialAction=import 时，等 listScripts 加载完成且为空则自动打开导入框
+  const isInitialMountRef = useRef(true);
+  useEffect(() => {
+    if (!isInitialMountRef.current) return;
+    isInitialMountRef.current = false;
+    if (initialProjectId && initialProjectId !== storeProjectId) {
+      setStoreProjectId(initialProjectId);
+    }
+  }, [initialProjectId, storeProjectId, setStoreProjectId]);
+
+  // 自动打开导入框（项目无剧本时）
+  useEffect(() => {
+    if (initialAction !== "import") return;
+    if (!selectedProjectId) return;
+    if (isLoading) return;
+    if (scripts.length > 0) return; // 已有剧本，不自动开
+    setShowImport(true);
+  }, [initialAction, selectedProjectId, isLoading, scripts.length]);
 
   // 筛选剧本列表
   const filteredScripts = useMemo(() => {
@@ -199,9 +233,9 @@ export function ScriptsCenterPage() {
     setIsFormOpen(true);
   };
 
-  // 打开剧本编辑器
+  // 打开剧本编辑器（新标签页）
   const handleOpenEditor = (scriptId: string) => {
-    router.push(`/scripts/${scriptId}`);
+    window.open(`/scripts/${scriptId}`, '_blank');
   };
 
   // 保存剧本（新建或编辑）
@@ -210,10 +244,10 @@ export function ScriptsCenterPage() {
     try {
       const payload = { ...values, project_id: selectedProjectId } as any;
       if (editingScript) {
-        await updateScript(editingScript.id, payload);
+        await updateScript(selectedProjectId, editingScript.id, payload);
       } else {
         // 新建剧本：先创建 scripts 记录，再把 description 同步写入 ScriptDocument.editor_json
-        const created = await createScript(payload);
+        const created = await createScript(selectedProjectId, payload);
         const description = String(values.description ?? "").trim();
         if (description) {
           try {
@@ -242,7 +276,7 @@ export function ScriptsCenterPage() {
   // 确认删除
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
-    await deleteScriptApi(deleteConfirm.id);
+    await deleteScriptApi(selectedProjectId, deleteConfirm.id);
     setDeleteConfirm(null);
     clearApiCache();
     await reloadScripts();
@@ -264,7 +298,7 @@ export function ScriptsCenterPage() {
       // 本地生成剧本大纲（AI服务的后备方案）
       const content = generateLocalScriptOutline(prompt, style, genre, targetLength);
 
-      await createScript({
+      await createScript(selectedProjectId, {
         title: `AI生成剧本 - ${prompt.slice(0, 20)}...`,
         author: "AI助手",
         status: "draft",
@@ -298,7 +332,7 @@ export function ScriptsCenterPage() {
         ? `${templateDesc}\n\n剧本结构：\n${templateStructure.map((s: string, i: number) => `${i + 1}. ${s}`).join("\n")}`
         : templateDesc;
 
-      await createScript({
+      await createScript(selectedProjectId, {
         title: `${templateName} - ${new Date().toLocaleDateString()}`,
         author: "当前用户",
         status: "draft",
@@ -348,7 +382,7 @@ export function ScriptsCenterPage() {
     // 如果状态变为 completed（审批通过），自动创建审核记录流转到审核中心
     if (updatedScript.status === "completed" && selectedProjectId) {
       try {
-        await createReview({
+        await createReview(selectedProjectId, {
           target_type: "script",
           target_id: updatedScript.id,
           reviewer: "系统自动",
@@ -621,7 +655,16 @@ export function ScriptsCenterPage() {
   ];
 
   return (
-    <PageContainer title="剧本中心" description="剧本分析与资产生成中心">
+    <PageContainer
+      title={initialProjectId ? "剧本中心 · 导入剧本" : "剧本中心"}
+      description={
+        initialProjectId
+          ? "项目暂无剧本，请先导入或新建一份剧本"
+          : "剧本分析与资产生成中心"
+      }
+      showBackButton={!!initialProjectId}
+      backPath="/projects"
+    >
       {/* 工作流程提示 - 修正为正确的定位 */}
       <div className="mb-6 flex items-start gap-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
         <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -985,6 +1028,7 @@ function SimpleTagManager({
   script: Script;
   onTagsUpdated: (script: Script) => void;
 }) {
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
   const [tags, setTags] = useState<string[]>(script.tags ?? []);
   const [newTag, setNewTag] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -1003,7 +1047,7 @@ function SimpleTagManager({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateScript(script.id, { tags } as any);
+      await updateScript(selectedProjectId, script.id, { tags } as any);
       onTagsUpdated({ ...script, tags });
       clearApiCache();
     } catch (err) {

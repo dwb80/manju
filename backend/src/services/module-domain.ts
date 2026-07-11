@@ -4,8 +4,21 @@
  */
 
 import type { AppContext } from "./app.js";
-import type { Script, Character, Scene, Prop, PropCategory, Storyboard, Audio, Asset, Review, ModuleVideoTask, ScriptDialogue, ScriptScene, ScriptSceneCharacter, ScriptSceneLocation, ProjectStoryboard, AssetEntityType, AssetVersion, AssetVersionChangeType } from "../types.js";
+import type { AssetEntityType, AssetVersion, AssetVersionChangeType } from "../types.js";
+import type { Script, ScriptDialogue, ScriptScene, ScriptSceneCharacter, ScriptSceneLocation } from "../types/script.js";
+import type { Character } from "../types/character.js";
+import type { Prop } from "../types/prop.js";
+import type { PropCategory } from "../types/prop.js";
+import type { Scene } from "../types/scene.js";
+import type { Storyboard } from "../types/storyboard.js";
+import type { Audio } from "../types/audio.js";
+import type { ModuleVideoTask } from "../types/video.js";
+import type { ProjectClip } from "../types/project.js";
+import type { ProjectStoryboard } from "../types/storyboard.js";
+import type { Asset } from "../types/asset.js";
+import type { Review } from "../types/review.js";
 import { id, nowIso } from "../utils.js";
+import { CsvRepository } from "../storage/csv.js";
 import { listCharacterTemplates, listSceneTemplates, listPropTemplates } from "./asset-templates.js";
 
 // ==================== 资产版本管理（任务12：统一版本管理） ====================
@@ -234,7 +247,8 @@ type CharacterInput = {
 
 export async function listCharacters(ctx: AppContext, projectId?: string): Promise<Character[]> {
   const filter: Partial<Character> = projectId ? { project_id: projectId } : {};
-  return ctx.characters.findMany(filter, { sort: "desc" });
+  const items = await ctx.characters.findMany(filter, { sort: "desc" });
+  return items.filter((item) => !item.deleted_at);
 }
 
 export async function createCharacter(ctx: AppContext, input: CharacterInput): Promise<Character> {
@@ -724,6 +738,8 @@ export type UsageReferenceItem = {
   project_id?: string;
   /** 关联剧集/分镜/场景等附加信息。 */
   context?: string;
+  /** 所属集数（已知时填入，用于前端汇总"出场 N 集"）。 */
+  episode?: number;
 };
 
 /** 资产引用统计返回结构。 */
@@ -848,6 +864,7 @@ export async function getCharacterUsage(ctx: AppContext, characterId: string): P
     title: sb.description?.slice(0, 30) || `分镜 #${sb.shot_number}`,
     project_id: sb.project_id,
     context: sb.dialogue,
+    episode: sb.episode,
   }));
 
   // 4. 项目工作台 - 分镜（通过 character_asset_ids 数组直接匹配）
@@ -860,6 +877,7 @@ export async function getCharacterUsage(ctx: AppContext, characterId: string): P
       title: sb.title || `分镜 ${sb.episode}-${sb.scene}-${sb.shot}`,
       project_id: sb.project_id,
       context: sb.description,
+      episode: sb.episode,
     });
   }
 
@@ -899,6 +917,7 @@ export async function getSceneUsage(ctx: AppContext, sceneId: string): Promise<A
     title: sb.description?.slice(0, 30) || `分镜 #${sb.shot_number}`,
     project_id: sb.project_id,
     context: sb.dialogue,
+    episode: sb.episode,
   }));
 
   // 2. 项目工作台 - 分镜（通过 scene_asset_id 直接关联）
@@ -911,6 +930,7 @@ export async function getSceneUsage(ctx: AppContext, sceneId: string): Promise<A
       title: sb.title || `分镜 ${sb.episode}-${sb.scene}-${sb.shot}`,
       project_id: sb.project_id,
       context: sb.description,
+      episode: sb.episode,
     });
   }
 
@@ -986,6 +1006,7 @@ export async function getPropUsage(ctx: AppContext, propId: string): Promise<Ass
     title: sb.description?.slice(0, 30) || `分镜 #${sb.shot_number}`,
     project_id: sb.project_id,
     context: sb.dialogue,
+    episode: sb.episode,
   }));
 
   return await finalizeUsage(ctx, ctx.props as unknown as { update: (id: string, patch: Record<string, unknown>) => Promise<void> }, propId, {
@@ -1022,20 +1043,27 @@ export async function batchUpdateProps(ctx: AppContext, ids: string[], patch: Pr
 type StoryboardInput = {
   project_id?: string;
   scene_id?: string;
+  episode?: number;
   shot_number?: number;
+  title?: string;
   description?: string;
   duration?: number;
   camera_angle?: string;
   movement?: string;
   dialogue?: string;
   notes?: string;
+  image_url?: string;
+  video_task_id?: string;
+  video_url?: string;
   status?: string;
+  tags?: string[];
   order?: number;
 };
 
 export async function listStoryboards(ctx: AppContext, projectId?: string): Promise<Storyboard[]> {
   const filter: Partial<Storyboard> = projectId ? { project_id: projectId } : {};
-  return ctx.storyboards.findMany(filter, { sort: "desc" });
+  const items = await ctx.storyboards.findMany(filter, { sort: "desc" });
+  return items.filter((item) => !item.deleted_at);
 }
 
 export async function createStoryboard(ctx: AppContext, input: StoryboardInput): Promise<Storyboard> {
@@ -1043,15 +1071,23 @@ export async function createStoryboard(ctx: AppContext, input: StoryboardInput):
     id: id("sb"),
     project_id: input.project_id ?? "",
     scene_id: input.scene_id ?? "",
+    episode: input.episode ?? 1,
     shot_number: input.shot_number ?? 1,
+    title: input.title ?? input.description ?? "",
     description: input.description ?? "",
     duration: input.duration ?? 0,
     camera_angle: input.camera_angle,
     movement: input.movement,
     dialogue: input.dialogue,
     notes: input.notes,
+    image_url: input.image_url ?? "",
+    video_task_id: input.video_task_id ?? "",
+    video_url: input.video_url ?? "",
     status: (input.status as Storyboard["status"]) ?? "draft",
+    tags: input.tags ?? [],
     order: input.order ?? 0,
+    usage_count: 0,
+    version: 1,
     created_at: nowIso(),
     updated_at: nowIso(),
   };
@@ -1081,9 +1117,13 @@ type AudioInput = {
   project_id?: string;
   name?: string;
   type?: string;
+  description?: string;
   duration?: number;
   file_url?: string;
   speaker?: string;
+  character_id?: string;
+  storyboard_id?: string;
+  episode?: number;
   tags?: string[];
   format?: string;
   size?: number;
@@ -1091,7 +1131,8 @@ type AudioInput = {
 
 export async function listAudios(ctx: AppContext, projectId?: string): Promise<Audio[]> {
   const filter: Partial<Audio> = projectId ? { project_id: projectId } : {};
-  return ctx.audios.findMany(filter, { sort: "desc" });
+  const items = await ctx.audios.findMany(filter, { sort: "desc" });
+  return items.filter((item) => !item.deleted_at);
 }
 
 export async function createAudio(ctx: AppContext, input: AudioInput): Promise<Audio> {
@@ -1100,12 +1141,18 @@ export async function createAudio(ctx: AppContext, input: AudioInput): Promise<A
     project_id: input.project_id ?? "",
     name: input.name ?? "",
     type: (input.type as Audio["type"]) ?? "voiceover",
+    description: input.description ?? "",
     duration: input.duration ?? 0,
     file_url: input.file_url ?? "",
-    speaker: input.speaker,
+    speaker: input.speaker ?? "",
+    character_id: input.character_id ?? "",
+    storyboard_id: input.storyboard_id ?? "",
+    episode: input.episode ?? 1,
     tags: input.tags ?? [],
-    format: input.format,
-    size: input.size,
+    format: input.format ?? "",
+    size: input.size ?? 0,
+    usage_count: 0,
+    version: 1,
     created_at: nowIso(),
     updated_at: nowIso(),
   };
@@ -1240,7 +1287,12 @@ export async function deleteReview(ctx: AppContext, reviewId: string): Promise<v
 
 type ModuleVideoTaskInput = {
   project_id?: string;
+  storyboard_id?: string;
   title?: string;
+  prompt?: string;
+  image_url?: string;
+  params?: any;
+  ai_task_id?: string;
   status?: string;
   progress?: number;
   duration?: number;
@@ -1248,25 +1300,39 @@ type ModuleVideoTaskInput = {
   fps?: number;
   format?: string;
   file_url?: string;
+  episode?: number;
+  tags?: string[];
+  error?: string;
 };
 
 export async function listModuleVideoTasks(ctx: AppContext, projectId?: string): Promise<ModuleVideoTask[]> {
   const filter: Partial<ModuleVideoTask> = projectId ? { project_id: projectId } : {};
-  return ctx.moduleVideoTasks.findMany(filter, { sort: "desc" });
+  const items = await ctx.moduleVideoTasks.findMany(filter, { sort: "desc" });
+  return items.filter((item) => !item.deleted_at);
 }
 
 export async function createModuleVideoTask(ctx: AppContext, input: ModuleVideoTaskInput): Promise<ModuleVideoTask> {
   const task: ModuleVideoTask = {
     id: id("vt"),
     project_id: input.project_id ?? "",
+    storyboard_id: input.storyboard_id ?? "",
     title: input.title ?? "",
+    prompt: input.prompt ?? "",
+    image_url: input.image_url ?? "",
+    params: input.params ?? {},
+    ai_task_id: input.ai_task_id ?? "",
     status: (input.status as ModuleVideoTask["status"]) ?? "queued",
     progress: input.progress ?? 0,
     duration: input.duration ?? 0,
-    resolution: input.resolution,
-    fps: input.fps,
-    format: input.format,
-    file_url: input.file_url,
+    resolution: input.resolution ?? "",
+    fps: input.fps ?? 0,
+    format: input.format ?? "",
+    file_url: input.file_url ?? "",
+    episode: input.episode ?? 1,
+    tags: input.tags ?? [],
+    error: input.error ?? "",
+    usage_count: 0,
+    version: 1,
     created_at: nowIso(),
     updated_at: nowIso(),
   };
@@ -1288,6 +1354,267 @@ export async function updateModuleVideoTask(ctx: AppContext, taskId: string, inp
 
 export async function deleteModuleVideoTask(ctx: AppContext, taskId: string): Promise<void> {
   await ctx.moduleVideoTasks.delete(taskId);
+}
+
+// ==================== 软删除 / 回收站 / 跨项目复制（工业化平台 P0-2 / P0-5） ====================
+
+/**
+ * 通用软删除：将记录标记为 deleted_at，物理不删除，5 秒撤销期内可恢复。
+ * 用于分镜 / 音频 / 视频 / 剪辑 4 个独立模块。
+ */
+async function softDelete(ctx: AppContext, repo: CsvRepository<any>, id: string): Promise<{ id: string }> {
+  const existing = await repo.findById(id);
+  if (!existing) throw new Error("记录不存在");
+  const deletedAt = nowIso();
+  await repo.update(id, { deleted_at: deletedAt, updated_at: deletedAt } as any);
+  return { id, deleted_at: deletedAt } as any;
+}
+
+/** 恢复软删除：清空 deleted_at。 */
+async function restoreDeleted(ctx: AppContext, repo: CsvRepository<any>, id: string): Promise<void> {
+  const existing = await repo.findById(id);
+  if (!existing) throw new Error("记录不存在或已被永久删除");
+  const restoredAt = nowIso();
+  await repo.update(id, { deleted_at: "", updated_at: restoredAt } as any);
+}
+
+/** 列出回收站中的软删除记录。 */
+async function listDeletedInRepo(repo: CsvRepository<any>, projectId?: string): Promise<any[]> {
+  const filter: any = projectId ? { project_id: projectId } : {};
+  const all = await repo.findMany(filter);
+  return all.filter((it: any) => !!it.deleted_at);
+}
+
+/** 永久删除。 */
+async function permanentDelete(ctx: AppContext, repo: CsvRepository<any>, id: string): Promise<void> {
+  await repo.delete(id);
+}
+
+/** 跨项目复制。 */
+async function copyToProject<T extends { id: string; project_id: string; created_at: string; name?: string; title?: string }>(
+  ctx: AppContext,
+  repo: CsvRepository<T>,
+  sourceId: string,
+  targetProjectId: string
+): Promise<T> {
+  const source = await repo.findById(sourceId);
+  if (!source) throw new Error("源记录不存在");
+  const prefix = "transferred-";
+  const dup = await repo.findMany({ project_id: targetProjectId } as any);
+  const existing = dup.find((d: any) => (d as any).name === (source as any).name);
+  if (existing) return existing as T;
+  const { id: _ignored, created_at: _ca, updated_at: _ua, deleted_at: _da, ...rest } = source as any;
+  const now = nowIso();
+  const cloned: any = {
+    ...rest,
+    id: id("cp"),
+    project_id: targetProjectId,
+    name: (source as any).name ? prefix + (source as any).name : source.name,
+    title: (source as any).title ? prefix + (source as any).title : source.title,
+    created_at: now,
+    updated_at: now,
+  };
+  await repo.insert(cloned);
+  return cloned as T;
+}
+
+// 分镜
+export const softDeleteStoryboard = (ctx: AppContext, id: string) => softDelete(ctx, ctx.storyboards, id);
+export const restoreStoryboard = (ctx: AppContext, id: string) => restoreDeleted(ctx, ctx.storyboards, id);
+export const listDeletedStoryboards = (ctx: AppContext, projectId?: string) => listDeletedInRepo(ctx.storyboards, projectId);
+export const permanentDeleteStoryboard = (ctx: AppContext, id: string) => permanentDelete(ctx, ctx.storyboards, id);
+export const copyStoryboardToProject = (ctx: AppContext, id: string, projectId: string) =>
+  copyToProject(ctx, ctx.storyboards, id, projectId);
+
+// 音频
+export const softDeleteAudio = (ctx: AppContext, id: string) => softDelete(ctx, ctx.audios, id);
+export const restoreAudio = (ctx: AppContext, id: string) => restoreDeleted(ctx, ctx.audios, id);
+export const listDeletedAudios = (ctx: AppContext, projectId?: string) => listDeletedInRepo(ctx.audios, projectId);
+export const permanentDeleteAudio = (ctx: AppContext, id: string) => permanentDelete(ctx, ctx.audios, id);
+export const copyAudioToProject = (ctx: AppContext, id: string, projectId: string) =>
+  copyToProject(ctx, ctx.audios, id, projectId);
+
+// 视频任务
+export const softDeleteVideo = (ctx: AppContext, id: string) => softDelete(ctx, ctx.moduleVideoTasks, id);
+export const restoreVideo = (ctx: AppContext, id: string) => restoreDeleted(ctx, ctx.moduleVideoTasks, id);
+export const listDeletedVideos = (ctx: AppContext, projectId?: string) => listDeletedInRepo(ctx.moduleVideoTasks, projectId);
+export const permanentDeleteVideo = (ctx: AppContext, id: string) => permanentDelete(ctx, ctx.moduleVideoTasks, id);
+export const copyVideoToProject = (ctx: AppContext, id: string, projectId: string) =>
+  copyToProject(ctx, ctx.moduleVideoTasks, id, projectId);
+
+// 剪辑
+export const softDeleteClip = (ctx: AppContext, id: string) => softDelete(ctx, ctx.projectClips, id);
+export const restoreClip = (ctx: AppContext, id: string) => restoreDeleted(ctx, ctx.projectClips, id);
+export const listDeletedClips = (ctx: AppContext, projectId?: string) => listDeletedInRepo(ctx.projectClips, projectId);
+export const permanentDeleteClip = (ctx: AppContext, id: string) => permanentDelete(ctx, ctx.projectClips, id);
+export const copyClipToProject = (ctx: AppContext, id: string, projectId: string) =>
+  copyToProject(ctx, ctx.projectClips, id, projectId);
+
+// ==================== 视频任务：重试 / 重新生成 / 状态轮询（工业化 P0-1 / P1-1） ====================
+
+/** 把外部 AI 任务的状态写回本地任务记录（轮询调用）。 */
+export async function syncVideoTaskStatus(
+  ctx: AppContext,
+  taskId: string,
+  remoteStatus: { status: string; progress?: number; file_url?: string; error?: string }
+): Promise<ModuleVideoTask> {
+  const existing = await ctx.moduleVideoTasks.findById(taskId);
+  if (!existing) throw new Error("视频任务不存在");
+  const patch: Partial<ModuleVideoTask> = {
+    status: remoteStatus.status as ModuleVideoTask["status"],
+    progress: remoteStatus.progress ?? existing.progress,
+    file_url: remoteStatus.file_url ?? existing.file_url,
+    error: remoteStatus.error ?? "",
+    updated_at: nowIso(),
+  };
+  await ctx.moduleVideoTasks.update(taskId, patch);
+  return { ...existing, ...patch } as ModuleVideoTask;
+}
+
+/** 把失败任务重新置为 queued（重试），复用同一 AI task id（如果 Agnes 任务还可查）。 */
+export async function retryVideoTask(ctx: AppContext, taskId: string): Promise<ModuleVideoTask> {
+  const existing = await ctx.moduleVideoTasks.findById(taskId);
+  if (!existing) throw new Error("视频任务不存在");
+  if (existing.status === "completed") throw new Error("已完成的任务不能重试");
+  const patch: Partial<ModuleVideoTask> = {
+    status: "queued",
+    progress: 0,
+    error: "",
+    updated_at: nowIso(),
+  };
+  await ctx.moduleVideoTasks.update(taskId, patch);
+  return { ...existing, ...patch } as ModuleVideoTask;
+}
+
+/** 重新生成：基于当前 prompt/image 重新调用 AI（生成新的 ai_task_id）。 */
+export async function regenerateVideo(ctx: AppContext, taskId: string): Promise<ModuleVideoTask> {
+  const existing = await ctx.moduleVideoTasks.findById(taskId);
+  if (!existing) throw new Error("视频任务不存在");
+  const patch: Partial<ModuleVideoTask> = {
+    status: "queued",
+    progress: 0,
+    file_url: "",
+    error: "",
+    updated_at: nowIso(),
+  };
+  await ctx.moduleVideoTasks.update(taskId, patch);
+  return { ...existing, ...patch } as ModuleVideoTask;
+}
+
+// ==================== 一键：从分镜生成视频（工业化 P0-1） ====================
+
+/**
+ * 工业流水线：分镜 → 视频。
+ * 1. 调用 agnes-client.generateVideo 提交 AI 任务。
+ * 2. 在 module_video_tasks 中创建一条对应记录，回填 storyboard.video_task_id。
+ * 3. 返回新任务 id（前端用于轮询状态）。
+ */
+export async function generateVideoFromStoryboard(
+  ctx: AppContext,
+  storyboardId: string,
+  options: { ratio?: string; duration?: number; num_inference_steps?: number } = {}
+): Promise<{ videoTask: ModuleVideoTask; remoteTaskId: string }> {
+  const storyboard = await ctx.storyboards.findById(storyboardId);
+  if (!storyboard) throw new Error("分镜不存在");
+  if (!storyboard.description) throw new Error("分镜描述为空，无法生成视频");
+  const params: any = {
+    prompt: storyboard.description,
+    image: storyboard.image_url || undefined,
+    ratio: (options.ratio as any) ?? "16:9",
+    duration: (options.duration as any) ?? 5,
+    num_inference_steps: options.num_inference_steps ?? 30,
+    mode: storyboard.image_url ? "ti2vid" : undefined,
+  };
+  const result = await ctx.ai.generateVideo(params);
+  const aiTaskId = ((result as any).taskId || (result as any).id) ?? "";
+  const task = await createModuleVideoTask(ctx, {
+    project_id: storyboard.project_id,
+    storyboard_id: storyboard.id,
+    title: storyboard.title || `分镜 ${storyboard.shot_number} 视频`,
+    prompt: storyboard.description,
+    image_url: storyboard.image_url ?? "",
+    params,
+    ai_task_id: aiTaskId,
+    status: "processing",
+    progress: 0,
+    duration: options.duration ?? 5,
+    resolution: options.ratio ?? "16:9",
+    format: "mp4",
+    episode: storyboard.episode,
+  });
+  await ctx.storyboards.update(storyboard.id, {
+    video_task_id: task.id,
+    status: "production",
+    updated_at: nowIso(),
+  } as any);
+  return { videoTask: task, remoteTaskId: aiTaskId };
+}
+
+// ==================== TTS：AI 配音（工业化 P1-2） ====================
+
+/**
+ * 工业流水线：剧本对白 → AI 配音。
+ * Agnes 暂时不直接支持 TTS，本实现做"占位"处理：
+ * 1. 根据台词、说话人、情绪生成 prompt；
+ * 2. 调用 agnes generateVideo 占位（不推荐），改为本地：仅创建一个占位 audio 记录并标记 file_url 为空，让前端可以感知状态。
+ * 3. 后续可替换为真正的 TTS API（ElevenLabs/字节/阿里 TTS）。
+ */
+export async function generateTTS(
+  ctx: AppContext,
+  input: {
+    project_id: string;
+    text: string;
+    speaker: string;
+    character_id?: string;
+    storyboard_id?: string;
+    emotion?: string;
+    voice?: string;
+  }
+): Promise<Audio> {
+  const result = await ctx.ai.generateTTS({
+    text: input.text,
+    voice: input.voice ?? "default",
+    emotion: input.emotion ?? "neutral",
+  });
+  return createAudio(ctx, {
+    project_id: input.project_id,
+    name: `${input.speaker || "配音"}-${(input.text || "").slice(0, 12)}`,
+    type: "voiceover",
+    description: input.text,
+    duration: 0,
+    file_url: result.file_url ?? "",
+    speaker: input.speaker,
+    character_id: input.character_id,
+    storyboard_id: input.storyboard_id,
+    format: "mp3",
+    size: 0,
+  });
+}
+
+// ==================== 出现次数聚合（工业化 P2-2） ====================
+
+/** 角色出现次数：在分镜侧（dialogue 含角色名）+ 音频侧（speaker/character_id）合并计数。 */
+export async function getCharacterAppearances(ctx: AppContext, characterId: string): Promise<{ storyboards: number; audios: number; total: number }> {
+  const character = await ctx.characters.findById(characterId);
+  if (!character) return { storyboards: 0, audios: 0, total: 0 };
+  const allStoryboards = await ctx.storyboards.findMany();
+  const allAudios = await ctx.audios.findMany();
+  const sb = allStoryboards.filter((s) => (s.dialogue || "").includes(character.name)).length;
+  const au = allAudios.filter((a) => a.character_id === characterId).length;
+  return { storyboards: sb, audios: au, total: sb + au };
+}
+
+export async function getSceneAppearances(ctx: AppContext, sceneId: string): Promise<{ storyboards: number; total: number }> {
+  const all = await ctx.storyboards.findMany({ scene_id: sceneId } as any);
+  return { storyboards: all.length, total: all.length };
+}
+
+export async function getPropAppearances(ctx: AppContext, propId: string): Promise<{ total: number }> {
+  const prop = await ctx.props.findById(propId);
+  if (!prop) return { total: 0 };
+  const all = await ctx.storyboards.findMany();
+  const matched = all.filter((s) => (s.notes || "").includes(prop.name) || (s.description || "").includes(prop.name)).length;
+  return { total: matched };
 }
 
 // ==================== 资产模板/预设库 ====================

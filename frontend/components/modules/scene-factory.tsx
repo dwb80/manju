@@ -11,16 +11,22 @@
  * - 删除场景确认 + 撤销
  * - 多选 + 批量删除 / 批量改类型
  * - AI 生成场景
+ * - 引用来源（UsageBadge）+ 快速插入到分镜
  */
 
-import { Image, Pencil, Trash2, CheckSquare, Copy } from "lucide-react";
+import { useState } from "react";
+import { Image, Pencil, Trash2, CheckSquare, Copy, Wand2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/shared/avatar";
 import { UsageBadge } from "@/components/shared";
-import { FactoryCRUDPage, type FactoryCRUDPageProps } from "@/components/factory";
+import { FactoryCRUDPage, flattenUsageReferences, type FactoryCRUDPageProps, type CardActions } from "@/components/factory";
 import type { AITypeFieldConfig } from "@/components/shared/ai-generate-dialog";
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import type { Scene } from "@/lib/module-types";
+import { useProjectStore } from "@/lib/stores/project-store";
+import { clearApiCache } from "@/lib/api-client";
+import { toast } from "@/components/common/toast";
 import {
   listScenes,
   createScene,
@@ -32,7 +38,9 @@ import {
   batchScenes,
   getSceneUsage,
   copyScenesToProjects,
+  type UsageReferenceItem,
 } from "@/services/module.service";
+import { createStoryboardFromAsset } from "@/services/storyboard.service";
 
 /** 场景类型中文标签映射 */
 const typeLabels: Record<string, string> = {
@@ -89,35 +97,54 @@ const typeColors: Record<string, string> = {
 };
 
 /** FactoryCRUDPage 需要的全部配置。 */
-const config: FactoryCRUDPageProps<Scene> = {
-  title: "场景工厂",
-  description: "设计和生成漫剧场景",
-  entityLabel: "场景",
-  listTitle: "场景列表",
-  emptyTitle: "未找到场景",
-  searchPlaceholder: "搜索场景名称、描述、标签...",
 
-  fetchList: listScenes,
-  createItem: createScene as unknown as (input: Record<string, unknown>) => Promise<Scene>,
-  updateItem: updateScene as unknown as (id: string, input: Record<string, unknown>) => Promise<Scene>,
-  deleteItem: deleteScene,
-  restoreItem: restoreScene,
-  fetchDeleted: listDeletedScenes,
-  permanentDelete: permanentDeleteScenes,
-  batch: batchScenes as unknown as (action: "delete" | "update", ids: string[], patch?: Record<string, unknown>) => Promise<{ deleted?: number; updated?: number }>,
+/** 场景卡片（含 UsageBadge onOpenSource + 插入到分镜） */
+function SceneCard({
+  scene,
+  actions,
+}: {
+  scene: Scene;
+  actions: CardActions;
+}) {
+  const router = useRouter();
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
+  const [inserting, setInserting] = useState<boolean>(false);
 
-  fields: sceneFields,
-  toFormValues: (s) => ({
-    name: s.name,
-    type: s.type,
-    description: s.description,
-    lighting: s.lighting || "",
-    time_of_day: s.time_of_day || "",
-    weather: s.weather || "",
-  }),
-  transformFormValues: (values, projectId) => ({ ...values, project_id: projectId }),
+  const handleInsert = async () => {
+    if (inserting) return;
+    setInserting(true);
+    try {
+      const created = await createStoryboardFromAsset({
+        name: scene.name,
+        description: scene.description,
+        image: scene.image,
+        tags: scene.tags,
+        type: "scene",
+        project_id: selectedProjectId,
+      });
+      clearApiCache();
+      toast.success("已插入分镜", `「${scene.name}」 → 新分镜「${created.title || created.description || "未命名"}」`);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("factory:reload"));
+      }
+    } catch (err) {
+      toast.error("插入失败", (err as Error)?.message ?? "请稍后重试");
+    } finally {
+      setInserting(false);
+    }
+  };
 
-  renderCard: (scene, actions) => (
+  const handleOpenRef = (ref: UsageReferenceItem) => {
+    if (ref.type === "storyboard") {
+      router.push(`/storyboards?storyboardId=${encodeURIComponent(ref.id)}`);
+    } else if (ref.type === "script" || ref.type === "script_center") {
+      router.push(`/scripts/${encodeURIComponent(ref.id)}`);
+    } else {
+      router.push(`/storyboards?focus=usage:${ref.id}`);
+    }
+  };
+
+  return (
     <div
       className={`group relative flex flex-col rounded-lg border bg-[#252525] overflow-hidden transition-colors ${
         actions.selected
@@ -194,6 +221,16 @@ const config: FactoryCRUDPageProps<Scene> = {
             <Button variant="ghost" size="sm" onClick={actions.onEdit}>
               <Pencil className="h-4 w-4" />
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleInsert}
+              disabled={inserting}
+              title="基于此场景快速新建一个分镜"
+              className="text-emerald-300"
+            >
+              {inserting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+            </Button>
             {actions.onCopyToProjects && (
               <Button
                 variant="ghost"
@@ -216,11 +253,43 @@ const config: FactoryCRUDPageProps<Scene> = {
             entityId={scene.id}
             entityName={scene.name}
             initialCount={scene.usage_count ?? 0}
+            onOpenSource={handleOpenRef}
           />
         </div>
       </div>
     </div>
-  ),
+  );
+}
+
+const config: FactoryCRUDPageProps<Scene> = {
+  title: "场景工厂",
+  description: "设计和生成漫剧场景",
+  entityLabel: "场景",
+  listTitle: "场景列表",
+  emptyTitle: "未找到场景",
+  searchPlaceholder: "搜索场景名称、描述、标签...",
+
+  fetchList: listScenes,
+  createItem: createScene as unknown as (input: Record<string, unknown>) => Promise<Scene>,
+  updateItem: updateScene as unknown as (id: string, input: Record<string, unknown>) => Promise<Scene>,
+  deleteItem: deleteScene,
+  restoreItem: restoreScene,
+  fetchDeleted: listDeletedScenes,
+  permanentDelete: permanentDeleteScenes,
+  batch: batchScenes as unknown as (action: "delete" | "update", ids: string[], patch?: Record<string, unknown>) => Promise<{ deleted?: number; updated?: number }>,
+
+  fields: sceneFields,
+  toFormValues: (s) => ({
+    name: s.name,
+    type: s.type,
+    description: s.description,
+    lighting: s.lighting || "",
+    time_of_day: s.time_of_day || "",
+    weather: s.weather || "",
+  }),
+  transformFormValues: (values, projectId) => ({ ...values, project_id: projectId }),
+
+  renderCard: (scene, actions) => <SceneCard scene={scene} actions={actions} />,
   gridClassName: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
 
   searchFields: (s, q) => {
@@ -291,6 +360,22 @@ const config: FactoryCRUDPageProps<Scene> = {
         tags,
       } as any);
     },
+  },
+
+  // P0-4：UsageBadge 引用次数与来源
+  fetchReferences: async (entity) => {
+    const usage = await getSceneUsage(entity.id);
+    return flattenUsageReferences(usage);
+  },
+  // P0-4：插入到分镜
+  insertToStoryboard: async (entity) => {
+    await createStoryboardFromAsset({
+      name: entity.name,
+      description: entity.description,
+      image: (entity as { image?: string }).image,
+      tags: (entity as { tags?: string[] }).tags,
+      type: "scene",
+    });
   },
 };
 

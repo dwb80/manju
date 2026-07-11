@@ -1,5 +1,7 @@
 /** 剧本中心服务 */
 
+import { analyzeScriptContent } from "@/components/modules/scripts-center/utils";
+
 const API_BASE = '/api'
 
 // 类型定义
@@ -351,7 +353,88 @@ export const scriptCenterService = {
     return payload?.data ?? payload
   },
 
-  // ========== 版本历史 ==========
+  // ========== AI 分析 ==========
+
+  /**
+   * AI 分析剧本内容（与 ScriptImportDialog 走同一套逻辑）
+   *
+   * 1. 优先调用后端大模型（POST /api/ai/script-analyze），50s 超时
+   * 2. AI 失败/超时时回退到本地正则分析（analyzeScriptContent）
+   * 3. 返回的字段对齐 store 入库格式：
+   *    - characters[].name / .description
+   *    - scenes[].location_name / .time_of_day / .description
+   *    - props[].name / .category / .description
+   *    - episodes[].episode_no / .title / .synopsis
+   */
+  analyzeScript: async (content: string): Promise<{
+    source: 'ai' | 'local'
+    characters: Array<{ name: string; description: string; traits: string[] }>
+    scenes: Array<{ location_name: string; time_of_day: string; description: string }>
+    props: Array<{ name: string; category: string; description: string }>
+    episodes: Array<{ episode_no: number; title: string; synopsis: string }>
+    warnings?: string[]
+  }> => {
+    // 1) 优先调用大模型
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 50_000);
+      const resp = await fetch(`${API_BASE}/ai/script-analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, format: 'txt' }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (resp.ok) {
+        const payload = await resp.json();
+        const data = payload?.data ?? payload;
+        return {
+          source: 'ai',
+          characters: data.characters ?? [],
+          scenes: data.scenes ?? data.sceneAssets ?? [],
+          props: data.props ?? data.propAssets ?? [],
+          episodes: data.episodes ?? [],
+          warnings: data.warnings ?? [],
+        };
+      }
+      console.warn(`AI 分析失败 HTTP ${resp.status}, 回退到本地正则`);
+    } catch (err) {
+      console.warn('AI 分析异常, 回退到本地正则:', err);
+    }
+
+    // 2) 兜底：本地正则分析
+    const localAssets = analyzeScriptContent(content);
+    const localCharacters = localAssets
+      .filter((a) => a.type === 'character')
+      .map((a) => ({
+        name: a.name,
+        description: a.description ?? '',
+        traits: a.traits ?? [],
+      }));
+    const localScenes = localAssets
+      .filter((a) => a.type === 'scene')
+      .map((a) => ({
+        location_name: a.name,
+        time_of_day: (a as any).timeOfDay ?? 'unknown',
+        description: a.description ?? '',
+      }));
+    const localProps = localAssets
+      .filter((a) => a.type === 'prop')
+      .map((a) => ({
+        name: a.name,
+        category: (a as any).category ?? 'other',
+        description: a.description ?? '',
+      }));
+
+    return {
+      source: 'local',
+      characters: localCharacters,
+      scenes: localScenes,
+      props: localProps,
+      episodes: [], // 本地正则无法识别剧集边界
+      warnings: ['已回退到本地正则分析，剧集未自动切分'],
+    };
+  },
 
   /** 获取版本历史 */
   getVersionHistory: async (documentId: string): Promise<any[]> => {

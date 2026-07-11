@@ -102,16 +102,29 @@ export interface ProjectClip {
   episode: number;
   scene: string;
   shot: string;
+  /** 名称（用于卡片显示 / 搜索 / 5秒撤销）。 */
+  name: string;
   title: string;
+  /** 描述（剪辑师备注 / 备注）。 */
+  description: string;
   source_video_url: string;
+  /** 缩略图（用于内嵌播放器前的占位）。 */
+  thumbnail_url: string;
   duration: number;
   in_point: string;
   out_point: string;
   order_index: number;
   status: ProjectClipStatus;
+  tags: string[];
   notes: string;
+  /** 资产被引用次数（缓存字段）。 */
+  usage_count?: number;
+  /** 当前版本号，每次 update 自增，初值为 1。 */
+  version?: number;
   created_at: string;
   updated_at: string;
+  /** 软删除时间戳。 */
+  deleted_at?: string;
 }
 
 /** 发布计划状态 */

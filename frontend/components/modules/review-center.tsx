@@ -90,7 +90,7 @@ export function ReviewCenterPage() {
     if (!selectedProjectId) { setReviews([]); return; }
     setIsLoading(true);
     listReviews(selectedProjectId)
-      .then(data => setReviews(data))
+      .then(data => setReviews(data as unknown as Review[]))
       .catch(err => console.error("Failed to load reviews:", err))
       .finally(() => setIsLoading(false));
   }, [selectedProjectId]);
@@ -139,16 +139,16 @@ export function ReviewCenterPage() {
     try {
       const payload = { ...values, project_id: selectedProjectId } as any;
       if (editingReview) {
-        await updateReview(editingReview.id, payload);
+        await updateReview(selectedProjectId, editingReview.id, payload);
       } else {
-        await createReview(payload);
+        await createReview(selectedProjectId, payload);
       }
       setIsFormOpen(false);
       setEditingReview(null);
       // Refresh the list
       clearApiCache();
       const data = await listReviews(selectedProjectId);
-      setReviews(data);
+      setReviews(data as unknown as Review[]);
     } finally {
       setIsSaving(false);
     }
@@ -157,11 +157,11 @@ export function ReviewCenterPage() {
   // 确认删除
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
-    await deleteReviewApi(deleteConfirm.id);
+    await deleteReviewApi(selectedProjectId, deleteConfirm.id);
     setDeleteConfirm(null);
     clearApiCache();
     const data = await listReviews(selectedProjectId);
-    setReviews(data);
+    setReviews(data as unknown as Review[]);
   };
 
   return (

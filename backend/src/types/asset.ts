@@ -14,6 +14,19 @@ export interface Asset {
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  // 兼容 ProjectAsset 字段（CSV 存储共用同一张表 assets.csv）。
+  kind?: ProjectAssetKind;
+  prompt?: string;
+  image_url?: string;
+  video_url?: string;
+  folder?: string;
+  is_favorite?: boolean;
+  resolution?: string;
+  duration?: string;
+  role_images?: string[];
+  role_traits?: string[];
+  style_keywords?: string[];
+  notes?: string;
 }
 
 export type ProjectAssetKind = "image" | "video" | "character" | "scene" | "style" | "prompt" | "project" | "storyboard";

@@ -106,3 +106,18 @@ export async function copyScenesToProjects(
 export async function listSceneTemplates(): Promise<Scene[]> {
   return api<Scene[]>("/api/templates/scenes");
 }
+
+// ==================== JOIN 缓存辅助 ====================
+
+/**
+ * 按 id 列表批量获取场景（用于分镜卡片等需要按 scene_id 还原场景名 / 缩略图）。
+ *
+ * 实现策略：复用 listScenes（项目级拉取 + 客户端过滤），避免新增后端路由。
+ * 对单项目场景数在几十以内的量级完全够用。
+ */
+export async function getScenesByIds(projectId: string, ids: string[]): Promise<Scene[]> {
+  if (!projectId || ids.length === 0) return [];
+  const all = await listScenes(projectId);
+  const set = new Set(ids.filter(Boolean));
+  return all.filter((s) => set.has(s.id));
+}

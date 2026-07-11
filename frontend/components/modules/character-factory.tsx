@@ -4,23 +4,30 @@
  * 角色工厂模块
  *
  * 通过通用 FactoryCRUDPage 渲染：保留角色卡片视觉差异 + 字段 / AI 配置。
+ * 编辑角色时打开图片生成页面。
  *
  * 功能：
  * - 角色列表展示（根据项目选择状态过滤）
- * - 新建/编辑角色对话框（含必填验证）
+ * - 编辑角色打开图片生成页面（三列布局）
  * - 删除角色确认 + 撤销
  * - 多选 + 批量删除 / 批量改类型
  * - AI 生成角色
+ * - 引用来源（UsageBadge）+ 快速插入到分镜
  */
 
-import { Users, Pencil, Trash2, ImageIcon, CheckSquare, Copy } from "lucide-react";
+import { useState } from "react";
+import { Users, Pencil, Trash2, ImageIcon, CheckSquare, Copy, Wand2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/shared/avatar";
 import { UsageBadge } from "@/components/shared";
-import { FactoryCRUDPage, type FactoryCRUDPageProps } from "@/components/factory";
+import { FactoryCRUDPage, flattenUsageReferences, type FactoryCRUDPageProps, type CardActions } from "@/components/factory";
 import type { AITypeFieldConfig } from "@/components/shared/ai-generate-dialog";
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import type { Character } from "@/lib/module-types";
+import { useProjectStore } from "@/lib/stores/project-store";
+import { clearApiCache } from "@/lib/api-client";
+import { toast } from "@/components/common/toast";
 import {
   listCharacters,
   createCharacter,
@@ -32,7 +39,10 @@ import {
   batchCharacters,
   getCharacterUsage,
   copyCharactersToProjects,
+  type UsageReferenceItem,
 } from "@/services/module.service";
+import { createStoryboardFromAsset } from "@/services/storyboard.service";
+import { CharacterImageGenerator } from "./character-image-generator";
 
 /** 角色类型中文标签映射 */
 const roleLabels: Record<string, string> = {
@@ -100,49 +110,70 @@ const roleColors: Record<string, string> = {
   minor: "bg-gray-500/20 text-gray-400",
 };
 
-/** FactoryCRUDPage 需要的全部配置。 */
-const config: FactoryCRUDPageProps<Character> = {
-  title: "角色工厂",
-  description: "设计和生成漫剧角色",
-  entityLabel: "角色",
-  listTitle: "角色列表",
-  emptyTitle: "未找到角色",
-  searchPlaceholder: "搜索角色名称、描述、标签...",
+/** 角色卡片（含 UsageBadge onOpenSource + 插入到分镜） */
+function CharacterCard({
+  character,
+  actions,
+}: {
+  character: Character;
+  actions: CardActions;
+}) {
+  const router = useRouter();
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
+  const [inserting, setInserting] = useState<boolean>(false);
+  const [showImageGenerator, setShowImageGenerator] = useState(false);
 
-  fetchList: listCharacters,
-  createItem: createCharacter as unknown as (input: Record<string, unknown>) => Promise<Character>,
-  updateItem: updateCharacter as unknown as (id: string, input: Record<string, unknown>) => Promise<Character>,
-  deleteItem: deleteCharacter,
-  restoreItem: restoreCharacter,
-  fetchDeleted: listDeletedCharacters,
-  permanentDelete: permanentDeleteCharacters,
-  batch: batchCharacters as unknown as (action: "delete" | "update", ids: string[], patch?: Record<string, unknown>) => Promise<{ deleted?: number; updated?: number }>,
-
-  fields: characterFields,
-  toFormValues: (c) => ({
-    name: c.name,
-    role: c.role,
-    gender: c.gender || "",
-    age: c.age ?? 0,
-    description: c.description || "",
-    traits: Array.isArray(c.traits) ? c.traits.join(", ") : "",
-  }),
-  transformFormValues: (values, projectId) => {
-    const payload: Record<string, unknown> = { ...values, project_id: projectId };
-    if (typeof payload.traits === "string") {
-      payload.traits = (payload.traits as string).split(",").map((t) => t.trim()).filter(Boolean);
+  const handleCloseImageGenerator = () => {
+    setShowImageGenerator(false);
+    clearApiCache();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("factory:reload"));
     }
-    return payload;
-  },
+  };
 
-  renderCard: (character, actions) => (
-    <div
-      className={`group relative rounded-lg border bg-[#202020] p-4 transition-colors ${
-        actions.selected
-          ? "border-emerald-500 ring-1 ring-emerald-500/40"
-          : "border-white/10 hover:border-emerald-500/50"
-      }`}
-    >
+  const handleInsert = async () => {
+    if (inserting) return;
+    setInserting(true);
+    try {
+      const created = await createStoryboardFromAsset({
+        name: character.name,
+        description: character.description,
+        image: character.image,
+        tags: character.tags,
+        type: "character",
+        project_id: selectedProjectId,
+      });
+      clearApiCache();
+      toast.success("已插入分镜", `「${character.name}」 → 新分镜「${created.title || created.description || "未命名"}」`);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("factory:reload"));
+      }
+    } catch (err) {
+      toast.error("插入失败", (err as Error)?.message ?? "请稍后重试");
+    } finally {
+      setInserting(false);
+    }
+  };
+
+  const handleOpenRef = (ref: UsageReferenceItem) => {
+    if (ref.type === "storyboard") {
+      router.push(`/storyboards?storyboardId=${encodeURIComponent(ref.id)}`);
+    } else if (ref.type === "script" || ref.type === "script_center") {
+      router.push(`/scripts/${encodeURIComponent(ref.id)}`);
+    } else {
+      router.push(`/scripts?focus=usage:${ref.id}`);
+    }
+  };
+
+  return (
+    <>
+      <div
+        className={`group relative rounded-lg border bg-[#202020] p-4 transition-colors ${
+          actions.selected
+            ? "border-emerald-500 ring-1 ring-emerald-500/40"
+            : "border-white/10 hover:border-emerald-500/50"
+        }`}
+      >
       <button
         type="button"
         onClick={(e) => {
@@ -200,13 +231,24 @@ const config: FactoryCRUDPageProps<Character> = {
           entityId={character.id}
           entityName={character.name}
           initialCount={character.usage_count ?? 0}
+          onOpenSource={handleOpenRef}
         />
       </div>
 
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="sm" onClick={actions.onEdit} className="flex-1">
+        <Button variant="ghost" size="sm" onClick={() => setShowImageGenerator(true)} className="flex-1">
           <Pencil className="mr-1 h-3 w-3" />
           编辑
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleInsert}
+          disabled={inserting}
+          title="基于此角色快速新建一个分镜"
+          className="text-emerald-300"
+        >
+          {inserting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
         </Button>
         {actions.onCopyToProjects && (
           <Button
@@ -223,7 +265,53 @@ const config: FactoryCRUDPageProps<Character> = {
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
-    </div>
+      </div>
+      {showImageGenerator && (
+        <CharacterImageGenerator
+          character={character}
+          onClose={handleCloseImageGenerator}
+        />
+      )}
+    </>
+  );
+}
+
+const config: FactoryCRUDPageProps<Character> = {
+  title: "角色工厂",
+  description: "设计和生成漫剧角色",
+  entityLabel: "角色",
+  listTitle: "角色列表",
+  emptyTitle: "未找到角色",
+  searchPlaceholder: "搜索角色名称、描述、标签...",
+
+  fetchList: listCharacters,
+  createItem: createCharacter as unknown as (input: Record<string, unknown>) => Promise<Character>,
+  updateItem: updateCharacter as unknown as (id: string, input: Record<string, unknown>) => Promise<Character>,
+  deleteItem: deleteCharacter,
+  restoreItem: restoreCharacter,
+  fetchDeleted: listDeletedCharacters,
+  permanentDelete: permanentDeleteCharacters,
+  batch: batchCharacters as unknown as (action: "delete" | "update", ids: string[], patch?: Record<string, unknown>) => Promise<{ deleted?: number; updated?: number }>,
+
+  fields: characterFields,
+  toFormValues: (c) => ({
+    name: c.name,
+    role: c.role,
+    gender: c.gender || "",
+    age: c.age ?? 0,
+    description: c.description || "",
+    traits: Array.isArray(c.traits) ? c.traits.join(", ") : "",
+  }),
+  transformFormValues: (values, projectId) => {
+    const payload: Record<string, unknown> = { ...values, project_id: projectId };
+    if (typeof payload.traits === "string") {
+      payload.traits = (payload.traits as string).split(",").map((t) => t.trim()).filter(Boolean);
+    }
+    return payload;
+  },
+
+  renderCard: (character, actions) => (
+    <CharacterCard character={character} actions={actions} />
   ),
   gridClassName: "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
 
@@ -299,14 +387,54 @@ const config: FactoryCRUDPageProps<Character> = {
       } as any);
     },
   },
+
+  // P0-4：UsageBadge 引用次数与来源（拉取后通过 UsageDialog 展示）
+  fetchReferences: async (entity) => {
+    const usage = await getCharacterUsage(entity.id);
+    return flattenUsageReferences(usage);
+  },
+  // P0-4：插入到分镜（卡片按钮已自带，FactoryCRUDPage 也会尝试调用一份）
+  insertToStoryboard: async (entity) => {
+    await createStoryboardFromAsset({
+      name: entity.name,
+      description: entity.description,
+      image: (entity as { image?: string }).image,
+      tags: (entity as { tags?: string[] }).tags,
+      type: "character",
+    });
+  },
 };
 
 export function CharacterFactoryPage() {
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
+
+  const handleCloseImageGenerator = () => {
+    setEditingCharacter(null);
+    clearApiCache();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("factory:reload"));
+    }
+  };
+
   return (
-    <FactoryCRUDPage<Character>
-      {...config}
-      // 任务12：统一版本管理 - 启用版本历史入口
-      fetchVersions={{ entityType: "character" }}
-    />
+    <>
+      <FactoryCRUDPage<Character>
+        {...config}
+        fetchVersions={{ entityType: "character" }}
+        extraToolbarContent={
+          editingCharacter && (
+            <div className="text-xs text-emerald-400">
+              正在编辑角色：{editingCharacter.name}
+            </div>
+          )
+        }
+      />
+      {editingCharacter && (
+        <CharacterImageGenerator
+          character={editingCharacter}
+          onClose={handleCloseImageGenerator}
+        />
+      )}
+    </>
   );
 }

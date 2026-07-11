@@ -208,6 +208,7 @@ export type StoryboardStatus =
 export interface Storyboard extends BaseEntity {
   scene_id: string;
   shot_number: number;
+  title?: string;
   description: string;
   duration: number; // 秒
   camera_angle?: string;
@@ -217,6 +218,11 @@ export interface Storyboard extends BaseEntity {
   status: StoryboardStatus;
   project_id?: string;
   order: number;
+  episode?: number;
+  image_url?: string;
+  video_task_id?: string;
+  video_url?: string;
+  tags?: string[];
 }
 
 // ==================== 视频生产线类型 ====================
@@ -238,8 +244,15 @@ export interface VideoTask extends BaseEntity {
   fps?: number;
   format?: string;
   file_url?: string;
+  image_url?: string;
+  /** 所属集数。 */
+  episode?: number;
+  storyboard_id?: string;
+  prompt?: string;
   project_id?: string;
   conversation_id?: string;
+  tags?: string[];
+  error?: string;
 }
 
 // ==================== 音频中心类型 ====================
@@ -257,10 +270,15 @@ export interface AudioItem extends BaseEntity {
   duration: number; // 秒
   file_url: string;
   speaker?: string;
+  description?: string;
+  /** 所属集数。 */
+  episode?: number;
   project_id?: string;
   tags: string[];
   format?: string;
   size?: number; // 字节
+  character_id?: string;
+  storyboard_id?: string;
 }
 
 // ==================== 审核中心类型 ====================

@@ -97,3 +97,10 @@ export const PROJECT_CLIP_STATUS_COLORS: Record<string, string> = {
   review: "bg-yellow-500/20 text-yellow-400",
   done: "bg-emerald-500/20 text-emerald-400",
 };
+
+export const PROJECT_CLIP_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "todo", label: "待剪辑" },
+  { value: "editing", label: "剪辑中" },
+  { value: "review", label: "审核中" },
+  { value: "done", label: "已完成" },
+];

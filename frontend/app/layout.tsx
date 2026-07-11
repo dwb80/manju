@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AppSidebar } from "@/components/layout/app-sidebar";
+import { LayoutShell } from "@/components/layout/layout-shell";
 
 export const metadata: Metadata = {
   title: "AI 漫剧工业化生产平台",
@@ -8,17 +8,14 @@ export const metadata: Metadata = {
 };
 
 /**
- * 根布局：左侧 AppSidebar + 右侧页面内容。
- * 驾驶舱（/）、AI 生产中心、管理中心下的所有页面都共用这套布局。
+ * 根布局：唯一包含 <html>/<body> 的布局。
+ * 通过 LayoutShell 客户端组件根据路径决定是否显示侧边栏。
  */
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN" className="dark">
       <body>
-        <div className="flex h-screen w-screen overflow-hidden bg-[#181818]">
-          <AppSidebar />
-          <main className="flex-1 min-w-0 min-h-0 overflow-auto">{children}</main>
-        </div>
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );

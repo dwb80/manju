@@ -175,6 +175,8 @@ export async function getAITasksMonitor(ctx: AppContext): Promise<AITaskMonitor[
       status: "running",
       progress: img.status === "processing" ? Math.round(Math.random() * 80 + 10) : 0,
       remainingTime: Math.round(Math.random() * 20 + 5) + "秒",
+      created_at: img.created_at,
+      project_id: img.conversation_id ?? "",
     });
   }
 
@@ -188,6 +190,8 @@ export async function getAITasksMonitor(ctx: AppContext): Promise<AITaskMonitor[
       status: "running",
       progress: vid.progress || Math.round(Math.random() * 60 + 10),
       remainingTime: Math.round(Math.random() * 120 + 30) + "秒",
+      created_at: vid.created_at,
+      project_id: vid.conversation_id ?? "",
     });
   }
 
@@ -201,6 +205,8 @@ export async function getAITasksMonitor(ctx: AppContext): Promise<AITaskMonitor[
       status: "waiting",
       progress: 0,
       remainingTime: "等待",
+      created_at: new Date().toISOString(),
+      project_id: "",
     });
   }
 

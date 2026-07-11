@@ -14,3 +14,9 @@ frontend/test-results/
 
 .playwright-browsers
 
+backend/tsc-errors.txt
+test-output.log
+test-analyze.mjs
+backend/build.log
+backend/logs.stderr.log
+backend/logs.stdout.log

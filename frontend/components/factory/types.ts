@@ -61,6 +61,12 @@ export interface CardActions {
   onViewHistory?: () => void;
   /** 打开"复制到其他项目"弹窗（仅当 copyToProjects 配置时可用）。 */
   onCopyToProjects?: () => void;
+  /** 任务：UsageBadge - 引用次数与来源列表。 */
+  usage?: { count: number; references: { id: string; title: string }[] };
+  /** 任务：点击 UsageBadge 后弹出引用列表 / 跳转。 */
+  onOpenSource?: () => void;
+  /** 任务：「插入到分镜」按钮回调（仅当 insertToStoryboard 配置时可用）。 */
+  onInsertToStoryboard?: () => void;
   selected: boolean;
 }
 
@@ -165,6 +171,24 @@ export interface FactoryCRUDPageProps<TEntity extends FactoryEntity> {
   /** 过滤下拉 placeholder。 */
   filterPlaceholder?: string;
 
+  // ===== 二级筛选（可选，用于分镜/视频/音频的 episode 集数筛选） =====
+  /**
+   * 二级筛选配置：与 filterField/filterValue 并列生效，两者都通过才显示。
+   * value 为空字符串表示"全部集数"。
+   */
+  secondaryFilter?: {
+    /** 筛选下拉选项（含 "" 表示"全部"）。 */
+    options: FilterOption[];
+    /** 匹配函数（item, value），value 为空时通常直接返回 true。 */
+    match: (item: TEntity, value: string) => boolean;
+    /** 当前值（受控）。 */
+    value?: string;
+    /** 值变更。 */
+    onChange?: (value: string) => void;
+    /** 占位文字。 */
+    placeholder?: string;
+  };
+
   // ===== 统计卡 =====
   stats: (items: TEntity[]) => StatCardConfig[];
 
@@ -193,6 +217,22 @@ export interface FactoryCRUDPageProps<TEntity extends FactoryEntity> {
    */
   copyToProjects?: (sourceId: string, targetProjectIds: string[]) => Promise<{ copied: number; skipped: number }>;
 
+  // ===== 引用统计 / 插入到分镜（可选） =====
+  /**
+   * 获取资产的引用次数与来源列表。
+   * 用于卡片右下角展示 `referenced N times` 徽章。
+   */
+  fetchReferences?: (entity: FactoryEntity) => Promise<{
+    count: number;
+    references: { id: string; title: string }[];
+    episodes: number[];
+  }>;
+  /**
+   * 配置后，卡片会显示「插入到分镜」按钮，调用此函数快速创建一个分镜。
+   * 父组件需要根据实体类型（character / scene / prop）从 service 中选择目标分镜创建函数。
+   */
+  insertToStoryboard?: (entity: FactoryEntity) => Promise<void>;
+
   // ===== 分页（可选，场景/道具需要） =====
   pageSize?: number;
   /** 分页场景下"全选所有页"按钮的 label。 */
@@ -203,6 +243,11 @@ export interface FactoryCRUDPageProps<TEntity extends FactoryEntity> {
   loadingView?: ReactNode;
   /** 顶部"全选"区下方插入额外操作（可选）。 */
   extraToolbarContent?: ReactNode;
+  /**
+   * 工具栏右侧注入自定义按钮（位于「新建」按钮左侧）。
+   * 用于子类添加专属于该模块的快捷入口，例如剪辑中心的「从分镜同步」。
+   */
+  toolbarExtra?: ReactNode;
 
   // ===== 模板/预设（任务15：三厂共性 - 资产模板） =====
   /**

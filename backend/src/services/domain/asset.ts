@@ -35,12 +35,12 @@ export async function listProjectAssets(ctx: AppContext, projectId: string, filt
   const filter: Partial<ProjectAsset> = { project_id: projectId };
   if (filters.kind && filters.kind !== "all") filter.kind = normalizeProjectAssetKind(filters.kind);
   let assets = await ctx.projectAssets.findMany(filter, { sort: "asc" });
-  if (filters.favorite === "true") assets = assets.filter((asset) => asset.is_favorite);
-  if (filters.tag) assets = assets.filter((asset) => (asset.tags ?? []).includes(filters.tag ?? ""));
+  if (filters.favorite === "true") assets = assets.filter((asset: any) => asset.is_favorite);
+  if (filters.tag) assets = assets.filter((asset: any) => (asset.tags ?? []).includes(filters.tag ?? ""));
   if (filters.q) {
     const keyword = filters.q.trim().toLowerCase();
     if (keyword) {
-      assets = assets.filter((asset) => [
+      assets = assets.filter((asset: any) => [
         asset.name,
         asset.prompt,
         asset.notes,

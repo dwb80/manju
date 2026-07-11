@@ -28,3 +28,21 @@ body {
 button, input, textarea, select {
   letter-spacing: 0;
 }
+
+/* 剧本编辑：剧集/场景锚定闪烁高亮 */
+@keyframes episodeHighlightFlash {
+  0%, 100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  20%, 60% {
+    background-color: rgba(16, 185, 129, 0.18);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25);
+  }
+}
+
+.episode-highlight-flash {
+  animation: episodeHighlightFlash 1.5s ease-in-out;
+  border-radius: 6px;
+  transition: background-color 0.3s;
+}

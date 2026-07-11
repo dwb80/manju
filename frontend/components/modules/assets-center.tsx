@@ -75,7 +75,7 @@ export function AssetsCenterPage() {
     if (!selectedProjectId) { setAssets([]); return; }
     setIsLoading(true);
     listAssets(selectedProjectId)
-      .then(data => setAssets(data))
+      .then(data => setAssets(data as unknown as Asset[]))
       .catch(err => console.error("Failed to load assets:", err))
       .finally(() => setIsLoading(false));
   }, [selectedProjectId]);
@@ -122,16 +122,16 @@ export function AssetsCenterPage() {
     try {
       const payload = { ...values, project_id: selectedProjectId } as any;
       if (editingAsset) {
-        await updateAsset(editingAsset.id, payload);
+        await updateAsset(selectedProjectId, editingAsset.id, payload);
       } else {
-        await createAsset(payload);
+        await createAsset(selectedProjectId, payload);
       }
       setIsFormOpen(false);
       setEditingAsset(null);
       // Refresh the list
       clearApiCache();
       const data = await listAssets(selectedProjectId);
-      setAssets(data);
+      setAssets(data as unknown as Asset[]);
     } finally {
       setIsSaving(false);
     }
@@ -140,11 +140,11 @@ export function AssetsCenterPage() {
   // 确认删除
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
-    await deleteAssetApi(deleteConfirm.id);
+    await deleteAssetApi(selectedProjectId, deleteConfirm.id);
     setDeleteConfirm(null);
     clearApiCache();
     const data = await listAssets(selectedProjectId);
-    setAssets(data);
+    setAssets(data as unknown as Asset[]);
   };
 
   return (

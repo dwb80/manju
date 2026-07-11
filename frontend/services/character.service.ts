@@ -17,6 +17,8 @@ export interface UsageReferenceItem {
   title: string;
   project_id?: string;
   context?: string;
+  /** 所属集数（已知时填入）。 */
+  episode?: number;
 }
 
 export interface AssetUsage {

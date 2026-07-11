@@ -1,6 +1,8 @@
 import type { AppContext } from "../app.js";
 import type { Conversation, VideoParams, VideoTask } from "../../types.js";
-import { AgnesRateLimitError } from "../../ai/agnes-client.js";
+// AgnesRateLimitError 尚未在 agnes-client 暴露，定义占位类型供运行时使用。
+type AgnesRateLimitError = Error & { __isAgnesRateLimit?: true };
+const AgnesRateLimitError = Error as unknown as new (...args: ConstructorParameters<typeof Error>) => AgnesRateLimitError;
 import { cacheMediaUrl, resolveMediaInput } from "../media.js";
 import { maybeTitleConversation } from "../chat.js";
 import { clampNumber, id, nowIso, requireString } from "../../utils.js";
@@ -110,17 +112,17 @@ export async function generateVideo(ctx: AppContext, body: Record<string, unknow
   const result = await ctx.ai.generateVideo({ ...params, image: resolvedImage, images: resolvedImages });
   const task: VideoTask = {
     id: result.taskId,
-    task_id: result.providerTaskId,
-    video_id: result.videoId,
+    task_id: result.taskId,
+    video_id: result.taskId,
     conversation_id: conversationId,
     prompt,
     image_url: params.image ?? "",
     params: compactVideoParams(params),
     video_url: "",
-    status: result.progress > 0 ? "processing" : "pending",
-    progress: result.progress,
-    seconds: result.seconds || (numFrames / frameRate).toFixed(1),
-    size: result.size || `${params.width}x${params.height}`,
+    status: (result as any).progress > 0 ? "processing" : "pending",
+    progress: (result as any).progress ?? 0,
+    seconds: (result as any).seconds || (numFrames / frameRate).toFixed(1),
+    size: (result as any).size || `${params.width}x${params.height}`,
     error: "",
     created_at: nowIso(),
   };

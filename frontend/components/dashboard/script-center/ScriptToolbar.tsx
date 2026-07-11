@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 
 interface ScriptToolbarProps {
   editor: Editor | null
+  onAnalyze?: () => void
 }
 
 interface ToolbarButtonProps {
@@ -30,7 +31,7 @@ function ToolbarButton({ onClick, disabled, active, label, tooltip }: ToolbarBut
   )
 }
 
-export function ScriptToolbar({ editor }: ScriptToolbarProps) {
+export function ScriptToolbar({ editor, onAnalyze }: ScriptToolbarProps) {
   // 编辑器为 null 或被销毁时返回 null，避免访问 editor.can() 崩溃
   if (!editor || editor.isDestroyed) {
     return null
@@ -219,6 +220,13 @@ export function ScriptToolbar({ editor }: ScriptToolbarProps) {
           label="AI"
           tooltip="AI辅助"
         />
+        {onAnalyze && (
+          <ToolbarButton
+            onClick={onAnalyze}
+            label="分析"
+            tooltip="AI分析剧本（识别角色/场景/道具）"
+          />
+        )}
       </div>
 
       {/* 撤销/重做 */}

@@ -1,52 +1,52 @@
 'use client'
 
 import { useState } from 'react'
-import { User, Plus, Search, Edit2, Trash2, ExternalLink } from 'lucide-react'
+import { Package, Plus, Search, Edit2, Trash2, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-interface CharacterAsset {
+interface PropAsset {
   id: string
   name: string
   assetId?: string
   description?: string
-  color: string
+  category?: string
+  color?: string
   thumbnail?: string
 }
 
-interface CharacterPanelProps {
-  characters: CharacterAsset[]
-  onAddCharacter: () => void
-  onSelectCharacter: (character: CharacterAsset) => void
-  onEditCharacter?: (character: CharacterAsset) => void
-  onDeleteCharacter: (id: string) => void
+interface PropPanelProps {
+  props: PropAsset[]
+  onAddProp: () => void
+  onSelectProp: (prop: PropAsset) => void
+  onEditProp?: (prop: PropAsset) => void
+  onDeleteProp: (id: string) => void
 }
 
-export function CharacterPanel({
-  characters,
-  onAddCharacter,
-  onSelectCharacter,
-  onEditCharacter,
-  onDeleteCharacter,
-}: CharacterPanelProps) {
+export function PropPanel({
+  props: propAssets,
+  onAddProp,
+  onSelectProp,
+  onEditProp,
+  onDeleteProp,
+}: PropPanelProps) {
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredCharacters = characters.filter((char) =>
-    char.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProps = propAssets.filter((prop) =>
+    prop.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   return (
-    <div className="character-panel bg-[#1a1a1a] border-l border-white/10 h-full overflow-y-auto">
-      {/* 标题和搜索 */}
+    <div className="prop-panel bg-[#1a1a1a] border-l border-white/10 h-full overflow-y-auto">
       <div className="p-3 border-b border-white/10">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-white">角色资产</h3>
+          <h3 className="text-sm font-medium text-white">道具资产</h3>
           <Button
             variant="ghost"
             size="sm"
-            onClick={onAddCharacter}
+            onClick={onAddProp}
             className="h-6 text-[10px] px-1.5"
-            title="在角色工厂中添加"
+            title="在道具工厂中添加"
           >
             <Plus className="h-3 w-3 mr-0.5" />
             添加
@@ -55,7 +55,7 @@ export function CharacterPanel({
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-[#888]" />
           <Input
-            placeholder="搜索角色..."
+            placeholder="搜索道具..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-8 pl-7 text-sm"
@@ -63,74 +63,74 @@ export function CharacterPanel({
         </div>
       </div>
 
-      {/* 角色列表 */}
       <div className="p-2">
-        {filteredCharacters.length === 0 ? (
+        {filteredProps.length === 0 ? (
           <div className="text-center py-8 text-[#666] text-sm">
-            {searchQuery ? '未找到匹配的角色' : '暂无角色资产'}
+            {searchQuery ? '未找到匹配的道具' : '暂无道具资产'}
             {!searchQuery && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onAddCharacter}
+                onClick={onAddProp}
                 className="mt-2"
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
-                在角色工厂中添加
+                在道具工厂中添加
               </Button>
             )}
           </div>
         ) : (
           <div className="grid gap-2">
-            {filteredCharacters.map((character) => (
+            {filteredProps.map((prop) => (
               <div
-                key={character.id}
+                key={prop.id}
                 className="group flex items-start gap-3 p-2 rounded bg-white/5 hover:bg-white/10 transition-colors"
               >
-                {/* 缩略图（点击插入到编辑器） */}
                 <div
-                  className="w-10 h-10 rounded flex items-center justify-center text-white font-medium cursor-pointer flex-shrink-0"
-                  style={{ backgroundColor: character.color }}
-                  onClick={() => onSelectCharacter(character)}
+                  className="w-10 h-10 rounded flex items-center justify-center text-white font-medium bg-amber-500/30 cursor-pointer flex-shrink-0"
+                  onClick={() => onSelectProp(prop)}
                   title="点击插入到剧本"
                 >
-                  {character.thumbnail ? (
+                  {prop.thumbnail ? (
                     <img
-                      src={character.thumbnail}
-                      alt={character.name}
+                      src={prop.thumbnail}
+                      alt={prop.name}
                       className="w-full h-full rounded object-cover"
                     />
                   ) : (
-                    <User className="h-5 w-5" />
+                    <Package className="h-5 w-5 text-amber-400" />
                   )}
                 </div>
 
-                {/* 信息 */}
                 <div
                   className="flex-1 min-w-0 cursor-pointer"
-                  onClick={() => onSelectCharacter(character)}
+                  onClick={() => onSelectProp(prop)}
                 >
                   <div className="font-medium text-white text-sm truncate">
-                    {character.name || '未命名'}
+                    {prop.name || '未命名'}
                   </div>
-                  {character.description && (
-                    <div className="text-xs text-[#888] truncate mt-1">
-                      {character.description}
+                  {prop.category && (
+                    <div className="text-xs text-amber-400/80 mt-0.5">
+                      {prop.category}
                     </div>
                   )}
-                  {character.assetId && (
+                  {prop.description && (
+                    <div className="text-xs text-[#888] truncate mt-1">
+                      {prop.description}
+                    </div>
+                  )}
+                  {prop.assetId && (
                     <div className="text-[10px] text-emerald-400 mt-0.5">已同步到工厂</div>
                   )}
                 </div>
 
-                {/* 操作按钮 */}
-                {onEditCharacter && (
+                {onEditProp && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onEditCharacter(character)}
+                    onClick={() => onEditProp(prop)}
                     className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                    title="在角色工厂中编辑"
+                    title="在道具工厂中编辑"
                   >
                     <Edit2 className="h-3 w-3" />
                   </Button>
@@ -138,7 +138,10 @@ export function CharacterPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onDeleteCharacter(character.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDeleteProp(prop.id)
+                  }}
                   className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
                   title="从剧本移除"
                 >

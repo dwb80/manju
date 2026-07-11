@@ -5,10 +5,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getRuntimeConfig } from "../config/env.js";
 import type { AppContext } from "../services/app.js";
-import { addFavorite, addMessage, createConversation, createProject, createLocalImageTask, deleteConversation, deleteProject, ensureConversation, generateImage, generateVideo, listConversations, listImages, listProjects, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateProject, updateSettings } from "../services/domain.js";
+import { addFavorite, addMessage, createConversation, createLocalImageTask, deleteConversation, ensureConversation, generateImage, generateVideo, listConversations, listImages, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateSettings } from "../services/domain.js";
+import { createProject, listProjects, updateProject, deleteProject } from "../services/domain/project.js";
 import { saveUploadedImage, type UploadInput } from "../services/media.js";
-import { listCharacters, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters, listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes, listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps, getCharacterUsage, getSceneUsage, getPropUsage, copyCharactersToProjects, copyScenesToProjects, copyPropsToProjects, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets, listVersions, getVersion, restoreVersion } from "../services/module-domain.js";
-import { listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment } from "../services/script-center-impl.js";
+import { listCharacters, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters, listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes, listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps, getCharacterUsage, getSceneUsage, getPropUsage, copyCharactersToProjects, copyScenesToProjects, copyPropsToProjects, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets, listVersions, getVersion, restoreVersion, listStoryboards, createStoryboard, updateStoryboard, deleteStoryboard, softDeleteStoryboard, restoreStoryboard as restoreStoryboardById, listDeletedStoryboards, permanentDeleteStoryboard, copyStoryboardToProject, generateVideoFromStoryboard, listAudios, createAudio, updateAudio, deleteAudio, softDeleteAudio, restoreAudio as restoreAudioById, listDeletedAudios, permanentDeleteAudio, copyAudioToProject, generateTTS, listModuleVideoTasks, createModuleVideoTask, updateModuleVideoTask, deleteModuleVideoTask, softDeleteVideo, restoreVideo as restoreVideoById, listDeletedVideos, permanentDeleteVideo, copyVideoToProject, syncVideoTaskStatus, retryVideoTask, regenerateVideo, softDeleteClip, restoreClip, listDeletedClips, permanentDeleteClip, copyClipToProject, listScripts, createScript, updateScript as updateScriptRecord, deleteScript as deleteScriptRecord } from "../services/module-domain.js";
+import { listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment, listScriptDocuments, getScriptDocument, createScriptDocument, updateScriptDocument, deleteScriptDocument, createScriptEpisode, createScriptScene, createScriptDialogue } from "../services/script-center-impl.js";
+import { analyzeScriptWithAI } from "../services/script-analyze-ai.js";
+import { listProjectClips, createProjectClip, updateProjectClip, softDeleteProjectClip, syncProjectClipsFromStoryboards } from "../services/domain/storyboard.js";
 import type { Conversation, Message, Project } from "../types.js";
 import { DEFAULT_MODEL, estimateTokens, requireString } from "../utils.js";
 
@@ -299,6 +302,53 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       await deleteProject(ctx, parts[2]);
       return sendJson(res, { deleted: true });
     }
+    // 剧本模块（按项目隔离）
+    if (method === "GET" && parts.join("/") === "api/scripts") {
+      return sendJson(res, await listScripts(ctx));
+    }
+    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts") {
+      return sendJson(res, await listScripts(ctx, parts[2]));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts") {
+      const body = await readJson(req);
+      return sendJson(res, await createScript(ctx, { ...(body as any), project_id: parts[2] }));
+    }
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4]) {
+      return sendJson(res, await updateScriptRecord(ctx, parts[4], await readJson(req) as any));
+    }
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4]) {
+      await deleteScriptRecord(ctx, parts[4]);
+      return sendJson(res, { deleted: true });
+    }
+    // 剧本富文本结构（剧集/场景/对白）—— 给剧本导入用，POST 单条写入
+    if (method === "POST" && parts.join("/") === "api/script-documents") {
+      return sendJson(res, await createScriptDocument(ctx, await readJson(req) as any));
+    }
+    if (method === "GET" && parts.join("/") === "api/script-documents") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listScriptDocuments(ctx, projectId));
+    }
+    if (method === "GET" && parts[0] === "api" && parts[1] === "script-documents" && parts[2]) {
+      const doc = await getScriptDocument(ctx, parts[2]);
+      if (!doc) throw new Error("剧本文档不存在");
+      return sendJson(res, doc);
+    }
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "script-documents" && parts[2]) {
+      return sendJson(res, await updateScriptDocument(ctx, parts[2], await readJson(req) as any));
+    }
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "script-documents" && parts[2]) {
+      await deleteScriptDocument(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "POST" && parts.join("/") === "api/script-episodes") {
+      return sendJson(res, await createScriptEpisode(ctx, await readJson(req) as any));
+    }
+    if (method === "POST" && parts.join("/") === "api/script-scenes") {
+      return sendJson(res, await createScriptScene(ctx, await readJson(req) as any));
+    }
+    if (method === "POST" && parts.join("/") === "api/script-dialogues") {
+      return sendJson(res, await createScriptDialogue(ctx, await readJson(req) as any));
+    }
     if (method === "GET" && parts.join("/") === "api/conversations") {
       const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId");
       return sendJson(res, await listConversations(ctx, projectId));
@@ -313,6 +363,10 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       return sendJson(res, await ctx.messages.findMany({ conversation_id: parts[2] } as Partial<Message>, { sort: "asc" }));
     }
     if (method === "POST" && parts.join("/") === "api/chat") return handleChat(ctx, req, res);
+    if (method === "POST" && parts.join("/") === "api/ai/script-analyze") {
+      const body = (await readJson(req)) as { content?: string; format?: string; useLocal?: boolean };
+      return sendJson(res, await analyzeScriptWithAI(ctx, { content: body.content || "", format: body.format || "txt", useLocal: body.useLocal }));
+    }
     if (method === "POST" && parts.join("/") === "api/uploads") return handleUpload(ctx, req, res);
     if (method === "POST" && parts.join("/") === "api/chat/stop") {
       const body = await readJson(req);
@@ -509,6 +563,166 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const targetProjectIds = Array.isArray(body.targetProjectIds) ? (body.targetProjectIds as string[]).filter(Boolean) : [];
       if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
       return sendJson(res, await copyPropsToProjects(ctx, sourceId, targetProjectIds));
+    }
+    // ============ 分镜模块（工业化 P0-1/P0-2） ============
+    if (method === "GET" && parts.join("/") === "api/storyboards") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listStoryboards(ctx, projectId));
+    }
+    if (method === "POST" && parts.join("/") === "api/storyboards") return sendJson(res, await createStoryboard(ctx, await readJson(req) as any));
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "storyboards" && parts[2]) return sendJson(res, await updateStoryboard(ctx, parts[2], await readJson(req) as any));
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "storyboards" && parts[2]) {
+      await deleteStoryboard(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] && parts[3] === "restore") {
+      await restoreStoryboardById(ctx, parts[2]);
+      return sendJson(res, { restored: true });
+    }
+    if (method === "GET" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] === "deleted") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listDeletedStoryboards(ctx, projectId));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] === "permanent") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      for (const id of ids) await permanentDeleteStoryboard(ctx, id);
+      return sendJson(res, { deleted: ids.length });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] && parts[3] === "generate-video") {
+      const body = await readJson(req);
+      return sendJson(res, await generateVideoFromStoryboard(ctx, parts[2], body ?? {}));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] && parts[3] === "copy") {
+      const body = await readJson(req);
+      const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
+      return sendJson(res, await copyStoryboardToProject(ctx, parts[2], targetProjectId));
+    }
+    // ============ 音频模块（工业化 P0-2/P1-2） ============
+    if (method === "GET" && parts.join("/") === "api/audios") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listAudios(ctx, projectId));
+    }
+    if (method === "POST" && parts.join("/") === "api/audios") return sendJson(res, await createAudio(ctx, await readJson(req) as any));
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "audios" && parts[2]) return sendJson(res, await updateAudio(ctx, parts[2], await readJson(req) as any));
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "audios" && parts[2]) {
+      await deleteAudio(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "audios" && parts[2] && parts[3] === "restore") {
+      await restoreAudioById(ctx, parts[2]);
+      return sendJson(res, { restored: true });
+    }
+    if (method === "GET" && parts[0] === "api" && parts[1] === "audios" && parts[2] === "deleted") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listDeletedAudios(ctx, projectId));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "audios" && parts[2] === "permanent") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      for (const id of ids) await permanentDeleteAudio(ctx, id);
+      return sendJson(res, { deleted: ids.length });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "audios" && parts[2] && parts[3] === "copy") {
+      const body = await readJson(req);
+      const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
+      return sendJson(res, await copyAudioToProject(ctx, parts[2], targetProjectId));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "audios" && parts[2] && parts[3] === "tts") {
+      const body = await readJson(req);
+      return sendJson(res, await generateTTS(ctx, { ...(body as any), audio_id: parts[2] }));
+    }
+    if (method === "POST" && parts.join("/") === "api/tts/generate") {
+      return sendJson(res, await generateTTS(ctx, await readJson(req) as any));
+    }
+    // ============ 视频任务模块（工业化 P0-2/P1-1） ============
+    if (method === "GET" && parts.join("/") === "api/module-videos") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listModuleVideoTasks(ctx, projectId));
+    }
+    if (method === "POST" && parts.join("/") === "api/module-videos") return sendJson(res, await createModuleVideoTask(ctx, await readJson(req) as any));
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "module-videos" && parts[2]) return sendJson(res, await updateModuleVideoTask(ctx, parts[2], await readJson(req) as any));
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "module-videos" && parts[2]) {
+      await deleteModuleVideoTask(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "restore") {
+      await restoreVideoById(ctx, parts[2]);
+      return sendJson(res, { restored: true });
+    }
+    if (method === "GET" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] === "deleted") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listDeletedVideos(ctx, projectId));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] === "permanent") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      for (const id of ids) await permanentDeleteVideo(ctx, id);
+      return sendJson(res, { deleted: ids.length });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "copy") {
+      const body = await readJson(req);
+      const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
+      return sendJson(res, await copyVideoToProject(ctx, parts[2], targetProjectId));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "retry") {
+      return sendJson(res, await retryVideoTask(ctx, parts[2]));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "regenerate") {
+      return sendJson(res, await regenerateVideo(ctx, parts[2]));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "sync-status") {
+      const body = await readJson(req);
+      return sendJson(res, await syncVideoTaskStatus(ctx, parts[2], body as any));
+    }
+    // ============ 剪辑模块（工业化 P0-3） ============
+    // 顶层 CRUD：与分镜/视频/音频对齐，使用 ?projectId= 查询参数
+    if (method === "GET" && parts.join("/") === "api/clips") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      if (!projectId) throw new Error("projectId 必填");
+      return sendJson(res, await listProjectClips(ctx, projectId));
+    }
+    if (method === "POST" && parts.join("/") === "api/clips") {
+      const body = await readJson(req);
+      const projectId = requireString(body.project_id, "project_id");
+      return sendJson(res, await createProjectClip(ctx, projectId, body as any));
+    }
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "clips" && parts[2]) {
+      const existing = await ctx.projectClips.findById(parts[2]);
+      if (!existing) throw new Error("clip not found");
+      const body = await readJson(req);
+      return sendJson(res, await updateProjectClip(ctx, (existing as any).project_id, parts[2], body as any));
+    }
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "clips" && parts[2]) {
+      const existing = await ctx.projectClips.findById(parts[2]);
+      if (!existing) throw new Error("clip not found");
+      await softDeleteProjectClip(ctx, (existing as any).project_id, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "clips" && parts[2] === "sync") {
+      const body = await readJson(req);
+      const projectId = requireString(body.project_id, "project_id");
+      return sendJson(res, await syncProjectClipsFromStoryboards(ctx, projectId));
+    }
+    // 回收站（与三厂对齐：?projectId=）
+    if (method === "GET" && parts[0] === "api" && parts[1] === "clips" && parts[2] === "deleted") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listDeletedClips(ctx, projectId));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "clips" && parts[2] && parts[3] === "restore") {
+      await restoreClip(ctx, parts[2]);
+      return sendJson(res, { restored: true });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "clips" && parts[2] === "permanent") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      for (const id of ids) await permanentDeleteClip(ctx, id);
+      return sendJson(res, { deleted: ids.length });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "clips" && parts[2] && parts[3] === "copy") {
+      const body = await readJson(req);
+      const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
+      return sendJson(res, await copyClipToProject(ctx, parts[2], targetProjectId));
     }
     // 剧本评论（任务8：评论持久化）
     if (method === "GET" && parts.join("/") === "api/script-comments") {

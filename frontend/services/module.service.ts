@@ -43,6 +43,7 @@ export {
   batchScenes,
   copyScenesToProjects,
   listSceneTemplates,
+  getScenesByIds,
 } from "./scene.service";
 
 // ==================== 道具 ====================
@@ -98,6 +99,18 @@ export {
   updateScript,
   deleteScript,
 } from "./script.service";
+
+// ==================== 剧本富文本结构（剧集/场景/对白） ====================
+export {
+  createScriptDocumentApi,
+  createScriptEpisodeApi,
+  createScriptSceneApi,
+  createScriptDialogueApi,
+  type ScriptDocumentPayload,
+  type ScriptEpisodePayload,
+  type ScriptScenePayload,
+  type ScriptDialoguePayload,
+} from "./script-structure.service";
 
 // ==================== 资产（已存在） ====================
 export {

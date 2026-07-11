@@ -40,18 +40,37 @@ export interface VideoTask {
 /** 视频任务状态（独立模块） */
 export type ModuleVideoTaskStatus = 'queued' | 'processing' | 'completed' | 'failed';
 
-/** 视频任务实体（独立模块） */
+/** 视频任务实体（独立模块）。 */
 export interface ModuleVideoTask {
   id: string;
   project_id: string;
+  /** 来源分镜（一键生成时回填）。 */
+  storyboard_id: string;
   title: string;
+  /** 提示词（来自分镜描述）。 */
+  prompt: string;
+  /** 首帧图（来自分镜 image_url）。 */
+  image_url: string;
+  params: VideoParams;
+  /** 关联的 Agnes AI 任务 ID（用于轮询 / 重试）。 */
+  ai_task_id: string;
   status: ModuleVideoTaskStatus;
   progress: number;
   duration: number;
-  resolution?: string;
-  fps?: number;
-  format?: string;
-  file_url?: string;
+  resolution: string;
+  fps: number;
+  format: string;
+  file_url: string;
+  /** 所属集数。 */
+  episode: number;
+  tags: string[];
+  error: string;
+  /** 资产被引用次数（缓存字段）。 */
+  usage_count?: number;
+  /** 当前版本号，每次 update 自增，初值为 1。 */
+  version?: number;
   created_at: string;
   updated_at: string;
+  /** 软删除时间戳。 */
+  deleted_at?: string;
 }

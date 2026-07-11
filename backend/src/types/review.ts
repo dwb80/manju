@@ -15,6 +15,11 @@ export interface Review {
   reviewer_name: string;
   created_at: string;
   updated_at: string;
+  // 兼容 ProjectReview 字段（CSV 存储共用同一张表 reviews.csv）。
+  target_type?: "storyboard" | "image" | "video" | "asset" | "clip";
+  target_id?: string;
+  reviewer?: string;
+  status?: ProjectReviewStatus;
 }
 
 export type ProjectReviewStatus = "open" | "resolved" | "rejected";

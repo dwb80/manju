@@ -9,6 +9,7 @@ import { CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { updateScript } from "@/services/module.service";
 import { clearApiCache } from "@/lib/api-client";
+import { useProjectStore } from "@/lib/stores/project-store";
 import type { Script } from "@/lib/module-types";
 import { DialogOverlay } from "./ScriptsCenterPage";
 
@@ -42,6 +43,7 @@ function SimpleApprovalWorkflow({
   script: Script;
   onStatusUpdated: (script: Script) => void | Promise<void>;
 }) {
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
   const [currentStatus, setCurrentStatus] = useState(script.status);
   const [comment, setComment] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -59,7 +61,8 @@ function SimpleApprovalWorkflow({
   const handleStatusChange = async (newStatus: string) => {
     setIsSaving(true);
     try {
-      await updateScript(script.id, { status: newStatus } as any);
+      if (!selectedProjectId) { alert("未选择项目"); return; }
+      await updateScript(selectedProjectId, script.id, { status: newStatus } as any);
       const oldStatus = currentStatus;
       setCurrentStatus(newStatus as Script["status"]);
       setHistory([

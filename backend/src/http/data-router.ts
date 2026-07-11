@@ -361,7 +361,7 @@ async function getProductionEfficiency(ctx: AppContext, timeRange: TimeRange): P
 
   // 获取剧本数据
   const scripts = await ctx.projectScripts.findMany({}, { sort: "desc" });
-  const filteredScripts = scripts.filter(script => script.created_at >= startTimeStr);
+  const filteredScripts = scripts.filter((script: any) => script.created_at >= startTimeStr);
 
   // 获取分镜数据
   const storyboards = await ctx.projectStoryboards.findMany({}, { sort: "desc" });
@@ -377,7 +377,7 @@ async function getProductionEfficiency(ctx: AppContext, timeRange: TimeRange): P
 
   // 获取审核数据
   const reviews = await ctx.projectReviews.findMany({}, { sort: "desc" });
-  const filteredReviews = reviews.filter(review => review.created_at >= startTimeStr);
+  const filteredReviews = reviews.filter((review: any) => review.created_at >= startTimeStr);
 
   // 计算各阶段效率
   const stageEfficiency = {

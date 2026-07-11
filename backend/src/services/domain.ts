@@ -417,12 +417,17 @@ export async function generateVideo(ctx: AppContext, body: Record<string, unknow
   const result = await ctx.ai.generateVideo({ ...params, image: await resolveMediaInput(ctx, inputImage) });
   const task: VideoTask = {
     id: result.taskId,
+    task_id: result.taskId,
+    video_id: result.taskId,
     conversation_id: conversationId,
     prompt,
     image_url: params.image ?? "",
     params: compactVideoParams(params),
     video_url: "",
     status: "processing",
+    progress: 0,
+    seconds: "0",
+    size: "",
     error: "",
     created_at: nowIso(),
   };

@@ -30,6 +30,7 @@ import { TemplateSelector, type AssetTemplate, type TemplateEntityType } from "@
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { UsageDialog } from "./UsageDialog";
 import { toast } from "@/components/common/toast";
 import { clearApiCache } from "@/lib/api-client";
 import { useFactoryEntity } from "./useFactoryEntity";
@@ -273,6 +274,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
     filterPlaceholder = "筛选",
     filterValue: filterValueProp,
     onFilterChange,
+    secondaryFilter,
     stats,
     aiConfig,
     fetchUsage,
@@ -283,10 +285,13 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
     selectAllLabel = "全选",
     loadingView,
     extraToolbarContent,
+    toolbarExtra,
     enableTemplates,
     templateFetcher,
     onApplyTemplate,
     fetchVersions,
+    fetchReferences,
+    insertToStoryboard,
   } = props;
 
   // ===== 数据加载 =====
@@ -326,6 +331,16 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
     setSelectedIds(new Set());
   }, [setSelectedIds]);
 
+  // 监听外部 reload 事件（用于 toolbarExtra 中的快捷操作，例如「从分镜同步」完成后刷新）
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = () => {
+      reload().catch((err) => console.error("FactoryCRUDPage: external reload failed", err));
+    };
+    window.addEventListener("factory:reload", handler);
+    return () => window.removeEventListener("factory:reload", handler);
+  }, [reload]);
+
   // ===== 搜索 / 过滤 =====
   const [searchQuery, setSearchQuery] = useState("");
   const [internalFilterValue, setInternalFilterValue] = useState("");
@@ -333,6 +348,14 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   const setFilterValue = (v: string) => {
     if (onFilterChange) onFilterChange(v);
     else setInternalFilterValue(v);
+  };
+
+  // 二级筛选（受控 / 非受控）
+  const [internalSecondaryValue, setInternalSecondaryValue] = useState("");
+  const secondaryValue = secondaryFilter?.value ?? internalSecondaryValue;
+  const setSecondaryValue = (v: string) => {
+    if (secondaryFilter?.onChange) secondaryFilter.onChange(v);
+    else setInternalSecondaryValue(v);
   };
 
   // ===== 表单弹窗 =====
@@ -368,6 +391,75 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   // ===== 版本历史（任务12：统一版本管理） =====
   const [versionHistory, setVersionHistory] = useState<{ id: string; name: string } | null>(null);
 
+  // ===== 引用统计 / 插入到分镜 =====
+  /** 引用次数与来源（懒加载，按需拉取）。key 为实体 id。 */
+  const [referencesMap, setReferencesMap] = useState<Record<string, {
+    count: number;
+    references: { id: string; title: string }[];
+    episodes: number[];
+  }>>({});
+  /** 点击 UsageBadge 弹出的来源列表。 */
+  const [usageDialog, setUsageDialog] = useState<{
+    name: string;
+    references: { id: string; title: string }[];
+    episodes: number[];
+  } | null>(null);
+  /** 「插入到分镜」loading 状态。 */
+  const [insertingId, setInsertingId] = useState<string | null>(null);
+
+  /** 懒加载某个实体的引用统计。 */
+  const loadReferences = useCallback(
+    async (item: TEntity) => {
+      if (!fetchReferences) return;
+      if (referencesMap[item.id]) return;
+      try {
+        const data = await fetchReferences(item);
+        setReferencesMap((prev) => ({ ...prev, [item.id]: data }));
+      } catch (err) {
+        console.warn("loadReferences failed", item.id, err);
+      }
+    },
+    [fetchReferences, referencesMap],
+  );
+
+  /** 视图里的所有项都触发一次懒加载（在卡片渲染时调用即可）。 */
+  useEffect(() => {
+    if (!fetchReferences) return;
+    const visible = items.slice(0, 24); // 一次最多加载 24 条
+    visible.forEach((it) => void loadReferences(it));
+  }, [items, fetchReferences, loadReferences]);
+
+  /** 点击 UsageBadge 打开来源列表弹窗。 */
+  const handleOpenSource = useCallback(
+    (item: TEntity) => {
+      const usage = referencesMap[item.id];
+      if (!usage) return;
+      setUsageDialog({ name: getEntityLabel(item), references: usage.references, episodes: usage.episodes });
+    },
+    [referencesMap],
+  );
+
+  /** 「插入到分镜」按钮：调用父组件提供的函数，并给出成功/失败反馈。 */
+  const handleInsertToStoryboard = useCallback(
+    async (item: TEntity) => {
+      if (!insertToStoryboard) return;
+      setInsertingId(item.id);
+      try {
+        await insertToStoryboard(item);
+        toast.success("已插入分镜", `已基于「${getEntityLabel(item)}」创建一个新分镜`);
+        clearApiCache();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("factory:reload"));
+        }
+      } catch (err) {
+        toast.error("插入失败", (err as Error).message ?? "请稍后重试");
+      } finally {
+        setInsertingId(null);
+      }
+    },
+    [insertToStoryboard],
+  );
+
   // ===== 分页（可选） =====
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -379,9 +471,10 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
     return items.filter((it) => {
       if (q && !searchFields(it, q)) return false;
       if (filterField && filterValue && !filterField(it, filterValue)) return false;
+      if (secondaryFilter && secondaryValue && !secondaryFilter.match(it, secondaryValue)) return false;
       return true;
     });
-  }, [items, searchQuery, searchFields, filterField, filterValue]);
+  }, [items, searchQuery, searchFields, filterField, filterValue, secondaryFilter, secondaryValue]);
 
   // 分页后的列表
   const totalPages = usePagination ? Math.ceil(filteredItems.length / pageSize) : 1;
@@ -697,6 +790,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
 
   return (
     <PageContainer title={title} description={description}>
+      <div data-factory-selected={JSON.stringify(Array.from(selectedIds))} style={{ display: "contents" }} />
       {/* 顶部 Tab：正常资产 / 回收站（仅当配置了 fetchDeleted + permanentDelete + restoreItem 时启用） */}
       {recycleBinEnabled && (
         <div className="mb-4 inline-flex h-9 items-center rounded-md border border-white/10 bg-[#1a1a1a] p-0.5 text-xs">
@@ -754,6 +848,14 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                 onChange={setFilterValue}
                 options={filterOptions}
                 placeholder={filterPlaceholder}
+              />
+            )}
+            {secondaryFilter && (
+              <FilterSelect
+                value={secondaryValue}
+                onChange={setSecondaryValue}
+                options={secondaryFilter.options}
+                placeholder={secondaryFilter.placeholder ?? "集数"}
               />
             )}
           </>
@@ -815,6 +917,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                     历史
                   </Button>
                 )}
+                {toolbarExtra}
                 <Button size="sm" onClick={openCreate}>
                   <Plus className="mr-2 h-4 w-4" />
                   新建{entityLabel}
@@ -867,6 +970,13 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                   onDelete: () => requestDelete(item),
                   onViewHistory: fetchVersions ? () => setVersionHistory({ id: item.id, name: getEntityLabel(item) }) : undefined,
                   onCopyToProjects: copyToProjects ? () => setCopyDialogItem(item) : undefined,
+                  usage: referencesMap[item.id],
+                  onOpenSource: fetchReferences ? () => handleOpenSource(item) : undefined,
+                  onInsertToStoryboard: insertToStoryboard
+                    ? insertingId === item.id
+                      ? undefined // 正在加载，临时隐藏按钮避免重复点击
+                      : () => handleInsertToStoryboard(item)
+                    : undefined,
                 }),
               )}
             </div>
@@ -887,7 +997,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
           <EmptyState
             type="no-results"
             title={emptyTitle}
-            description={searchQuery || filterValue ? "尝试调整搜索条件" : `点击上方按钮创建新${entityLabel}`}
+            description={searchQuery || filterValue || secondaryValue ? "尝试调整搜索条件" : `点击上方按钮创建新${entityLabel}`}
             action={{ label: `新建${entityLabel}`, onClick: openCreate }}
           />
         )}
@@ -1171,6 +1281,16 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
             clearApiCache();
             void reload();
           }}
+        />
+      )}
+
+      {usageDialog && (
+        <UsageDialog
+          isOpen
+          onClose={() => setUsageDialog(null)}
+          entityName={usageDialog.name}
+          references={usageDialog.references}
+          episodes={usageDialog.episodes}
         />
       )}
     </PageContainer>

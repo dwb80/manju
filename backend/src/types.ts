@@ -1,3 +1,56 @@
+// 兼容层：从新的领域类型文件 re-export 出去，旧模块 (`../types.js`) 引用这些类型时仍可解析。
+import type { VideoParams } from "./types/video.js";
+export type {
+  Script,
+  ProjectScript,
+  ScriptDocument,
+  ScriptEpisode,
+  ScriptScene,
+  ScriptDialogue,
+  ScriptSceneCharacter,
+  ScriptSceneLocation,
+  ScriptTemplate,
+  ScriptTag,
+  ScriptQualityAssessment,
+  ScriptApproval,
+  ScriptBackup,
+  ScriptComment,
+  AIScriptGenerationRequest,
+  AIScriptOptimizationRequest,
+  AISceneGenerationRequest,
+  AIDialogueGenerationRequest,
+  AIStoryboardSplitRequest,
+} from "./types/script.js";
+export type { Character, CharacterRole, CharacterGender } from "./types/character.js";
+export type { Scene, SceneType } from "./types/scene.js";
+export type { Prop, PropCategory } from "./types/prop.js";
+export type { Storyboard, StoryboardStatus, ProjectStoryboard, ProjectStoryboardStatus } from "./types/storyboard.js";
+export type { Audio, AudioType } from "./types/audio.js";
+export type { VideoParams, ModuleVideoTask, ModuleVideoTaskStatus } from "./types/video.js";
+// VideoTask 由本文件维护（兼容历史/legacy 调用方），包含 task_id/video_id/progress/seconds/size。
+export type { ProjectClip, ProjectClipStatus, ProjectTask, ProjectTaskStatus, ProjectMember, ProjectMilestone, ProjectMilestoneStatus, ProjectIssue, ProjectIssueStatus, ProjectIssueSeverity, ProjectEpisode, PublishPlan, PublishPlanStatus, PublishPlatform, PublishedVideo } from "./types/project.js";
+export type { ChatChunk, ChatToolCall, ChatParams } from "./types/chat.js";
+export type { ModelType, ModelPricing, ModelApiConfig, ModelCapabilities, ModelParameterRule, ModelConfig, ModelProvider, ModelPermission, ModelCallLog, ModelQuota, ModelRecommendationRequest, ModelRecommendation } from "./types/model.js";
+export type { Review, ReviewResult, ProjectReview, ProjectReviewStatus } from "./types/review.js";
+export type { ImageParams, ImageTask } from "./types/image.js";
+export type { ProjectAsset, ProjectAssetKind, Asset, AssetType } from "./types/asset.js";
+export type { ContentStatus } from "./types/script.js";
+// Dashboard 等占位类型直接 re-export 自 types/extra.ts，避免与 types/project.ts 命名冲突。
+export type {
+  AITaskMonitor,
+  CostBreakdown,
+  DashboardData,
+  DashboardKPI,
+  ProductionHealth,
+  ProductionPipeline,
+  ProjectProgress,
+  RecentGeneration,
+  ResourceMonitorData,
+  ReviewCenterData,
+  TeamActivity,
+  ImageTaskStatus,
+} from "./types/extra.js";
+
 export type Role = "system" | "user" | "assistant";
 export type TaskStatus = "pending" | "processing" | "success" | "failed";
 export type FavoriteType = "chat" | "image" | "video";
@@ -22,6 +75,12 @@ export interface Project {
   storage_path: string;
   storage_mode: string;
   archived_at: string;
+  status?: string;
+  category?: string;
+  description?: string;
+  episode_count?: number;
+  owner?: string;
+  due_date?: string;
 }
 
 export interface Message {
@@ -34,26 +93,19 @@ export interface Message {
   created_at: string;
 }
 
-export interface ImageTask {
-  id: string;
-  conversation_id: string;
-  prompt: string;
-  negative: string;
-  params: ImageParams;
-  image_urls: string[];
-  status: TaskStatus;
-  error: string;
-  created_at: string;
-}
-
 export interface VideoTask {
   id: string;
+  task_id: string;
+  video_id: string;
   conversation_id: string;
   prompt: string;
   image_url: string;
   params: VideoParams;
   video_url: string;
   status: TaskStatus;
+  progress: number;
+  seconds: string;
+  size: string;
   error: string;
   created_at: string;
 }
@@ -74,37 +126,7 @@ export interface Settings {
   defaultVideoRatio: "16:9" | "9:16" | "1:1";
 }
 
-export interface ImageParams {
-  prompt: string;
-  negative_prompt?: string;
-  image?: string;
-  images?: string[];
-  size?: "1024x768" | "768x1024" | "1024x1024" | "1152x768" | "768x1152";
-  ratio?: "1:1" | "3:2" | "2:3" | "16:9" | "9:16";
-  n?: number;
-  seed?: number;
-  steps?: number;
-  cfg?: number;
-}
-
-export interface VideoParams {
-  prompt: string;
-  image?: string;
-  ratio?: "16:9" | "9:16" | "1:1";
-  duration?: 5 | 10;
-  model?: string;
-}
-
-export interface ChatParams {
-  conversationId: string;
-  message: string;
-  model?: string;
-}
-
-export interface ChatChunk {
-  content: string;
-  done?: boolean;
-}
+/** VideoParams 由 ./types/video.js re-export，此处不再重复定义，避免冲突。 */
 
 export interface ApiResponse<T> {
   code: number;
@@ -112,21 +134,7 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-/** 剧本编辑器内行内批注与回复（任务8：评论持久化）。 */
-export interface ScriptComment {
-  id: string;
-  script_id: string;
-  episode_id?: string;
-  user_name: string;
-  content: string;
-  selected_text: string;
-  position_from: number;
-  position_to: number;
-  parent_id?: string;
-  resolved: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// ScriptComment 由 ./types/script.js 统一导出（兼容编辑器行内批注）。
 
 // ==================== 任务12：统一版本管理 ====================
 

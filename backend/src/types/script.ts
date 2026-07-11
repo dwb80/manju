@@ -1,5 +1,5 @@
-/** 内容状态枚举 */
-export type ContentStatus = 'draft' | 'active' | 'review' | 'completed' | 'archived';
+/** 内容状态枚举（兼容独立 Script 与项目 ProjectScript 两套状态值）。 */
+export type ContentStatus = 'draft' | 'active' | 'review' | 'completed' | 'archived' | 'ready' | 'storyboarded';
 
 /** 剧本实体（独立模块） */
 export interface Script {
@@ -15,6 +15,10 @@ export interface Script {
   version: number;
   created_at: string;
   updated_at: string;
+  // 兼容 ProjectScript 字段（CSV 存储共用同一张表 scripts.csv）。
+  episode?: number;
+  content?: string;
+  notes?: string;
 }
 
 /** 剧本文档，一般按集数保存，后续可拆成分镜。 */

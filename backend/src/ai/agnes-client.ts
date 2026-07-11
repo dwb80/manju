@@ -6,9 +6,13 @@ export interface AgnesClient {
   /** 发送图片生成请求，返回图片地址列表。 */
   generateImage(params: ImageParams): Promise<{ imageUrls: string[] }>;
   /** 发送视频生成请求，返回异步任务 ID。 */
-  generateVideo(params: VideoParams): Promise<{ taskId: string }>;
+  generateVideo(params: VideoParams): Promise<{ taskId: string; providerTaskId?: string; videoId?: string; progress?: number; seconds?: string; size?: string }>;
   /** 查询视频任务状态和结果地址。 */
   queryTask(taskId: string): Promise<{ status: TaskStatus; videoUrl?: string; error?: string }>;
+  /** 调用 TTS 文本转语音（占位：Agnes 暂未提供 TTS，返回空 file_url 让前端降级）。 */
+  generateTTS(params: { text: string; voice?: string; emotion?: string; speed?: number; format?: string }): Promise<{ file_url: string; duration: number; status: string; voice?: string; emotion?: string }>;
+  /** 查询任务状态（兼容旧版）。 */
+  queryVideoStatus(taskId: string): Promise<{ status: string; progress: number; file_url: string; error: string }>;
 }
 
 /** 等待指定毫秒数，主要给模拟客户端制造流式输出节奏。 */
@@ -151,7 +155,7 @@ export class RealAgnesClient implements AgnesClient {
   }
 
   /** 调用 Agnes 视频生成接口，创建异步视频任务并返回任务 ID。 */
-  async generateVideo(params: VideoParams): Promise<{ taskId: string }> {
+  async generateVideo(params: VideoParams): Promise<{ taskId: string; providerTaskId?: string; videoId?: string; progress?: number; seconds?: string; size?: string }> {
     const response = await this.post(this.videoPath, {
       model: params.model ?? "agnes-video-v2.0",
       prompt: params.prompt,
@@ -181,6 +185,19 @@ export class RealAgnesClient implements AgnesClient {
       pickString(data, ["video_url", "videoUrl", "url", "remixed_from_video_id"]);
     const error = pickString(payload, ["error", "message"]) || pickString(data, ["error", "message"]);
     return { status, videoUrl: videoUrl || undefined, error: error || undefined };
+  }
+
+  /** 文本转语音：Agnes 暂不提供 TTS，前端按占位实现处理。 */
+  async generateTTS(params: { text: string; voice?: string; emotion?: string; speed?: number; format?: string }): Promise<{ file_url: string; duration: number; status: string; voice?: string; emotion?: string }> {
+    void params;
+    return { file_url: "", duration: 0, status: "queued", voice: params.voice, emotion: params.emotion };
+  }
+
+  /** 查询视频任务状态（带进度和错误），与 queryTask 等价。 */
+  async queryVideoStatus(taskId: string): Promise<{ status: string; progress: number; file_url: string; error: string }> {
+    const r = await this.queryTask(taskId);
+    const progress = r.status === "success" ? 100 : r.status === "failed" ? 0 : 50;
+    return { status: r.status, progress, file_url: r.videoUrl ?? "", error: r.error ?? "" };
   }
 
   /** 发起带认证信息的 GET 请求。 */
@@ -246,7 +263,7 @@ export class MockAgnesClient implements AgnesClient {
   }
 
   /** 生成本地模拟视频任务 ID。 */
-  async generateVideo(params: VideoParams): Promise<{ taskId: string }> {
+  async generateVideo(params: VideoParams): Promise<{ taskId: string; providerTaskId?: string; videoId?: string; progress?: number; seconds?: string; size?: string }> {
     const seed = Buffer.from(`${params.prompt}-${Date.now()}`).toString("base64url").slice(0, 12);
     return { taskId: `v-${seed}` };
   }
@@ -257,6 +274,17 @@ export class MockAgnesClient implements AgnesClient {
       status: "success",
       videoUrl: `https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4#${taskId}`,
     };
+  }
+
+  /** 模拟 TTS：直接返回占位 file_url，前端标记为"待生成"。 */
+  async generateTTS(params: { text: string; voice?: string; emotion?: string; speed?: number; format?: string }): Promise<{ file_url: string; duration: number; status: string; voice?: string; emotion?: string }> {
+    void params;
+    return { file_url: "", duration: 0, status: "queued", voice: params.voice, emotion: params.emotion };
+  }
+
+  /** 模拟视频状态查询。 */
+  async queryVideoStatus(taskId: string): Promise<{ status: string; progress: number; file_url: string; error: string }> {
+    return { status: "completed", progress: 100, file_url: `https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4#${taskId}`, error: "" };
   }
 }
 
