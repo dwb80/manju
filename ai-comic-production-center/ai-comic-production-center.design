@@ -1,0 +1,415 @@
+{
+  "data": [
+    {
+      "id": "page-overview",
+      "title": "总览看板",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/overview.html",
+        "interactions": [
+          {
+            "domId": "cta-view-projects",
+            "targetPageId": "page-projects",
+            "hideEdge": false
+          },
+          {
+            "domId": "nav-projects",
+            "targetPageId": "page-projects",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-pipeline",
+            "targetPageId": "page-pipeline",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-workspace",
+            "targetPageId": "page-workspace",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-assets",
+            "targetPageId": "page-assets",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-projects",
+      "title": "项目管理",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/projects.html",
+        "interactions": [
+          {
+            "domId": "cta-enter-pipeline",
+            "targetPageId": "page-pipeline",
+            "hideEdge": false
+          },
+          {
+            "domId": "nav-overview",
+            "targetPageId": "page-overview",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-pipeline",
+            "targetPageId": "page-pipeline",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-workspace",
+            "targetPageId": "page-workspace",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-assets",
+            "targetPageId": "page-assets",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-pipeline",
+      "title": "生产流水线",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 1240,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/pipeline.html",
+        "interactions": [
+          {
+            "domId": "cta-open-workspace",
+            "targetPageId": "page-workspace",
+            "hideEdge": false
+          },
+          {
+            "domId": "nav-overview",
+            "targetPageId": "page-overview",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-projects",
+            "targetPageId": "page-projects",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-workspace",
+            "targetPageId": "page-workspace",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-assets",
+            "targetPageId": "page-assets",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-workspace",
+      "title": "AI创作工作台",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 1848,
+        "y": -12,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/workspace.html",
+        "interactions": [
+          {
+            "domId": "cta-browse-assets",
+            "targetPageId": "page-assets",
+            "hideEdge": false
+          },
+          {
+            "domId": "nav-overview",
+            "targetPageId": "page-overview",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-projects",
+            "targetPageId": "page-projects",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-pipeline",
+            "targetPageId": "page-pipeline",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-assets",
+            "targetPageId": "page-assets",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-assets",
+      "title": "素材资产库",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 2480,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/assets.html",
+        "interactions": [
+          {
+            "domId": "nav-overview",
+            "targetPageId": "page-overview",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-projects",
+            "targetPageId": "page-projects",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-pipeline",
+            "targetPageId": "page-pipeline",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-workspace",
+            "targetPageId": "page-workspace",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-character-gen",
+      "title": "角色图片生成",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 3100,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/character-gen.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-character-gen-shots",
+      "title": "角色图片生成 - 景别角度版",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 3720,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/character-gen-shots.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "image-001",
+      "title": "AI漫剧生产英雄视觉",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 0,
+        "y": 377
+      },
+      "devMetadata": {
+        "imageSrc": "assets/comic-hero.jpg"
+      }
+    },
+    {
+      "id": "image-002",
+      "title": "漫剧项目缩略图1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 620,
+        "y": 377
+      },
+      "devMetadata": {
+        "imageSrc": "assets/comic-thumbnail-1.jpg"
+      }
+    },
+    {
+      "id": "image-003",
+      "title": "漫剧项目缩略图2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 1240,
+        "y": 377
+      },
+      "devMetadata": {
+        "imageSrc": "assets/comic-thumbnail-2.jpg"
+      }
+    },
+    {
+      "id": "image-004",
+      "title": "AI生成角色设计",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 1860,
+        "y": 377
+      },
+      "devMetadata": {
+        "imageSrc": "assets/comic-character.jpg"
+      }
+    },
+    {
+      "id": "image-005",
+      "title": "AI生成场景背景",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 2480,
+        "y": 377
+      },
+      "devMetadata": {
+        "imageSrc": "assets/comic-scene.jpg"
+      }
+    },
+    {
+      "id": "image-006",
+      "title": "侦探主角正面设计",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 0,
+        "y": 900
+      },
+      "devMetadata": {
+        "imageSrc": "assets/character-detective-front.jpg"
+      }
+    },
+    {
+      "id": "image-007",
+      "title": "侦探雨夜氛围图",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 320,
+        "y": 900
+      },
+      "devMetadata": {
+        "imageSrc": "assets/character-detective-rain.jpg"
+      }
+    },
+    {
+      "id": "image-008",
+      "title": "反派角色设计",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 640,
+        "y": 900
+      },
+      "devMetadata": {
+        "imageSrc": "assets/character-antagonist.jpg"
+      }
+    },
+    {
+      "id": "image-009",
+      "title": "特写正面景别",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 960,
+        "y": 900
+      },
+      "devMetadata": {
+        "imageSrc": "assets/shot-closeup-front.jpg"
+      }
+    },
+    {
+      "id": "image-010",
+      "title": "近景侧面景别",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 1280,
+        "y": 900
+      },
+      "devMetadata": {
+        "imageSrc": "assets/shot-medium-side.jpg"
+      }
+    },
+    {
+      "id": "image-011",
+      "title": "全景背影景别",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 1600,
+        "y": 900
+      },
+      "devMetadata": {
+        "imageSrc": "assets/shot-full-back.jpg"
+      }
+    },
+    {
+      "id": "image-012",
+      "title": "仰视戏剧角度",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1783600000000,
+      "canvasData": {
+        "x": 1920,
+        "y": 900
+      },
+      "devMetadata": {
+        "imageSrc": "assets/shot-low-angle.jpg"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "desktop",
+    "projectName": "AI漫剧工业化生产中心",
+    "designLibrary": null
+  }
+}

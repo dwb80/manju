@@ -10,3 +10,7 @@ frontend/.next/
 frontend/.next-build/
 frontend/playwright-report/
 frontend/test-results/
+
+
+.playwright-browsers
+

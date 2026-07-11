@@ -1,0 +1,69 @@
+{
+  "root": {
+    "nodeId": "gen-project-shell",
+    "kind": "project-shell",
+    "pageIds": ["page-overview", "page-projects", "page-pipeline", "page-workspace", "page-assets"],
+    "output": "partials/project-shell.html",
+    "sharedRegions": ["left sidebar navigation", "top bar with breadcrumb/search/actions", "root frame and background", "user profile widget"],
+    "privateRegions": [],
+    "mutableSlots": ["activeNavItem", "pageTitle", "breadcrumb"],
+    "status": "generated",
+    "children": [
+      {
+        "nodeId": "gen-page-overview",
+        "kind": "page-leaf",
+        "pageIds": ["page-overview"],
+        "output": "pages/overview.html",
+        "sharedRegions": [],
+        "privateRegions": ["KPI metric cards row", "production pipeline status visualization", "recent project activity feed", "production trend chart", "quick action panel"],
+        "mutableSlots": ["activeNavItem", "pageTitle", "breadcrumb"],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-projects",
+        "kind": "page-leaf",
+        "pageIds": ["page-projects"],
+        "output": "pages/projects.html",
+        "sharedRegions": [],
+        "privateRegions": ["filter bar with status/genre/date", "project grid cards with thumbnails", "batch operation toolbar", "project stats summary"],
+        "mutableSlots": ["activeNavItem", "pageTitle", "breadcrumb"],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-pipeline",
+        "kind": "page-leaf",
+        "pageIds": ["page-pipeline"],
+        "output": "pages/pipeline.html",
+        "sharedRegions": [],
+        "privateRegions": ["kanban pipeline columns", "stage cards with progress", "bottleneck alerts panel", "pipeline stats bar"],
+        "mutableSlots": ["activeNavItem", "pageTitle", "breadcrumb"],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-workspace",
+        "kind": "page-leaf",
+        "pageIds": ["page-workspace"],
+        "output": "pages/workspace.html",
+        "sharedRegions": [],
+        "privateRegions": ["prompt input panel with model selector", "generation parameters sidebar", "preview output area with comic panels", "history/version timeline"],
+        "mutableSlots": ["activeNavItem", "pageTitle", "breadcrumb"],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-assets",
+        "kind": "page-leaf",
+        "pageIds": ["page-assets"],
+        "output": "pages/assets.html",
+        "sharedRegions": [],
+        "privateRegions": ["category filter sidebar", "asset grid with thumbnails", "asset detail preview panel", "asset stats and search bar"],
+        "mutableSlots": ["activeNavItem", "pageTitle", "breadcrumb"],
+        "status": "generated",
+        "children": []
+      }
+    ]
+  }
+}

@@ -2,11 +2,11 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "default" | "secondary" | "ghost" | "destructive";
+  variant?: "default" | "secondary" | "ghost" | "destructive" | "outline";
   size?: "default" | "icon" | "sm";
 };
 
-/** 统一按钮样式，支持默认、次级、幽灵和危险操作几种状态。 */
+/** 统一按钮样式，支持默认、次级、幽灵、轮廓和危险操作几种状态。 */
 export function Button({ className, variant = "default", size = "default", ...props }: ButtonProps) {
   return (
     <button
@@ -15,6 +15,7 @@ export function Button({ className, variant = "default", size = "default", ...pr
         variant === "default" && "border-primary bg-primary text-primary-foreground hover:bg-primary/90",
         variant === "secondary" && "border-border bg-muted text-foreground hover:border-primary",
         variant === "ghost" && "border-transparent bg-transparent hover:bg-muted",
+        variant === "outline" && "border-border bg-transparent text-foreground hover:bg-muted",
         variant === "destructive" && "border-destructive bg-destructive text-white hover:bg-destructive/90",
         size === "default" && "h-10 px-4",
         size === "sm" && "h-8 px-3",

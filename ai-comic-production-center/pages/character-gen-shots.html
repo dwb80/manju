@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色图片生成 - 景别角度版</title>
+    <style id="theme-vars">
+/* ============================================
+   AI漫剧工业化生产中心 — Brand CSS
+   Dark Editorial Creative Studio
+   ============================================ */
+
+:root {
+  /* --- Brand Primary Hue: Warm Terracotta --- */
+  --acpc-color-1: #1A0F08;
+  --acpc-color-2: #2A1810;
+  --acpc-color-3: #3D2418;
+  --acpc-color-4: #5C3624;
+  --acpc-color-5: #7A4A30;
+  --acpc-color-6: #995E3C;
+  --acpc-color-7: #B86A3A;
+  --acpc-color-8: #E8743C;
+  --acpc-color-9: #F2855A;
+  --acpc-color-10: #F5A882;
+
+  /* --- Semantic Primary --- */
+  --acpc-color-primary: #E8743C;
+  --acpc-color-primary-hover: #F2855A;
+  --acpc-color-primary-active: #D66230;
+  --acpc-color-primary-tint: rgba(232, 116, 60, 0.12);
+  --acpc-color-primary-tint-strong: rgba(232, 116, 60, 0.20);
+
+  /* --- Dark Surface System --- */
+  --acpc-color-bg: #0D0D11;
+  --acpc-color-bg-deep: #08080B;
+  --acpc-color-surface: #16161D;
+  --acpc-color-surface-2: #1D1D26;
+  --acpc-color-surface-3: #24242F;
+  --acpc-color-surface-hover: #2A2A36;
+  --acpc-color-overlay: rgba(13, 13, 17, 0.80);
+
+  /* --- Borders --- */
+  --acpc-color-border: #2A2A36;
+  --acpc-color-border-light: #36363F;
+  --acpc-color-border-strong: #454552;
+
+  /* --- Text --- */
+  --acpc-color-text: #EAEAEF;
+  --acpc-color-text-secondary: #9494A0;
+  --acpc-color-text-tertiary: #5F5F6E;
+  --acpc-color-text-disabled: #3D3D48;
+  --acpc-color-text-inverse: #0D0D11;
+  --acpc-color-text-on-primary: #FFFFFF;
+
+  /* --- State Colors (semantic only) --- */
+  --state-success: #4ADE80;
+  --state-success-tint: rgba(74, 222, 128, 0.12);
+  --state-warning: #FBBF24;
+  --state-warning-tint: rgba(251, 191, 36, 0.12);
+  --state-error: #F87171;
+  --state-error-tint: rgba(248, 113, 113, 0.12);
+  --state-info: #60A5FA;
+  --state-info-tint: rgba(96, 165, 250, 0.12);
+
+  /* --- Radius Scale --- */
+  --acpc-radius-sm: 4px;
+  --acpc-radius-md: 8px;
+  --acpc-radius-lg: 12px;
+  --acpc-radius-full: 9999px;
+
+  /* --- Typography --- */
+  --acpc-font-display: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --acpc-font-body: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --acpc-font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* --- Spacing --- */
+  --acpc-space-xs: 4px;
+  --acpc-space-sm: 8px;
+  --acpc-space-md: 12px;
+  --acpc-space-lg: 16px;
+  --acpc-space-xl: 24px;
+  --acpc-space-2xl: 32px;
+  --acpc-space-3xl: 48px;
+
+  /* --- Shadows (floating layers only) --- */
+  --acpc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --acpc-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --acpc-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --acpc-shadow-floating: 0 8px 32px rgba(0, 0, 0, 0.32);
+
+  /* --- Tailwind Semantic Bridge Aliases --- */
+  --acpc-primary: var(--acpc-color-primary);
+  --acpc-primary-foreground: var(--acpc-color-text-on-primary);
+  --acpc-background: var(--acpc-color-bg);
+  --acpc-foreground: var(--acpc-color-text);
+  --acpc-card: var(--acpc-color-surface);
+  --acpc-card-foreground: var(--acpc-color-text);
+  --acpc-popover: var(--acpc-color-surface-2);
+  --acpc-popover-foreground: var(--acpc-color-text);
+  --acpc-secondary: var(--acpc-color-surface-3);
+  --acpc-secondary-foreground: var(--acpc-color-text);
+  --acpc-muted: var(--acpc-color-surface-2);
+  --acpc-muted-foreground: var(--acpc-color-text-secondary);
+  --acpc-accent: var(--acpc-color-surface-3);
+  --acpc-accent-foreground: var(--acpc-color-text);
+  --acpc-destructive: var(--state-error);
+  --acpc-destructive-foreground: #FFFFFF;
+  --acpc-border: var(--acpc-color-border);
+  --acpc-input: var(--acpc-color-border);
+  --acpc-ring: var(--acpc-color-primary);
+  --acpc-sidebar: var(--acpc-color-surface);
+  --acpc-sidebar-foreground: var(--acpc-color-text);
+  --acpc-sidebar-primary: var(--acpc-color-primary);
+  --acpc-sidebar-primary-foreground: var(--acpc-color-text-on-primary);
+  --acpc-sidebar-accent: var(--acpc-color-surface-2);
+  --acpc-sidebar-accent-foreground: var(--acpc-color-text);
+  --acpc-chart-1: var(--acpc-color-primary);
+  --acpc-chart-2: var(--state-info);
+  --acpc-chart-3: var(--state-success);
+  --acpc-chart-4: var(--state-warning);
+  --acpc-chart-5: var(--state-error);
+  --acpc-radius-small: var(--acpc-radius-sm);
+  --acpc-radius-medium: var(--acpc-radius-md);
+  --acpc-radius-large: var(--acpc-radius-lg);
+}
+
+/* --- Base Reset --- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--acpc-font-body);
+  background-color: var(--acpc-color-bg);
+  color: var(--acpc-color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* --- Typography Classes --- */
+.acpc-display {
+  font-family: var(--acpc-font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.acpc-h1 {
+  font-family: var(--acpc-font-display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.acpc-h2 {
+  font-family: var(--acpc-font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.acpc-h3 {
+  font-family: var(--acpc-font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+}
+
+.acpc-body {
+  font-family: var(--acpc-font-body);
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.acpc-body-sm {
+  font-family: var(--acpc-font-body);
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.acpc-label {
+  font-family: var(--acpc-font-body);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.acpc-mono {
+  font-family: var(--acpc-font-mono);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.acpc-metric {
+  font-family: var(--acpc-font-display);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.acpc-metric-lg {
+  font-family: var(--acpc-font-display);
+  font-weight: 800;
+  font-size: 36px;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/* --- Section Number (editorial) --- */
+.acpc-section-num {
+  font-family: var(--acpc-font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--acpc-color-primary);
+  letter-spacing: 0.08em;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--acpc-background);
+    --color-foreground: var(--acpc-foreground);
+    --color-card: var(--acpc-card);
+    --color-card-foreground: var(--acpc-card-foreground);
+    --color-popover: var(--acpc-popover);
+    --color-popover-foreground: var(--acpc-popover-foreground);
+    --color-primary: var(--acpc-primary);
+    --color-primary-foreground: var(--acpc-primary-foreground);
+    --color-secondary: var(--acpc-secondary);
+    --color-secondary-foreground: var(--acpc-secondary-foreground);
+    --color-muted: var(--acpc-muted);
+    --color-muted-foreground: var(--acpc-muted-foreground);
+    --color-accent: var(--acpc-accent);
+    --color-accent-foreground: var(--acpc-accent-foreground);
+    --color-destructive: var(--acpc-destructive);
+    --color-destructive-foreground: var(--acpc-destructive-foreground);
+    --color-border: var(--acpc-border);
+    --color-input: var(--acpc-input);
+    --color-ring: var(--acpc-ring);
+    --color-chart-1: var(--acpc-chart-1);
+    --color-chart-2: var(--acpc-chart-2);
+    --color-chart-3: var(--acpc-chart-3);
+    --color-chart-4: var(--acpc-chart-4);
+    --color-chart-5: var(--acpc-chart-5);
+    --color-sidebar: var(--acpc-sidebar);
+    --color-sidebar-foreground: var(--acpc-sidebar-foreground);
+    --color-sidebar-primary: var(--acpc-sidebar-primary);
+    --color-sidebar-primary-foreground: var(--acpc-sidebar-primary-foreground);
+    --color-sidebar-accent: var(--acpc-sidebar-accent);
+    --color-sidebar-accent-foreground: var(--acpc-sidebar-accent-foreground);
+    --radius-sm: var(--acpc-radius-small);
+    --radius-md: var(--acpc-radius-medium);
+    --radius-lg: var(--acpc-radius-large);
+  }
+  @layer base {
+    body { background: var(--acpc-background); color: var(--acpc-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

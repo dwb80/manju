@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI漫剧工业化生产中心</title>
+    <style id="theme-vars">
+/* ============================================
+   AI漫剧工业化生产中心 — Brand CSS
+   Dark Editorial Creative Studio
+   ============================================ */
+
+:root {
+  /* --- Brand Primary Hue: Warm Terracotta --- */
+  --acpc-color-1: #1A0F08;
+  --acpc-color-2: #2A1810;
+  --acpc-color-3: #3D2418;
+  --acpc-color-4: #5C3624;
+  --acpc-color-5: #7A4A30;
+  --acpc-color-6: #995E3C;
+  --acpc-color-7: #B86A3A;
+  --acpc-color-8: #E8743C;
+  --acpc-color-9: #F2855A;
+  --acpc-color-10: #F5A882;
+
+  /* --- Semantic Primary --- */
+  --acpc-color-primary: #E8743C;
+  --acpc-color-primary-hover: #F2855A;
+  --acpc-color-primary-active: #D66230;
+  --acpc-color-primary-tint: rgba(232, 116, 60, 0.12);
+  --acpc-color-primary-tint-strong: rgba(232, 116, 60, 0.20);
+
+  /* --- Dark Surface System --- */
+  --acpc-color-bg: #0D0D11;
+  --acpc-color-bg-deep: #08080B;
+  --acpc-color-surface: #16161D;
+  --acpc-color-surface-2: #1D1D26;
+  --acpc-color-surface-3: #24242F;
+  --acpc-color-surface-hover: #2A2A36;
+  --acpc-color-overlay: rgba(13, 13, 17, 0.80);
+
+  /* --- Borders --- */
+  --acpc-color-border: #2A2A36;
+  --acpc-color-border-light: #36363F;
+  --acpc-color-border-strong: #454552;
+
+  /* --- Text --- */
+  --acpc-color-text: #EAEAEF;
+  --acpc-color-text-secondary: #9494A0;
+  --acpc-color-text-tertiary: #5F5F6E;
+  --acpc-color-text-disabled: #3D3D48;
+  --acpc-color-text-inverse: #0D0D11;
+  --acpc-color-text-on-primary: #FFFFFF;
+
+  /* --- State Colors (semantic only) --- */
+  --state-success: #4ADE80;
+  --state-success-tint: rgba(74, 222, 128, 0.12);
+  --state-warning: #FBBF24;
+  --state-warning-tint: rgba(251, 191, 36, 0.12);
+  --state-error: #F87171;
+  --state-error-tint: rgba(248, 113, 113, 0.12);
+  --state-info: #60A5FA;
+  --state-info-tint: rgba(96, 165, 250, 0.12);
+
+  /* --- Radius Scale --- */
+  --acpc-radius-sm: 4px;
+  --acpc-radius-md: 8px;
+  --acpc-radius-lg: 12px;
+  --acpc-radius-full: 9999px;
+
+  /* --- Typography --- */
+  --acpc-font-display: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --acpc-font-body: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --acpc-font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* --- Spacing --- */
+  --acpc-space-xs: 4px;
+  --acpc-space-sm: 8px;
+  --acpc-space-md: 12px;
+  --acpc-space-lg: 16px;
+  --acpc-space-xl: 24px;
+  --acpc-space-2xl: 32px;
+  --acpc-space-3xl: 48px;
+
+  /* --- Shadows (floating layers only) --- */
+  --acpc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --acpc-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --acpc-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --acpc-shadow-floating: 0 8px 32px rgba(0, 0, 0, 0.32);
+
+  /* --- Tailwind Semantic Bridge Aliases --- */
+  --acpc-primary: var(--acpc-color-primary);
+  --acpc-primary-foreground: var(--acpc-color-text-on-primary);
+  --acpc-background: var(--acpc-color-bg);
+  --acpc-foreground: var(--acpc-color-text);
+  --acpc-card: var(--acpc-color-surface);
+  --acpc-card-foreground: var(--acpc-color-text);
+  --acpc-popover: var(--acpc-color-surface-2);
+  --acpc-popover-foreground: var(--acpc-color-text);
+  --acpc-secondary: var(--acpc-color-surface-3);
+  --acpc-secondary-foreground: var(--acpc-color-text);
+  --acpc-muted: var(--acpc-color-surface-2);
+  --acpc-muted-foreground: var(--acpc-color-text-secondary);
+  --acpc-accent: var(--acpc-color-surface-3);
+  --acpc-accent-foreground: var(--acpc-color-text);
+  --acpc-destructive: var(--state-error);
+  --acpc-destructive-foreground: #FFFFFF;
+  --acpc-border: var(--acpc-color-border);
+  --acpc-input: var(--acpc-color-border);
+  --acpc-ring: var(--acpc-color-primary);
+  --acpc-sidebar: var(--acpc-color-surface);
+  --acpc-sidebar-foreground: var(--acpc-color-text);
+  --acpc-sidebar-primary: var(--acpc-color-primary);
+  --acpc-sidebar-primary-foreground: var(--acpc-color-text-on-primary);
+  --acpc-sidebar-accent: var(--acpc-color-surface-2);
+  --acpc-sidebar-accent-foreground: var(--acpc-color-text);
+  --acpc-chart-1: var(--acpc-color-primary);
+  --acpc-chart-2: var(--state-info);
+  --acpc-chart-3: var(--state-success);
+  --acpc-chart-4: var(--state-warning);
+  --acpc-chart-5: var(--state-error);
+  --acpc-radius-small: var(--acpc-radius-sm);
+  --acpc-radius-medium: var(--acpc-radius-md);
+  --acpc-radius-large: var(--acpc-radius-lg);
+}
+
+/* --- Base Reset --- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--acpc-font-body);
+  background-color: var(--acpc-color-bg);
+  color: var(--acpc-color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* --- Typography Classes --- */
+.acpc-display {
+  font-family: var(--acpc-font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.acpc-h1 {
+  font-family: var(--acpc-font-display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.acpc-h2 {
+  font-family: var(--acpc-font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.acpc-h3 {
+  font-family: var(--acpc-font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+}
+
+.acpc-body {
+  font-family: var(--acpc-font-body);
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.acpc-body-sm {
+  font-family: var(--acpc-font-body);
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.acpc-label {
+  font-family: var(--acpc-font-body);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.acpc-mono {
+  font-family: var(--acpc-font-mono);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.acpc-metric {
+  font-family: var(--acpc-font-display);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.acpc-metric-lg {
+  font-family: var(--acpc-font-display);
+  font-weight: 800;
+  font-size: 36px;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/* --- Section Number (editorial) --- */
+.acpc-section-num {
+  font-family: var(--acpc-font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--acpc-color-primary);
+  letter-spacing: 0.08em;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--acpc-background);
+    --color-foreground: var(--acpc-foreground);
+    --color-card: var(--acpc-card);
+    --color-card-foreground: var(--acpc-card-foreground);
+    --color-popover: var(--acpc-popover);
+    --color-popover-foreground: var(--acpc-popover-foreground);
+    --color-primary: var(--acpc-primary);
+    --color-primary-foreground: var(--acpc-primary-foreground);
+    --color-secondary: var(--acpc-secondary);
+    --color-secondary-foreground: var(--acpc-secondary-foreground);
+    --color-muted: var(--acpc-muted);
+    --color-muted-foreground: var(--acpc-muted-foreground);
+    --color-accent: var(--acpc-accent);
+    --color-accent-foreground: var(--acpc-accent-foreground);
+    --color-destructive: var(--acpc-destructive);
+    --color-destructive-foreground: var(--acpc-destructive-foreground);
+    --color-border: var(--acpc-border);
+    --color-input: var(--acpc-input);
+    --color-ring: var(--acpc-ring);
+    --color-chart-1: var(--acpc-chart-1);
+    --color-chart-2: var(--acpc-chart-2);
+    --color-chart-3: var(--acpc-chart-3);
+    --color-chart-4: var(--acpc-chart-4);
+    --color-chart-5: var(--acpc-chart-5);
+    --color-sidebar: var(--acpc-sidebar);
+    --color-sidebar-foreground: var(--acpc-sidebar-foreground);
+    --color-sidebar-primary: var(--acpc-sidebar-primary);
+    --color-sidebar-primary-foreground: var(--acpc-sidebar-primary-foreground);
+    --color-sidebar-accent: var(--acpc-sidebar-accent);
+    --color-sidebar-accent-foreground: var(--acpc-sidebar-accent-foreground);
+    --radius-sm: var(--acpc-radius-small);
+    --radius-md: var(--acpc-radius-medium);
+    --radius-lg: var(--acpc-radius-large);
+  }
+  @layer base {
+    body { background: var(--acpc-background); color: var(--acpc-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <div class="flex h-screen overflow-hidden">
+        <!-- ===== Left Sidebar (220px fixed) ===== -->
+        <aside class="hidden md:flex w-[220px] shrink-0 flex-col" style="background-color: var(--acpc-color-surface); border-right: 1px solid var(--acpc-color-border);">
+            <!-- Logo -->
+            <div class="h-12 shrink-0 flex items-center gap-2.5 px-4" style="border-bottom: 1px solid var(--acpc-color-border);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--acpc-color-primary); flex-shrink: 0;">
+                    <rect width="18" height="18" x="3" y="3" rx="2"/>
+                    <path d="M7 3v18"/>
+                    <path d="M3 7.5h4"/>
+                    <path d="M3 12h18"/>
+                    <path d="M3 16.5h4"/>
+                </svg>
+                <span class="text-[15px] font-bold tracking-tight" style="color: var(--acpc-color-text);">ACPC</span>
+            </div>
+            <!-- Navigation -->
+            <nav class="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-1 no-scrollbar">
+                <a data-nav-key="overview" data-dom-id="nav-overview" href="#" class="acpc-nav-item flex items-center gap-3 h-9 px-3 text-[13px] whitespace-nowrap" style="color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-md);">
+                    <svg class="acpc-nav-icon shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="7" height="9" x="3" y="3" rx="1"/>
+                        <rect width="7" height="5" x="14" y="3" rx="1"/>
+                        <rect width="7" height="9" x="14" y="12" rx="1"/>
+                        <rect width="7" height="5" x="3" y="16" rx="1"/>
+                    </svg>
+                    <span>总览看板</span>
+                </a>
+                <a data-nav-key="projects" data-dom-id="nav-projects" href="#" class="acpc-nav-item flex items-center gap-3 h-9 px-3 text-[13px] whitespace-nowrap" style="color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-md);">
+                    <svg class="acpc-nav-icon shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+                    </svg>
+                    <span>项目管理</span>
+                </a>
+                <a data-nav-key="pipeline" data-active="true" data-dom-id="nav-pipeline" href="#" class="acpc-nav-item flex items-center gap-3 h-9 px-3 text-[13px] whitespace-nowrap" style="color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-md);">
+                    <svg class="acpc-nav-icon shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="8" height="8" x="3" y="3" rx="2"/>
+                        <path d="M7 11v4a2 2 0 0 0 2 2h4"/>
+                        <rect width="8" height="8" x="13" y="13" rx="2"/>
+                    </svg>
+                    <span>生产流水线</span>
+                </a>
+                <a data-nav-key="workspace" data-dom-id="nav-workspace" href="#" class="acpc-nav-item flex items-center gap-3 h-9 px-3 text-[13px] whitespace-nowrap" style="color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-md);">
+                    <svg class="acpc-nav-icon shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m12 19 7-7 3 3-7 7-3-3z"/>
+                        <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                        <path d="m2 2 7.586 7.586"/>
+                        <circle cx="11" cy="11" r="2"/>
+                    </svg>
+                    <span>AI创作工作台</span>
+                </a>
+                <a data-nav-key="assets" data-dom-id="nav-assets" href="#" class="acpc-nav-item flex items-center gap-3 h-9 px-3 text-[13px] whitespace-nowrap" style="color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-md);">
+                    <svg class="acpc-nav-icon shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m16 6 4 14"/>
+                        <path d="M12 6v14"/>
+                        <path d="M8 8v12"/>
+                        <path d="M4 4v16"/>
+                    </svg>
+                    <span>素材资产库</span>
+                </a>
+            </nav>
+            <!-- User Profile -->
+            <div class="p-3 shrink-0" style="border-top: 1px solid var(--acpc-color-border);">
+                <div class="flex items-center gap-3 p-2" style="background-color: var(--acpc-color-surface-2); border-radius: var(--acpc-radius-md);">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-primary);">
+                        <span class="text-[13px] font-semibold" style="color: var(--acpc-color-text-on-primary);">林</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">林墨白</div>
+                        <div class="text-[11px] truncate" style="color: var(--acpc-color-text-secondary);">制作总监</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ===== Main Area ===== -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- Top Bar (48px) -->
+            <header class="h-12 shrink-0 flex items-center gap-3 px-4 sm:px-6" style="background-color: var(--acpc-color-surface); border-bottom: 1px solid var(--acpc-color-border);">
+                <!-- Mobile menu button -->
+                <button class="md:hidden w-8 h-8 flex items-center justify-center" style="color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-sm);">
+                    <i data-lucide="menu" class="w-4 h-4"></i>
+                </button>
+                <!-- Breadcrumb -->
+                <div class="flex items-center gap-2 text-[12px] min-w-0" style="color: var(--acpc-color-text-secondary);">
+                    <a href="#" class="acpc-breadcrumb-link whitespace-nowrap">首页</a>
+                    <i data-lucide="chevron-right" class="w-3 h-3 shrink-0" style="color: var(--acpc-color-text-tertiary);"></i>
+                    <span class="whitespace-nowrap" style="color: var(--acpc-color-text);">生产流水线</span>
+                </div>
+                <!-- Spacer -->
+                <div class="flex-1"></div>
+                <!-- Search -->
+                <div class="relative hidden sm:block w-[240px]">
+                    <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4" style="color: var(--acpc-color-text-tertiary);"></i>
+                    <input type="text" placeholder="搜索项目、素材..." class="acpc-search-input w-full h-8 pl-8 pr-3 text-[13px]" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); color: var(--acpc-color-text); border-radius: var(--acpc-radius-sm);">
+                </div>
+                <!-- Notifications -->
+                <button class="acpc-icon-btn relative w-8 h-8 flex items-center justify-center" style="color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-sm);">
+                    <i data-lucide="bell" class="w-4 h-4"></i>
+                    <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full" style="background-color: var(--acpc-color-primary);"></span>
+                </button>
+                <!-- Quick Action CTA -->
+                <button class="acpc-cta-primary h-8 px-4 flex items-center justify-center gap-1.5 text-[13px] font-medium whitespace-nowrap" style="background-color: var(--acpc-color-primary); color: var(--acpc-color-text-on-primary); border-radius: var(--acpc-radius-md);">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>新建项目</span>
+                </button>
+            </header>
+            <!-- Main Content -->
+            <main class="flex-1 overflow-y-auto" style="background-color: var(--acpc-color-bg);">
+                <div class="p-6">
+                    <!-- Page Title Area -->
+                    <div class="mb-6">
+                        <div class="flex items-end justify-between gap-4 flex-wrap">
+                            <div class="min-w-0">
+                                <h1 class="acpc-h1" style="color: var(--acpc-color-text); text-wrap: balance; word-break: keep-all;">生产流水线</h1>
+                                <p class="acpc-body-sm mt-2" style="color: var(--acpc-color-text-secondary);">实时跟踪剧本到发布全流程，识别瓶颈并优化产能</p>
+                            </div>
+                            <div class="flex items-center gap-2 text-[12px] shrink-0 whitespace-nowrap" style="color: var(--acpc-color-text-secondary);">
+                                <span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--state-success);"></span>
+                                <span>实时同步</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Content Wrapper -->
+                    <div>
+                        <!-- ===== Bottleneck Alert Bar ===== -->
+                        <div class="acpc-alert-bar flex items-center gap-3 px-4 py-3 mb-4" style="background-color: var(--state-warning-tint); border-left: 3px solid var(--state-warning); border-radius: var(--acpc-radius-md);">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0" style="color: var(--state-warning);"></i>
+                            <p class="text-[13px] flex-1 min-w-0" style="color: var(--acpc-color-text);">
+                                <span class="font-medium" style="color: var(--state-warning);">瓶颈预警：</span>分镜绘制阶段积压18项，平均等待时间2.1h，建议增加绘制人员
+                            </p>
+                            <a href="#" data-dom-id="alert-view-detail" class="acpc-link-detail text-[12px] whitespace-nowrap shrink-0" style="color: var(--acpc-color-text-secondary);">查看详情</a>
+                        </div>
+
+                        <!-- ===== Pipeline Stats Bar ===== -->
+                        <div class="flex items-center gap-6 px-4 py-3 mb-6 flex-wrap" style="background-color: var(--acpc-color-surface); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md);">
+                            <div class="flex items-center gap-6 flex-1 min-w-0 flex-wrap">
+                                <div class="flex flex-col gap-1">
+                                    <span class="acpc-metric whitespace-nowrap" style="font-size: 20px; color: var(--acpc-color-text);">62</span>
+                                    <span class="acpc-label" style="color: var(--acpc-color-text-secondary);">总在产</span>
+                                </div>
+                                <span class="w-px h-8 shrink-0" style="background-color: var(--acpc-color-border);"></span>
+                                <div class="flex flex-col gap-1">
+                                    <span class="acpc-metric whitespace-nowrap" style="font-size: 20px; color: var(--acpc-color-text);">247</span>
+                                    <span class="acpc-label" style="color: var(--acpc-color-text-secondary);">日均吞吐</span>
+                                </div>
+                                <span class="w-px h-8 shrink-0" style="background-color: var(--acpc-color-border);"></span>
+                                <div class="flex flex-col gap-1">
+                                    <span class="acpc-metric whitespace-nowrap" style="font-size: 20px; color: var(--acpc-color-text);">4.2h</span>
+                                    <span class="acpc-label" style="color: var(--acpc-color-text-secondary);">平均周期</span>
+                                </div>
+                                <span class="w-px h-8 shrink-0" style="background-color: var(--acpc-color-border);"></span>
+                                <div class="flex flex-col gap-1">
+                                    <span class="acpc-metric whitespace-nowrap" style="font-size: 20px; color: var(--state-warning);">分镜绘制</span>
+                                    <span class="acpc-label" style="color: var(--acpc-color-text-secondary);">瓶颈阶段</span>
+                                </div>
+                            </div>
+                            <button data-dom-id="cta-open-workspace" class="acpc-cta-primary acpc-cta-workspace h-8 px-4 flex items-center gap-1.5 text-[13px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--acpc-color-primary); color: var(--acpc-color-text-on-primary); border-radius: var(--acpc-radius-md);">
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                <span>打开创作工作台</span>
+                            </button>
+                        </div>
+
+                        <!-- ===== Kanban Board (6 columns, horizontal scroll) ===== -->
+                        <div class="acpc-kanban-board flex gap-3 overflow-x-auto pb-2" style="align-items: flex-start;">
+
+                            <!-- Column 1: 剧本创作 -->
+                            <section class="acpc-kanban-column flex flex-col shrink-0 w-[240px]" style="background-color: var(--acpc-color-surface); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                <header class="flex items-center justify-between gap-2 mb-3">
+                                    <span class="text-[13px] font-semibold whitespace-nowrap" style="color: var(--acpc-color-text);">剧本创作</span>
+                                    <span class="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold" style="background-color: var(--acpc-color-surface-3); color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-full); font-family: var(--acpc-font-mono);">5</span>
+                                </header>
+                                <div class="acpc-card-stack flex flex-col gap-2 flex-1" style="min-height: 0; max-height: 500px; overflow-y: auto;">
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">都市暗影录</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-error-tint); color: var(--state-error); border-radius: var(--acpc-radius-full);">高</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 68%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">都</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/15</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">星河战记</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 45%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">星</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/20</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">校园怪谈</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-error-tint); color: var(--state-error); border-radius: var(--acpc-radius-full);">高</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 90%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">校</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/12</span>
+                                        </div>
+                                    </article>
+                                </div>
+                                <button data-dom-id="add-card-script" class="acpc-add-btn w-full h-8 flex items-center justify-start gap-1 px-2 text-[12px] mt-2 shrink-0" style="color: var(--acpc-color-text-secondary); border: 1px dashed var(--acpc-color-border-light); border-radius: var(--acpc-radius-md); background: transparent;">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>添加</span>
+                                </button>
+                            </section>
+
+                            <!-- Column 2: 角色设计 -->
+                            <section class="acpc-kanban-column flex flex-col shrink-0 w-[240px]" style="background-color: var(--acpc-color-surface); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                <header class="flex items-center justify-between gap-2 mb-3">
+                                    <span class="text-[13px] font-semibold whitespace-nowrap" style="color: var(--acpc-color-text);">角色设计</span>
+                                    <span class="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold" style="background-color: var(--acpc-color-surface-3); color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-full); font-family: var(--acpc-font-mono);">8</span>
+                                </header>
+                                <div class="acpc-card-stack flex flex-col gap-2 flex-1" style="min-height: 0; max-height: 500px; overflow-y: auto;">
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">时空迷局</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 32%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">时</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/25</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">末日方舟</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--acpc-color-surface-3); color: var(--acpc-color-text-tertiary); border-radius: var(--acpc-radius-full);">低</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 100%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">末</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/08</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">古墓迷踪</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 15%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">古</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">08/01</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">暗夜追踪</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-error-tint); color: var(--state-error); border-radius: var(--acpc-radius-full);">高</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 55%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">暗</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/18</span>
+                                        </div>
+                                    </article>
+                                </div>
+                                <button data-dom-id="add-card-character" class="acpc-add-btn w-full h-8 flex items-center justify-center gap-1 text-[12px] mt-2 shrink-0" style="color: var(--acpc-color-text-secondary); border: 1px dashed var(--acpc-color-border-light); border-radius: var(--acpc-radius-md); background: transparent;">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>添加</span>
+                                </button>
+                            </section>
+
+                            <!-- Column 3: 场景制作 -->
+                            <section class="acpc-kanban-column flex flex-col shrink-0 w-[240px]" style="background-color: var(--acpc-color-surface); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                <header class="flex items-center justify-between gap-2 mb-3">
+                                    <span class="text-[13px] font-semibold whitespace-nowrap" style="color: var(--acpc-color-text);">场景制作</span>
+                                    <span class="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold" style="background-color: var(--acpc-color-surface-3); color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-full); font-family: var(--acpc-font-mono);">6</span>
+                                </header>
+                                <div class="acpc-card-stack flex flex-col gap-2 flex-1" style="min-height: 0; max-height: 500px; overflow-y: auto;">
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">迷雾档案</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 40%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">迷</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/22</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">星尘物语</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--acpc-color-surface-3); color: var(--acpc-color-text-tertiary); border-radius: var(--acpc-radius-full);">低</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 25%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">尘</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">08/05</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">机械之心</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 62%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">机</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/19</span>
+                                        </div>
+                                    </article>
+                                </div>
+                                <button data-dom-id="add-card-scene" class="acpc-add-btn w-full h-8 flex items-center justify-start gap-1 px-2 text-[12px] mt-2 shrink-0" style="color: var(--acpc-color-text-secondary); border: 1px dashed var(--acpc-color-border-light); border-radius: var(--acpc-radius-md); background: transparent;">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>添加</span>
+                                </button>
+                            </section>
+
+                            <!-- Column 4: 分镜绘制 (BOTTLENECK — primary border) -->
+                            <section class="acpc-kanban-column acpc-column-bottleneck flex flex-col shrink-0 w-[240px]" style="background-color: var(--acpc-color-surface); border: 1px solid var(--acpc-color-primary); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                <header class="flex items-center justify-between gap-2 mb-3">
+                                    <span class="text-[13px] font-semibold whitespace-nowrap" style="color: var(--acpc-color-text);">分镜绘制</span>
+                                    <span class="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold" style="background-color: var(--acpc-color-primary-tint); color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full); font-family: var(--acpc-font-mono);">18</span>
+                                </header>
+                                <div class="acpc-card-stack flex flex-col gap-2 flex-1" style="min-height: 0; max-height: 500px; overflow-y: auto;">
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">幽灵列车</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-error-tint); color: var(--state-error); border-radius: var(--acpc-radius-full);">高</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 28%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">幽</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/21</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">深海回响</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 18%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">深</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/28</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">赛博纪元</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-error-tint); color: var(--state-error); border-radius: var(--acpc-radius-full);">高</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 42%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">赛</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/16</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">异度空间</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 8%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">异</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">08/03</span>
+                                        </div>
+                                    </article>
+                                </div>
+                                <button data-dom-id="add-card-storyboard" class="acpc-add-btn w-full h-8 flex items-center justify-center gap-1 text-[12px] mt-2 shrink-0" style="color: var(--acpc-color-text-secondary); border: 1px dashed var(--acpc-color-border-light); border-radius: var(--acpc-radius-md); background: transparent;">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>添加</span>
+                                </button>
+                            </section>
+
+                            <!-- Column 5: 审核校对 -->
+                            <section class="acpc-kanban-column flex flex-col shrink-0 w-[240px]" style="background-color: var(--acpc-color-surface); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                <header class="flex items-center justify-between gap-2 mb-3">
+                                    <span class="text-[13px] font-semibold whitespace-nowrap" style="color: var(--acpc-color-text);">审核校对</span>
+                                    <span class="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold" style="background-color: var(--acpc-color-surface-3); color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-full); font-family: var(--acpc-font-mono);">8</span>
+                                </header>
+                                <div class="acpc-card-stack flex flex-col gap-2 flex-1" style="min-height: 0; max-height: 500px; overflow-y: auto;">
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">赤焰苍穹</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 75%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">赤</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/14</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">镜中奇缘</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-error-tint); color: var(--state-error); border-radius: var(--acpc-radius-full);">高</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 88%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">镜</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/13</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">暮光之歌</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--acpc-color-surface-3); color: var(--acpc-color-text-tertiary); border-radius: var(--acpc-radius-full);">低</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 60%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">暮</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/23</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">极地追凶</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 50%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">极</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/26</span>
+                                        </div>
+                                    </article>
+                                </div>
+                                <button data-dom-id="add-card-review" class="acpc-add-btn w-full h-8 flex items-center justify-start gap-1 px-2 text-[12px] mt-2 shrink-0" style="color: var(--acpc-color-text-secondary); border: 1px dashed var(--acpc-color-border-light); border-radius: var(--acpc-radius-md); background: transparent;">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>添加</span>
+                                </button>
+                            </section>
+
+                            <!-- Column 6: 发布上线 -->
+                            <section class="acpc-kanban-column flex flex-col shrink-0 w-[240px]" style="background-color: var(--acpc-color-surface); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                <header class="flex items-center justify-between gap-2 mb-3">
+                                    <span class="text-[13px] font-semibold whitespace-nowrap" style="color: var(--acpc-color-text);">发布上线</span>
+                                    <span class="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold" style="background-color: var(--acpc-color-surface-3); color: var(--acpc-color-text-secondary); border-radius: var(--acpc-radius-full); font-family: var(--acpc-font-mono);">2</span>
+                                </header>
+                                <div class="acpc-card-stack flex flex-col gap-2 flex-1" style="min-height: 0; max-height: 500px; overflow-y: auto;">
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">破晓传说</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--acpc-color-surface-3); color: var(--acpc-color-text-tertiary); border-radius: var(--acpc-radius-full);">低</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 100%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">破</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/10</span>
+                                        </div>
+                                    </article>
+                                    <article class="acpc-kanban-card" style="background-color: var(--acpc-color-surface-2); border: 1px solid var(--acpc-color-border); border-radius: var(--acpc-radius-md); padding: 12px;">
+                                        <div class="flex items-center justify-between gap-2 mb-2">
+                                            <span class="text-[13px] font-medium truncate" style="color: var(--acpc-color-text);">龙脉秘境</span>
+                                            <span class="inline-flex items-center justify-center h-5 px-1.5 text-[11px] font-medium whitespace-nowrap shrink-0" style="background-color: var(--state-warning-tint); color: var(--state-warning); border-radius: var(--acpc-radius-full);">中</span>
+                                        </div>
+                                        <div class="w-full mb-2" style="height: 4px; background-color: var(--acpc-color-surface-3); border-radius: var(--acpc-radius-full); overflow: hidden;">
+                                            <div style="height: 100%; width: 95%; background-color: var(--acpc-color-primary); border-radius: var(--acpc-radius-full);"></div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background-color: var(--acpc-color-surface-3);">
+                                                <span class="text-[10px] font-medium" style="color: var(--acpc-color-text-secondary);">龙</span>
+                                            </div>
+                                            <span class="text-[11px] whitespace-nowrap" style="color: var(--acpc-color-text-tertiary); font-family: var(--acpc-font-mono);">07/11</span>
+                                        </div>
+                                    </article>
+                                </div>
+                                <button data-dom-id="add-card-publish" class="acpc-add-btn w-full h-8 flex items-center justify-start gap-1 px-2 text-[12px] mt-2 shrink-0" style="color: var(--acpc-color-text-secondary); border: 1px dashed var(--acpc-color-border-light); border-radius: var(--acpc-radius-md); background: transparent;">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>添加</span>
+                                </button>
+                            </section>
+
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <!-- Custom shell styles (placed before </body> per free-explore rules) -->
+    <style>
+        .acpc-nav-item {
+            transition: background-color 120ms cubic-bezier(.2,.8,.2,1), color 120ms cubic-bezier(.2,.8,.2,1);
+        }
+        .acpc-nav-item:hover {
+            background-color: var(--acpc-color-surface-2);
+            color: var(--acpc-color-text);
+        }
+        .acpc-nav-item[data-active="true"] {
+            background-color: var(--acpc-color-primary-tint);
+            color: var(--acpc-color-primary);
+        }
+        .acpc-nav-item:focus-visible {
+            outline: 2px solid var(--acpc-color-primary);
+            outline-offset: -2px;
+        }
+        .acpc-icon-btn {
+            transition: background-color 120ms cubic-bezier(.2,.8,.2,1), color 120ms cubic-bezier(.2,.8,.2,1);
+        }
+        .acpc-icon-btn:hover {
+            background-color: var(--acpc-color-surface-2);
+            color: var(--acpc-color-text);
+        }
+        .acpc-icon-btn:focus-visible {
+            outline: 2px solid var(--acpc-color-primary);
+            outline-offset: -2px;
+        }
+        .acpc-search-input {
+            transition: border-color 120ms cubic-bezier(.2,.8,.2,1);
+        }
+        .acpc-search-input:focus {
+            border-color: var(--acpc-color-primary);
+            outline: none;
+        }
+        .acpc-search-input::placeholder {
+            color: var(--acpc-color-text-tertiary);
+        }
+        .acpc-cta-primary {
+            transition: background-color 120ms cubic-bezier(.2,.8,.2,1);
+        }
+        .acpc-cta-primary:hover {
+            background-color: var(--acpc-color-primary-hover);
+        }
+        .acpc-cta-primary:active {
+            background-color: var(--acpc-color-primary-active);
+        }
+        .acpc-cta-primary:focus-visible {
+            outline: 2px solid var(--acpc-color-primary);
+            outline-offset: 2px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .acpc-nav-item,
+            .acpc-icon-btn,
+            .acpc-search-input,
+            .acpc-cta-primary {
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+    <!-- Pipeline page styles (free-explore custom CSS, placed before </body>) -->
+    <style>
+        .acpc-breadcrumb-link {
+            color: var(--acpc-color-text-tertiary);
+            transition: color 120ms cubic-bezier(.2,.8,.2,1);
+        }
+        .acpc-breadcrumb-link:hover { color: var(--acpc-color-text); }
+        .acpc-breadcrumb-link:focus-visible {
+            outline: 2px solid var(--acpc-color-primary);
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
+
+        .acpc-alert-bar { transition: background-color 160ms cubic-bezier(.2,.8,.2,1); }
+
+        .acpc-link-detail {
+            text-decoration: none;
+            transition: color 120ms cubic-bezier(.2,.8,.2,1);
+        }
+        .acpc-link-detail:hover {
+            color: var(--acpc-color-text);
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+        .acpc-link-detail:focus-visible {
+            outline: 2px solid var(--acpc-color-primary);
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
+
+        /* CTA icon slide — memorable business micro-interaction */
+        .acpc-cta-workspace i {
+            transition: transform 160ms cubic-bezier(.2,.8,.2,1);
+        }
+        .acpc-cta-workspace:hover i { transform: translateX(2px); }
+        .acpc-cta-workspace:active i { transform: translateX(0); }
+
+        /* Kanban board + columns */
+        .acpc-kanban-board { scrollbar-width: thin; scrollbar-color: var(--acpc-color-surface-3) transparent; }
+        .acpc-kanban-board::-webkit-scrollbar { height: 8px; }
+        .acpc-kanban-board::-webkit-scrollbar-track { background: transparent; }
+        .acpc-kanban-board::-webkit-scrollbar-thumb {
+            background: var(--acpc-color-surface-3);
+            border-radius: 4px;
+        }
+        .acpc-kanban-board::-webkit-scrollbar-thumb:hover { background: var(--acpc-color-border-strong); }
+
+        .acpc-card-stack { scrollbar-width: thin; scrollbar-color: var(--acpc-color-surface-3) transparent; }
+        .acpc-card-stack::-webkit-scrollbar { width: 6px; }
+        .acpc-card-stack::-webkit-scrollbar-track { background: transparent; }
+        .acpc-card-stack::-webkit-scrollbar-thumb {
+            background: var(--acpc-color-surface-3);
+            border-radius: 3px;
+        }
+
+        .acpc-kanban-card {
+            cursor: pointer;
+            transition: border-color 120ms cubic-bezier(.2,.8,.2,1), background-color 120ms cubic-bezier(.2,.8,.2,1);
+        }
+        .acpc-kanban-card:hover {
+            border-color: var(--acpc-color-border-light);
+            background-color: var(--acpc-color-surface-3);
+        }
+        .acpc-kanban-card:focus-visible {
+            outline: 2px solid var(--acpc-color-primary);
+            outline-offset: 2px;
+        }
+
+        .acpc-add-btn {
+            transition: background-color 120ms cubic-bezier(.2,.8,.2,1), border-color 120ms cubic-bezier(.2,.8,.2,1), color 120ms cubic-bezier(.2,.8,.2,1);
+        }
+        .acpc-add-btn:hover {
+            background-color: var(--acpc-color-surface-2);
+            border-color: var(--acpc-color-border-strong);
+            color: var(--acpc-color-text);
+        }
+        .acpc-add-btn:focus-visible {
+            outline: 2px solid var(--acpc-color-primary);
+            outline-offset: 2px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .acpc-breadcrumb-link,
+            .acpc-alert-bar,
+            .acpc-link-detail,
+            .acpc-cta-workspace i,
+            .acpc-kanban-card,
+            .acpc-add-btn {
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

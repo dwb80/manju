@@ -111,3 +111,40 @@ export interface ApiResponse<T> {
   message: string;
   data: T;
 }
+
+/** 剧本编辑器内行内批注与回复（任务8：评论持久化）。 */
+export interface ScriptComment {
+  id: string;
+  script_id: string;
+  episode_id?: string;
+  user_name: string;
+  content: string;
+  selected_text: string;
+  position_from: number;
+  position_to: number;
+  parent_id?: string;
+  resolved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ==================== 任务12：统一版本管理 ====================
+
+/** 资产实体类型（角色 / 场景 / 道具）。 */
+export type AssetEntityType = "character" | "scene" | "prop";
+
+/** 版本变更类型。 */
+export type AssetVersionChangeType = "create" | "update" | "restore";
+
+/** 资产版本快照。 */
+export interface AssetVersion {
+  id: string;
+  entity_type: AssetEntityType;
+  entity_id: string;
+  version: number;
+  data: string;
+  change_note?: string;
+  change_type: AssetVersionChangeType;
+  created_at: string;
+  created_by?: string;
+}

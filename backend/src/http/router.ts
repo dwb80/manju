@@ -7,6 +7,8 @@ import { getRuntimeConfig } from "../config/env.js";
 import type { AppContext } from "../services/app.js";
 import { addFavorite, addMessage, createConversation, createProject, createLocalImageTask, deleteConversation, deleteProject, ensureConversation, generateImage, generateVideo, listConversations, listImages, listProjects, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateProject, updateSettings } from "../services/domain.js";
 import { saveUploadedImage, type UploadInput } from "../services/media.js";
+import { listCharacters, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters, listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes, listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps, getCharacterUsage, getSceneUsage, getPropUsage, copyCharactersToProjects, copyScenesToProjects, copyPropsToProjects, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets, listVersions, getVersion, restoreVersion } from "../services/module-domain.js";
+import { listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment } from "../services/script-center-impl.js";
 import type { Conversation, Message, Project } from "../types.js";
 import { DEFAULT_MODEL, estimateTokens, requireString } from "../utils.js";
 
@@ -355,6 +357,189 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     if (method === "GET" && parts.join("/") === "api/settings") return sendJson(res, await ctx.settings.get());
     if (method === "PUT" && parts.join("/") === "api/settings") return sendJson(res, await updateSettings(ctx, await readJson(req)));
+    // 角色模块
+    if (method === "GET" && parts.join("/") === "api/characters") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listCharacters(ctx, projectId));
+    }
+    if (method === "POST" && parts.join("/") === "api/characters") return sendJson(res, await createCharacter(ctx, await readJson(req) as any));
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "characters" && parts[2]) return sendJson(res, await updateCharacter(ctx, parts[2], await readJson(req) as any));
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "characters" && parts[2]) {
+      await deleteCharacter(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "characters" && parts[2] && parts[3] === "restore") {
+      await restoreCharacter(ctx, parts[2]);
+      return sendJson(res, { restored: true });
+    }
+    // 角色引用查询
+    if (method === "GET" && parts[0] === "api" && parts[1] === "characters" && parts[2] && parts[3] === "usage") {
+      return sendJson(res, await getCharacterUsage(ctx, parts[2]));
+    }
+    if (method === "POST" && parts.join("/") === "api/characters/batch") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      if (body.action === "delete") {
+        await batchDeleteCharacters(ctx, ids);
+        return sendJson(res, { deleted: ids.length });
+      }
+      if (body.action === "update") {
+        await batchUpdateCharacters(ctx, ids, (body.patch ?? {}) as any);
+        return sendJson(res, { updated: ids.length });
+      }
+      throw new Error("unknown batch action");
+    }
+    // 角色回收站（已软删除列表 + 永久删除）
+    if (method === "GET" && parts[0] === "api" && parts[1] === "characters" && parts[2] === "deleted") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listDeletedCharacters(ctx, projectId));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "characters" && parts[2] === "permanent") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      await permanentDeleteCharacters(ctx, ids);
+      return sendJson(res, { deleted: ids.length });
+    }
+    // 跨项目复制角色
+    if (method === "POST" && parts.join("/") === "api/characters/copy") {
+      const body = await readJson(req);
+      const sourceId = requireString(body.sourceId, "sourceId");
+      const targetProjectIds = Array.isArray(body.targetProjectIds) ? (body.targetProjectIds as string[]).filter(Boolean) : [];
+      if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
+      return sendJson(res, await copyCharactersToProjects(ctx, sourceId, targetProjectIds));
+    }
+    // 场景模块
+    if (method === "GET" && parts.join("/") === "api/scenes") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listScenes(ctx, projectId));
+    }
+    if (method === "POST" && parts.join("/") === "api/scenes") return sendJson(res, await createScene(ctx, await readJson(req) as any));
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "scenes" && parts[2]) return sendJson(res, await updateScene(ctx, parts[2], await readJson(req) as any));
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "scenes" && parts[2]) {
+      await deleteScene(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "scenes" && parts[2] && parts[3] === "restore") {
+      await restoreScene(ctx, parts[2]);
+      return sendJson(res, { restored: true });
+    }
+    // 场景引用查询
+    if (method === "GET" && parts[0] === "api" && parts[1] === "scenes" && parts[2] && parts[3] === "usage") {
+      return sendJson(res, await getSceneUsage(ctx, parts[2]));
+    }
+    if (method === "POST" && parts.join("/") === "api/scenes/batch") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      if (body.action === "delete") {
+        await batchDeleteScenes(ctx, ids);
+        return sendJson(res, { deleted: ids.length });
+      }
+      if (body.action === "update") {
+        await batchUpdateScenes(ctx, ids, (body.patch ?? {}) as any);
+        return sendJson(res, { updated: ids.length });
+      }
+      throw new Error("unknown batch action");
+    }
+    // 场景回收站（已软删除列表 + 永久删除）
+    if (method === "GET" && parts[0] === "api" && parts[1] === "scenes" && parts[2] === "deleted") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listDeletedScenes(ctx, projectId));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "scenes" && parts[2] === "permanent") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      await permanentDeleteScenes(ctx, ids);
+      return sendJson(res, { deleted: ids.length });
+    }
+    // 跨项目复制场景
+    if (method === "POST" && parts.join("/") === "api/scenes/copy") {
+      const body = await readJson(req);
+      const sourceId = requireString(body.sourceId, "sourceId");
+      const targetProjectIds = Array.isArray(body.targetProjectIds) ? (body.targetProjectIds as string[]).filter(Boolean) : [];
+      if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
+      return sendJson(res, await copyScenesToProjects(ctx, sourceId, targetProjectIds));
+    }
+    // 道具模块
+    if (method === "GET" && parts.join("/") === "api/props") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listProps(ctx, projectId));
+    }
+    if (method === "POST" && parts.join("/") === "api/props") return sendJson(res, await createProp(ctx, await readJson(req) as any));
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "props" && parts[2]) return sendJson(res, await updateProp(ctx, parts[2], await readJson(req) as any));
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "props" && parts[2]) {
+      await deleteProp(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "props" && parts[2] && parts[3] === "restore") {
+      await restoreProp(ctx, parts[2]);
+      return sendJson(res, { restored: true });
+    }
+    // 道具引用查询
+    if (method === "GET" && parts[0] === "api" && parts[1] === "props" && parts[2] && parts[3] === "usage") {
+      return sendJson(res, await getPropUsage(ctx, parts[2]));
+    }
+    if (method === "POST" && parts.join("/") === "api/props/batch") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      if (body.action === "delete") {
+        await batchDeleteProps(ctx, ids);
+        return sendJson(res, { deleted: ids.length });
+      }
+      if (body.action === "update") {
+        await batchUpdateProps(ctx, ids, (body.patch ?? {}) as any);
+        return sendJson(res, { updated: ids.length });
+      }
+      throw new Error("unknown batch action");
+    }
+    // 道具回收站（已软删除列表 + 永久删除）
+    if (method === "GET" && parts[0] === "api" && parts[1] === "props" && parts[2] === "deleted") {
+      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      return sendJson(res, await listDeletedProps(ctx, projectId));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "props" && parts[2] === "permanent") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      await permanentDeleteProps(ctx, ids);
+      return sendJson(res, { deleted: ids.length });
+    }
+    // 跨项目复制道具
+    if (method === "POST" && parts.join("/") === "api/props/copy") {
+      const body = await readJson(req);
+      const sourceId = requireString(body.sourceId, "sourceId");
+      const targetProjectIds = Array.isArray(body.targetProjectIds) ? (body.targetProjectIds as string[]).filter(Boolean) : [];
+      if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
+      return sendJson(res, await copyPropsToProjects(ctx, sourceId, targetProjectIds));
+    }
+    // 剧本评论（任务8：评论持久化）
+    if (method === "GET" && parts.join("/") === "api/script-comments") {
+      const scriptId = new URL(req.url ?? "/", "http://localhost").searchParams.get("scriptId") ?? "";
+      return sendJson(res, await listScriptComments(ctx, scriptId));
+    }
+    if (method === "POST" && parts.join("/") === "api/script-comments") return sendJson(res, await createScriptComment(ctx, await readJson(req) as any));
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "script-comments" && parts[2]) return sendJson(res, await updateScriptComment(ctx, parts[2], await readJson(req) as any));
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "script-comments" && parts[2]) {
+      await deleteScriptComment(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    // 资产模板/预设库（任务15：三厂共性 - 全局模板）
+    if (method === "GET" && parts.join("/") === "api/templates/characters") return sendJson(res, await listCharacterTemplatePresets());
+    if (method === "GET" && parts.join("/") === "api/templates/scenes") return sendJson(res, await listSceneTemplatePresets());
+    if (method === "GET" && parts.join("/") === "api/templates/props") return sendJson(res, await listPropTemplatePresets());
+    // 资产版本历史（任务12：三厂共性 - 统一版本管理）
+    if (method === "GET" && parts.join("/") === "api/versions") {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const entityType = url.searchParams.get("entity_type") ?? "";
+      const entityId = url.searchParams.get("entity_id") ?? "";
+      if (!entityType || !entityId) throw new Error("entity_type 和 entity_id 必填");
+      return sendJson(res, await listVersions(ctx, entityType as "character" | "scene" | "prop", entityId));
+    }
+    if (method === "GET" && parts[0] === "api" && parts[1] === "versions" && parts[2]) {
+      return sendJson(res, await getVersion(ctx, parts[2]));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "versions" && parts[2] && parts[3] === "restore") {
+      const restored = await restoreVersion(ctx, parts[2]);
+      return sendJson(res, restored);
+    }
     sendError(res, new Error("not found"), 404);
   } catch (error) {
     logLine(ctx, `ERROR ${(error as Error).stack ?? (error as Error).message ?? String(error)}`);

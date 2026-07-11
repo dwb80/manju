@@ -1,8 +1,8 @@
 import path from "node:path";
 import { createAgnesClient, type AgnesClient } from "../ai/agnes-client.js";
-import type { Conversation, Favorite, ImageTask, Message, Project, Settings, VideoTask } from "../types.js";
+import type { Conversation, Favorite, ImageTask, Message, Project, Settings, VideoTask, ScriptComment, AssetVersion } from "../types.js";
 import { CsvRepository, SettingsRepository } from "../storage/csv.js";
-import { conversationFields, favoriteFields, imageTaskFields, messageFields, projectFields, videoTaskFields } from "../storage/schema.js";
+import { conversationFields, favoriteFields, imageTaskFields, messageFields, projectFields, videoTaskFields, scriptCommentFields, assetVersionFields } from "../storage/schema.js";
 
 export interface AppContext {
   ai: AgnesClient;
@@ -15,6 +15,10 @@ export interface AppContext {
   images: CsvRepository<ImageTask>;
   videos: CsvRepository<VideoTask>;
   favorites: CsvRepository<Favorite>;
+  /** 剧本编辑器内行内批注与回复仓储（任务8：评论持久化）。 */
+  scriptComments: CsvRepository<ScriptComment>;
+  /** 三厂共性：资产版本历史仓储（任务12：统一版本管理）。 */
+  assetVersions: CsvRepository<AssetVersion>;
   settings: SettingsRepository<Settings>;
   aborts: Map<string, AbortController>;
 }
@@ -42,6 +46,8 @@ export function createAppContext(root = process.cwd(), options: { mediaCacheEnab
     images: new CsvRepository(base, "image_tasks", imageTaskFields),
     videos: new CsvRepository(base, "video_tasks", videoTaskFields),
     favorites: new CsvRepository(base, "favorites", favoriteFields),
+    scriptComments: new CsvRepository(base, "script_comments", scriptCommentFields),
+    assetVersions: new CsvRepository(base, "asset_versions", assetVersionFields),
     settings: new SettingsRepository(path.join(root, "data", "csv"), defaultSettings),
     aborts: new Map(),
   };

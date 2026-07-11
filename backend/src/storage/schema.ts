@@ -1,4 +1,4 @@
-import type { Conversation, Favorite, ImageTask, Message, Project, VideoTask } from "../types.js";
+import type { Conversation, Favorite, ImageTask, Message, Project, VideoTask, ScriptComment, AssetVersion } from "../types.js";
 import type { FieldSpec } from "./csv.js";
 
 export const conversationFields: FieldSpec<Conversation>[] = [
@@ -62,4 +62,39 @@ export const favoriteFields: FieldSpec<Favorite>[] = [
   { key: "type", type: "string" },
   { key: "ref_id", type: "string" },
   { key: "created_at", type: "string" },
+];
+
+/** 剧本编辑器行内批注与回复表字段（任务8：评论持久化）。 */
+export const scriptCommentFields: FieldSpec<ScriptComment>[] = [
+  { key: "id", type: "string" },
+  { key: "script_id", type: "string" },
+  { key: "episode_id", type: "string" },
+  { key: "user_name", type: "string" },
+  { key: "content", type: "string" },
+  { key: "selected_text", type: "string" },
+  { key: "position_from", type: "number" },
+  { key: "position_to", type: "number" },
+  { key: "parent_id", type: "string" },
+  { key: "resolved", type: "boolean" },
+  { key: "created_at", type: "string" },
+  { key: "updated_at", type: "string" },
+];
+
+/**
+ * 三厂共性：资产版本历史表字段（任务12：统一版本管理）。
+ *
+ * - data 字段为 JSON 字符串，存放对应实体的完整快照。
+ * - version 自增，从 1 开始。
+ * - change_type 区分 create/update/restore。
+ */
+export const assetVersionFields: FieldSpec<AssetVersion>[] = [
+  { key: "id", type: "string" },
+  { key: "entity_type", type: "string" },
+  { key: "entity_id", type: "string" },
+  { key: "version", type: "number" },
+  { key: "data", type: "string" },
+  { key: "change_note", type: "string" },
+  { key: "change_type", type: "string" },
+  { key: "created_at", type: "string" },
+  { key: "created_by", type: "string" },
 ];
