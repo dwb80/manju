@@ -32,7 +32,6 @@ backend\.env
 ```env
 AGNES_API_KEY=你的_key
 AGNES_API_BASE_URL=https://apihub.agnes-ai.com
-AGNES_USE_REAL_API=true
 ```
 
 启动：

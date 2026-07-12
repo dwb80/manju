@@ -7,7 +7,7 @@
  *   其他工厂可复用，无需重复定义。
  */
 
-import { api } from "./api-client";
+import { api, apiUrl } from "./api-client";
 import type { Character } from "@/lib/module-types";
 
 /** 角色被哪些内容引用。 */
@@ -101,6 +101,18 @@ export async function permanentDeleteCharacters(ids: string[]): Promise<void> {
 }
 
 // ==================== 引用 / 批量 / 跨项目 ====================
+
+/** 获取单个角色（编辑页用，找不到时返回 null） */
+export async function getCharacter(id: string): Promise<Character | null> {
+  try {
+    return await api<Character>(`/api/characters/${encodeURIComponent(id)}`);
+  } catch (err) {
+    // 后端 404 时 api() 会抛错；这里统一转为 null，让上层展示"角色不存在"
+    const msg = (err as Error)?.message ?? "";
+    if (/404|not\s*found|不存在/i.test(msg)) return null;
+    throw err;
+  }
+}
 
 export async function getCharacterUsage(id: string): Promise<AssetUsage> {
   return api<AssetUsage>(`/api/characters/${id}/usage`);

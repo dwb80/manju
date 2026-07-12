@@ -13,7 +13,6 @@ import {
   FileText,
   Plus,
   Sparkles,
-  Pencil,
   Trash2,
   LayoutGrid,
   List as ListIcon,
@@ -61,7 +60,7 @@ import { ScriptImportDialog } from "./ScriptImportDialog";
 import { TemplateLibraryDialog } from "./TemplateLibraryDialog";
 import { ScriptAnalysisPanel } from "./ScriptAnalysisPanel";
 import { ApprovalWorkflowDialog } from "./ApprovalWorkflowDialog";
-import { analyzeScriptContent, generateLocalScriptOutline, textToEditorJson } from "./utils";
+import { generateLocalScriptOutline, textToEditorJson } from "./utils";
 import type { ViewMode, ExtractedAsset } from "./types";
 
 /** 通用对话框覆盖层组件 */
@@ -224,12 +223,6 @@ export function ScriptsCenterPage({
   // 打开新建对话框
   const handleCreate = () => {
     setEditingScript(null);
-    setIsFormOpen(true);
-  };
-
-  // 打开编辑对话框
-  const handleEdit = (script: Script) => {
-    setEditingScript(script);
     setIsFormOpen(true);
   };
 
@@ -406,7 +399,7 @@ export function ScriptsCenterPage({
     setIsAnalyzing(true);
     try {
       const content = selectedScript.description || "";
-      // 优先调用 AI 接口分析
+      // 始终调用 AI 分析（不使用正则兜底）
       let assets: ExtractedAsset[] = [];
       try {
         const response = await fetch("/api/ai/script-analyze", {
@@ -416,38 +409,67 @@ export function ScriptsCenterPage({
         });
         if (response.ok) {
           const payload = await response.json();
-          const aiAssets: any[] = payload?.data ?? [];
-          if (aiAssets.length > 0) {
-            assets = aiAssets.map((a, idx) => ({
-              id: `${a.type}-${idx + 1}-${Date.now()}`,
-              type: a.type,
-              name: a.name,
-              description: a.description ?? "",
-              confirmed: true,
-              role: a.role,
-              gender: a.gender,
-              traits: a.traits,
-              sceneType: a.sceneType,
-              lighting: a.lighting,
-              timeOfDay: a.timeOfDay,
-              weather: a.weather,
-              category: a.category,
-              material: a.material,
-              color: a.color,
-            } as ExtractedAsset));
+          if (payload?.success === false) {
+            // AI 失败：直接报错，不回退到正则
+            throw new Error(payload.error || "AI 分析失败");
           }
+          // AI 返回 characters / scenes / props 三个数组，统一映射成 ExtractedAsset 列表
+          const data = payload?.data ?? {};
+          const charList: any[] = Array.isArray(data.characters) ? data.characters : [];
+          const sceneList: any[] = Array.isArray(data.scenes) ? data.scenes : [];
+          const propList: any[] = Array.isArray(data.props) ? data.props : [];
+
+          const mapCharacter = (a: any, idx: number): ExtractedAsset => ({
+            id: `character-${idx + 1}-${Date.now()}`,
+            type: "character",
+            name: a.name || "",
+            description: a.description ?? "",
+            confirmed: true,
+            role: a.role,
+            gender: a.gender,
+            age: a.age,
+            appearance: a.appearance,
+            personality: a.personality,
+            traits: Array.isArray(a.traits) ? a.traits : [],
+          });
+          const mapScene = (a: any, idx: number): ExtractedAsset => ({
+            id: `scene-${idx + 1}-${Date.now()}`,
+            type: "scene",
+            name: a.location_name || a.name || "",
+            description: a.description ?? "",
+            confirmed: true,
+            sceneType: a.sceneType,
+            lighting: a.lighting,
+            timeOfDay: a.time_of_day ?? a.timeOfDay,
+            weather: a.weather,
+          });
+          const mapProp = (a: any, idx: number): ExtractedAsset => ({
+            id: `prop-${idx + 1}-${Date.now()}`,
+            type: "prop",
+            name: a.name || "",
+            description: a.description ?? "",
+            confirmed: true,
+            category: a.category,
+            material: a.material,
+            color: a.color,
+          });
+
+          assets = [
+            ...charList.map(mapCharacter),
+            ...sceneList.map(mapScene),
+            ...propList.map(mapProp),
+          ];
         }
       } catch (err) {
-        console.error("AI分析失败，回退到本地分析:", err);
-      }
-      // AI 失败时回退到本地正则分析
-      if (assets.length === 0) {
-        assets = analyzeScriptContent(content);
+        // AI 失败直接抛出，不回退到正则
+        console.error("AI 分析失败:", err);
+        throw err;
       }
       setExtractedAssets(assets);
     } catch (err) {
       console.error("分析失败:", err);
-      alert("剧本分析失败，请重试");
+      const message = (err as Error)?.message || "请重试";
+      alert(`剧本分析失败：${message}\n\n请检查网络或 AI 配置后重试。`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -770,7 +792,6 @@ export function ScriptsCenterPage({
                     <ScriptRow
                       key={script.id}
                       script={script}
-                      onEdit={() => handleEdit(script)}
                       onOpenEditor={() => handleOpenEditor(script.id)}
                       onDelete={() => setDeleteConfirm({ id: script.id, title: script.title })}
                       onTagManager={() => handleOpenTagManager(script)}
@@ -905,7 +926,6 @@ export function ScriptsCenterPage({
 /** 剧本表格行组件 */
 function ScriptRow({
   script,
-  onEdit,
   onOpenEditor,
   onDelete,
   onTagManager,
@@ -913,7 +933,6 @@ function ScriptRow({
   onApproval,
 }: {
   script: Script;
-  onEdit: () => void;
   onOpenEditor: () => void;
   onDelete: () => void;
   onTagManager: () => void;
@@ -1006,9 +1025,6 @@ function ScriptRow({
           </Button>
           <Button variant="ghost" size="sm" onClick={onApproval} title="审批流程">
             <CheckCircle className="h-4 w-4 text-yellow-400" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onEdit} title="编辑信息">
-            <Pencil className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={onDelete} title="删除">
             <Trash2 className="h-4 w-4 text-red-400" />

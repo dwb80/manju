@@ -304,7 +304,19 @@ function updateVideoPolling(shouldPoll) {
     state.videoPollTimer = 0;
   }
   if (shouldPoll && state.activeTab === "video") {
-    state.videoPollTimer = window.setInterval(loadVideos, 3000);
+    // 评审 P1-M1 修复：30 次上限（3s × 30 = 90s），防止孤儿任务无限轮询
+    state.videoPollCount = 0;
+    state.videoPollTimer = window.setInterval(() => {
+      state.videoPollCount = (state.videoPollCount || 0) + 1;
+      if (state.videoPollCount > 30) {
+        clearInterval(state.videoPollTimer);
+        state.videoPollTimer = 0;
+        const el = document.querySelector("#videoStatus");
+        if (el) el.textContent = "视频轮询超时，请手动刷新";
+        return;
+      }
+      loadVideos();
+    }, 3000);
     document.querySelector("#videoStatus").textContent = "视频生成中，正在自动刷新";
   }
 }

@@ -11,7 +11,8 @@
  * - 设置默认模型、启用/禁用模型
  *
  * 页面布局：
- * - 顶部：页面标题 + 返回首页 + 模型类型统计概览
+ * - 顶部：StandalonePageHeader 统一页面头（含面包屑、H1、描述）
+ * - 统计：StatsOverview 统一统计卡组
  * - 主体：ModelCenter 组件（列表 + 搜索 + 类型切换）
  * - 弹窗：ModelFormDialog（新建/编辑表单，含API配置）
  *
@@ -19,8 +20,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, LayoutDashboard, Settings2 } from "lucide-react";
+import { MessageCircle, Image as ImageIcon, Video, Settings2 } from "lucide-react";
 import {
   ModelCenter,
   type ModelInfo,
@@ -31,6 +31,7 @@ import {
 } from "@/components/model/model-form-dialog";
 import { useModuleCrud } from "@/hooks/use-module-crud";
 import { clearApiCache } from "@/lib/api-client";
+import { StandalonePageHeader, StatsOverview, Alert } from "@/components/layout";
 
 /**
  * 将表单数据转换为后端 API 请求体
@@ -122,8 +123,6 @@ function formToApiData(form: ModelFormData) {
  * 模型中心页面组件
  */
 export default function ModelsPage() {
-  const router = useRouter();
-
   // 使用通用 CRUD hook 管理模型数据
   const { items: models, isLoading, error, load, create, update, remove, refresh } =
     useModuleCrud<ModelInfo>("/api/models");
@@ -233,9 +232,6 @@ export default function ModelsPage() {
     load();
   }, [load]);
 
-  /** 返回首页 */
-  const goBackToHome = () => router.push("/");
-
   // 统计信息计算
   const chatModels = models.filter((m) => m.type === "chat");
   const imageModels = models.filter((m) => m.type === "image");
@@ -243,124 +239,57 @@ export default function ModelsPage() {
 
   return (
     <main className="min-h-screen bg-[#181818] text-[#ececec]">
-      {/* 页面头部 */}
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-[#181818]/95 px-6 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          {/* 左侧：返回按钮和标题 */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={goBackToHome}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#888] transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="返回首页"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>返回首页</span>
-            </button>
-            <div className="h-4 w-px bg-white/20" />
-            <nav className="flex items-center gap-2 text-sm text-[#888]">
-              <button onClick={goBackToHome} className="flex items-center gap-1 hover:text-white">
-                <LayoutDashboard className="h-3 w-3" />
-                <span>首页</span>
-              </button>
-              <span className="text-white/40">/</span>
-              <span className="text-white font-medium">模型中心</span>
-            </nav>
-          </div>
-
-          {/* 右侧：页面信息 */}
-          <div className="flex items-center gap-6 text-xs text-[#888]">
-            <div className="flex items-center gap-3">
+      {/* === 统一页面头 === */}
+      <StandalonePageHeader
+        title="模型中心"
+        description="管理AI模型配置、API接口、能力标签和价格信息，支持模型注册、编辑、删除和启用/禁用"
+        breadcrumbs={["首页", "模型中心"]}
+        extraRight={
+          <>
+            <div className="flex items-center gap-2">
               <Settings2 className="h-4 w-4" />
               <span>配置管理</span>
             </div>
             <div>共 {models.length} 个模型</div>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {/* 页面标题和描述 */}
-        <div className="mt-4">
-          <h1 className="text-2xl font-bold text-white">模型中心</h1>
-          <p className="mt-1 text-sm text-[#888]">
-            管理AI模型配置、API接口、能力标签和价格信息，支持模型注册、编辑、删除和启用/禁用
-          </p>
-        </div>
-
-        {/* 错误提示 */}
+      <div className="px-6 py-4">
+        {/* === 错误提示（统一 Alert 组件） === */}
         {error && (
-          <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+          <Alert tone="error" className="mb-4">
             {error}
-          </div>
+          </Alert>
         )}
 
-        {/* 模型类型统计概览 */}
-        <div className="mt-4 grid grid-cols-3 gap-4">
-          {/* 聊天模型统计 */}
-          <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <svg className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-white">聊天模型</div>
-                  <div className="text-xs text-blue-300">
-                    {chatModels.filter((m) => m.is_enabled).length} 个可用
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-bold text-white">{chatModels.length}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* 图片模型统计 */}
-          <div className="rounded-lg border border-purple-500/20 bg-purple-500/10 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                  <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-white">图片模型</div>
-                  <div className="text-xs text-purple-300">
-                    {imageModels.filter((m) => m.is_enabled).length} 个可用
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-bold text-white">{imageModels.length}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* 视频模型统计 */}
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                  <svg className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-white">视频模型</div>
-                  <div className="text-xs text-amber-300">
-                    {videoModels.filter((m) => m.is_enabled).length} 个可用
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-bold text-white">{videoModels.length}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+        {/* === 统一统计卡组 === */}
+        <StatsOverview
+          cards={[
+            {
+              tone: "blue",
+              icon: <MessageCircle className="h-4 w-4" />,
+              title: "聊天模型",
+              value: chatModels.length,
+              sub: `${chatModels.filter((m) => m.is_enabled).length} 个可用`,
+            },
+            {
+              tone: "purple",
+              icon: <ImageIcon className="h-4 w-4" />,
+              title: "图片模型",
+              value: imageModels.length,
+              sub: `${imageModels.filter((m) => m.is_enabled).length} 个可用`,
+            },
+            {
+              tone: "amber",
+              icon: <Video className="h-4 w-4" />,
+              title: "视频模型",
+              value: videoModels.length,
+              sub: `${videoModels.filter((m) => m.is_enabled).length} 个可用`,
+            },
+          ]}
+        />
+      </div>
 
       {/* 页面主体：模型中心组件 */}
       <section className="px-6 py-6">

@@ -18,6 +18,10 @@ export interface ExtractedAsset {
   role?: string;
   gender?: string;
   age?: number;
+  /** 外貌描述（来自 AI 提取或本地正则） */
+  appearance?: string;
+  /** 性格描述（来自 AI 提取或本地正则） */
+  personality?: string;
   traits?: string[];
   // 场景专属
   sceneType?: string;

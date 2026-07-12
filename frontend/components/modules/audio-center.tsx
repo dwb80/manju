@@ -9,18 +9,21 @@
  * - 内嵌 HTML5 音频播放器（file_url）
  * - AI 配音（TTS）弹窗：speaker 从角色列表选择（EntityPicker）
  * - 工具栏"AI配音"按钮（无选中时，按当前过滤器下第一条音频生成；选中则批量配音）
+ * - 关联分镜：卡片显示已关联分镜，点击可重选；列表工具栏批量关联
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Music, Pencil, Trash2, CheckSquare, Wand2, Volume2, Mic, X, Loader2 } from "lucide-react";
+import { Music, Pencil, Trash2, CheckSquare, Wand2, Volume2, Mic, X, Loader2, Link as LinkIcon, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FactoryCRUDPage, type FactoryCRUDPageProps, getEntityLabel } from "@/components/factory";
 import { EntityPicker } from "@/components/shared";
 import { toast } from "@/components/common/toast";
+import { createLogger } from "@/lib/logger";
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
-import type { AudioItem, AudioType, Character } from "@/lib/module-types";
+import type { AudioItem, AudioType, Character, Storyboard } from "@/lib/module-types";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { clearApiCache } from "@/lib/api-client";
+import { useNameLookup } from "@/hooks/use-name-lookup";
 import {
   listAudios,
   createAudio,
@@ -33,11 +36,15 @@ import {
   generateTTS,
 } from "@/services/audio.service";
 import { listCharacters } from "@/services/module.service";
+import { listStoryboards } from "@/services/storyboard.service";
 import {
   AUDIO_TYPE_LABELS,
   AUDIO_TYPE_COLORS,
   AUDIO_TYPE_OPTIONS,
 } from "@/lib/module-dictionaries";
+
+// 模块级 logger
+const log = createLogger('audio-center')
 
 /** 音频表单字段。 */
 const audioFields: FormFieldConfig[] = [
@@ -56,6 +63,88 @@ const audioFields: FormFieldConfig[] = [
   { name: "speaker", label: "说话人", type: "text", placeholder: "请输入说话人" },
   { name: "format", label: "格式", type: "text", placeholder: "mp3" },
 ];
+
+/** 关联分镜弹窗：选一个项目内的分镜写入 audio.storyboard_id */
+function AssociateStoryboardDialog({
+  audio,
+  isOpen,
+  onClose,
+  onSuccess,
+}: {
+  audio: AudioItem | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+}) {
+  const [storyboardId, setStoryboardId] = useState<string>("");
+  const [busy, setBusy] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isOpen && audio) {
+      setStoryboardId(audio.storyboard_id ?? "");
+    }
+  }, [isOpen, audio]);
+
+  if (!isOpen || !audio) return null;
+
+  const handleSubmit = async () => {
+    setBusy(true);
+    try {
+      await updateAudio(audio.id, { storyboard_id: storyboardId });
+      clearApiCache();
+      log.info('associate storyboard success', { audioId: audio.id, storyboardId })
+      toast.success("已关联分镜", storyboardId ? "音频已绑定到分镜" : "已清空分镜关联");
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      log.error('associate storyboard failed', { error: (err as Error).message })
+      toast.error("关联失败", (err as Error)?.message ?? "请稍后重试");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-lg overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a] shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+          <div className="flex items-center gap-2">
+            <LinkIcon className="h-4 w-4 text-emerald-400" />
+            <h2 className="text-sm font-medium text-white">关联分镜 · {audio.name}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="text-[#888] hover:text-white" aria-label="关闭">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3 p-5">
+          <EntityPicker<Storyboard>
+            name="audio-storyboard"
+            label="关联分镜（这条音频用在哪个镜头）"
+            placeholder="选择项目内的分镜"
+            value={storyboardId}
+            onChange={setStoryboardId}
+            fetcher={listStoryboards}
+            formatLabel={(s) => s.title || `第 ${s.episode ?? 1} 集 · 镜头 ${s.shot_number}`}
+            formatHint={(s) => s.description?.slice(0, 40) ?? ""}
+            allowEmpty
+            emptyLabel="不关联分镜"
+          />
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-white/10 px-5 py-3">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>取消</Button>
+          <Button variant="secondary" size="sm" onClick={handleSubmit} disabled={busy}>
+            {busy ? <><Loader2 className="mr-1 h-3 w-3 animate-spin" />保存中...</> : "保存关联"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** 集数下拉选项（1-20）。 */
 const episodeOptions: { value: string; label: string }[] = [
@@ -219,10 +308,12 @@ function AudioCard({
   a,
   actions,
   onTTSClick,
+  onAssociateClick,
 }: {
   a: AudioItem;
   actions: import("@/components/factory").CardActions;
   onTTSClick: (a: AudioItem) => void;
+  onAssociateClick: (a: AudioItem) => void;
 }) {
   const type = (a.type ?? "voiceover") as AudioType;
   const color = AUDIO_TYPE_COLORS[type] ?? "bg-gray-500/20 text-gray-400";
@@ -265,6 +356,12 @@ function AudioCard({
             <span className="text-xs text-[#888]">时长: {formatDuration(a.duration ?? 0)}</span>
             {a.speaker && <span className="text-xs text-[#888]">说话人: {a.speaker}</span>}
             {a.format && <span className="text-xs text-[#888]">格式: {a.format}</span>}
+            {a.storyboard_id && (
+              <span className="inline-flex items-center gap-1 text-xs text-blue-300/90 bg-blue-500/10 px-1.5 py-0.5 rounded" title="已关联分镜">
+                <Film className="h-3 w-3" />
+                已关联分镜
+              </span>
+            )}
           </div>
           {a.file_url ? (
             <audio
@@ -286,6 +383,15 @@ function AudioCard({
             className="text-emerald-300"
           >
             <Mic className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onAssociateClick(a)}
+            title="关联分镜"
+            className="text-blue-300"
+          >
+            <LinkIcon className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={actions.onEdit}>
             <Pencil className="h-4 w-4" />
@@ -336,7 +442,7 @@ const config: FactoryCRUDPageProps<AudioItem> = {
     match: (a, v) => !v || String(a.episode ?? 1) === v,
   },
 
-  // p1-2：renderCard 由 AudioCenterPage 注入（需要外部 onTTSClick 回调）。
+  // p1-2：renderCard 由 AudioCenterPage 注入（需要外部 onTTSClick / onAssociateClick 回调）。
   // 此处提供一个空的占位渲染，FactoryCRUDPage 接收 props 时的 renderCard 优先。
   renderCard: (a, actions) => (
     <AudioCard
@@ -344,6 +450,9 @@ const config: FactoryCRUDPageProps<AudioItem> = {
       actions={actions}
       onTTSClick={() => {
         /* 占位：实际渲染在 AudioCenterPage 中以 props.renderCard 覆盖 */
+      }}
+      onAssociateClick={() => {
+        /* 同上 */
       }}
     />
   ),
@@ -373,16 +482,26 @@ const config: FactoryCRUDPageProps<AudioItem> = {
 export function AudioCenterPage() {
   const [ttsTarget, setTtsTarget] = useState<AudioItem | null>(null);
   const [ttsOpen, setTtsOpen] = useState<boolean>(false);
+  const [associateTarget, setAssociateTarget] = useState<AudioItem | null>(null);
+  const [associateOpen, setAssociateOpen] = useState<boolean>(false);
 
   return (
     <>
       <FactoryCRUDPage<AudioItem>
         {...config}
         renderCard={(a, actions) => (
-          <AudioCard a={a} actions={actions} onTTSClick={(it) => {
-            setTtsTarget(it);
-            setTtsOpen(true);
-          }} />
+          <AudioCard
+            a={a}
+            actions={actions}
+            onTTSClick={(it) => {
+              setTtsTarget(it);
+              setTtsOpen(true);
+            }}
+            onAssociateClick={(it) => {
+              setAssociateTarget(it);
+              setAssociateOpen(true);
+            }}
+          />
         )}
         toolbarExtra={
           <Button
@@ -414,7 +533,16 @@ export function AudioCenterPage() {
         isOpen={ttsOpen}
         onClose={() => setTtsOpen(false)}
         onSuccess={() => {
-          // 触发 factory 重载
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("factory:reload"));
+          }
+        }}
+      />
+      <AssociateStoryboardDialog
+        audio={associateTarget}
+        isOpen={associateOpen}
+        onClose={() => setAssociateOpen(false)}
+        onSuccess={() => {
           if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("factory:reload"));
           }

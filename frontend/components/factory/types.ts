@@ -249,6 +249,24 @@ export interface FactoryCRUDPageProps<TEntity extends FactoryEntity> {
    */
   toolbarExtra?: ReactNode;
 
+  // ===== 自定义筛选 Tabs（可选，评审优化 P1） =====
+  /**
+   * 配置后，工具栏上方会出现一组"全部 / 最近使用 / 我创建的 / 已收藏"Tab。
+   * 父组件只需提供字段访问器，FactoryCRUDPage 内部会调用 useFilterState 完成筛选与展示。
+   */
+  filterTabs?: {
+    /** "最近使用"Tab 取更新时间。 */
+    getUpdatedAt: (item: TEntity) => string | undefined
+    /** "我创建的"Tab 取创建者（不传则该 Tab 隐藏）。 */
+    getCreatedBy?: (item: TEntity) => string | undefined
+    /** "已收藏"Tab 取是否收藏（不传则该 Tab 隐藏）。 */
+    getIsFavorited?: (item: TEntity) => boolean | undefined
+    /** 当前登录用户 ID（不传则"我创建的"Tab 隐藏）。 */
+    currentUserId?: string
+    /** "最近使用"Tab 默认取前多少条（默认 50）。 */
+    pageSize?: number
+  }
+
   // ===== 模板/预设（任务15：三厂共性 - 资产模板） =====
   /**
    * 是否启用"使用模板"按钮。提供后会在工具栏右侧出现入口，点击后弹出 TemplateSelector。

@@ -32,6 +32,8 @@ import { FormDialog } from "@/components/ui/form-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { UsageDialog } from "./UsageDialog";
 import { toast } from "@/components/common/toast";
+import { useFilterState } from "@/hooks/use-filter-state";
+import { FilterTabsBar } from "./filter-tabs-bar";
 import { clearApiCache } from "@/lib/api-client";
 import { useFactoryEntity } from "./useFactoryEntity";
 import type { FactoryCRUDPageProps, FactoryEntity, FactoryEntityType, FilterOption } from "./types";
@@ -292,10 +294,30 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
     fetchVersions,
     fetchReferences,
     insertToStoryboard,
+    filterTabs,
   } = props;
 
   // ===== 数据加载 =====
   const { selectedProjectId, items, isLoading, reload, selectedIds, setSelectedIds } = useFactoryEntity(fetchList);
+
+  // ===== 顶部筛选 Tabs（评审优化 P1：全部 / 最近使用 / 我创建的 / 已收藏） =====
+  const {
+    activeTab: filterActiveTab,
+    setActiveTab: setFilterActiveTab,
+    filteredItems: filterTabFiltered,
+    tabConfig: filterTabConfig,
+  } = useFilterState<TEntity>({
+    items,
+    getUpdatedAt: filterTabs?.getUpdatedAt ?? (() => undefined),
+    getCreatedBy: filterTabs?.getCreatedBy,
+    getIsFavorited: filterTabs?.getIsFavorited,
+    currentUserId: filterTabs?.currentUserId,
+    pageSize: filterTabs?.pageSize,
+    moduleName: title,
+  });
+
+  // 启用 filterTabs 时，列表数据走筛选结果；否则保持原行为（全部数据）。
+  const sourceItems: TEntity[] = filterTabs ? filterTabFiltered : items;
 
   // ===== 视图模式：normal / recycleBin =====
   const [activeView, setActiveView] = useState<"normal" | "recycleBin">("normal");
@@ -425,9 +447,9 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   /** 视图里的所有项都触发一次懒加载（在卡片渲染时调用即可）。 */
   useEffect(() => {
     if (!fetchReferences) return;
-    const visible = items.slice(0, 24); // 一次最多加载 24 条
+    const visible = sourceItems.slice(0, 24); // 一次最多加载 24 条
     visible.forEach((it) => void loadReferences(it));
-  }, [items, fetchReferences, loadReferences]);
+  }, [sourceItems, fetchReferences, loadReferences]);
 
   /** 点击 UsageBadge 打开来源列表弹窗。 */
   const handleOpenSource = useCallback(
@@ -468,13 +490,13 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   // ===== 过滤 / 搜索 =====
   const filteredItems = useMemo(() => {
     const q = searchQuery.toLowerCase();
-    return items.filter((it) => {
+    return sourceItems.filter((it) => {
       if (q && !searchFields(it, q)) return false;
       if (filterField && filterValue && !filterField(it, filterValue)) return false;
       if (secondaryFilter && secondaryValue && !secondaryFilter.match(it, secondaryValue)) return false;
       return true;
     });
-  }, [items, searchQuery, searchFields, filterField, filterValue, secondaryFilter, secondaryValue]);
+  }, [sourceItems, searchQuery, searchFields, filterField, filterValue, secondaryFilter, secondaryValue]);
 
   // 分页后的列表
   const totalPages = usePagination ? Math.ceil(filteredItems.length / pageSize) : 1;
@@ -836,6 +858,17 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
               </StatCardGrid>
             </PageCard>
           )}
+
+      {/* 工具栏上方的自定义筛选 Tabs（评审优化 P1） */}
+      {filterTabs && filterTabConfig.length > 0 && (
+        <div className="mb-3">
+          <FilterTabsBar
+            tabs={filterTabConfig}
+            activeTab={filterActiveTab}
+            onChange={setFilterActiveTab}
+          />
+        </div>
+      )}
 
       {/* 工具栏 */}
       <ModuleToolbar

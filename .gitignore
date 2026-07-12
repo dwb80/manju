@@ -20,3 +20,4 @@ test-analyze.mjs
 backend/build.log
 backend/logs.stderr.log
 backend/logs.stdout.log
+backend/backend-tsc.out

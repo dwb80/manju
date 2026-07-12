@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { api, uploadImages } from "@/lib/api-client";
 import { cropReferenceImageToPortrait, shouldUseLocalCrop } from "@/lib/media-tools";
-import { imageRatioFromSize } from "@/lib/project-workflow";
+import { findStyleOption, imageRatioFromSize } from "@/lib/project-workflow";
 import type { Attachment, ImageSettings, ImageSize, ImageTask, ImageRequest } from "@/lib/app-types";
 
 export function useImageGeneration({
@@ -14,12 +14,14 @@ export function useImageGeneration({
   showNotice: (message: string) => void;
 }) {
   const [imageSettings, setImageSettings] = useState<ImageSettings>({
+    model: "agnes-image-2.1-flash",
     ratio: imageRatioFromSize("1024x768"),
     size: "1024x768",
     n: 1,
     seed: "",
     negative_prompt: "",
     response_format: "url",
+    style: "",
   });
   const [images, setImages] = useState<ImageTask[]>([]);
   const [imageRequests, setImageRequests] = useState<ImageRequest[]>([]);
@@ -102,6 +104,7 @@ export function useImageGeneration({
           task = await api<ImageTask>("/api/images/generate", {
             method: "POST",
             body: JSON.stringify({
+              model: imageSettings.model,
               prompt: text,
               conversationId: targetConversationId,
               size: imageSettings.size,

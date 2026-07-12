@@ -2,12 +2,10 @@
  * 清理并重新填充项目数据
  * 运行：node scripts/reset-projects.mjs
  */
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROJECTS_DIR = path.join(__dirname, "..", "backend", "data", "csv", "projects");
 
 const PROJECTS = [
   { id: "proj-1", name: "星际迷航：新纪元", category: "科幻冒险漫剧", status: "active", description: "讲述人类在宇宙探索中发现新文明的科幻冒险故事，融合科幻元素与人文关怀", episode_count: 24, owner: "王导演", due_date: "2026-08-15", is_pinned: true, storage_path: "projects/star-trek" },
@@ -40,33 +38,23 @@ async function api(pathname, options = {}) {
 }
 
 async function main() {
-  // 1. 删除所有现有的 projects CSV 文件
-  console.log("Cleaning projects CSV...");
-  if (fs.existsSync(PROJECTS_DIR)) {
-    for (const f of fs.readdirSync(PROJECTS_DIR)) {
-      if (f.endsWith(".csv")) {
-        fs.unlinkSync(path.join(PROJECTS_DIR, f));
-        console.log("  - removed", f);
-      }
+  // 1. 通过后端 API 列出并删除现有项目（统一存于 SQLite）
+  console.log("Cleaning projects via backend API...");
+  const existing = await api("/api/projects");
+  const list = existing?.data ?? [];
+  for (const p of list) {
+    try {
+      await api(`/api/projects/${p.id}`, { method: "DELETE" });
+      console.log(`  - removed ${p.name} (${p.id})`);
+    } catch (err) {
+      console.log(`  ! failed to remove ${p.name} (${p.id}):`, err?.message ?? err);
     }
   }
 
-  // 2. 重启后端（通过先停掉现有进程再启动）
-  // 这里只清理文件，后端进程在调用方手动重启
+  // 2. 等待片刻让 SQLite 事务落盘
+  await new Promise((r) => setTimeout(r, 500));
 
-  // 3. 等待文件被重新加载
-  console.log("\n请重启后端服务，然后按 Enter 继续...");
-  console.log("  Stop-Process -Name node -Force (kill running dist/server.js)");
-  console.log("  cd d:\\trae\\manju\\backend; Start-Process node -ArgumentList dist/server.js");
-  console.log("Or run: node scripts/restart-backend.mjs");
-  console.log("");
-
-  // 4. 等待用户输入
-  await new Promise((resolve) => {
-    process.stdin.once("data", resolve);
-  });
-
-  // 5. 重新创建项目
+  // 3. 重新创建项目
   console.log("\nRecreating projects...");
   for (const p of PROJECTS) {
     const created = await api("/api/projects", {

@@ -13,6 +13,7 @@ import {
   MoreVertical,
   Eye,
   CheckCircle,
+  Package,
 } from "lucide-react";
 
 /**
@@ -89,6 +90,8 @@ export type PublishedVideosListProps = {
   onMarkAsPublished?: (video: PublishedVideo, platform: PublishPlatform) => void;
   /** 设置发布平台回调 */
   onSetPublishPlatform?: (video: PublishedVideo, platform: PublishPlatform) => void;
+  /** 一键打包回调（评审优化 P2）：把成片 + 元数据打成 manifest，生成可发布包 */
+  onPackageVideo?: (video: PublishedVideo) => void;
 };
 
 /**
@@ -138,6 +141,7 @@ export function PublishedVideosList({
   onDownloadVideo,
   onMarkAsPublished,
   onSetPublishPlatform,
+  onPackageVideo,
 }: PublishedVideosListProps) {
   const [filter, setFilter] = useState<VideoFilter>({
     projectId: undefined,
@@ -425,6 +429,16 @@ export function PublishedVideosList({
                       >
                         <Download className="h-3.5 w-3.5" />
                       </button>
+                      {onPackageVideo && (
+                        <button
+                          onClick={() => onPackageVideo(video)}
+                          className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2.5 py-1 text-xs text-amber-300 transition-colors hover:bg-amber-500/20"
+                          title="一键打包"
+                        >
+                          <Package className="h-3.5 w-3.5" />
+                          打包
+                        </button>
+                      )}
                       <div className="relative">
                         <button
                           onClick={() =>

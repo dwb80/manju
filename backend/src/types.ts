@@ -35,6 +35,9 @@ export type { Review, ReviewResult, ProjectReview, ProjectReviewStatus } from ".
 export type { ImageParams, ImageTask } from "./types/image.js";
 export type { ProjectAsset, ProjectAssetKind, Asset, AssetType } from "./types/asset.js";
 export type { ContentStatus } from "./types/script.js";
+export type { Todo, TodoStatus, TodoPriority } from "./types/todo.js";
+export type { WorkItem, WorkItemKind, WorkItemStatus, WorkItemSeverity, WorkItemTargetType } from "./types/work-item.js";
+export type { AppLog, AppLogAction, AppLogEntityType } from "./types/common.js";
 // Dashboard 等占位类型直接 re-export 自 types/extra.ts，避免与 types/project.ts 命名冲突。
 export type {
   AITaskMonitor,

@@ -5,9 +5,10 @@ import type { RefObject } from "react";
 import { ImagePlus, Loader2, Paperclip, Pencil, Send, Video, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { defaultVideoSize, estimateVideoSeconds, imageSizeOptions } from "@/lib/project-workflow";
+import { defaultVideoSize, estimateVideoSeconds, aspectRatioOptions, defaultSizeFromRatio, imageSizeOptions } from "@/lib/project-workflow";
 import { formatBytes } from "@/lib/media-tools";
-import type { Attachment, ChatSettings, ImageSettings, ImageSize, Mode, VideoMode, VideoRatio, VideoSettings } from "@/lib/app-types";
+import type { Attachment, ChatSettings, ImageRatio, ImageSettings, Mode, VideoMode, VideoRatio, VideoSettings } from "@/lib/app-types";
+import { AspectRatioPicker } from "@/components/modules/image-picker-aspect-ratio";
 
 type ComposerPanelProps = {
   mode: Mode;
@@ -191,19 +192,14 @@ export function ComposerPanel({
               </div>
             </div>
             <div className="grid grid-cols-[1fr_1fr_120px_120px] gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
-              <label className="space-y-2">
-                <span className="block text-sm font-medium text-[#cfcfcf]">输出尺寸</span>
-                <select
-                  className="h-12 w-full rounded-xl border border-white/10 bg-[#303030] px-4 text-sm text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                  value={imageSettings.size}
-                  onChange={(event) => {
-                    const size = event.target.value as ImageSize;
-                    onImageSettingsChange((draft) => ({ ...draft, size }));
-                  }}
-                >
-                  {imageSizeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                </select>
-              </label>
+              <div className="col-span-full max-lg:col-span-full space-y-2">
+                <span className="block text-sm font-medium text-[#cfcfcf]">比例</span>
+                <AspectRatioPicker
+                  value={(imageSizeOptions.find((o) => o.value === imageSettings.size)?.ratio ?? "1:1") as ImageRatio}
+                  options={aspectRatioOptions}
+                  onChange={(ratio) => onImageSettingsChange((draft) => ({ ...draft, size: defaultSizeFromRatio(ratio) }))}
+                />
+              </div>
               <label className="space-y-2">
                 <span className="block text-sm font-medium text-[#cfcfcf]">生成数量</span>
                 <input

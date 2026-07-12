@@ -2,8 +2,7 @@ import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { jsonClone } from "../utils.js";
-import type { FieldSpec } from "./csv.js";
-import type { KeyValueRepository, QueryOptions, Repository } from "./repository.js";
+import type { FieldSpec, FieldType, KeyValueRepository, QueryOptions, Repository } from "./repository.js";
 
 type DatabaseSync = {
   exec(sql: string): void;
@@ -13,9 +12,7 @@ type DatabaseSync = {
     get(...values: unknown[]): Record<string, unknown> | undefined;
     all(...values: unknown[]): Record<string, unknown>[];
   };
-};
-
-type FieldType = FieldSpec<Record<string, unknown>>["type"];
+}
 
 const require = createRequire(import.meta.url);
 const sqlite = require("node:sqlite") as { DatabaseSync: new (filename: string) => DatabaseSync };
@@ -56,7 +53,7 @@ function encodeValue(type: FieldType, value: unknown): unknown {
   return value;
 }
 
-/** 从 SQLite 行还原业务对象，保持和 CSV 仓储一致的字段类型。 */
+/** 从 SQLite 行还原业务对象，保持业务字段类型。 */
 function decodeValue(type: FieldType, value: unknown): unknown {
   if (type === "number") return Number(value ?? 0);
   if (type === "boolean") return value === 1 || value === "1" || value === true || value === "true";
@@ -67,7 +64,7 @@ function decodeValue(type: FieldType, value: unknown): unknown {
   return String(value ?? "");
 }
 
-/** 比较筛选条件，JSON 字段用字符串化后的结果比对，和旧 CSV 逻辑保持一致。 */
+/** 比较筛选条件，JSON 字段用字符串化后的结果比对。 */
 function encodeFilterValue<T>(fields: FieldSpec<T>[], key: string, value: unknown): unknown {
   const field = fields.find((item) => item.key === key);
   return encodeValue((field?.type ?? "string") as FieldType, value);
@@ -89,6 +86,9 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
 
   /** 创建表结构；当前统一使用 TEXT/INTEGER 存储，类型转换由仓储层负责。 */
   private ensureTable(): void {
+    // 兼容旧表（如 project_tasks / publish_plans / model_configs 等正在迁出或已停用），
+    // 当 fields 为空时跳过建表，避免 `CREATE TABLE name ()` 触发 SQLite 语法错误。
+    if (this.fields.length === 0) return;
     const columns = this.fields.map((field) => {
       const type = field.type === "number" || field.type === "boolean" ? "INTEGER" : "TEXT";
       const primary = field.key === "id" ? " PRIMARY KEY" : "";

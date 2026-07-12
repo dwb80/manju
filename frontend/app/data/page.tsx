@@ -10,8 +10,9 @@
  * - 提供AI成本详情和生产效率详情入口
  *
  * 页面布局：
- * - 顶部：页面标题 + 返回首页按钮 + 面包屑导航
- * - 主体：DataCenter组件
+ * - 顶部：StandalonePageHeader + StatsOverview 关键指标
+ * - 主体：DataCenter 组件
+ * - 底部：数据来源 + 最后更新时间
  *
  * 数据来源：
  * - 通过真实API接口获取数据
@@ -20,11 +21,19 @@
  */
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, LayoutDashboard, Database } from "lucide-react";
+import { Database, DollarSign, Zap, TrendingUp } from "lucide-react";
 import { DataCenter } from "@/components/data/data-center";
 import type { AICostData } from "@/components/data/ai-cost-stats";
 import type { ProductionEfficiencyData } from "@/components/data/production-efficiency";
+import {
+  StandalonePageHeader,
+  StatsOverview,
+  Alert,
+} from "@/components/layout";
+import { createLogger } from "@/lib/logger";
+
+// 模块级 logger
+const log = createLogger('data-page')
 
 /**
  * API响应格式
@@ -76,31 +85,11 @@ interface ProductionEfficiencyResponse {
   successRate: number;
   taskThroughput: number;
   stageEfficiency: {
-    script: {
-      avgTime: number;
-      successRate: number;
-      taskCount: number;
-    };
-    storyboard: {
-      avgTime: number;
-      successRate: number;
-      taskCount: number;
-    };
-    image: {
-      avgTime: number;
-      successRate: number;
-      taskCount: number;
-    };
-    video: {
-      avgTime: number;
-      successRate: number;
-      taskCount: number;
-    };
-    review: {
-      avgTime: number;
-      successRate: number;
-      taskCount: number;
-    };
+    script: { avgTime: number; successRate: number; taskCount: number };
+    storyboard: { avgTime: number; successRate: number; taskCount: number };
+    image: { avgTime: number; successRate: number; taskCount: number };
+    video: { avgTime: number; successRate: number; taskCount: number };
+    review: { avgTime: number; successRate: number; taskCount: number };
   };
   bottleneckAnalysis: {
     stage: string;
@@ -116,17 +105,14 @@ interface ProductionEfficiencyResponse {
  * 数据中心页面组件
  */
 export default function DataCenterPage() {
-  // 路由导航
-  const router = useRouter();
-
   // 加载状态
   const [loading, setLoading] = useState(false);
-
   // 最后更新时间（避免hydration错误）
   const [lastUpdate, setLastUpdate] = useState<string>("");
-
   // 时间范围状态
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month" | "all">("month");
+  // 加载错误
+  const [loadError, setLoadError] = useState<string>("");
 
   // 概览指标数据
   const [metrics, setMetrics] = useState({
@@ -166,244 +152,194 @@ export default function DataCenterPage() {
    */
   async function loadData(range: "today" | "week" | "month" | "all") {
     setLoading(true);
+    setLoadError("")
+    log.debug('load data', { range })
 
     try {
-      // 并行调用3个API接口
       const [metricsResponse, aiCostResponse, productionResponse] = await Promise.all([
         fetch(`/api/data/metrics?timeRange=${range}`),
         fetch(`/api/data/ai-cost?timeRange=${range}`),
         fetch(`/api/data/production-efficiency?timeRange=${range}`),
       ]);
 
-      // 解析响应
       const metricsResult: ApiResponse<DataMetricsResponse> = await metricsResponse.json();
       const aiCostResult: ApiResponse<AICostResponse> = await aiCostResponse.json();
       const productionResult: ApiResponse<ProductionEfficiencyResponse> = await productionResponse.json();
 
-      // 处理概览指标数据
+      // 处理概览指标
       if (metricsResult.code === 0 && metricsResult.data) {
-        const metricsData = metricsResult.data;
+        const m = metricsResult.data;
         setMetrics({
-          monthlyAICost: metricsData.monthlyAICost,
-          monthlyTasks: metricsData.monthlyTaskCount,
-          avgResponseTime: metricsData.avgResponseTime,
-          efficiencyIndex: metricsData.productionEfficiencyIndex,
-          costTrend: [], // API未返回趋势数据，暂时使用空数组
-          efficiencyTrend: [], // API未返回趋势数据，暂时使用空数组
+          monthlyAICost: m.monthlyAICost,
+          monthlyTasks: m.monthlyTaskCount,
+          avgResponseTime: m.avgResponseTime,
+          efficiencyIndex: m.productionEfficiencyIndex,
+          costTrend: [],
+          efficiencyTrend: [],
         });
       } else {
-        console.error("获取概览指标失败:", metricsResult.message);
+        log.warn('metrics load failed', { message: metricsResult.message })
       }
 
-      // 处理AI成本数据
+      // 处理AI成本
       if (aiCostResult.code === 0 && aiCostResult.data) {
-        const aiCostData = aiCostResult.data;
+        const a = aiCostResult.data;
         setAICostData({
-          totalCost: aiCostData.totalCost,
-          imageCost: aiCostData.imageCost,
-          videoCost: aiCostData.videoCost,
-          chatCost: aiCostData.chatCost,
-          budget: aiCostData.budget,
-          trend: aiCostData.costTrend.map(item => ({
+          totalCost: a.totalCost,
+          imageCost: a.imageCost,
+          videoCost: a.videoCost,
+          chatCost: a.chatCost,
+          budget: a.budget,
+          trend: a.costTrend.map(item => ({
             date: item.date,
             totalCost: item.totalCost,
             imageCost: item.imageCost,
             videoCost: item.videoCost,
             chatCost: item.chatCost,
           })),
-          suggestions: aiCostData.optimizationSuggestions,
+          suggestions: a.optimizationSuggestions,
         });
       } else {
-        console.error("获取AI成本数据失败:", aiCostResult.message);
+        log.warn('ai cost load failed', { message: aiCostResult.message })
       }
 
-      // 处理生产效率数据
+      // 处理生产效率
       if (productionResult.code === 0 && productionResult.data) {
-        const productionData = productionResult.data;
+        const p = productionResult.data;
         setProductionData({
-          avgCompletionTime: productionData.avgCompletionTime,
-          successRate: productionData.successRate,
-          throughput: productionData.taskThroughput,
-          trend: [], // API未返回趋势数据，暂时使用空数组
-          stages: [
-            {
-              stage: "script",
-              stageName: "剧本创作",
-              efficiency: Math.round(productionData.stageEfficiency.script.successRate * 100),
-              avgTime: productionData.stageEfficiency.script.avgTime,
-              successRate: productionData.stageEfficiency.script.successRate * 100,
-              taskCount: productionData.stageEfficiency.script.taskCount,
-            },
-            {
-              stage: "storyboard",
-              stageName: "分镜设计",
-              efficiency: Math.round(productionData.stageEfficiency.storyboard.successRate * 100),
-              avgTime: productionData.stageEfficiency.storyboard.avgTime,
-              successRate: productionData.stageEfficiency.storyboard.successRate * 100,
-              taskCount: productionData.stageEfficiency.storyboard.taskCount,
-            },
-            {
-              stage: "image",
-              stageName: "图片生成",
-              efficiency: Math.round(productionData.stageEfficiency.image.successRate * 100),
-              avgTime: productionData.stageEfficiency.image.avgTime,
-              successRate: productionData.stageEfficiency.image.successRate * 100,
-              taskCount: productionData.stageEfficiency.image.taskCount,
-            },
-            {
-              stage: "video",
-              stageName: "视频生成",
-              efficiency: Math.round(productionData.stageEfficiency.video.successRate * 100),
-              avgTime: productionData.stageEfficiency.video.avgTime,
-              successRate: productionData.stageEfficiency.video.successRate * 100,
-              taskCount: productionData.stageEfficiency.video.taskCount,
-            },
-            {
-              stage: "review",
-              stageName: "审核环节",
-              efficiency: Math.round(productionData.stageEfficiency.review.successRate * 100),
-              avgTime: productionData.stageEfficiency.review.avgTime,
-              successRate: productionData.stageEfficiency.review.successRate * 100,
-              taskCount: productionData.stageEfficiency.review.taskCount,
-            },
-          ],
-          bottlenecks: [productionData.bottleneckAnalysis.issue],
-          suggestions: productionData.optimizationSuggestions,
+          avgCompletionTime: p.avgCompletionTime,
+          successRate: p.successRate,
+          throughput: p.taskThroughput,
+          trend: [],
+          stages: (["script", "storyboard", "image", "video", "review"] as const).map((key) => {
+            const stageData = p.stageEfficiency[key]
+            return {
+              stage: key,
+              stageName: STAGE_NAME_MAP[key],
+              efficiency: Math.round(stageData.successRate * 100),
+              avgTime: stageData.avgTime,
+              successRate: stageData.successRate * 100,
+              taskCount: stageData.taskCount,
+            }
+          }),
+          bottlenecks: [p.bottleneckAnalysis.issue],
+          suggestions: p.optimizationSuggestions,
         });
       } else {
-        console.error("获取生产效率数据失败:", productionResult.message);
+        log.warn('production load failed', { message: productionResult.message })
       }
-    } catch (error) {
-      console.error("API调用失败:", error);
+
+      // 任一接口失败则提示
+      if (metricsResult.code !== 0 || aiCostResult.code !== 0 || productionResult.code !== 0) {
+        setLoadError("部分数据加载失败，显示的可能是历史缓存")
+      }
+    } catch (err) {
+      log.error('API call failed', { error: (err as Error).message })
+      setLoadError(`API 调用失败：${(err as Error).message}`)
     } finally {
       setLoading(false);
     }
   }
 
-  /**
-   * 页面加载时获取数据和设置时间
-   */
   useEffect(() => {
     loadData(timeRange);
     setLastUpdate(new Date().toLocaleString("zh-CN"));
   }, [timeRange]);
 
-  /**
-   * 处理时间范围变化
-   */
   function handleTimeRangeChange(range: "today" | "week" | "month" | "all") {
     setTimeRange(range);
   }
 
-  /**
-   * 查看AI成本详情
-   */
   function handleViewAICostDetails() {
-    // TODO: 跳转到AI成本详情页面或打开详情弹窗
-    console.log("查看AI成本详情");
+    log.debug('view AI cost details')
   }
 
-  /**
-   * 查看生产效率详情
-   */
   function handleViewEfficiencyDetails() {
-    // TODO: 跳转到生产效率详情页面或打开详情弹窗
-    console.log("查看生产效率详情");
+    log.debug('view efficiency details')
   }
 
-  /**
-   * 查看团队绩效
-   */
   function handleViewTeamPerformance() {
-    // TODO: 跳转到团队绩效页面或打开绩效弹窗
-    console.log("查看团队绩效");
+    log.debug('view team performance')
   }
 
-  /**
-   * 返回首页
-   */
-  function goBackToHome() {
-    router.push("/");
-  }
-
-  /**
-   * 刷新数据
-   */
   function handleRefresh() {
     loadData(timeRange);
   }
 
+  // 时间范围中文显示
+  const timeRangeLabel = {
+    today: "今日数据",
+    week: "本周数据",
+    month: "本月数据",
+    all: "全部数据",
+  }[timeRange]
+
   return (
     <main className="min-h-screen bg-[#181818] text-[#ececec]">
-      {/* 页面头部 */}
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-[#181818]/95 px-6 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          {/* 左侧：返回按钮和标题 */}
+      {/* === 统一页面头 === */}
+      <StandalonePageHeader
+        title="数据中心"
+        description="监控AI成本、生产效率和团队绩效，助力数据驱动决策。支持多维度数据分析和可视化展示。"
+        breadcrumbs={["首页", "数据中心"]}
+        extraRight={
           <div className="flex items-center gap-4">
-            {/* 返回首页按钮 */}
-            <button
-              onClick={goBackToHome}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#888] transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="返回首页"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>返回首页</span>
-            </button>
-
-            {/* 分隔线 */}
-            <div className="h-4 w-px bg-white/20" />
-
-            {/* 面包屑导航 */}
-            <nav className="flex items-center gap-2 text-sm text-[#888]">
-              <button
-                onClick={goBackToHome}
-                className="flex items-center gap-1 hover:text-white"
-              >
-                <LayoutDashboard className="h-3 w-3" />
-                <span>首页</span>
-              </button>
-              <span className="text-white/40">/</span>
-              <span className="flex items-center gap-1 text-white font-medium">
-                <Database className="h-3 w-3" />
-                <span>数据中心</span>
-              </span>
-            </nav>
-          </div>
-
-          {/* 右侧：页面信息和刷新按钮 */}
-          <div className="flex items-center gap-4">
-            {/* 当前时间范围 */}
-            <div className="text-xs text-[#888]">
-              {timeRange === "today" && "今日数据"}
-              {timeRange === "week" && "本周数据"}
-              {timeRange === "month" && "本月数据"}
-              {timeRange === "all" && "全部数据"}
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              <span>{timeRangeLabel}</span>
             </div>
-
-            {/* 刷新按钮 */}
             <button
               onClick={handleRefresh}
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#888] transition-colors hover:bg-white/10 hover:text-white"
               aria-label="刷新数据"
               disabled={loading}
             >
-              <span>{loading ? "加载中..." : "刷新"}</span>
+              {loading ? "加载中..." : "刷新"}
             </button>
           </div>
-        </div>
+        }
+      />
 
-        {/* 页面标题和描述 */}
-        <div className="mt-4">
-          <h1 className="text-2xl font-bold text-white">
-            数据中心
-          </h1>
-          <p className="mt-1 text-sm text-[#888]">
-            监控AI成本、生产效率和团队绩效，助力数据驱动决策。支持多维度数据分析和可视化展示。
-          </p>
-        </div>
-      </header>
+      <div className="px-6 py-4 space-y-4">
+        {/* === 错误提示（统一 Alert） === */}
+        {loadError && <Alert tone="error">{loadError}</Alert>}
 
-      {/* 页面主体：数据中心组件 */}
+        {/* === 统一统计卡组：关键指标 === */}
+        <StatsOverview
+          columns={4}
+          cards={[
+            {
+              tone: "blue",
+              icon: <DollarSign className="h-4 w-4" />,
+              title: "AI 成本",
+              value: `¥${metrics.monthlyAICost.toLocaleString()}`,
+              sub: timeRangeLabel,
+            },
+            {
+              tone: "purple",
+              icon: <Zap className="h-4 w-4" />,
+              title: "月度任务数",
+              value: metrics.monthlyTasks.toLocaleString(),
+              sub: "已完成任务",
+            },
+            {
+              tone: "amber",
+              icon: <TrendingUp className="h-4 w-4" />,
+              title: "平均响应",
+              value: `${metrics.avgResponseTime}s`,
+              sub: "全平台均值",
+            },
+            {
+              tone: "emerald",
+              icon: <TrendingUp className="h-4 w-4" />,
+              title: "生产效率",
+              value: `${metrics.efficiencyIndex}`,
+              sub: "综合指数",
+            },
+          ]}
+        />
+      </div>
+
+      {/* 页面主体 */}
       <section className="px-6 py-6">
         <DataCenter
           metrics={metrics}
@@ -416,12 +352,9 @@ export default function DataCenterPage() {
         />
       </section>
 
-      {/* 页面底部信息 */}
       <footer className="border-t border-white/10 px-6 py-4 text-xs text-[#666]">
         <div className="flex items-center justify-between">
-          <div>
-            数据来源：真实API接口
-          </div>
+          <div>数据来源：真实API接口</div>
           <div suppressHydrationWarning>
             最后更新：{lastUpdate || "加载中..."}
           </div>
@@ -429,4 +362,13 @@ export default function DataCenterPage() {
       </footer>
     </main>
   );
+}
+
+// 阶段名映射
+const STAGE_NAME_MAP: Record<string, string> = {
+  script: "剧本创作",
+  storyboard: "分镜设计",
+  image: "图片生成",
+  video: "视频生成",
+  review: "审核环节",
 }

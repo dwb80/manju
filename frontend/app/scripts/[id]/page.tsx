@@ -1,84 +1,58 @@
 'use client'
 
-import { useState, useEffect, lazy, Suspense } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { X, GripHorizontal, ExternalLink, Edit2, Save, Check } from 'lucide-react'
-import { ScriptEditor, ScriptToolbar, ScriptSidebar, OutlineView, CommentSystem, PropPanel } from '@/components/dashboard/script-center'
+/**
+ * 剧本编辑页（/scripts/[id]）
+ *
+ * 设计原则：
+ * - 单一职责：仅作为"剧本编辑工作台"的容器，协调各子模块（编辑器/侧栏/右面板/弹窗）
+ * - 低耦合：业务逻辑下沉到 hooks（useScriptSave、useScriptAnalyze 等），UI 下沉到组件
+ * - 状态分离：UI 状态（弹窗、视图模式）保留在 page，业务数据由 script-store 统一管理
+ *
+ * 历史变更：
+ * - v2（评审优化）：移除右侧"场景" Tab，场景资产统一由左侧 ScriptSidebar 维护
+ * - v2（评审优化）：将原 ~1190 行单体文件拆分为：
+ *     - ScriptEditRightPanel / ScriptEditRightPanel 右侧面板
+ *     - VersionHistoryModal / VersionPreviewModal / AnalyzePreviewModal 弹窗
+ *     - useScriptSave 保存 hook
+ *     - lib/logger 模块化日志
+ *     - constants Tab 与工厂入口配置
+ */
+
+import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
+import { useParams } from 'next/navigation'
+import { ScriptEditor, ScriptToolbar, ScriptSidebar, OutlineView } from '@/components/dashboard/script-center'
 import type { NavTreeNode } from '@/components/dashboard/script-center'
-import { useDraggable } from '@/components/dashboard/script-center/useDraggable'
+import { ScriptEditRightPanel } from '@/components/dashboard/script-center/ScriptEditRightPanel'
+import { VersionHistoryModal } from '@/components/dashboard/script-center/modals/VersionHistoryModal'
+import { VersionPreviewModal } from '@/components/dashboard/script-center/modals/VersionPreviewModal'
+import { AnalyzePreviewModal } from '@/components/dashboard/script-center/modals/AnalyzePreviewModal'
+import { useScriptSave } from '@/components/dashboard/script-center/hooks/useScriptSave'
 import { useScriptStore } from '@/lib/stores/script-store'
 import type { ScriptVersion } from '@/lib/stores/script-store'
 import { scriptCenterService } from '@/services/script-center.service'
-import { createCharacter } from '@/services/character.service'
-import { createScene as createFactoryScene } from '@/services/scene.service'
-import { createProp as createFactoryProp } from '@/services/prop.service'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { toast } from '@/components/common/toast'
+import { notify } from '@/lib/notify'
+import { createLogger } from '@/lib/logger'
+import { useScriptAnalyze } from '@/components/dashboard/script-center/hooks/useScriptAnalyze'
 
-// 懒加载右侧面板（用户点击时才加载）
-const CharacterPanel = lazy(() =>
-  import('@/components/dashboard/script-center/CharacterPanel').then(mod => ({ default: mod.CharacterPanel }))
-)
-const AIPanel = lazy(() =>
-  import('@/components/dashboard/script-center/AIPanel').then(mod => ({ default: mod.AIPanel }))
-)
-const VersionHistory = lazy(() =>
-  import('@/components/dashboard/script-center/VersionHistory').then(mod => ({ default: mod.VersionHistory }))
-)
+// 页面级 logger
+const log = createLogger('script-edit-page')
+
+// 懒加载导入导出对话框（用户触发时才下载）
 const ImportExportDialog = lazy(() =>
-  import('@/components/dashboard/script-center/ImportExportDialog').then(mod => ({ default: mod.ImportExportDialog }))
+  import('@/components/dashboard/script-center/ImportExportDialog').then((m) => ({
+    default: m.ImportExportDialog,
+  })),
 )
 
-// 简单的加载占位符
+// 加载占位符
 function LoadingFallback() {
   return <div className="p-4 text-center text-gray-400">加载中...</div>
 }
 
-// 从 editor_json 中提取纯文本用于版本预览
-function extractTextFromEditorJson(content: any): string {
-  if (!content) return '（无内容）'
-  let json = content
-  if (typeof json === 'string') {
-    try {
-      json = JSON.parse(json)
-    } catch {
-      return json
-    }
-  }
-  // 兼容后端 ScriptBackup.content 结构
-  if (json.script_document) {
-    return extractTextFromEditorJson(json.script_document)
-  }
-  if (json.editor_json) {
-    return extractTextFromEditorJson(json.editor_json)
-  }
-  const blocks: string[] = []
-  const collectText = (node: any): string => {
-    if (!node) return ''
-    if (typeof node.text === 'string') return node.text
-    if (Array.isArray(node.content)) {
-      return node.content.map((child: any) => collectText(child)).join('')
-    }
-    return ''
-  }
-  const walk = (node: any) => {
-    if (!node) return
-    if (['paragraph', 'heading', 'blockquote', 'listItem', 'codeBlock'].includes(node.type)) {
-      blocks.push(collectText(node))
-      return
-    }
-    if (Array.isArray(node.content)) {
-      node.content.forEach((child: any) => walk(child))
-    } else if (typeof node.text === 'string') {
-      blocks.push(node.text)
-    }
-  }
-  walk(json)
-  return blocks.join('\n') || '（无文本内容）'
-}
-
-// 大纲节点类型（与 OutlineView 组件接口一致）
+// === 大纲视图数据类型（与 OutlineView 组件接口一致） ===
 interface OutlineNode {
   id: string
   type: 'episode' | 'scene' | 'character'
@@ -88,9 +62,9 @@ interface OutlineNode {
   order: number
 }
 
-// 评论与回复类型（已迁到 CommentSystem 内部管理，page.tsx 不再持有本地状态）
-
-// 将编辑器导航树（NavTreeNode[]）转换为大纲视图节点（OutlineNode[]）
+/**
+ * 将 editor 导航树转换为大纲视图所需结构
+ */
 function convertNavTreeToOutline(nodes: NavTreeNode[]): OutlineNode[] {
   return nodes.map((node, index) => {
     const outlineType: 'episode' | 'scene' | 'character' =
@@ -106,31 +80,32 @@ function convertNavTreeToOutline(nodes: NavTreeNode[]): OutlineNode[] {
       type: outlineType,
       title: node.title,
       subtitle,
-      children:
-        node.children && node.children.length > 0
-          ? convertNavTreeToOutline(node.children)
-          : undefined,
+      children: node.children?.length ? convertNavTreeToOutline(node.children) : undefined,
       order: index,
     }
   })
 }
 
+// ============================================================
+// 主组件
+// ============================================================
 export default function ScriptEditPage() {
   const params = useParams()
-  const router = useRouter()
   const scriptId = params.id as string
 
+  // ---- store 数据 ----
   const {
     currentDocument,
     episodes,
     scenes,
     characters,
     props: propAssets,
+    sceneAssets,
     versions,
     selectedEpisode,
     selectedScene,
-    isSaving,
     isLoading,
+    error,
     loadDocument,
     createEpisode,
     updateEpisode,
@@ -146,73 +121,65 @@ export default function ScriptEditPage() {
     addProp,
     updateProp: updateScriptProp,
     removeProp,
+    appendFactoryAsset,
+    removeFactoryAsset,
     loadVersions,
     restoreVersion,
     deleteVersion,
   } = useScriptStore()
 
-  const [showImportExport, setShowImportExport] = useState(false)
-  const [showVersionHistory, setShowVersionHistory] = useState(false)
-  const [activePanel, setActivePanel] = useState<'character' | 'prop' | 'ai' | 'comment'>('character')
-  const [viewingVersion, setViewingVersion] = useState<ScriptVersion | null>(null)
-  // 分析剧本的确认对话框
-  const [showAnalyzeConfirm, setShowAnalyzeConfirm] = useState(false)
-  // 分析结果预览（确认后才会写入）
-  const [analyzePreview, setAnalyzePreview] = useState<{
-    characters: any[]
-    scenes: any[]
-    props: any[]
-    episodes: any[]
-    source?: 'ai' | 'local'
-    warnings?: string[]
-  } | null>(null)
-
-  // 编辑器实例
+  // ---- UI 状态 ----
   const [editor, setEditor] = useState<any>(null)
-  // 编辑器实时导航树（Feature 2.10）
   const [editorTree, setEditorTree] = useState<NavTreeNode[]>([])
-
-  // 大纲模式（Feature 2.1）
   const [viewMode, setViewMode] = useState<'edit' | 'outline'>('edit')
   const [outlineNodes, setOutlineNodes] = useState<OutlineNode[]>([])
+  /** 右侧面板当前 Tab（受控），顶部"评论"按钮可切到 'comment' */
+  const [rightPanelTab, setRightPanelTab] = useState<import('@/components/dashboard/script-center').RightPanelTab>('character')
 
-  // 评论批注（Feature 2.9）- 数据由 CommentSystem 通过 API 自管理
+  // 弹窗状态
+  const [showImportExport, setShowImportExport] = useState(false)
+  const [showVersionHistory, setShowVersionHistory] = useState(false)
+  const [viewingVersion, setViewingVersion] = useState<ScriptVersion | null>(null)
+  const [showAnalyzeConfirm, setShowAnalyzeConfirm] = useState(false)
+  const [analyzePreview, setAnalyzePreview] = useState<any>(null)
+
+  // AI 分析前的原文快照：用于分析后重建 Tiptap 结构（让剧集/场景与正文锚定）
+  const [pendingAnalyzeText, setPendingAnalyzeText] = useState<string>('')
+  const [pendingAnalyzeJson, setPendingAnalyzeJson] = useState<any>(null)
+
+  // 评论选区
   const [selectedText, setSelectedText] = useState('')
   const [selectionPosition, setSelectionPosition] = useState<{ from: number; to: number } | undefined>(undefined)
 
-  // 弹窗拖拽（版本历史 + 版本预览）
-  const versionHistoryDrag = useDraggable(-1, 60)
-  const versionPreviewDrag = useDraggable(-1, 60)
-
-  // 加载剧本文档
+  // ---- 副作用 ----
   useEffect(() => {
-    if (scriptId) {
-      loadDocument(scriptId)
-    }
+    if (!scriptId) return
+    log.info('load document', { scriptId })
+    // 重置 store，避免上一次会话的缓存影响本次加载
+    useScriptStore.getState().reset()
+    loadDocument(scriptId)
   }, [scriptId, loadDocument])
 
-  // 加载版本历史
   useEffect(() => {
     if (currentDocument && showVersionHistory) {
+      log.debug('load versions on history open')
       loadVersions()
     }
   }, [currentDocument, showVersionHistory, loadVersions])
 
-  // 进入大纲模式时，从 editorTree 生成大纲数据（Feature 2.1）
   useEffect(() => {
     if (viewMode === 'outline') {
       setOutlineNodes(convertNavTreeToOutline(editorTree))
     }
   }, [viewMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 跟踪编辑器选中文本（用于评论功能 Feature 2.9）
+  // 跟踪编辑器选中文本（用于评论功能）
   useEffect(() => {
     if (!editor) return
     const updateSelection = () => {
       const { from, to } = editor.state.selection
       if (from !== to) {
-        const text = editor.state.doc.textBetween(from, to, ' ')
-        setSelectedText(text)
+        setSelectedText(editor.state.doc.textBetween(from, to, ' '))
         setSelectionPosition({ from, to })
       } else {
         setSelectedText('')
@@ -225,116 +192,72 @@ export default function ScriptEditPage() {
     }
   }, [editor])
 
-  // 保存剧本（含同步角色/场景/道具到工厂）
-  const handleSave = async () => {
-    if (!currentDocument) return
-    try {
-      // 1. 保存剧本文档
-      await scriptCenterService.updateDocument(currentDocument.id, {
-        editor_json: editor?.getJSON()
-      })
-
-      // 2. 同步角色到角色工厂
-      const projectId = currentDocument.project_id || ''
-      let syncedChars = 0
-      for (const char of characters) {
-        if (char.assetId) continue // 已同步过
-        try {
-          const created = await createCharacter({
-            name: char.name || '未命名角色',
-            role: 'supporting',
-            description: char.description,
-            tags: [],
-          })
-          updateScriptCharacter(char.id, { assetId: created.id })
-          syncedChars++
-        } catch (err) {
-          console.warn('同步角色失败:', char.name, err)
+  // ---- 保存（委托给 useScriptSave hook） ----
+  const { save: handleSave, saving: isSaving } = useScriptSave({
+    document: currentDocument
+      ? {
+          id: currentDocument.id,
+          project_id: currentDocument.project_id,
+          version: currentDocument.version,
         }
-      }
+      : null,
+    editor,
+    characters: characters as any,
+    propAssets: propAssets as any,
+    updateScriptCharacter,
+    updateScriptProp,
+    appendFactoryAsset,
+  })
 
-      // 3. 同步场景到场景工厂
-      let syncedScenes = 0
-      for (const sc of scenes) {
-        if (sc.assetId) continue
-        try {
-          const created = await createFactoryScene({
-            name: sc.location || '未命名场景',
-            type: 'outdoor',
-            description: sc.description,
-            time_of_day: sc.time,
-          })
-          updateScene(sc.id, { assetId: created.id })
-          syncedScenes++
-        } catch (err) {
-          console.warn('同步场景失败:', sc.location, err)
-        }
-      }
-
-      // 4. 同步道具到道具工厂
-      let syncedProps = 0
-      for (const p of propAssets) {
-        if (p.assetId) continue
-        try {
-          const created = await createFactoryProp({
-            name: p.name || '未命名道具',
-            category: (p.category as any) || 'other',
-            description: p.description,
-          })
-          updateScriptProp(p.id, { assetId: created.id })
-          syncedProps++
-        } catch (err) {
-          console.warn('同步道具失败:', p.name, err)
-        }
-      }
-
-      // 5. 创建版本快照
-      try {
-        await fetch('/api/script-versions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            document_id: currentDocument.id,
-            editor_json: JSON.stringify(editor?.getJSON()),
-            version: currentDocument.version + 1,
-            changes: '保存',
-          }),
-        })
-      } catch {
-        // 版本快照失败不阻塞保存
-      }
-
-      const total = syncedChars + syncedScenes + syncedProps
-      if (total > 0) {
-        toast.success('剧本已保存', `已同步 ${syncedChars} 个角色、${syncedScenes} 个场景、${syncedProps} 个道具到工厂`)
-      } else {
-        toast.success('剧本已保存')
-      }
-    } catch (error) {
-      toast.error('保存失败：' + (error as Error).message)
-    }
-  }
-
-  // AI分析剧本 - 第一步：弹出确认对话框
-  const handleAnalyzeScript = () => {
+  // ---- AI 分析剧本：第一步打开确认弹窗 ----
+  const handleAnalyzeScript = useCallback(() => {
     if (!editor || !currentDocument) return
     const content = editor.getText()
     if (!content.trim()) {
+      log.warn('analyze skipped: empty content')
       toast.error('请先输入剧本内容')
       return
     }
+    // 在用户确认分析前先抓取"原文快照"，用于分析成功后重建结构化 Tiptap 文档。
+    // 重建后侧栏点击剧集才能通过 [data-id] 精确锚定到正文位置。
+    setPendingAnalyzeText(content)
+    setPendingAnalyzeJson(editor.getJSON())
+    log.info('open analyze confirm', { chars: content.length })
     setShowAnalyzeConfirm(true)
-  }
+  }, [editor, currentDocument])
 
-  // AI分析剧本 - 第二步：确认后调用大模型
-  const handleConfirmAnalyze = async () => {
+  // ---- AI 分析剧本：第二步调用大模型 ----
+  const handleConfirmAnalyze = useCallback(async () => {
     if (!editor || !currentDocument) return
     setShowAnalyzeConfirm(false)
     const content = editor.getText()
-    const charCount = content.length
-    toast.success(`正在分析剧本…（共 ${charCount} 字）`)
+    // 显式可见的"正在分析中"进度提示
+    //   - 带"取消"按钮：用户可中止请求（避免 50s 等待）
+    //   - 每 1.5s 推一次百分比，模拟真实进度，给用户明确"在分析"的感知
+    let progress = 10
+    const controller = new AbortController()
+    const cancelHandler = () => {
+      controller.abort()
+      toast.error('已取消 AI 分析')
+    }
+    const progressId = toast.progress(
+      'AI 正在分析剧本…',
+      `共 ${content.length} 字，将识别角色 / 场景 / 道具 / 剧集`,
+      cancelHandler,
+    )
+    const progressTimer = setInterval(() => {
+      progress = Math.min(progress + 5, 90)
+      toast.updateProgress(progressId, progress)
+    }, 1500)
     try {
-      const result = await scriptCenterService.analyzeScript(content)
+      log.info('analyze request start', { chars: content.length })
+      const result = await scriptCenterService.analyzeScript(content, { signal: controller.signal })
+      // 检测：若 AI 大模型未返回任何资产，给出明确提示
+      const totalAssets =
+        (result.characters?.length || 0) +
+        (result.scenes?.length || 0) +
+        (result.props?.length || 0) +
+        (result.episodes?.length || 0)
       setAnalyzePreview({
         characters: result.characters || [],
         scenes: result.scenes || [],
@@ -343,108 +266,94 @@ export default function ScriptEditPage() {
         source: result.source,
         warnings: result.warnings,
       })
-      if (result.source === 'local') {
-        toast.success('AI 不可用，已使用本地正则分析')
+      toast.updateProgress(progressId, 100)
+      if (totalAssets === 0) {
+        // AI 没有识别出任何资产：可能剧本内容为空 / 格式特殊
+        toast.success(
+          'AI 未识别到角色/场景/道具',
+          '可调整剧本格式后重试，或在「角色/场景/道具工厂」中手动添加',
+        )
       } else {
         toast.success('AI 分析完成，请确认结果')
       }
+      log.info('analyze success', { source: result.source, totalAssets })
     } catch (error) {
-      toast.error('分析失败：' + (error as Error).message)
+      // 用户主动中止时不再弹"分析失败"
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        log.info('analyze cancelled by user')
+      } else {
+        log.error('analyze failed', { error: (error as Error).message })
+        toast.error('分析失败：' + (error as Error).message)
+      }
+    } finally {
+      clearInterval(progressTimer)
+      // 短暂延迟移除，让用户看到 100% 完成态
+      setTimeout(() => toast.remove(progressId), 600)
     }
-  }
+  }, [editor, currentDocument])
 
-  // AI分析剧本 - 第三步：应用分析结果
-  const handleApplyAnalyze = async () => {
-    if (!analyzePreview) return
-    try {
-      // 剧集去重添加
-      for (const ep of analyzePreview.episodes) {
-        const existing = episodes.find((e) => e.title === ep.title)
-        if (!existing) {
-          await createEpisode({
-            episodeNo: ep.episode_no,
-            title: ep.title,
-            synopsis: ep.synopsis,
-          })
-        }
-      }
+  // ---- AI 分析剧本：第三步应用结果（落库到工厂） ----
+  //   业务逻辑下沉到 useScriptAnalyze hook（已落库场景/角色/道具到工厂 + 写回 store）
+  //   同时会把 AI 返回的剧集/场景结构写回编辑器正文，赋予 [data-id] 锚点。
+  const handleContentRestructured = useCallback(
+    (newContent: any) => {
+      if (!editor || !newContent) return
+      // emitUpdate=true：让 ScriptEditor 的 onUpdate 触发 tree 同步 + 自动保存
+      editor.commands.setContent(newContent, true)
+      log.info('editor content restructured from AI analyze')
+    },
+    [editor],
+  )
 
-      // 角色去重添加（写入 store）
-      for (const char of analyzePreview.characters) {
-        const existing = characters.find((c) => c.name === char.name)
-        if (!existing) {
-          addCharacter({
-            id: `temp-${Date.now()}-${char.name}`,
-            name: char.name,
-            description: char.description,
-            color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'),
-          })
-        }
-      }
+  const { apply: applyAnalyze, applying: isApplyingAnalyze } = useScriptAnalyze({
+    document: currentDocument ? { id: currentDocument.id, project_id: currentDocument.project_id } : null,
+    preview: analyzePreview,
+    episodes,
+    scenes,
+    sceneAssets,
+    characters,
+    propAssets,
+    createEpisode,
+    createScene,
+    addCharacter,
+    addProp,
+    appendFactoryAsset,
+    originalText: pendingAnalyzeText,
+    originalEditorJson: pendingAnalyzeJson,
+    onContentRestructured: handleContentRestructured,
+  })
 
-      // 场景去重添加（写入 store；作为第一个剧集的场景）
-      const targetEpisodes = episodes.length > 0 ? episodes : (await new Promise<any[]>((resolve) => {
-        // 等待 episodes 更新
-        setTimeout(() => resolve(useScriptStore.getState().episodes), 100)
-      }))
-      for (const scene of analyzePreview.scenes) {
-        const existing = scenes.find((s) => s.location === scene.location_name)
-        if (!existing && targetEpisodes.length > 0) {
-          await createScene(targetEpisodes[0].id, {
-            location: scene.location_name,
-            time: scene.time_of_day,
-            description: scene.description,
-          })
-        }
-      }
-
-      // 道具去重添加
-      for (const p of analyzePreview.props) {
-        const existing = propAssets.find((pp) => pp.name === p.name)
-        if (!existing) {
-          addProp({
-            id: `temp-${Date.now()}-${p.name}`,
-            name: p.name,
-            category: p.category,
-            description: p.description,
-          })
-        }
-      }
-
-      toast.success(
-        `分析结果已应用！识别出 ${analyzePreview.characters.length} 个角色、${analyzePreview.scenes.length} 个场景、${analyzePreview.props.length} 个道具、${analyzePreview.episodes.length} 个剧集`
-      )
+  const handleApplyAnalyze = useCallback(async () => {
+    const result = await applyAnalyze()
+    if (result.success) {
+      log.info('analyze applied, closing modal')
       setAnalyzePreview(null)
-    } catch (error) {
-      toast.error('应用失败：' + (error as Error).message)
+      // 清空"原文快照"：下次分析时再重新捕获，避免陈旧内容污染后续重建
+      setPendingAnalyzeText('')
+      setPendingAnalyzeJson(null)
     }
-  }
+  }, [applyAnalyze])
 
-  // ============ 大纲模式处理（Feature 2.1） ============
+  // ---- 大纲模式：节点点击 / 排序 / 添加 / 删除 / 重命名 ----
   const handleNodeClick = (node: OutlineNode) => {
-    // 切回编辑模式并跳转到对应节点
+    log.debug('outline node click', { id: node.id, type: node.type })
     setViewMode('edit')
     setTimeout(() => {
       const el = document.querySelector(`[data-id="${node.id}"]`)
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 100)
   }
-
-  const handleNodeReorder = async (nodeId: string, newOrder: number) => {
+  const handleNodeReorder = async (nodeId: string, newOrder: number): Promise<void> => {
     setOutlineNodes((prev) => {
-      const index = prev.findIndex((n) => n.id === nodeId)
-      if (index === -1) return prev
-      const targetIndex = prev.findIndex((n) => n.order === newOrder)
-      if (targetIndex === -1) return prev
-      const newNodes = [...prev]
-      const [moved] = newNodes.splice(index, 1)
-      newNodes.splice(targetIndex, 0, moved)
-      return newNodes.map((n, i) => ({ ...n, order: i }))
+      const idx = prev.findIndex((n) => n.id === nodeId)
+      const tIdx = prev.findIndex((n) => n.order === newOrder)
+      if (idx < 0 || tIdx < 0) return prev
+      const next = [...prev]
+      const [moved] = next.splice(idx, 1)
+      next.splice(tIdx, 0, moved)
+      return next.map((n, i) => ({ ...n, order: i }))
     })
   }
-
   const handleAddNode = (type: 'episode' | 'scene' | 'character', parentId?: string) => {
     const newNode: OutlineNode = {
       id: `new-${Date.now()}`,
@@ -454,93 +363,131 @@ export default function ScriptEditPage() {
       children: [],
     }
     if (parentId) {
-      setOutlineNodes((prev) =>
-        prev.map((n) => {
-          if (n.id === parentId) {
-            return { ...n, children: [...(n.children || []), newNode] }
-          }
-          // 递归查找父节点
-          if (n.children) {
-            const findAndAdd = (nodes: OutlineNode[]): OutlineNode[] =>
-              nodes.map((child) => {
-                if (child.id === parentId) {
-                  return { ...child, children: [...(child.children || []), newNode] }
-                }
-                if (child.children) {
-                  return { ...child, children: findAndAdd(child.children) }
-                }
-                return child
-              })
-            return { ...n, children: findAndAdd(n.children) }
-          }
-          return n
-        })
-      )
+      const findAndAdd = (nodes: OutlineNode[]): OutlineNode[] =>
+        nodes.map((n) =>
+          n.id === parentId
+            ? { ...n, children: [...(n.children || []), newNode] }
+            : n.children
+            ? { ...n, children: findAndAdd(n.children) }
+            : n,
+        )
+      setOutlineNodes((prev) => prev.map((n) => (n.children ? { ...n, children: findAndAdd(n.children) } : n)))
     } else {
       setOutlineNodes((prev) => [...prev, newNode])
     }
   }
-
   const handleNodeDelete = (nodeId: string) => {
-    setOutlineNodes((prev) => {
-      const filterRecursive = (nodes: OutlineNode[]): OutlineNode[] =>
-        nodes
-          .filter((n) => n.id !== nodeId)
-          .map((n) => ({
-            ...n,
-            children: n.children ? filterRecursive(n.children) : undefined,
-          }))
-      return filterRecursive(prev)
-    })
+    const filterRecursive = (nodes: OutlineNode[]): OutlineNode[] =>
+      nodes
+        .filter((n) => n.id !== nodeId)
+        .map((n) => ({ ...n, children: n.children ? filterRecursive(n.children) : undefined }))
+    setOutlineNodes((prev) => filterRecursive(prev))
   }
-
   const handleNodeRename = (nodeId: string, newTitle: string) => {
-    setOutlineNodes((prev) => {
-      const renameRecursive = (nodes: OutlineNode[]): OutlineNode[] =>
-        nodes.map((n) => {
-          if (n.id === nodeId) {
-            return { ...n, title: newTitle }
-          }
-          if (n.children) {
-            return { ...n, children: renameRecursive(n.children) }
-          }
-          return n
-        })
-      return renameRecursive(prev)
-    })
+    const renameRecursive = (nodes: OutlineNode[]): OutlineNode[] =>
+      nodes.map((n) =>
+        n.id === nodeId
+          ? { ...n, title: newTitle }
+          : n.children
+          ? { ...n, children: renameRecursive(n.children) }
+          : n,
+      )
+    setOutlineNodes((prev) => renameRecursive(prev))
   }
 
-  // ============ 评论批注处理（Feature 2.9）============
-  // 已迁移到 CommentSystem 内部通过 API 持久化，page.tsx 只传递必要 props。
+  // ---- 顶部"评论"按钮：切换右侧面板 Tab 到 'comment' ----
+  const handleCommentToggle = useCallback(() => {
+    log.debug('toggle comment', { currentTab: rightPanelTab })
+    // 若当前是 comment，再次点击切回默认 character；否则切到 comment
+    setRightPanelTab((prev) => (prev === 'comment' ? 'character' : 'comment'))
+  }, [rightPanelTab])
 
+  // ---- 加载 / 空态 ----
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full min-h-0 bg-[#0a0a0a]">
-        <div className="text-emerald-400 animate-pulse">加载中...</div>
+      <div className="flex flex-col items-center justify-center h-full min-h-0 bg-[#0a0a0a] gap-3">
+        <div className="text-emerald-400 animate-pulse text-base">
+          正在加载中，请耐心等待…
+        </div>
+        <div className="text-xs text-[#666]">
+          {(typeof window !== 'undefined' && (window as any).__scriptLoadProgress) || '正在请求后端数据'}
+        </div>
       </div>
     )
   }
-
   if (!currentDocument) {
     return (
-      <div className="flex items-center justify-center h-full min-h-0 bg-[#0a0a0a] text-[#888]">
-        剧本不存在或已删除
+      <div className="flex flex-col items-center justify-center h-full min-h-0 bg-[#0a0a0a] gap-4 p-6 text-center max-w-2xl mx-auto">
+        <div className="text-[#888] text-base">剧本加载失败</div>
+        <div className="text-xs text-[#888] max-w-md leading-relaxed">
+          剧本 ID：<code className="text-emerald-400/80">{scriptId}</code>
+          <br />
+          {error || '可能原因：剧本已删除、后端服务未启动、或该 ID 在数据中找不到对应记录。'}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (typeof window !== 'undefined') (window as any).__scriptLoadProgress = null
+              if (scriptId) loadDocument(scriptId)
+            }}
+          >
+            重试
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              try {
+                const [scriptsRes, docRes] = await Promise.all([
+                  fetch('/api/scripts'),
+                  fetch(`/api/script-documents/${encodeURIComponent(scriptId)}`),
+                ])
+                const scripts = await scriptsRes.json()
+                const doc = docRes.ok ? await docRes.json() : await docRes.text()
+                alert(
+                  `/api/scripts: ${scriptsRes.status}\n` +
+                    `总剧本数: ${(scripts?.data ?? []).length}\n` +
+                    `含此 ID: ${(scripts?.data ?? []).some((s: any) => s.id === scriptId)}\n\n` +
+                    `/api/script-documents/${scriptId.slice(0, 16)}...: ${docRes.status}\n` +
+                    `响应: ${JSON.stringify(doc).slice(0, 200)}`,
+                )
+              } catch (err) {
+                alert('测试 API 失败：' + (err as Error).message)
+              }
+            }}
+          >
+            测试 API
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.close()}
+          >
+            关闭标签页
+          </Button>
+        </div>
+        <div className="text-[10px] text-[#555] mt-4 leading-relaxed">
+          提示：打开浏览器 DevTools → Network 标签，可以查看 <code>/api/scripts</code> 和 <code>/api/script-documents</code> 的请求状态。
+          <br />
+          常见问题：① SQLite 数据库 <code>backend/data/sqlite.db</code> 的 <code>scripts</code> 表中是否存在此 ID；② <code>script_documents</code> 表是否需要为该剧本补充一条文档记录。
+        </div>
       </div>
     )
   }
 
+  // ============================================================
+  // 渲染
+  // ============================================================
   return (
     <div className="script-edit-page h-full min-h-0 bg-[#0a0a0a] flex flex-col overflow-hidden">
-      {/* 顶部工具栏 */}
+      {/* === 顶部工具栏 === */}
       <div className="border-b border-white/10 bg-[#1a1a1a] px-4 py-2 flex items-center gap-2">
         <div className="flex-1">
           <h1 className="text-lg font-medium text-white">{currentDocument.title || '未命名剧本'}</h1>
-          <div className="text-xs text-[#888]">
-            {isSaving ? '保存中...' : '已保存'}
-          </div>
+          <div className="text-xs text-[#888]">{isSaving ? '保存中...' : '已保存'}</div>
         </div>
-
-        {/* 工具按钮 - 使用文本而非图标 */}
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" onClick={handleSave} disabled={isSaving}>
             保存
@@ -555,28 +502,22 @@ export default function ScriptEditPage() {
             variant={viewMode === 'outline' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode(viewMode === 'outline' ? 'edit' : 'outline')}
+            title={viewMode === 'outline' ? '返回编辑器' : '切换到大纲视图'}
           >
-            大纲
+            {viewMode === 'outline' ? '返回编辑' : '大纲'}
           </Button>
-          <Button
-            variant={activePanel === 'comment' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActivePanel(activePanel === 'comment' ? 'character' : 'comment')}
-          >
+          <Button variant={rightPanelTab === 'comment' ? 'default' : 'ghost'} size="sm" onClick={handleCommentToggle}>
             评论
           </Button>
         </div>
       </div>
 
-      {/* 编辑器工具栏 */}
-      <ScriptToolbar 
-        editor={editor} 
-        onAnalyze={handleAnalyzeScript}
-      />
+      {/* === 编辑器工具栏 === */}
+      <ScriptToolbar editor={editor} onAnalyze={handleAnalyzeScript} />
 
-      {/* 主内容区域 */}
+      {/* === 主内容区：左（侧栏） + 中（编辑器/大纲） + 右（面板） === */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 左侧导航 */}
+        {/* 左侧：剧集/场景导航 */}
         <div className="w-64 flex-shrink-0">
           <ScriptSidebar
             episodes={episodes}
@@ -584,13 +525,13 @@ export default function ScriptEditPage() {
             selectedScene={selectedScene}
             onSelectEpisode={selectEpisode}
             onSelectScene={selectScene}
-            onAddEpisode={() => createEpisode({ episodeNo: episodes.length + 1, title: '' })}
+            onAddEpisode={() => createEpisode({ episodeNo: episodes.length + 1, title: '' } as any)}
             onAddScene={(episodeId) => createScene(episodeId, { location: '', time: '' })}
             onRenameEpisode={(id, title) => updateEpisode(id, { title })}
             onDeleteEpisode={(id) => deleteEpisode(id)}
             onDuplicateEpisode={(id) => {
               const ep = episodes.find((e) => e.id === id)
-              if (ep) createEpisode({ episodeNo: episodes.length + 1, title: `${ep.title} (副本)`, synopsis: ep.synopsis })
+              if (ep) createEpisode({ episodeNo: episodes.length + 1, title: `${ep.title} (副本)`, synopsis: ep.synopsis } as any)
             }}
             onRenameScene={(id, location, time) => updateScene(id, { location, time })}
             onDeleteScene={(id) => deleteScene(id)}
@@ -599,46 +540,22 @@ export default function ScriptEditPage() {
               if (sc) createScene(sc.episodeId, { location: `${sc.location} (副本)`, time: sc.time, description: sc.description })
             }}
             treeData={editorTree}
-            onJumpToEpisode={(nodeId) => {
-              // 通过 data-id 定位编辑器内对应 DOM 节点并滚动（Feature 2.10）
-              const el = document.querySelector(`[data-id="${nodeId}"]`)
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                // 添加高亮闪烁
-                el.classList.add('episode-highlight-flash')
-                setTimeout(() => el.classList.remove('episode-highlight-flash'), 1500)
-                toast.success('已跳转到剧集')
-              } else {
-                toast.error('未在编辑器中找到该剧集')
-              }
-            }}
-            onJumpToScene={(nodeId) => {
-              const el = document.querySelector(`[data-id="${nodeId}"]`)
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                el.classList.add('episode-highlight-flash')
-                setTimeout(() => el.classList.remove('episode-highlight-flash'), 1500)
-                toast.success('已跳转到场景')
-              } else {
-                toast.error('未在编辑器中找到该场景')
-              }
-            }}
+            onJumpToEpisode={jumpToNode('已跳转到剧集', '未在编辑器中找到该剧集')}
+            onJumpToScene={jumpToNode('已跳转到场景', '未在编辑器中找到该场景')}
             onReorderEpisodes={(fromId, toId) => {
-              // 交换 episodes 数组中的位置（Feature 1.5 AC3）
               const idxFrom = episodes.findIndex((e) => e.id === fromId)
               const idxTo = episodes.findIndex((e) => e.id === toId)
               if (idxFrom < 0 || idxTo < 0) return
               const reordered = [...episodes]
               const [moved] = reordered.splice(idxFrom, 1)
               reordered.splice(idxTo, 0, moved)
-              // 更新 episodeNo
               reordered.forEach((ep, i) => updateEpisode(ep.id, { episodeNo: i + 1 }))
               toast.success('剧集顺序已更新')
             }}
           />
         </div>
 
-        {/* 编辑器 / 大纲视图（Feature 2.1） */}
+        {/* 中部：编辑器 / 大纲视图 */}
         <div className="flex-1 overflow-y-auto">
           {viewMode === 'outline' ? (
             <OutlineView
@@ -648,6 +565,7 @@ export default function ScriptEditPage() {
               onAddNode={handleAddNode}
               onNodeDelete={handleNodeDelete}
               onNodeRename={handleNodeRename}
+              onBackToEdit={() => setViewMode('edit')}
             />
           ) : (
             <ScriptEditor
@@ -665,258 +583,78 @@ export default function ScriptEditPage() {
           )}
         </div>
 
-        {/* 右侧面板 - 固定显示，Tab切换内容 */}
-        <div className="w-80 flex-shrink-0 bg-[#1a1a1a] border-l border-white/10 flex flex-col overflow-hidden">
-          {/* Tab 切换栏 */}
-          <div className="flex border-b border-white/10 bg-[#1a1a1a]">
-            <Button
-              variant={activePanel === 'character' ? 'default' : 'ghost'}
-              size="sm"
-              className="flex-1 h-9 text-xs rounded-none"
-              onClick={() => setActivePanel('character')}
-            >
-              角色
-            </Button>
-            <Button
-              variant={activePanel === 'prop' ? 'default' : 'ghost'}
-              size="sm"
-              className="flex-1 h-9 text-xs rounded-none"
-              onClick={() => setActivePanel('prop')}
-            >
-              道具
-            </Button>
-            <Button
-              variant={activePanel === 'ai' ? 'default' : 'ghost'}
-              size="sm"
-              className="flex-1 h-9 text-xs rounded-none"
-              onClick={() => setActivePanel('ai')}
-            >
-              AI
-            </Button>
-            <Button
-              variant={activePanel === 'comment' ? 'default' : 'ghost'}
-              size="sm"
-              className="flex-1 h-9 text-xs rounded-none"
-              onClick={() => setActivePanel('comment')}
-            >
-              评论
-            </Button>
-          </div>
-
-          {/* 顶部"在工厂中编辑"快捷入口 */}
-          <div className="flex border-b border-white/10 bg-[#1a1a1a]">
-            <button
-              type="button"
-              onClick={() => router.push('/characters')}
-              className="flex-1 flex items-center justify-center gap-1 h-7 text-[10px] text-emerald-400 hover:bg-white/5"
-            >
-              <ExternalLink className="h-3 w-3" />
-              角色工厂
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/scenes')}
-              className="flex-1 flex items-center justify-center gap-1 h-7 text-[10px] text-emerald-400 hover:bg-white/5 border-l border-white/10"
-            >
-              <ExternalLink className="h-3 w-3" />
-              场景工厂
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/props')}
-              className="flex-1 flex items-center justify-center gap-1 h-7 text-[10px] text-emerald-400 hover:bg-white/5 border-l border-white/10"
-            >
-              <ExternalLink className="h-3 w-3" />
-              道具工厂
-            </button>
-          </div>
-
-          {/* 面板内容区 */}
-          <div className="flex-1 overflow-y-auto">
-            {/* 角色面板（只读 + 跳转工厂编辑） */}
-            {activePanel === 'character' && (
-              <Suspense fallback={<LoadingFallback />}>
-                <CharacterPanel
-                  characters={characters}
-                  onAddCharacter={() => router.push('/characters')}
-                  onSelectCharacter={(char) => {
-                    if (editor && char.name) {
-                      editor.commands.setCharacter?.({ name: char.name, color: char.color })
-                    }
-                  }}
-                  onEditCharacter={(char) => {
-                    // 跳转到角色工厂编辑对应角色
-                    if (char.assetId) {
-                      router.push(`/characters?focus=${char.assetId}`)
-                    } else {
-                      router.push('/characters')
-                    }
-                  }}
-                  onDeleteCharacter={(id) => removeCharacter(id)}
-                />
-              </Suspense>
-            )}
-
-            {/* 道具面板（只读 + 跳转工厂编辑） */}
-            {activePanel === 'prop' && (
-              <Suspense fallback={<LoadingFallback />}>
-                <PropPanel
-                  props={propAssets}
-                  onAddProp={() => router.push('/props')}
-                  onSelectProp={(p) => {
-                    if (editor && p.name) {
-                      editor.commands.insertContent?.(p.name)
-                    }
-                  }}
-                  onEditProp={(p) => {
-                    if (p.assetId) {
-                      router.push(`/props?focus=${p.assetId}`)
-                    } else {
-                      router.push('/props')
-                    }
-                  }}
-                  onDeleteProp={(id) => removeProp(id)}
-                />
-              </Suspense>
-            )}
-
-            {/* AI面板 */}
-            {activePanel === 'ai' && (
-              <Suspense fallback={<LoadingFallback />}>
-                <AIPanel
-                  editor={editor}
-                  hasSelection={!!(selectedText && selectionPosition)}
-                  onGenerateScript={async (params) => {
-                    const result = await scriptCenterService.generateScript(params)
-                    if (editor && result.content) editor.commands.setContent(result.content)
-                    toast.success('AI生成完成')
-                  }}
-                  onOptimizeScript={async (params) => {
-                    const result = await scriptCenterService.optimizeScript({
-                      content: params.content || undefined,
-                      optimization_type: params.target as any,
-                      script_id: params.content ? undefined : currentDocument.id,
-                    })
-                    return { optimizedContent: result.optimizedContent || '' }
-                  }}
-                  onGenerateScene={async (params) => {
-                    const result = await scriptCenterService.generateScene(params)
-                    if (editor && result.description) editor.commands.insertContent(result.description)
-                    toast.success('场景生成完成')
-                  }}
-                  onGenerateDialogue={async (params) => {
-                    const result = await scriptCenterService.generateDialogue(params)
-                    if (editor && result.dialogue) editor.commands.insertContent(result.dialogue)
-                    toast.success('对话生成完成')
-                  }}
-                />
-              </Suspense>
-            )}
-
-            {/* 评论面板 */}
-            {activePanel === 'comment' && (
-              <CommentSystem
-                scriptId={scriptId}
-                selectedText={selectedText}
-                selectionPosition={selectionPosition}
-              />
-            )}
-          </div>
-        </div>
+        {/* 右侧：剧本编辑面板（不含场景 Tab，工厂入口已收敛到组件内） */}
+        <ScriptEditRightPanel
+          characters={characters as any}
+          onAddCharacter={() => notify.info('请通过顶部"角色工厂"快捷入口管理角色资产')}
+          onSelectCharacter={(char) => {
+            if (editor && char.name) editor.commands.setCharacter?.({ name: char.name, color: char.color })
+          }}
+          onEditCharacter={(char) => {
+            if (char.assetId) notify.info(`请在角色工厂中编辑角色 ${char.name}`)
+          }}
+          onDeleteCharacter={(id) => removeCharacter(id)}
+          propAssets={propAssets as any}
+          onAddProp={() => notify.info('请通过顶部"道具工厂"快捷入口管理道具资产')}
+          onSelectProp={(p) => {
+            if (editor && p.name) editor.commands.insertContent?.(p.name)
+          }}
+          onEditProp={(p) => {
+            if (p.assetId) notify.info(`请在道具工厂中编辑道具 ${p.name}`)
+          }}
+          onDeleteProp={(id) => removeProp(id)}
+          editor={editor}
+          hasSelection={!!(selectedText && selectionPosition)}
+          onGenerateScript={async (params) => {
+            const result = await scriptCenterService.generateScript(params)
+            if (editor && result.content) editor.commands.setContent(result.content)
+            toast.success('AI生成完成')
+          }}
+          onOptimizeScript={async (params) => {
+            const result = await scriptCenterService.optimizeScript({
+              content: params.content || undefined,
+              optimization_type: params.target as any,
+              script_id: params.content ? undefined : currentDocument.id,
+            })
+            return { optimizedContent: result.optimizedContent || '' }
+          }}
+          onGenerateScene={async (params) => {
+            const result = await scriptCenterService.generateScene(params)
+            if (editor && result.description) editor.commands.insertContent(result.description)
+            toast.success('场景生成完成')
+          }}
+          onGenerateDialogue={async (params) => {
+            const result = await scriptCenterService.generateDialogue(params)
+            if (editor && result.dialogue) editor.commands.insertContent(result.dialogue)
+            toast.success('对话生成完成')
+          }}
+          scriptId={scriptId}
+          selectedText={selectedText}
+          selectionPosition={selectionPosition}
+          activeTab={rightPanelTab}
+          onActiveTabChange={setRightPanelTab}
+        />
       </div>
 
-      {/* 版本历史 - 懒加载 */}
+      {/* === 弹窗集合（按需渲染） === */}
       {showVersionHistory && (
-        <div className="fixed inset-0 z-50 bg-black/50">
-          <div
-            className="absolute w-[500px] max-h-[600px] bg-[#1a1a1a] rounded-lg border border-white/10 shadow-2xl overflow-hidden flex flex-col"
-            style={{ left: versionHistoryDrag.position.x, top: versionHistoryDrag.position.y }}
-          >
-            {/* 标题栏 —— 拖拽手柄 */}
-            <div
-              className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-[#252525] cursor-move select-none"
-              onMouseDown={versionHistoryDrag.onDragStart}
-            >
-              <div className="flex items-center gap-2">
-                <GripHorizontal className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-200">版本历史</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowVersionHistory(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-3">
-              <Suspense fallback={<LoadingFallback />}>
-                <VersionHistory
-                  versions={versions}
-                  onRestore={async (versionId) => {
-                    await restoreVersion(versionId)
-                    setShowVersionHistory(false)
-                  }}
-                  onView={(versionId) => {
-                    const version = versions.find((v) => v.id === versionId)
-                    if (version) setViewingVersion(version)
-                  }}
-                  onDelete={async (versionId) => {
-                    await deleteVersion(versionId)
-                    toast.success('版本已删除')
-                  }}
-                  onCompare={async (versionId1, versionId2) => {
-                    return await scriptCenterService.compareVersions(currentDocument.id, versionId1, versionId2)
-                  }}
-                />
-              </Suspense>
-              <Button variant="ghost" onClick={() => setShowVersionHistory(false)} className="mt-2 w-full">
-                关闭
-              </Button>
-            </div>
-          </div>
-        </div>
+        <VersionHistoryModal
+          onClose={() => setShowVersionHistory(false)}
+          versions={versions}
+          onRestore={restoreVersion}
+          onView={(id) => {
+            const v = versions.find((x) => x.id === id)
+            if (v) setViewingVersion(v)
+          }}
+          onDelete={deleteVersion}
+          onCompare={async (v1, v2) => scriptCenterService.compareVersions(currentDocument.id, v1, v2)}
+        />
       )}
 
-      {/* 版本内容预览弹窗 */}
       {viewingVersion && (
-        <div className="fixed inset-0 z-50 bg-black/50">
-          <div
-            className="absolute bg-[#1a1a1a] rounded-lg border border-white/10 shadow-2xl w-[640px] max-h-[80vh] overflow-hidden flex flex-col"
-            style={{ left: versionPreviewDrag.position.x, top: versionPreviewDrag.position.y }}
-          >
-            {/* 标题栏 —— 拖拽手柄 */}
-            <div
-              className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-[#252525] cursor-move select-none"
-              onMouseDown={versionPreviewDrag.onDragStart}
-            >
-              <div className="flex items-center gap-2">
-                <GripHorizontal className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-white">
-                  版本 V{viewingVersion.version} - {new Date(viewingVersion.timestamp).toLocaleString()}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewingVersion(null)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            {viewingVersion.changes && (
-              <div className="text-xs text-[#888] px-4 pt-2">{viewingVersion.changes}</div>
-            )}
-            <div className="flex-1 overflow-y-auto p-4">
-              <pre className="text-xs text-[#ccc] whitespace-pre-wrap">
-                {extractTextFromEditorJson(viewingVersion.content)}
-              </pre>
-            </div>
-          </div>
-        </div>
+        <VersionPreviewModal version={viewingVersion} onClose={() => setViewingVersion(null)} />
       )}
 
-      {/* 导入导出对话框 */}
       {showImportExport && (
         <Suspense fallback={<LoadingFallback />}>
           <ImportExportDialog
@@ -935,16 +673,13 @@ export default function ScriptEditPage() {
               toast.success('导出成功')
             }}
             onImport={(editorJson) => {
-              if (editor) {
-                editor.commands.setContent(editorJson)
-              }
+              if (editor) editor.commands.setContent(editorJson)
               toast.success('导入成功')
             }}
           />
         </Suspense>
       )}
 
-      {/* 分析剧本确认对话框 */}
       {showAnalyzeConfirm && (
         <ConfirmDialog
           title="AI 分析剧本"
@@ -955,118 +690,110 @@ export default function ScriptEditPage() {
         />
       )}
 
-      {/* 分析结果预览对话框 */}
       {analyzePreview && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="w-[640px] max-h-[80vh] bg-[#1a1a1a] rounded-lg border border-white/10 shadow-2xl flex flex-col overflow-hidden">
-            <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between">
-              <h3 className="text-base font-medium text-white flex items-center gap-2">
-                AI 分析结果
-                {analyzePreview.source === 'ai' ? (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                    AI
-                  </span>
-                ) : (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
-                    本地正则
-                  </span>
-                )}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setAnalyzePreview(null)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            {analyzePreview.warnings && analyzePreview.warnings.length > 0 && (
-              <div className="px-5 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-200 text-xs">
-                {analyzePreview.warnings.map((w, i) => <div key={i}>• {w}</div>)}
-              </div>
-            )}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 text-sm">
-              <div>
-                <div className="text-emerald-400 font-medium mb-2">
-                  识别出 {analyzePreview.characters.length} 个角色
-                </div>
-                {analyzePreview.characters.length > 0 ? (
-                  <ul className="space-y-1 text-[#ccc]">
-                    {analyzePreview.characters.map((c: any, idx: number) => (
-                      <li key={idx} className="px-2 py-1 rounded bg-white/5">
-                        <span className="text-white">{c.name}</span>
-                        {c.description && <span className="text-[#888] ml-2">- {c.description}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-[#666]">未识别到角色</div>
-                )}
-              </div>
-              <div>
-                <div className="text-emerald-400 font-medium mb-2">
-                  识别出 {analyzePreview.scenes.length} 个场景
-                </div>
-                {analyzePreview.scenes.length > 0 ? (
-                  <ul className="space-y-1 text-[#ccc]">
-                    {analyzePreview.scenes.map((s: any, idx: number) => (
-                      <li key={idx} className="px-2 py-1 rounded bg-white/5">
-                        <span className="text-white">{s.location_name}</span>
-                        {s.time_of_day && <span className="text-[#888] ml-2">- {s.time_of_day}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-[#666]">未识别到场景</div>
-                )}
-              </div>
-              <div>
-                <div className="text-emerald-400 font-medium mb-2">
-                  识别出 {analyzePreview.props.length} 个道具
-                </div>
-                {analyzePreview.props.length > 0 ? (
-                  <ul className="space-y-1 text-[#ccc]">
-                    {analyzePreview.props.map((p: any, idx: number) => (
-                      <li key={idx} className="px-2 py-1 rounded bg-white/5">
-                        <span className="text-white">{p.name}</span>
-                        {p.description && <span className="text-[#888] ml-2">- {p.description}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-[#666]">未识别到道具</div>
-                )}
-              </div>
-              <div>
-                <div className="text-emerald-400 font-medium mb-2">
-                  识别出 {analyzePreview.episodes.length} 个剧集
-                </div>
-                {analyzePreview.episodes.length > 0 ? (
-                  <ul className="space-y-1 text-[#ccc]">
-                    {analyzePreview.episodes.map((e: any, idx: number) => (
-                      <li key={idx} className="px-2 py-1 rounded bg-white/5">
-                        <span className="text-white">第{e.episode_no}集 - {e.title}</span>
-                        {e.synopsis && <span className="text-[#888] ml-2">- {e.synopsis}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-[#666]">未识别到剧集（将使用整篇内容）</div>
-                )}
-              </div>
-            </div>
-            <div className="px-5 py-3 border-t border-white/10 flex items-center justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setAnalyzePreview(null)}>
-                取消
-              </Button>
-              <Button size="sm" onClick={handleApplyAnalyze} className="bg-emerald-500 hover:bg-emerald-600">
-                <Check className="mr-1 h-3 w-3" />
-                应用结果
-              </Button>
-            </div>
-          </div>
-        </div>
+        <AnalyzePreviewModal
+          data={analyzePreview}
+          onApply={handleApplyAnalyze}
+          onCancel={() => setAnalyzePreview(null)}
+        />
       )}
     </div>
   )
+}
+
+// ============================================================
+// 局部辅助工具
+// ============================================================
+
+/**
+ * 通用滚动跳转工厂方法（高内聚）：抽离自原 page.tsx 中的两段重复逻辑
+ *
+ * 支持两层定位：
+ * 1) 结构化定位：编辑器中含 `data-id` 的 episode/scene 节点（AI 拆条 / 手动结构化后）
+ * 2) 纯文本回退：编辑器为纯文本时，按剧集标题 / "第N集" / 场景地点 在 .ProseMirror 中检索
+ *    最近邻段落，滚动并加高亮
+ */
+function jumpToNode(successMsg: string, failMsg: string) {
+  return (nodeId: string) => {
+    // 1) 结构化定位：data-id 直接命中
+    let el: HTMLElement | null = document.querySelector(`[data-id="${nodeId}"]`)
+    let via: 'structured' | 'text' = 'structured'
+
+    if (!el) {
+      // 2) 纯文本回退：在 store 中找节点元数据，构造候选关键词
+      const { episodes, scenes } = useScriptStore.getState()
+      const keywords: string[] = []
+      const ep = episodes.find((e) => e.id === nodeId)
+      if (ep) {
+        if (typeof ep.episodeNo === 'number' && ep.episodeNo > 0) {
+          keywords.push(`第${ep.episodeNo}集`)
+        }
+        if (ep.title) {
+          keywords.push(ep.title)
+        }
+      } else {
+        const sc = scenes.find((s) => s.id === nodeId)
+        if (sc) {
+          if (sc.location) keywords.push(sc.location)
+          if (sc.location && sc.time) {
+            keywords.push(`${sc.location} · ${sc.time}`)
+            keywords.push(`${sc.location} ${sc.time}`)
+          }
+        }
+      }
+      el = findBlockByText(keywords)
+      if (el) via = 'text'
+    }
+
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('episode-highlight-flash')
+      setTimeout(() => el.classList.remove('episode-highlight-flash'), 1500)
+      // 第二层定位时通过 toast 文本告知用户，提示内容为文本匹配
+      toast.success(
+        successMsg,
+        via === 'text' ? '已在编辑器中按文本匹配定位' : undefined,
+      )
+    } else {
+      // 3) 完全找不到：滚到顶部 + 提示（让用户知道发生了什么）
+      const editorRoot = document.querySelector('.ProseMirror')
+      if (editorRoot) {
+        // 找到最近的可滚动祖先
+        let scrollParent: HTMLElement | null = editorRoot.parentElement
+        while (scrollParent && scrollParent !== document.body) {
+          const style = window.getComputedStyle(scrollParent)
+          if (/(auto|scroll|overlay)/.test(style.overflowY)) break
+          scrollParent = scrollParent.parentElement
+        }
+        if (scrollParent) scrollParent.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+      toast.error(failMsg + '（已滚到顶部）')
+    }
+  }
+}
+
+/**
+ * 在 .ProseMirror 内部按关键词列表查找首个匹配的块级元素。
+ * 仅当关键词非空时匹配；返回的是最近的段落/标题/自定义块容器。
+ */
+function findBlockByText(keywords: string[]): HTMLElement | null {
+  const editor = document.querySelector('.ProseMirror') as HTMLElement | null
+  if (!editor) return null
+  const cleaned = keywords
+    .map((k) => (k || '').toString().trim())
+    .filter((k) => k.length > 0)
+  if (cleaned.length === 0) return null
+  // 检索 block 容器：包含自定义节点 + 标准块
+  const blockSelector =
+    'p, h1, h2, h3, h4, h5, h6, blockquote, li, [data-type="episode"], [data-type="scene"]'
+  const blocks = editor.querySelectorAll<HTMLElement>(blockSelector)
+  for (const keyword of cleaned) {
+    for (const block of Array.from(blocks)) {
+      const text = (block.textContent || '').trim()
+      if (text && text.includes(keyword)) {
+        return block
+      }
+    }
+  }
+  return null
 }

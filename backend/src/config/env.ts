@@ -4,7 +4,6 @@ import path from "node:path";
 export interface RuntimeConfig {
   agnesApiKeyConfigured: boolean;
   agnesApiBaseUrl: string;
-  agnesMode: "mock" | "real";
 }
 
 /** 读取项目根目录的 .env 文件，并把其中变量补充到 process.env。 */
@@ -31,7 +30,7 @@ export function loadEnv(root = process.cwd()): void {
   }
 }
 
-/** 汇总当前运行配置，方便前端或日志判断 Agnes 是真实模式还是模拟模式。 */
+/** 汇总当前运行配置。所有 AI 能力必须通过真实 API（AGNES_API_KEY）。 */
 export function getRuntimeConfig(): RuntimeConfig {
   const hasKey = Boolean(process.env.AGNES_API_KEY);
   const rawBaseUrl = process.env.AGNES_API_BASE_URL ?? "https://apihub.agnes-ai.com";
@@ -41,6 +40,5 @@ export function getRuntimeConfig(): RuntimeConfig {
   return {
     agnesApiKeyConfigured: hasKey,
     agnesApiBaseUrl,
-    agnesMode: hasKey && process.env.AGNES_USE_REAL_API !== "false" ? "real" : "mock",
   };
 }

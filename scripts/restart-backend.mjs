@@ -1,5 +1,5 @@
 /**
- * 启动后端（dev 已编译后） - 关闭旧进程、删除 projects CSV、启动新进程、重新插入测试项目
+ * 启动后端（dev 已编译后） - 关闭旧进程、清空 SQLite 中的项目数据、启动新进程、重新插入测试项目
  * 用法：node scripts/restart-backend.mjs
  */
 import fs from "node:fs";
@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_DIR = path.join(__dirname, "..", "backend");
-const PROJECTS_DIR = path.join(BACKEND_DIR, "data", "csv", "projects");
+const DATABASE_FILE = path.join(BACKEND_DIR, "data", "sqlite.db");
 const BACKEND = process.env.BACKEND_URL || "http://127.0.0.1:3000";
 
 const PROJECTS = [
@@ -58,17 +58,6 @@ function killOldBackend() {
   }
 }
 
-function clearProjectsCsv() {
-  if (fs.existsSync(PROJECTS_DIR)) {
-    for (const f of fs.readdirSync(PROJECTS_DIR)) {
-      if (f.endsWith(".csv")) {
-        fs.unlinkSync(path.join(PROJECTS_DIR, f));
-        console.log("  removed", f);
-      }
-    }
-  }
-}
-
 function startBackend() {
   console.log("Starting backend...");
   const child = spawn("node", ["dist/server.js"], {
@@ -95,8 +84,8 @@ async function waitBackend(retries = 30) {
 async function main() {
   killOldBackend();
   await new Promise((r) => setTimeout(r, 1500));
-  console.log("\nClearing projects CSV...");
-  clearProjectsCsv();
+  console.log("\nClearing projects data in SQLite...");
+  clearProjectsData();
   startBackend();
   console.log("Waiting for backend...");
   await waitBackend();

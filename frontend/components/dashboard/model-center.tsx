@@ -205,10 +205,13 @@ export const ModelCenter = memo(function ModelCenter({
 
   return (
     <div className="rounded-xl border border-white/10 bg-[#1a1a1a]">
-      {/* 头部 */}
+      {/* 头部
+        * 评审优化：去掉 "模型中心" 重复标题（页面级 H1 已含相同文案）
+        * 改为功能性副标题 "模型注册与配置"
+        */}
       <div className="border-b border-white/10 p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white">模型中心</h3>
+          <h3 className="text-lg font-semibold text-white">模型注册与配置</h3>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={onRefresh} className="gap-2" disabled={isLoading}>
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />

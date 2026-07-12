@@ -100,9 +100,8 @@ start-frontend.bat
 检查：
 
 1. `backend/.env` 是否有 `AGNES_API_KEY`。
-2. `AGNES_USE_REAL_API` 是否为 `true`。
-3. Agnes 接口路径是否和官方文档一致。
-4. 后端日志中真实接口返回的错误。
+2. Agnes 接口路径是否和官方文档一致。
+3. 后端日志中真实接口返回的错误。
 
 ## 改功能时看哪里
 
@@ -112,5 +111,5 @@ start-frontend.bat
 - 改接口路由：`backend/src/http/router.ts`
 - 改聊天、图片、视频业务：`backend/src/services/domain.ts`
 - 改本地文件保存：`backend/src/services/media.ts`
-- 改 CSV 字段：`backend/src/storage/schema.ts`
-- 改 CSV 读写逻辑：`backend/src/storage/csv.ts`
+- 改数据库表字段：`backend/src/storage/schema.ts`
+- 改 SQLite 仓储实现：`backend/src/storage/sqlite.ts`

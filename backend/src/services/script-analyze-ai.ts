@@ -14,10 +14,13 @@
  *   4) 场景合并（同一地点不同时间算不同场景）
  *   5) 道具要"可视觉化"（颜色/材质/形态），方便后续生图
  *
- * 失败兜底：AI 不可用时回退到 utils.ts 的本地正则分析
+ * 策略：
+ *   - 始终走真实大模型（ctx.ai.chat）
+ *   - 任何失败（网络/超时/解析错误）直接返回 error，不提供 mock 兜底
+ *   - 使用前必须配置 AGNES_API_KEY（无 Key 时 createAgnesClient 抛错）
  */
 
-import { DEFAULT_MODEL, requireString } from "../utils.js";
+import { AI_TIMEOUTS, DEFAULT_MODEL, requireString, withTimeout } from "../utils.js";
 import type { AppContext } from "./app.js";
 
 /** 大模型输出的标准结构 */
@@ -200,8 +203,13 @@ ${content.slice(0, 8000)}
 // ============ AI 调用 ============
 
 /**
- * 调用大模型分析剧本。
+ * 调用真实大模型分析剧本。
  * 返回 { success, data?, error? }
+ *
+ * 行为：
+ *   1) ctx.ai 必须存在（AppContext 启动时若未配置 AGNES_API_KEY 会被 setup 阶段拒绝）
+ *   2) 任何失败（网络/超时/输出无法解析）直接返回 success:false，不提供任何 mock 兜底
+ *   3) useLocal=true 一律拒绝（不允许跳过真实 AI）
  */
 export async function analyzeScriptWithAI(
   ctx: AppContext,
@@ -214,20 +222,21 @@ export async function analyzeScriptWithAI(
   const content = requireString(body.content, "content");
   const format = body.format || "txt";
 
-  // 显式要求本地（不调 AI）
+  // useLocal 不再支持：剧本分析必须走真实大模型
   if (body.useLocal) {
-    return { success: true, data: localFallback(content, format, "用户要求本地") };
+    return { success: false, error: "剧本分析必须使用真实大模型，不支持 useLocal 跳过" };
   }
 
   if (!ctx.ai) {
-    return { success: true, data: localFallback(content, format, "AI 客户端未配置") };
+    return { success: false, error: "AI 客户端未配置：必须在 backend/.env 设置 AGNES_API_KEY 后重启服务" };
   }
 
   try {
     // agnes-client 当前实现不读 history 字段，把 system + user 拼到同一个 message 里
     const combined = `${SYSTEM_PROMPT}\n\n---\n\n${buildUserPrompt(content, format)}`;
 
-    // ctx.ai.chat 返回 AsyncIterable<ChatChunk>，需要把 content 拼起来
+    // 60s 超时：剧本分析是大流量调用，AbortController 会自动中断 fetch
+    const analyzeCtrl = new AbortController();
     const iter = ctx.ai.chat(
       {
         // 合成一个 conversationId（handleChat 才会写库；这里直接调底层 chat API，不会落库）
@@ -237,15 +246,25 @@ export async function analyzeScriptWithAI(
         temperature: 0.2,
         max_tokens: 4000,
       } as any,
-      new AbortController().signal
+      analyzeCtrl.signal
     );
 
-    const fullText = await collectStream(iter);
+    const fullText = await withTimeout(
+      collectStream(iter),
+      AI_TIMEOUTS.analyzeScript,
+      "analyzeScriptWithAI",
+      analyzeCtrl
+    );
+
     const parsed = extractJson(fullText);
     if (!parsed) {
+      // 真实 AI 输出无法解析为 JSON：直接报错，不提供任何兜底
       return {
-        success: true,
-        data: { ...localFallback(content, format, "AI 输出无法解析为 JSON"), rawModelOutput: fullText.slice(0, 1000) },
+        success: false,
+        error: "AI 输出无法解析为 JSON",
+        // 仍把原始输出带回，方便排查
+        // @ts-expect-error 兼容旧字段
+        rawModelOutput: fullText.slice(0, 1000),
       };
     }
 
@@ -272,8 +291,77 @@ export async function analyzeScriptWithAI(
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "未知错误";
-    return { success: true, data: localFallback(content, format, `AI 调用失败：${message}`) };
+    // 真实 AI 失败：直接报错，不提供任何兜底
+    return { success: false, error: `AI 调用失败：${message}` };
   }
+}
+
+// ============ 导入流程适配层 ============
+
+/**
+ * 旧版 importScriptFromJson 使用的扁平资产结构。
+ * 保持向后兼容，让 persistAnalyzedAssets 继续按 type/name 去重入库。
+ */
+export interface AnalyzedAsset {
+  type: "character" | "scene" | "prop";
+  name: string;
+  description?: string;
+  role?: string;
+  gender?: string;
+  traits?: string[];
+  sceneType?: string;
+  lighting?: string;
+  timeOfDay?: string;
+  weather?: string;
+  category?: string;
+  material?: string;
+  color?: string;
+}
+
+/**
+ * 把 AIAnalyzeResult 扁平化为 AnalyzedAsset[]。
+ * 供 importScriptFromJson 调用，角色/场景/道具按 type 拆为多条记录。
+ */
+export function aiResultToAssets(result: AIAnalyzeResult | undefined): AnalyzedAsset[] {
+  if (!result) return [];
+  const out: AnalyzedAsset[] = [];
+
+  for (const c of result.characters || []) {
+    if (!c?.name) continue;
+    out.push({
+      type: "character",
+      name: c.name,
+      description: c.description,
+      role: c.role,
+      gender: c.gender,
+      traits: c.traits,
+    });
+  }
+  for (const s of result.scenes || []) {
+    if (!s?.location_name) continue;
+    out.push({
+      type: "scene",
+      name: s.location_name,
+      description: s.description,
+      sceneType: "indoor", // AIScene 未拆分 indoor/outdoor，统一给默认值；后续可扩展
+      lighting: "",
+      timeOfDay: s.time_of_day || "",
+      weather: "",
+    });
+  }
+  for (const p of result.props || []) {
+    if (!p?.name) continue;
+    out.push({
+      type: "prop",
+      name: p.name,
+      description: p.description,
+      category: p.category,
+      material: p.material,
+      color: p.color,
+    });
+  }
+
+  return out;
 }
 
 /** 把 AsyncIterable<ChatChunk> 拼成完整字符串 */
@@ -398,22 +486,4 @@ function cleanCharacterName(raw: string): string {
     .replace(/[（(][^）)]*[）)]/g, "") // 去除所有中英文括号内容
     .replace(/[（(].*$/, "")
     .trim();
-}
-
-// ============ 本地兜底（保持与 utils.ts 一致的能力） ============
-
-function localFallback(content: string, format: string, reason: string): AIAnalyzeResult {
-  // 简单提取：行数、首行作为标题
-  const lines = content.split(/\r?\n/).filter((l) => l.trim());
-  const title = lines[0]?.replace(/^#+\s*/, "").slice(0, 30) || "";
-  return {
-    title,
-    format,
-    characters: [],
-    scenes: [],
-    props: [],
-    episodes: [],
-    source: "local_fallback",
-    warnings: [reason],
-  };
 }

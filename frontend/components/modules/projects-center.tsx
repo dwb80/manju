@@ -67,7 +67,6 @@ const projectFields: FormFieldConfig[] = [
 ];
 
 export function ProjectsCenterPage() {
-  const router = useRouter();
   const { setSelectedProjectId } = useProjectStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -189,25 +188,25 @@ export function ProjectsCenterPage() {
   // - 拉取该项目的剧本列表
   // - 有：取最近编辑的剧本（按 updated_at 倒序）直接进编辑器
   // - 无：跳到剧本中心列表并自动打开导入对话框
+  // 行为：在新浏览器标签页打开（保留当前项目中心页面）
   const [openingScriptFor, setOpeningScriptFor] = useState<string | null>(null);
   const handleOpenScripts = async (project: Project) => {
     setSelectedProjectId(project.id);
     setOpeningScriptFor(project.id);
     try {
       const list = await listScripts(project.id);
-      if (Array.isArray(list) && list.length > 0) {
-        const primary = [...list].sort((a: any, b: any) => {
-          const ta = new Date(a.updated_at || 0).getTime();
-          const tb = new Date(b.updated_at || 0).getTime();
-          return tb - ta;
-        })[0];
-        router.push(`/scripts/${primary.id}`);
-      } else {
-        router.push(`/scripts?projectId=${project.id}&action=import`);
-      }
+      const targetUrl =
+        Array.isArray(list) && list.length > 0
+          ? `/scripts/${[...list].sort((a: any, b: any) => {
+              const ta = new Date(a.updated_at || 0).getTime();
+              const tb = new Date(b.updated_at || 0).getTime();
+              return tb - ta;
+            })[0].id}`
+          : `/scripts?projectId=${project.id}&action=import`;
+      window.open(targetUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
       console.error("打开剧本失败:", err);
-      router.push(`/scripts?projectId=${project.id}&action=import`);
+      window.open(`/scripts?projectId=${project.id}&action=import`, "_blank", "noopener,noreferrer");
     } finally {
       setOpeningScriptFor(null);
     }

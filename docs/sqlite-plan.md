@@ -1,14 +1,14 @@
 # SQLite 存储说明
 
-系统现在默认使用 SQLite 作为主数据存储，数据库文件位于：
+系统使用 SQLite 作为**唯一**主数据存储，数据库文件位于：
 
 ```text
-backend/data/app.sqlite
+backend/data/sqlite.db
 ```
 
-旧的 CSV 仓储代码仍然保留，用于测试、导出思路和后续兼容迁移，但运行时主数据已经写入 SQLite。
+WAL 模式下还会伴随 `sqlite.db-shm` 与 `sqlite.db-wal` 两个文件。CSV 不再承担持久化角色。
 
-## 为什么切到 SQLite
+## 为什么使用 SQLite
 
 AI 漫剧项目会产生大量关联数据：
 
@@ -22,7 +22,17 @@ AI 漫剧项目会产生大量关联数据：
 - 风格和提示词资产
 - 审核和导出记录
 
-这些数据需要稳定查询、更新和关联。CSV 适合简单备份和人工查看，但不适合作为长期主存储。
+这些数据需要稳定查询、更新和关联。SQLite 提供事务、参数化语句与软删除友好的列式字段，比按天分文件 CSV 更适合做长期主存储。
+
+## 仓储抽象
+
+`backend/src/storage/repository.ts` 定义通用接口：
+
+- `Repository<T extends { id: string; created_at: string }>`：标准 CRUD。
+- `KeyValueRepository<T>`：设置类实体。
+- `FieldSpec<T>`：把领域字段声明为 `string` / `number` / `boolean` / `json` 四种类型，供 `SqliteRepository<T>` 自动建表与读写。
+
+`backend/src/storage/sqlite.ts` 提供 `SqliteRepository<T>` 与 `SqliteSettingsRepository<T>` 两种实现，统一使用 Node 24 自带的 `node:sqlite`。
 
 ## 当前核心表
 
@@ -30,17 +40,19 @@ AI 漫剧项目会产生大量关联数据：
 - `conversations`：聊天、图片、视频生成会话。
 - `messages`：聊天消息。
 - `project_members`：项目成员和职责分工。
-- `project_episodes`：剧集规划，保存每集标题、阶段、简介、截止日期和备注。
-- `project_issues`：项目问题和风险跟踪。
-- `project_milestones`：项目里程碑和交付节点。
-- `project_tasks`：项目任务看板。
+- `project_episodes`：剧集规划。
 - `project_storyboards`：分镜中心。
-- `project_clips`：剪辑清单，保存片段顺序、入点、出点、状态和备注。
-- `project_assets`：项目资产库，包含图片、视频、角色、场景、风格、提示词等。
+- `project_clips`：剪辑清单。
+- `project_assets`：项目资产库（图片 / 视频 / 角色 / 场景 / 风格 / 提示词）。
+- `project_versions`：资产与剧本文档的版本历史。
 - `image_tasks`：图片生成任务。
 - `video_tasks`：视频生成任务。
 - `favorites`：收藏记录。
-- `settings`：应用设置。
+- `work_items`：统一工作项（任务 / 问题 / 评审 / 里程碑，状态机收敛后的唯一工作项表）。
+- `app_logs`：审计日志（业务事件、跨项目复制、软删 / 恢复等）。
+- `settings`：应用设置（KV 形式）。
+
+`scripts` / `project_assets` / `project_reviews` 等表由 Path A（`Script` / `Asset` / `Review`）与 Path B（`ProjectScript` / `ProjectAsset` / `ProjectReview`）共用。
 
 ## 分镜表关键字段
 
@@ -89,23 +101,8 @@ backend/data/projects/{project}/media/
 
 ## 连接释放
 
-后端使用 Node 24 自带的 `node:sqlite`。HTTP server 关闭时会调用应用上下文的 `close()`，释放 SQLite 连接，避免 Windows 下 `app.sqlite` 文件被锁住。
+后端使用 Node 24 自带的 `node:sqlite`。HTTP server 关闭时会调用应用上下文的 `close()`，释放 SQLite 连接，避免 Windows 下 `sqlite.db` 文件被锁住。
 
-## 旧 CSV 迁移
+## 历史背景
 
-如果需要把旧版本 `backend/data/csv/` 里的数据导入 SQLite，可以执行：
-
-```bash
-cd backend
-npm run migrate:csv
-```
-
-迁移脚本会：
-
-1. 读取 `backend/data/csv/` 下的旧 CSV。
-2. 按 `backend/src/storage/schema.ts` 的字段定义解析。
-3. 跳过 SQLite 中已经存在的同 ID 记录，避免重复插入。
-4. 写入 `backend/data/app.sqlite`。
-5. 打印每类记录的总数、插入数和跳过数。
-
-迁移完成后建议保留旧 CSV 作为备份，不再让运行时继续写入 CSV。
+v1.1 之前的版本曾以 CSV 按天分文件存储（`backend/data/csv/`）。该方案已于 2026-07-12 全面下线——`CsvRepository` 不再被任何运行时路径引用，`backend/data/csv/` 目录已删除，所有业务表统一走 SQLite。

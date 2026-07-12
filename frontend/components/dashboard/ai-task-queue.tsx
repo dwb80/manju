@@ -62,9 +62,12 @@ export const AITaskQueue = memo(function AITaskQueue({
 
   return (
     <div className="rounded-xl border border-white/10 bg-[#1a1a1a]">
-      {/* 头部 */}
+      {/* 头部
+        * 评审优化：去掉 "AI任务队列" 重复标题（页面级 H1 已含相同文案）
+        * 改为功能性副标题 "跨项目任务监控"，保持标题层级 H1→H3
+        */}
       <div className="flex items-center justify-between border-b border-white/10 p-4">
-        <h3 className="text-lg font-semibold text-white">AI任务队列</h3>
+        <h3 className="text-lg font-semibold text-white">跨项目任务监控</h3>
         <Button variant="secondary" size="sm" onClick={onRefresh} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           刷新

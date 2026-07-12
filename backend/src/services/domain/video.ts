@@ -1,11 +1,11 @@
-import type { AppContext } from "../app.js";
+﻿import type { AppContext } from "../app.js";
 import type { Conversation, VideoParams, VideoTask } from "../../types.js";
-// AgnesRateLimitError 尚未在 agnes-client 暴露，定义占位类型供运行时使用。
-type AgnesRateLimitError = Error & { __isAgnesRateLimit?: true };
-const AgnesRateLimitError = Error as unknown as new (...args: ConstructorParameters<typeof Error>) => AgnesRateLimitError;
+import { isAgnesRateLimitError } from "../../ai/agnes-client.js";
 import { cacheMediaUrl, resolveMediaInput } from "../media.js";
 import { maybeTitleConversation } from "../chat.js";
-import { clampNumber, id, nowIso, requireString } from "../../utils.js";
+import { AI_TIMEOUTS, clampNumber, id, nowIso, requireString, withTimeout } from "../../utils.js";
+import { rootLogger } from "../../logger.js";
+import { recordAppLog } from "../audit-log.js";
 import { compactMediaInput, legacyOwnerByTime, taskProjectId } from "./image.js";
 
 /** 压缩视频任务参数，避免本地图片内容写进数据库。 */
@@ -66,7 +66,12 @@ function scheduleVideoTaskCache(ctx: AppContext, task: VideoTask): void {
       }
       return undefined;
     })
-    .catch((error: unknown) => console.error(error));
+    .catch((error: unknown) =>
+      rootLogger.error(
+        { event: "video.background.failed", taskId: task.id, err: error },
+        "video task background cache failed",
+      ),
+    );
 }
 
 /** 获取视频任务列表，并按会话过滤和触发本地缓存。 */
@@ -106,10 +111,17 @@ export async function generateVideo(ctx: AppContext, body: Record<string, unknow
     model: typeof body.model === "string" ? body.model : "agnes-video-v2.0",
   };
   // 视频任务通常是异步的：先保存 processing 记录，详情查询时再轮询 Agnes。
+  // 这里只创建任务（30s 超时），不阻塞等结果。
   const resolvedImage = await resolveMediaInput(ctx, inputImage);
   const resolvedImages = (await Promise.all(keyframeImages.map((image) => resolveMediaInput(ctx, image))))
     .filter((image): image is string => Boolean(image));
-  const result = await ctx.ai.generateVideo({ ...params, image: resolvedImage, images: resolvedImages });
+  const vidCtrl = new AbortController();
+  const result = await withTimeout(
+    ctx.ai.generateVideo({ ...params, image: resolvedImage, images: resolvedImages }, vidCtrl.signal),
+    AI_TIMEOUTS.generateVideo,
+    "generateVideo",
+    vidCtrl
+  );
   const task: VideoTask = {
     id: result.taskId,
     task_id: result.taskId,
@@ -138,9 +150,16 @@ export async function queryVideo(ctx: AppContext, idValue: string): Promise<Vide
   if (task.status === "processing" || task.status === "pending") {
     let status: { status: VideoTask["status"]; videoUrl?: string; error?: string; progress?: number; seconds?: string; size?: string; videoId?: string; providerTaskId?: string };
     try {
-      status = await ctx.ai.queryTask(task.video_id || task.id);
+      // 视频状态查询：20s 超时，避免孤儿任务一直 polling
+      const queryCtrl = new AbortController();
+      status = await withTimeout(
+        ctx.ai.queryTask(task.video_id || task.id, queryCtrl.signal),
+        AI_TIMEOUTS.queryTask,
+        "queryTask",
+        queryCtrl
+      );
     } catch (error) {
-      if (error instanceof AgnesRateLimitError) {
+      if (isAgnesRateLimitError(error)) {
         const patch: Partial<VideoTask> = {
           status: task.status,
           error: "视频状态查询太频繁，稍后会自动重试",
@@ -162,6 +181,22 @@ export async function queryVideo(ctx: AppContext, idValue: string): Promise<Vide
     };
     await ctx.videos.update(idValue, patch);
     const next = { ...task, ...patch };
+    // 状态机变更：仅在 from != to 时写一条 app_log，避免空转
+    if (patch.status && patch.status !== task.status) {
+      void recordAppLog(ctx, {
+        entityType: "video_task",
+        entityId: idValue,
+        action: "video.status_changed",
+        event: "video.status_changed",
+        payload: {
+          from: task.status,
+          to: patch.status,
+          progress: patch.progress,
+          error: patch.error,
+        },
+        projectId: await taskProjectId(ctx, task.conversation_id),
+      });
+    }
     scheduleVideoTaskCache(ctx, next);
     return next;
   }

@@ -26,7 +26,6 @@ import type { AITypeFieldConfig } from "@/components/shared/ai-generate-dialog";
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import type { Character } from "@/lib/module-types";
 import { useProjectStore } from "@/lib/stores/project-store";
-import { clearApiCache } from "@/lib/api-client";
 import { toast } from "@/components/common/toast";
 import {
   listCharacters,
@@ -42,7 +41,7 @@ import {
   type UsageReferenceItem,
 } from "@/services/module.service";
 import { createStoryboardFromAsset } from "@/services/storyboard.service";
-import { CharacterImageGenerator } from "./character-image-generator";
+// CharacterImageGenerator 不再在本页直接渲染；点击"编辑"按钮会在新标签页打开 /characters/[id]/edit
 
 /** 角色类型中文标签映射 */
 const roleLabels: Record<string, string> = {
@@ -121,14 +120,14 @@ function CharacterCard({
   const router = useRouter();
   const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
   const [inserting, setInserting] = useState<boolean>(false);
-  const [showImageGenerator, setShowImageGenerator] = useState(false);
 
-  const handleCloseImageGenerator = () => {
-    setShowImageGenerator(false);
-    clearApiCache();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("factory:reload"));
-    }
+  // 打开角色图片编辑（新标签页）—— 不打断当前列表浏览
+  const handleEdit = () => {
+    window.open(
+      `/characters/${encodeURIComponent(character.id)}/edit`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   const handleInsert = async () => {
@@ -143,7 +142,6 @@ function CharacterCard({
         type: "character",
         project_id: selectedProjectId,
       });
-      clearApiCache();
       toast.success("已插入分镜", `「${character.name}」 → 新分镜「${created.title || created.description || "未命名"}」`);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("factory:reload"));
@@ -236,7 +234,7 @@ function CharacterCard({
       </div>
 
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="sm" onClick={() => setShowImageGenerator(true)} className="flex-1">
+        <Button variant="ghost" size="sm" onClick={handleEdit} className="flex-1" title="在新标签页打开角色图片编辑">
           <Pencil className="mr-1 h-3 w-3" />
           编辑
         </Button>
@@ -266,12 +264,6 @@ function CharacterCard({
         </Button>
       </div>
       </div>
-      {showImageGenerator && (
-        <CharacterImageGenerator
-          character={character}
-          onClose={handleCloseImageGenerator}
-        />
-      )}
     </>
   );
 }
@@ -406,35 +398,20 @@ const config: FactoryCRUDPageProps<Character> = {
 };
 
 export function CharacterFactoryPage() {
-  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
-
-  const handleCloseImageGenerator = () => {
-    setEditingCharacter(null);
-    clearApiCache();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("factory:reload"));
-    }
-  };
-
+  // 编辑功能已迁移到独立路由 /characters/[id]/edit，不再在本页维护模态弹窗。
+  // 顶部筛选 Tabs（评审 P1：全部 / 最近使用 / 我创建的 / 已收藏），
+  // FactoryCRUDPage 内部已接好 useFilterState；缺字段时自动降级隐藏。
   return (
-    <>
-      <FactoryCRUDPage<Character>
-        {...config}
-        fetchVersions={{ entityType: "character" }}
-        extraToolbarContent={
-          editingCharacter && (
-            <div className="text-xs text-emerald-400">
-              正在编辑角色：{editingCharacter.name}
-            </div>
-          )
-        }
-      />
-      {editingCharacter && (
-        <CharacterImageGenerator
-          character={editingCharacter}
-          onClose={handleCloseImageGenerator}
-        />
-      )}
-    </>
+    <FactoryCRUDPage<Character>
+      {...config}
+      fetchVersions={{ entityType: "character" }}
+      filterTabs={{
+        // 后端 listCharacters 返回的对象支持 updated_at / created_by
+        getUpdatedAt: (c) => (c as { updated_at?: string }).updated_at,
+        getCreatedBy: (c) => (c as { created_by?: string }).created_by,
+        // 收藏功能未上线，先留口子
+        // getIsFavorited: (c) => (c as { is_favorited?: boolean }).is_favorited,
+      }}
+    />
   );
 }

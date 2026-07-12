@@ -6,6 +6,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AppContext } from "../services/app.js";
 import type { PublishedVideo, PublishPlan, PublishPlanStatus, PublishPlatform, VideoTask } from "../types.js";
 import { id, nowIso } from "../utils.js";
+import { rootLogger } from "../logger.js";
 
 /** 发布计划状态列表 */
 const publishPlanStatuses: PublishPlanStatus[] = ["draft", "scheduled", "publishing", "published", "failed", "cancelled"];
@@ -430,7 +431,7 @@ export async function handlePublishRouter(
     // 未匹配的路由
     sendErrorResponse(res, new Error("未找到发布中心路由"), 404);
   } catch (error) {
-    console.error(`发布中心路由错误: ${(error as Error).stack ?? (error as Error).message ?? String(error)}`);
+    rootLogger.error({ event: "router.error", route: "publish", err: error }, `发布中心路由错误`);
     sendErrorResponse(res, error);
   }
 }

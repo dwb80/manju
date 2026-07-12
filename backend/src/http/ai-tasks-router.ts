@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AppContext } from "../services/app.js";
 import type { ImageTask, VideoTask, TaskStatus } from "../types.js";
+import { rootLogger } from "../logger.js";
 
 /** 统一的AI任务类型，合并ImageTask和VideoTask */
 export type AITaskType = "image" | "video";
@@ -515,7 +516,7 @@ export async function handleAITasksRouter(
     // 未匹配的路由
     sendErrorResponse(res, new Error("未找到AI任务路由"), 404);
   } catch (error) {
-    console.error(`AI任务路由错误: ${(error as Error).stack ?? (error as Error).message ?? String(error)}`);
+    rootLogger.error({ event: "router.error", route: "ai-tasks", err: error }, `AI任务路由错误`);
     sendErrorResponse(res, error);
   }
 }

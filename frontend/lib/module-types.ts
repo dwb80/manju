@@ -277,7 +277,9 @@ export interface AudioItem extends BaseEntity {
   tags: string[];
   format?: string;
   size?: number; // 字节
+  /** 关联角色（用于 AI 配音音色）。 */
   character_id?: string;
+  /** 关联分镜（这条音频用在哪个镜头）。 */
   storyboard_id?: string;
 }
 
@@ -385,3 +387,17 @@ export interface AssetFilterParams extends BaseFilterParams, PaginationParams {
   min_size?: number;
   max_size?: number;
 }
+
+// ==================== 图片参数类型（与 app-types 保持一致） ====================
+
+/** 重新导出图片相关类型，方便其他模块统一引入。 */
+export type {
+  ImageModel,
+  ImageSize,
+  ImageRatio,
+  ImageResponseFormat,
+  ImageSettings,
+  AspectRatioOption,
+  StyleOption,
+  StyleValue,
+} from "./app-types";

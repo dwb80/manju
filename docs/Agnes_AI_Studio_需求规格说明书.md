@@ -1,10 +1,11 @@
 # Agnes AI Studio 详细需求规格说明书
 
-> 版本：v1.1
+> 版本：v1.2
 > 文档状态：待评审
-> 最后更新：2026-07-01
+> 最后更新：2026-07-12
 > 适用阶段：MVP + V2 全量规划
-> **v1.1 变更**：将持久化存储由 MySQL 调整为 **CSV 文件存储（按天分文件）**。
+> **v1.2 变更**：将持久化存储从 CSV 文件存储调整为 **SQLite（`backend/data/sqlite.db`）**，统一业务数据写入一份数据库。
+> **v1.1 变更**：将持久化存储由 MySQL 调整为 CSV 文件存储（按天分文件）——该方案已于 2026-07-12 全面下线。
 
 ---
 
@@ -260,7 +261,7 @@
 - RBAC。
 - 接口签名（防重放）。
 - Rate Limit（IP + User 维度）。
-- XSS 过滤、CSRF Token、CSV 注入防护（字段转义 + 引用包裹）。
+- XSS 过滤、CSRF Token、SQL 注入防护（参数化语句 + 输入校验）。
 - 文件上传类型/大小校验。
 - 敏感词过滤。
 
@@ -295,12 +296,12 @@
 │         NestJS Backend (Node.js)            │
 │  模块：Chat/Image/Video/Setting             │
 │  SDK：AgnesClient（统一封装）               │
-│  存储：CsvRepository（按天分文件）          │
+│  存储：SqliteRepository（统一 SQLite 表）   │
 └─────┬──────────┬────────────┬────────────┘
       │          │            │
       ▼          ▼            ▼
-  CSV Files   Redis      Agnes AI
-  (按天分片) (Cache)      APIs
+  SQLite DB    Redis      Agnes AI
+  (单一文件)  (Cache)      APIs
 ```
 
 ### 6.2 前端技术栈
@@ -321,7 +322,7 @@
 - Node.js 20 LTS
 - NestJS
 - TypeScript
-- **CsvRepository**（自研，封装按天分文件存储：原子写入、文件锁、内存索引、压缩归档）
+- **SqliteRepository**（基于 Node 24 `node:sqlite` 内置模块，参数化语句、WAL 模式、软删除）
 - Swagger
 - Winston / Pino（日志）
 - Jest（单元测试）
@@ -345,147 +346,70 @@ class AgnesClient {
 
 ---
 
-## 7. 数据存储设计（CSV 按天分文件）
+## 7. 数据存储设计（SQLite 单一数据库）
 
 ### 7.1 设计原则
-- **存储介质**：本地文件系统（MVP），未来可挂载 NFS / OSS / S3 兼容存储。
-- **文件格式**：UTF-8 CSV（逗号分隔），首行为表头；含分隔符 / 换行的字段使用双引号包裹并按 RFC 4180 转义。
-- **分片策略**：**每个业务实体每天一个 CSV 文件**（按 `created_at` 的日期分片）。
-- **写入策略**：追加写 + 原子重命名（先写 `.tmp`，fsync 后 rename）。
-- **读取策略**：近期文件内存索引 + 懒加载；历史文件按需加载。
-- **归档策略**：超过 7 天的 CSV 自动 gzip 压缩归档，超过 90 天清理或迁移冷存储。
-- **并发控制**：基于 Redis 分布式文件锁（`proper-lockfile`）防止并发写入同一文件。
+- **存储介质**：单一 SQLite 数据库文件 `backend/data/sqlite.db`（WAL 模式）。
+- **引擎**：Node 24 自带 `node:sqlite`，参数化语句避免注入。
+- **连接释放**：HTTP server 关闭时调用 `ctx.close()`，释放 SQLite 连接。
+- **可移植性**：未来可平滑切换到 MySQL / Postgres，仅需替换 `SqliteRepository<T>` 实现，`Repository<T>` 抽象保持不变。
 
 ### 7.2 目录结构
 ```
 /data
-├── csv/
-│   ├── conversations/
-│   │   ├── conversations_2026-07-01.csv
-│   │   └── ...
-│   ├── messages/
-│   │   ├── messages_2026-07-01.csv
-│   │   └── ...
-│   ├── image_tasks/
-│   │   └── image_tasks_YYYY-MM-DD.csv
-│   │   └── ...
-│   ├── video_tasks/
-│   │   └── video_tasks_YYYY-MM-DD.csv
-│   │   └── ...
-│   ├── favorites/
-│   │   └── favorites_YYYY-MM-DD.csv
-│   │   └── ...
-│   └── settings/
-│       └── settings.csv              # 单文件，个人配置
-└── locks/                              # 分布式锁目录（Redis 实现）
+├── sqlite.db              # 主数据库
+├── sqlite.db-shm          # WAL 共享内存
+├── sqlite.db-wal          # WAL 日志
+├── media/                 # 通用媒体（图片、视频、上传）
+├── projects/              # 每个项目自己的媒体目录
+└── logs/                  # 业务日志 + 审计日志
 ```
 
-### 7.3 命名规范
-- **文件名**：`{entity}_{YYYY-MM-DD}.csv`，如 `messages_2026-07-01.csv`。
-- **日期归属**：写入时按**服务端本地时区**（默认 `Asia/Shanghai`）的 `created_at` 决定文件。
-- **跨天写入**：单条记录不会被拆分到多文件，按创建时间整体归属。
-- **时间戳统一**：所有时间字段使用 ISO 8601（`2026-07-01T10:23:45.123+08:00`）。
+### 7.3 Repository 抽象
+`backend/src/storage/repository.ts` 提供：
+- `Repository<T extends { id: string; created_at: string }>`：标准 CRUD。
+- `KeyValueRepository<T>`：设置类实体。
+- `FieldSpec<T>`：把领域字段声明为 `string` / `number` / `boolean` / `json` 四种类型，由 `SqliteRepository<T>` 自动建表与读写。
 
-### 7.4 业务实体 → CSV Schema
+### 7.4 核心业务表
+| 表名 | 用途 |
+|------|------|
+| `projects` | 项目基础信息与本地存储目录 |
+| `conversations` | 聊天 / 图片 / 视频生成会话 |
+| `messages` | 聊天消息 |
+| `project_members` | 项目成员与职责分工 |
+| `project_episodes` | 剧集规划 |
+| `project_storyboards` | 分镜中心 |
+| `project_clips` | 剪辑清单 |
+| `project_assets` | 项目资产库（图片 / 视频 / 角色 / 场景 / 风格 / 提示词） |
+| `project_versions` | 资产与剧本文档的版本历史 |
+| `image_tasks` | 图片生成任务 |
+| `video_tasks` | 视频生成任务 |
+| `favorites` | 收藏记录 |
+| `work_items` | 统一工作项（任务 / 问题 / 评审 / 里程碑，状态机收敛后的唯一表） |
+| `app_logs` | 业务审计日志（视频状态变化、跨项目复制、软删 / 恢复等） |
+| `settings` | 应用设置（KV 形式） |
 
-> 注：JSON / 列表类字段序列化为 JSON 字符串写入单格，按 RFC 4180 转义。
+`scripts` / `project_assets` / `project_reviews` 等表同时被 Path A（`Script` / `Asset` / `Review`）和 Path B（`ProjectScript` / `ProjectAsset` / `ProjectReview`）共用——通过 `id` 主键保持一致。
 
-#### 7.4.1 conversations（会话表，按天分文件）
-```
-id,title,model,is_pinned,created_at,updated_at
-```
+### 7.5 软删除
+所有业务表均带 `deleted_at` 字段。删除操作仅写入 `deleted_at` 时间戳，UI 仍可在"5 秒撤销"内恢复。真正物理删除需要走专门的管理接口。
 
-#### 7.4.2 messages（消息表，按天分文件）
-```
-id,conversation_id,role,content,tokens,meta,created_at
-```
-- `meta` 序列化为 JSON 字符串。
+### 7.6 写入与并发安全
+1. **参数化语句**：所有读写都通过 `?` 占位符，避免任何 SQL 注入风险。
+2. **WAL 模式**：读写并发不互斥，前端轮询与业务写入可以同时进行。
+3. **事务**：批量插入使用 `db.exec("BEGIN")` / `db.exec("COMMIT")` 包裹。
+4. **关闭释放**：`ctx.close()` 在 server 关闭时调用，避免 Windows 下文件被锁。
 
-#### 7.4.3 image_tasks（图片任务，按天分文件）
-```
-id,prompt,negative,params,image_urls,status,error,created_at
-```
-- `params`、`image_urls` 序列化为 JSON 字符串。
-
-#### 7.4.4 video_tasks（视频任务，按天分文件）
-```
-id,prompt,image_url,params,video_url,status,error,created_at
-```
-
-#### 7.4.5 favorites（收藏表，按天分文件）
-```
-id,type,ref_id,created_at
-```
-
-#### 7.4.6 settings（个人设置，单文件）
-```
-config,updated_at
-```
-- 仅一行，每次更新直接覆写。
-
-### 7.5 实体关系
-```
-conversations ── messages
-image_tasks
-video_tasks
-favorites
-settings
-```
-> 所有实体均为个人数据，无需 user_id 关联。
-
-### 7.6 索引与查询策略
-| 查询场景 | 策略 |
-|----------|------|
-| 按 `id` 查 | 内存哈希表 `id → (file, offset, line)`，O(1) |
-| 按 `conversation_id` 查消息 | 倒排索引 `conversation_id → [(file, line)]` |
-| 时间范围 / 列表 | 限定文件范围 + 内存索引 + 流式过滤 |
-| 全文搜索（消息内容） | 暂不支持；V2 接入 SQLite FTS5 / Meilisearch 辅助索引 |
-
-### 7.7 CsvRepository 接口设计
-```ts
-interface CsvRepository<T> {
-  insert(record: T): Promise<void>;
-  insertBatch(records: T[]): Promise<void>;
-  findById(id: string): Promise<T | null>;
-  findOne(filter: Partial<T>): Promise<T | null>;
-  findMany(filter: Partial<T>, options?: QueryOptions): Promise<T[]>;
-  update(id: string, patch: Partial<T>): Promise<void>;
-  delete(id: string): Promise<void>;
-  count(filter: Partial<T>): Promise<number>;
-}
-```
-
-### 7.8 写入与并发安全
-1. **追加写**：当日文件仅追加（append），不修改历史行。
-2. **更新语义**：追加新行 + 标记旧行 `__deleted=1`（软删）或直接覆写（按实体策略）。
-3. **原子性**：写流程 = 写 `.tmp` → `fsync` → `rename` 到正式文件。
-4. **分布式锁**：跨进程并发使用 Redis 锁 `csv:lock:{entity}:{date}`。
-5. **崩溃恢复**：启动时校验 `.tmp` 文件，删除残留。
-
-### 7.9 备份与归档
+### 7.7 备份与归档
 | 周期 | 动作 |
 |------|------|
-| 每日 02:00 | 前日 CSV → gzip 归档为 `.csv.gz` |
-| 每周日 03:00 | 全量 tar 备份至 OSS/S3 |
-| 每月 1 日 | 清理 90 天前已压缩数据（可配置） |
+| 每日 02:00 | `sqlite.db` → `sqlite.db.YYYY-MM-DD.bak` |
+| 每周日 03:00 | 全量 tar 备份至 OSS / S3 |
 | 实时 | 通过 `rclone` / `rsync` 同步至异地 |
 
-### 7.10 CSV 示例
-**conversations_2026-07-01.csv**
-```csv
-id,user_id,title,model,is_pinned,created_at,updated_at
-c-1700000001,u-1,帮我写一个 PRD,agnes-2.0-flash,1,2026-07-01T09:00:00+08:00,2026-07-01T09:23:11+08:00
-c-1700000002,u-1,产品命名建议,agnes-2.0-flash,0,2026-07-01T10:11:00+08:00,2026-07-01T10:12:00+08:00
-```
-
-**messages_2026-07-01.csv**
-```csv
-id,conversation_id,role,content,tokens,meta,created_at
-m-1,c-1700000001,user,"请帮我写一个 AI 聊天产品的 PRD 框架",12,{},2026-07-01T09:00:00+08:00
-m-2,c-1700000001,assistant,"# PRD 框架\n\n## 1. 概述\n...",256,{"model":"agnes-2.0-flash"},2026-07-01T09:00:08+08:00
-```
-
----
+### 7.8 历史背景
+v1.1 曾以 CSV 按天分文件存储（`backend/data/csv/`）。该方案已于 2026-07-12 全面下线——`CsvRepository` 不再被任何运行时路径引用，`backend/data/csv/` 目录已删除，所有业务表统一走 SQLite。
 
 ## 8. API 设计
 
@@ -581,7 +505,7 @@ m-2,c-1700000001,assistant,"# PRD 框架\n\n## 1. 概述\n...",256,{"model":"agn
 - Rate Limit：IP 维度 100/min。
 - 输入：class-validator + XSS 过滤（DOMPurify）。
 - 输出：响应转义。
-- CSV 注入防护：所有用户输入字段经 RFC 4180 转义（双引号包裹、前导 `=`/`+`/`-`/`@` 字符过滤）。
+- SQL 注入防护：所有用户输入字段经参数化语句处理，配合输入校验与最小权限 SQLite 账户。
 
 ### 10.2 文件上传
 - 类型白名单（图片 jpg/png/webp，视频 mp4，文件 pdf/txt/md）。
@@ -589,9 +513,9 @@ m-2,c-1700000001,assistant,"# PRD 框架\n\n## 1. 概述\n...",256,{"model":"agn
 
 ### 10.3 数据安全
 - API Key 存储在本地环境变量或配置文件中，不对外暴露。
-- CSV 文件存储安全：
-  - `/data` 目录权限 700，进程专属用户。
-  - 文件权限 600。
+- SQLite 数据库安全：
+  - `data/sqlite.db` 文件权限 600，进程专属用户。
+  - `data/media` 目录权限 700。
 
 ### 10.4 内容安全
 - 提示词审核（敏感词 + AI 审核）。
@@ -603,7 +527,7 @@ m-2,c-1700000001,assistant,"# PRD 框架\n\n## 1. 概述\n...",256,{"model":"agn
 
 ### 11.1 部署架构
 ```
-[CDN] → [Nginx] → [Next.js (SSR)] → [NestJS] → [CSV Files (/data) + Redis + OSS]
+[CDN] → [Nginx] → [Next.js (SSR)] → [NestJS] → [SQLite (/data/sqlite.db) + Redis + OSS]
                                     → [Agnes AI APIs]
 ```
 - `/data` 目录挂载为独立数据卷（建议 NVMe SSD），支持后续迁移到 NAS / OSS。
@@ -646,9 +570,9 @@ m-2,c-1700000001,assistant,"# PRD 框架\n\n## 1. 概述\n...",256,{"model":"agn
 ## 13. 项目里程碑
 
 ### 13.1 MVP（v1.0，6 周）
-- 阶段 1：产品设计（1 周）— PRD、UI 原型、CSV 存储设计、API 设计。
+- 阶段 1：产品设计（1 周）— PRD、UI 原型、SQLite 存储设计、API 设计。
 - 阶段 2：前端（2 周）— 框架、聊天、图片、视频页面。
-- 阶段 3：后端（2 周）— 聊天、图片、视频、SDK 封装、Redis、CsvRepository。
+- 阶段 3：后端（2 周）— 聊天、图片、视频、SDK 封装、Redis、SqliteRepository。
 - 阶段 4：联调 + 部署（1 周）— 联调、Docker、CI/CD、上线。
 
 **MVP 验收**：全部 P0 需求通过验收测试，核心流程跑通。
@@ -677,10 +601,10 @@ m-2,c-1700000001,assistant,"# PRD 框架\n\n## 1. 概述\n...",256,{"model":"agn
 | 内容合规风险 | 合规 | 高 | 中 | 敏感词过滤、AI 审核 |
 | 第三方依赖升级 | 技术 | 中 | 中 | 锁版本、抽象接口、定期升级窗口 |
 | 需求频繁变更 | 业务 | 中 | 高 | 需求评审、变更控制、文档化 |
-| **CSV 文件并发写入冲突** | 技术 | 高 | 中 | 追加写 + 原子 rename |
-| **CSV 单文件膨胀（热数据热点）** | 技术 | 中 | 高 | 按天分片 + 自动归档 + 大文件流式读取 |
-| **CSV 索引重建耗时** | 技术 | 中 | 中 | 启动时增量构建 + 持久化 `_index.json` + 定期 checkpoint |
-| **CSV 注入 / 字段污染** | 安全 | 高 | 中 | RFC 4180 转义 + 前导字符过滤 + DTO 强校验 |
+| **SQLite 大库查询慢** | 技术 | 中 | 中 | 关键列建索引 + 软删除过滤条件 + 必要时拆库 |
+| **SQLite 写并发瓶颈** | 技术 | 中 | 中 | WAL 模式 + 批量事务 + 业务侧限流 |
+| **SQLite 备份一致性** | 运维 | 中 | 中 | `VACUUM INTO` 或 `sqlite3 .backup`，每日 02:00 全量 |
+| **SQL 注入 / 字段污染** | 安全 | 高 | 中 | 参数化语句 + 输入校验 + DTO 强校验 |
 | **磁盘容量耗尽** | 运维 | 中 | 中 | 监控 + 90 天自动清理 + 压缩归档 |
 
 ---
@@ -725,8 +649,9 @@ m-2,c-1700000001,assistant,"# PRD 框架\n\n## 1. 概述\n...",256,{"model":"agn
 | 版本 | 日期 | 变更 | 作者 |
 |------|------|------|------|
 | v1.0 | 2026-07-01 | 初始版本 | 产品/BA |
-| v1.1 | 2026-07-01 | 存储介质由 MySQL 改为 **CSV 按天分文件**，新增 CsvRepository 设计、目录/命名/索引/备份策略、安全/性能/并发相关风险 | 产品/BA |
+| v1.1 | 2026-07-01 | 存储介质由 MySQL 改为 CSV 按天分文件，新增 CsvRepository 设计（**该方案已于 v1.3 下线**） | 产品/BA |
 | v1.2 | 2026-07-01 | 调整为**个人本地使用**模式：移除登录/注册、用户管理、RBAC、后台管理、JWT 鉴权等模块；简化数据存储（移除 users/login_logs/operation_logs 表）；简化安全设计；调整里程碑 | 产品/BA |
+| v1.3 | 2026-07-12 | 持久化存储由 CSV 改为 **SQLite（`backend/data/sqlite.db`）**：删除 CsvRepository，新增 SqliteRepository，删除 `data/csv/` 目录；状态机收敛到 `work_items`；新增 `app_logs` 审计日志 | 产品/BA |
 
 ---
 

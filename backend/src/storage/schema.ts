@@ -1,5 +1,5 @@
-import type { Conversation, Favorite, ImageTask, Message, Project, Settings, VideoTask, ScriptComment, AssetVersion } from "../types.js";
-import type { Script } from "../types/script.js";
+import type { Conversation, Favorite, ImageTask, Message, Project, Settings, VideoTask, ScriptComment, AssetVersion, Todo, AppLog, WorkItem } from "../types.js";
+import type { Script, ProjectScript } from "../types/script.js";
 import type { Character } from "../types/character.js";
 import type { Scene } from "../types/scene.js";
 import type { Prop } from "../types/prop.js";
@@ -7,10 +7,10 @@ import type { Storyboard, ProjectStoryboard } from "../types/storyboard.js";
 import type { Audio } from "../types/audio.js";
 import type { ModuleVideoTask } from "../types/video.js";
 import type { ProjectClip } from "../types/project.js";
-import type { Asset } from "../types/asset.js";
-import type { Review } from "../types/review.js";
+import type { Asset, ProjectAsset } from "../types/asset.js";
+import type { Review, ProjectReview } from "../types/review.js";
 import type { ScriptDocument, ScriptEpisode, ScriptScene, ScriptDialogue, ScriptSceneCharacter, ScriptSceneLocation, ScriptTemplate, ScriptTag, ScriptQualityAssessment, ScriptApproval, ScriptBackup } from "../types/script.js";
-import type { FieldSpec } from "./csv.js";
+import type { FieldSpec } from "./repository.js";
 
 export const conversationFields: FieldSpec<Conversation>[] = [
   { key: "id", type: "string" },
@@ -110,6 +110,65 @@ export const assetVersionFields: FieldSpec<AssetVersion>[] = [
   { key: "change_type", type: "string" },
   { key: "created_at", type: "string" },
   { key: "created_by", type: "string" },
+];
+
+/** 我的待办字段（评审优化 P1）。 */
+export const todoFields: FieldSpec<Todo>[] = [
+  { key: "id", type: "string" },
+  { key: "owner", type: "string" },
+  { key: "title", type: "string" },
+  { key: "description", type: "string" },
+  { key: "status", type: "string" },
+  { key: "priority", type: "string" },
+  { key: "due_date", type: "string" },
+  { key: "link_type", type: "string" },
+  { key: "link_id", type: "string" },
+  { key: "link_url", type: "string" },
+  { key: "created_at", type: "string" },
+  { key: "updated_at", type: "string" },
+  { key: "deleted_at", type: "string" },
+];
+
+/**
+ * 统一工作项字段（评审优化 P2：状态机收敛）。
+ * 合并原 project_tasks / project_issues / project_reviews / project_milestones。
+ */
+export const workItemFields: FieldSpec<WorkItem>[] = [
+  { key: "id", type: "string" },
+  { key: "project_id", type: "string" },
+  { key: "kind", type: "string" },
+  { key: "title", type: "string" },
+  { key: "status", type: "string" },
+  { key: "owner", type: "string" },
+  { key: "due_date", type: "string" },
+  { key: "severity", type: "string" },
+  { key: "target_type", type: "string" },
+  { key: "target_id", type: "string" },
+  { key: "description", type: "string" },
+  { key: "tags", type: "json" },
+  { key: "created_at", type: "string" },
+  { key: "updated_at", type: "string" },
+  { key: "deleted_at", type: "string" },
+];
+
+/**
+ * 应用审计日志字段（评审增量 P1-1：状态机变更 / P1-2：跨项目复制 + 软删除 / 恢复）。
+ *
+ * - payload 是 JSON 字符串，便于按字段全文检索；调用方写库前用 JSON.stringify 序列化。
+ * - event 字段与 rootLogger event 保持一致（如 "video.status_changed"），
+ *   便于日志（file logger）和审计表（app_logs）联合查询。
+ */
+export const appLogFields: FieldSpec<AppLog>[] = [
+  { key: "id", type: "string" },
+  { key: "entity_type", type: "string" },
+  { key: "entity_id", type: "string" },
+  { key: "action", type: "string" },
+  { key: "event", type: "string" },
+  { key: "payload", type: "string" },
+  { key: "operator", type: "string" },
+  { key: "project_id", type: "string" },
+  { key: "trace_id", type: "string" },
+  { key: "created_at", type: "string" },
 ];
 
 // ==================== 三大工厂：角色/场景/道具 ====================
@@ -320,6 +379,19 @@ export const scriptFields: FieldSpec<Script>[] = [
   { key: "updated_at", type: "string" },
 ];
 
+/** 评审 P1-H11 修复：Path B（ProjectScript）的 schema，与 Path A 共用同一张 SQLite 表（scripts）。 */
+export const projectScriptFields: FieldSpec<ProjectScript>[] = [
+  { key: "id", type: "string" },
+  { key: "project_id", type: "string" },
+  { key: "episode", type: "number" },
+  { key: "title", type: "string" },
+  { key: "content", type: "string" },
+  { key: "status", type: "string" },
+  { key: "notes", type: "string" },
+  { key: "created_at", type: "string" },
+  { key: "updated_at", type: "string" },
+];
+
 export const assetFields: FieldSpec<Asset>[] = [
   { key: "id", type: "string" },
   { key: "project_id", type: "string" },
@@ -330,6 +402,16 @@ export const assetFields: FieldSpec<Asset>[] = [
   { key: "format", type: "string" },
   { key: "tags", type: "json" },
   { key: "metadata", type: "json" },
+  { key: "created_at", type: "string" },
+  { key: "updated_at", type: "string" },
+];
+
+/** 评审 P1-H11 修复：Path B（ProjectAsset）的 schema */
+export const projectAssetFields: FieldSpec<ProjectAsset>[] = [
+  { key: "id", type: "string" },
+  { key: "project_id", type: "string" },
+  { key: "kind", type: "string" },
+  { key: "name", type: "string" },
   { key: "created_at", type: "string" },
   { key: "updated_at", type: "string" },
 ];
@@ -345,6 +427,19 @@ export const reviewFields: FieldSpec<Review>[] = [
   { key: "comment", type: "string" },
   { key: "reviewer_id", type: "string" },
   { key: "reviewer_name", type: "string" },
+  { key: "created_at", type: "string" },
+  { key: "updated_at", type: "string" },
+];
+
+/** 评审 P1-H11 修复：Path B（ProjectReview）的 schema */
+export const projectReviewFields: FieldSpec<ProjectReview>[] = [
+  { key: "id", type: "string" },
+  { key: "project_id", type: "string" },
+  { key: "target_type", type: "string" },
+  { key: "target_id", type: "string" },
+  { key: "reviewer", type: "string" },
+  { key: "status", type: "string" },
+  { key: "comment", type: "string" },
   { key: "created_at", type: "string" },
   { key: "updated_at", type: "string" },
 ];
@@ -475,6 +570,7 @@ export const scriptApprovalFields: FieldSpec<ScriptApproval>[] = [
 export const scriptBackupFields: FieldSpec<ScriptBackup>[] = [
   { key: "id", type: "string" },
   { key: "project_id", type: "string" },
+  { key: "document_id", type: "string" },
   { key: "type", type: "string" },
   { key: "size", type: "number" },
   { key: "content", type: "json" },

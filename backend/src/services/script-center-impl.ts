@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 剧本中心服务实现
  *
  * 提供剧本、剧集、场景、对白的CRUD操作，以及剧本解析、资产关联、版本管理、导入导出等功能。
@@ -29,7 +29,11 @@ import type {
 } from "../types.js";
 import type { ScriptComment } from "../types/script.js";
 import { id, nowIso, DEFAULT_MODEL } from "../utils.js";
+import { rootLogger } from "../logger.js";
 import { executeModelCall, recommendModels } from "./model-center-impl.js";
+import { analyzeScriptWithAI, aiResultToAssets } from "./script-analyze-ai.js";
+import type { AnalyzedAsset } from "./script-analyze-ai.js";
+import { listCharacters } from "./module-domain.js";
 
 /**
  * 辅助函数：从 AsyncIterable<ChatChunk> 中收集完整内容
@@ -611,13 +615,57 @@ export async function listBackups(ctx: AppContext, projectId: string): Promise<S
   return ctx.scriptBackups.findMany({ project_id: projectId }, { sort: "desc" });
 }
 
+// 剧本版本（薄封装，与 Backup 同表；前端走 /api/script-versions 直接操作）
+export async function listScriptVersions(
+  ctx: AppContext,
+  documentId: string
+): Promise<ScriptBackup[]> {
+  return ctx.scriptBackups.findMany({ document_id: documentId }, { sort: "desc" });
+}
+
+export async function createScriptVersion(
+  ctx: AppContext,
+  input: {
+    documentId: string;
+    editorJson: string;
+    version: number;
+    changes?: string;
+    type?: "auto" | "manual" | "scheduled";
+    createdBy?: string;
+  }
+): Promise<ScriptBackup> {
+  const document = await ctx.scriptDocuments.findById(input.documentId);
+  if (!document) throw new Error("剧本文档不存在");
+  const backup: ScriptBackup = {
+    id: id("sbkp"),
+    project_id: document.project_id,
+    type: input.type ?? "manual",
+    size: (input.editorJson || "").length,
+    content: {
+      script_document: input.editorJson,
+      version: input.version,
+      changes: input.changes,
+    },
+    status: "completed",
+    created_by: input.createdBy ?? "system",
+    created_at: nowIso(),
+    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+  await ctx.scriptBackups.insert(backup);
+  return backup;
+}
+
+export async function deleteScriptVersion(ctx: AppContext, versionId: string): Promise<void> {
+  await ctx.scriptBackups.delete(versionId);
+}
+
 export async function restoreBackup(ctx: AppContext, backupId: string): Promise<void> {
   const backup = await ctx.scriptBackups.findById(backupId);
   if (!backup || backup.status !== "completed") throw new Error("备份不存在或不可用");
 
   // 恢复操作需要根据实际业务逻辑实现
   // 这里简化为直接返回备份内容
-  console.log("恢复备份:", backup.id);
+  rootLogger.info({ event: "script.backup.restore", backupId: backup.id }, `恢复备份: ${backup.id}`);
 }
 
 // ==================== 剧本评论 CRUD ====================
@@ -881,18 +929,25 @@ export async function importScriptFromJson(
 
   // 3. 调用 AI 分析剧本内容，提取角色/场景/道具
   //    阈值：1000 字（Feature 3.3 前置条件）
-  //    AI 失败时不影响主流程
+  //    AI 失败时不影响主流程（脚本-analyze-ai 内部已自动回退到 localFallback）
   try {
     if (plainText && plainText.length >= 1000) {
-      const assets = await analyzeScriptWithAI(
-        ctx,
-        data.title || "导入剧本",
-        plainText
-      );
-      await persistAnalyzedAssets(ctx, projectId, assets);
+      // 使用规范版本 analyzeScriptWithAI(ctx, {content, format, useLocal?})；
+      // 再通过 aiResultToAssets 转为扁平 AnalyzedAsset[] 给 persistAnalyzedAssets。
+      const aiResult = await analyzeScriptWithAI(ctx, {
+        content: plainText,
+        format: "txt",
+        useLocal: false,
+      });
+      if (aiResult.success && aiResult.data) {
+        const assets = aiResultToAssets(aiResult.data);
+        if (assets.length > 0) {
+          await persistAnalyzedAssets(ctx, projectId, assets);
+        }
+      }
     }
   } catch (err) {
-    console.warn("[importScriptFromJson] AI 资产分析失败:", err);
+    rootLogger.warn({ event: "script.import.aiAnalyzeFailed", err }, "[importScriptFromJson] AI 资产分析失败");
   }
 
   // 4. 拆分剧集 + 场景 + 对白
@@ -923,59 +978,96 @@ export async function importScriptFromJson(
   }
 
   // 5. 写入数据库：剧集 → 场景 → 对白
-  for (const episode of episodes) {
-    const createdEpisode = await createScriptEpisode(ctx, {
-      project_id: projectId,
-      document_id: document.id,
-      episode_no: episode.episode_no,
-      title: episode.title,
-      synopsis: episode.synopsis,
-      status: episode.status || "draft",
-    });
-
-    for (const scene of episode.scenes || []) {
-      const createdScene = await createScriptScene(ctx, {
+  //    评审 P1-H4 修复：用补偿式回滚保证半成品不污染数据库：
+  //    任何一步失败 → 逆序删除已写入的 document/episode/scene/dialogue。
+  const createdDocumentIds: string[] = [document.id];
+  const createdEpisodeIds: string[] = [];
+  const createdSceneIds: string[] = [];
+  const createdDialogueIds: string[] = [];
+  const rollback = async (reason: unknown) => {
+    rootLogger.warn(
+      {
+        event: "script.import.rollback",
+        reason: String(reason),
+        createdCount: {
+          documents: createdDocumentIds.length,
+          episodes: createdEpisodeIds.length,
+          scenes: createdSceneIds.length,
+          dialogues: createdDialogueIds.length,
+        },
+      },
+      `[importScriptFromJson] 回滚已写入记录: ${reason}`,
+    );
+    for (const idToDel of createdDialogueIds.reverse()) {
+      try { await deleteScriptDialogue(ctx, idToDel); } catch {}
+    }
+    for (const idToDel of createdSceneIds.reverse()) {
+      try { await deleteScriptScene(ctx, idToDel); } catch {}
+    }
+    for (const idToDel of createdEpisodeIds.reverse()) {
+      try { await deleteScriptEpisode(ctx, idToDel); } catch {}
+    }
+    for (const idToDel of createdDocumentIds.reverse()) {
+      try { await deleteScriptDocument(ctx, idToDel); } catch {}
+    }
+  };
+  try {
+    for (const episode of episodes) {
+      const createdEpisode = await createScriptEpisode(ctx, {
         project_id: projectId,
-        episode_id: createdEpisode.id,
-        scene_no: scene.scene_no,
-        location_name: scene.location_name,
-        time_of_day: scene.time_of_day,
-        description: scene.description,
-        notes: scene.notes || "",
+        document_id: document.id,
+        episode_no: episode.episode_no,
+        title: episode.title,
+        synopsis: episode.synopsis,
+        status: episode.status || "draft",
       });
+      createdEpisodeIds.push(createdEpisode.id);
 
-      // 写入对白（按 character 名称查表获取 character_id）
-      for (const dialogue of scene.dialogues || []) {
-        if (!dialogue.text || !dialogue.character) continue;
-        try {
-          const charRecord = await ctx.characters.findMany({
-            project_id: projectId,
-            name: dialogue.character,
-          });
+      for (const scene of episode.scenes || []) {
+        const createdScene = await createScriptScene(ctx, {
+          project_id: projectId,
+          episode_id: createdEpisode.id,
+          scene_no: scene.scene_no,
+          location_name: scene.location_name,
+          time_of_day: scene.time_of_day,
+          description: scene.description,
+          notes: scene.notes || "",
+        });
+        createdSceneIds.push(createdScene.id);
+
+        // 写入对白（按 character 名称查表获取 character_id）。
+        // 评审 P1-H3 修复：用 listCharacters 走已过滤 deleted_at 的服务，
+        // 避免直接查 Repository 漏掉软删角色被"复活"绑定到对白。
+        for (const dialogue of scene.dialogues || []) {
+          if (!dialogue.text || !dialogue.character) continue;
+          const charRecord = await listCharacters(ctx, projectId, dialogue.character);
           if (charRecord.length > 0) {
-            await ctx.scriptDialogues.insert({
-              id: id("sd"),
+            const inserted = await createScriptDialogue(ctx, {
               project_id: projectId,
               scene_id: createdScene.id,
               character_id: charRecord[0].id,
               dialogue: dialogue.text,
               emotion: dialogue.emotion || "",
               order: dialogue.order,
-              created_at: nowIso(),
             });
+            createdDialogueIds.push(inserted.id);
           }
-        } catch (err) {
-          console.warn(`[importScriptFromJson] 对白入库失败 (${dialogue.character}):`, err);
         }
       }
     }
+  } catch (err) {
+    await rollback(err);
+    throw err;
   }
 
   // 6. 导入后自动生成版本快照（Feature 4.5 业务规则）
   try {
     await createBackup(ctx, projectId, document.id, "manual", "system");
   } catch (err) {
-    console.warn("[importScriptFromJson] 版本快照创建失败:", err);
+    rootLogger.warn(
+      { event: "script.import.versionFailed", documentId: document.id, err },
+      "[importScriptFromJson] 版本快照创建失败",
+    );
   }
 
   // 7. 写入导入日志（Feature 4.5 业务规则：导入时间、文件名、格式、解析结果、操作者）
@@ -990,8 +1082,20 @@ export async function importScriptFromJson(
         ),
       0
     );
-    console.log(
-      `[importScriptFromJson] project=${projectId} document=${document.id} file=${data.file_name || "导入剧本"} format=${data.format || "json"} episodes=${episodes.length} scenes=${sceneCount} dialogues=${dialogueCount} operator=system at=${nowIso()}`
+    rootLogger.info(
+      {
+        event: "script.import.completed",
+        projectId,
+        documentId: document.id,
+        fileName: data.file_name || "导入剧本",
+        format: data.format || "json",
+        episodes: episodes.length,
+        scenes: sceneCount,
+        dialogues: dialogueCount,
+        operator: "system",
+        at: nowIso(),
+      },
+      `[importScriptFromJson] project=${projectId} document=${document.id} file=${data.file_name || "导入剧本"} format=${data.format || "json"} episodes=${episodes.length} scenes=${sceneCount} dialogues=${dialogueCount} operator=system at=${nowIso()}`,
     );
   } catch {
     // 日志失败不影响导入
@@ -1042,7 +1146,7 @@ interface ParsedDialogue {
 async function persistAnalyzedAssets(
   ctx: AppContext,
   projectId: string,
-  assets: AnalyzedAsset[]
+  assets: AnalyzedAsset[] // 从 ./script-analyze-ai.js 导入的类型
 ): Promise<void> {
   for (const asset of assets) {
     if (!asset || !asset.name) continue;
@@ -1099,7 +1203,7 @@ async function persistAnalyzedAssets(
         }
       }
     } catch (err) {
-      console.warn(`[importScriptFromJson] 资产 ${asset.name} 入库失败:`, err);
+      rootLogger.warn({ event: "script.import.assetInsertFailed", assetName: asset.name, err }, `[importScriptFromJson] 资产 ${asset.name} 入库失败`);
     }
   }
 }
@@ -1774,76 +1878,9 @@ function buildStoryboardSplitPrompt(
   return prompt;
 }
 
-// ==================== AI剧本分析服务（提取角色/场景/道具） ====================
+// ==================== AI剧本分析服务已迁移到 ./script-analyze-ai.js ====================
+// 旧版 analyzeScriptWithAI(ctx, title, content) → AnalyzedAsset[] / extractJsonObject / AnalyzedAsset 接口
+// 已废弃。importScriptFromJson 现在调用规范版本 analyzeScriptWithAI(ctx, {content, format, useLocal?})
+// 并通过 aiResultToAssets() 转为 AnalyzedAsset[] 给 persistAnalyzedAssets。
 
-/** 从模型输出中提取 JSON，兼容被 Markdown 代码块包裹的情况。 */
-function extractJsonObject(text: string): unknown {
-  const trimmed = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  if (start < 0 || end <= start) return null;
-  try {
-    return JSON.parse(trimmed.slice(start, end + 1));
-  } catch {
-    return null;
-  }
-}
-
-export interface AnalyzedAsset {
-  type: "character" | "scene" | "prop";
-  name: string;
-  description: string;
-  role?: string;
-  gender?: string;
-  traits?: string[];
-  sceneType?: string;
-  lighting?: string;
-  timeOfDay?: string;
-  weather?: string;
-  category?: string;
-  material?: string;
-  color?: string;
-}
-
-/**
- * 调用 AI chat 接口分析剧本内容，提取角色、场景、道具。
- * AI 失败时回退到本地正则分析，保证功能可用。
- */
-export async function analyzeScriptWithAI(
-  ctx: AppContext,
-  scriptTitle: string,
-  scriptContent: string
-): Promise<AnalyzedAsset[]> {
-  const instruction = [
-    "你是AI漫剧导演助理。请分析以下剧本内容，提取其中的角色、场景、道具信息。",
-    "只输出 JSON，不要 Markdown，不要解释。",
-    '输出格式：{ "assets": [ { "type": "character|scene|prop", "name": "名称", "description": "描述", "role": "protagonist|antagonist|supporting|minor", "gender": "male|female|other", "traits": ["特征"], "sceneType": "indoor|outdoor", "lighting": "光线", "timeOfDay": "白天|夜晚|黄昏", "weather": "天气", "category": "weapon|tool|clothing|vehicle|artifact|furniture|other", "material": "材质", "color": "颜色" } ] }',
-    "要求：name 简短（2-10字），description 详细描述该资产在剧本中的作用；只提取剧本中真实出现的资产，不要臆造。",
-    "",
-    `剧本标题：${scriptTitle}`,
-    "剧本内容：",
-    scriptContent.slice(0, 4000),
-  ].join("\n");
-
-  let text = "";
-  try {
-    const chunks = await ctx.ai.chat({
-      conversationId: "",
-      message: instruction,
-      model: DEFAULT_MODEL,
-    });
-    text = await collectChatContent(chunks);
-  } catch {
-    text = "";
-  }
-
-  const parsed = extractJsonObject(text) as { assets?: AnalyzedAsset[] } | null;
-  if (parsed?.assets && Array.isArray(parsed.assets)) {
-    return parsed.assets.filter(
-      (a) => a && (a.type === "character" || a.type === "scene" || a.type === "prop") && a.name
-    );
-  }
-
-  // AI 失败时回退：返回空数组，由前端使用本地分析
-  return [];
-}
+// 旧版接口与函数已废弃，统一从 ./script-analyze-ai.js 引入 analyzeScriptWithAI / AnalyzedAsset / aiResultToAssets。

@@ -48,7 +48,7 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || [])
     const newFiles: ImportFile[] = selectedFiles.map((file) => ({
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       file,
       name: file.name,
       size: file.size,

@@ -1,7 +1,5 @@
 /** 剧本中心服务 */
 
-import { analyzeScriptContent } from "@/components/modules/scripts-center/utils";
-
 const API_BASE = '/api'
 
 // 类型定义
@@ -356,84 +354,102 @@ export const scriptCenterService = {
   // ========== AI 分析 ==========
 
   /**
-   * AI 分析剧本内容（与 ScriptImportDialog 走同一套逻辑）
+   * AI 分析剧本内容（走大模型，不使用正则兜底）
    *
-   * 1. 优先调用后端大模型（POST /api/ai/script-analyze），50s 超时
-   * 2. AI 失败/超时时回退到本地正则分析（analyzeScriptContent）
-   * 3. 返回的字段对齐 store 入库格式：
-   *    - characters[].name / .description
-   *    - scenes[].location_name / .time_of_day / .description
-   *    - props[].name / .category / .description
-   *    - episodes[].episode_no / .title / .synopsis
+   * 行为：
+   *   1) 始终调用大模型（POST /api/ai/script-analyze）
+   *   2) 用户主动中止（signal.aborted）→ 抛 AbortError，由调用方处理
+   *   3) 后端返回 success:false（AI 失败 / 输出无法解析）→ 抛 Error，让前端弹错
+   *   4) 后端返回 success:true → 归一化字段后返回
+   *
+   * @param content - 待分析的剧本文本
+   * @param options.signal - 可选 AbortSignal，用于用户主动取消
    */
-  analyzeScript: async (content: string): Promise<{
-    source: 'ai' | 'local'
-    characters: Array<{ name: string; description: string; traits: string[] }>
+  analyzeScript: async (
+    content: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<{
+    source: 'ai'
+    characters: Array<{
+      name: string
+      description: string
+      role?: string
+      gender?: string
+      age?: number
+      appearance?: string
+      personality?: string
+      traits: string[]
+    }>
     scenes: Array<{ location_name: string; time_of_day: string; description: string }>
     props: Array<{ name: string; category: string; description: string }>
     episodes: Array<{ episode_no: number; title: string; synopsis: string }>
     warnings?: string[]
   }> => {
-    // 1) 优先调用大模型
+    // 外部 signal 与内部 50s 超时合并：任一触发即中止
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 50_000);
+    const onExternalAbort = () => controller.abort();
+    if (options.signal) {
+      if (options.signal.aborted) {
+        controller.abort();
+      } else {
+        options.signal.addEventListener('abort', onExternalAbort, { once: true });
+      }
+    }
+    let resp: Response;
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 50_000);
-      const resp = await fetch(`${API_BASE}/ai/script-analyze`, {
+      resp = await fetch(`${API_BASE}/ai/script-analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, format: 'txt' }),
         signal: controller.signal,
       });
+    } finally {
       clearTimeout(timer);
-      if (resp.ok) {
-        const payload = await resp.json();
-        const data = payload?.data ?? payload;
-        return {
-          source: 'ai',
-          characters: data.characters ?? [],
-          scenes: data.scenes ?? data.sceneAssets ?? [],
-          props: data.props ?? data.propAssets ?? [],
-          episodes: data.episodes ?? [],
-          warnings: data.warnings ?? [],
-        };
-      }
-      console.warn(`AI 分析失败 HTTP ${resp.status}, 回退到本地正则`);
-    } catch (err) {
-      console.warn('AI 分析异常, 回退到本地正则:', err);
+      if (options.signal) options.signal.removeEventListener('abort', onExternalAbort);
     }
 
-    // 2) 兜底：本地正则分析
-    const localAssets = analyzeScriptContent(content);
-    const localCharacters = localAssets
-      .filter((a) => a.type === 'character')
-      .map((a) => ({
-        name: a.name,
-        description: a.description ?? '',
-        traits: a.traits ?? [],
-      }));
-    const localScenes = localAssets
-      .filter((a) => a.type === 'scene')
-      .map((a) => ({
-        location_name: a.name,
-        time_of_day: (a as any).timeOfDay ?? 'unknown',
-        description: a.description ?? '',
-      }));
-    const localProps = localAssets
-      .filter((a) => a.type === 'prop')
-      .map((a) => ({
-        name: a.name,
-        category: (a as any).category ?? 'other',
-        description: a.description ?? '',
-      }));
+    // 解析响应（统一捕获 JSON 解析错误）
+    let payload: any;
+    try {
+      payload = await resp.json();
+    } catch (e) {
+      throw new Error(`AI 分析响应无法解析 (HTTP ${resp.status})`);
+    }
+
+    // 后端用 success 字段标识是否成功
+    if (payload?.success === false) {
+      throw new Error(payload?.error || `AI 分析失败 (HTTP ${resp.status})`);
+    }
+    if (!resp.ok && payload?.success !== true) {
+      throw new Error(`AI 分析失败 (HTTP ${resp.status})`);
+    }
+
+    const data = payload?.data ?? payload;
+    if (!data) {
+      throw new Error('AI 分析返回数据为空');
+    }
+
+    // 归一化角色字段：后端 AI 已返回 role/gender/appearance/personality/traits
+    const characters = (data.characters ?? []).map((c: any) => ({
+      name: c.name || '',
+      description: c.description || '',
+      role: c.role,
+      gender: c.gender,
+      age: c.age,
+      appearance: c.appearance,
+      personality: c.personality,
+      traits: Array.isArray(c.traits) ? c.traits : [],
+    }))
 
     return {
-      source: 'local',
-      characters: localCharacters,
-      scenes: localScenes,
-      props: localProps,
-      episodes: [], // 本地正则无法识别剧集边界
-      warnings: ['已回退到本地正则分析，剧集未自动切分'],
-    };
+      source: 'ai',
+      characters,
+      scenes: data.scenes ?? data.sceneAssets ?? [],
+      props: data.props ?? data.propAssets ?? [],
+      episodes: data.episodes ?? [],
+      warnings: data.warnings ?? [],
+    }
   },
 
   /** 获取版本历史 */

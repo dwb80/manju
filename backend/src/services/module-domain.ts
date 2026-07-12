@@ -17,16 +17,18 @@ import type { ProjectClip } from "../types/project.js";
 import type { ProjectStoryboard } from "../types/storyboard.js";
 import type { Asset } from "../types/asset.js";
 import type { Review } from "../types/review.js";
+import { rootLogger } from "../logger.js";
 import { id, nowIso } from "../utils.js";
-import { CsvRepository } from "../storage/csv.js";
+import type { Repository } from "../storage/repository.js";
 import { listCharacterTemplates, listSceneTemplates, listPropTemplates } from "./asset-templates.js";
+import { recordAppLog } from "./audit-log.js";
 
 // ==================== 资产版本管理（任务12：统一版本管理） ====================
 
 /** 版本 ID 前缀，方便排查。 */
 const VERSION_ID_PREFIX = "av";
 
-/** 把任意实体对象深拷贝为可写入 CSV 的纯 JSON 字符串。 */
+/** 把任意实体对象深拷贝为可写入数据库的纯 JSON 字符串（写入 `json` 类型字段）。 */
 function serializeEntity(entity: unknown): string {
   return JSON.stringify(entity ?? null, (_key, value) => (value === undefined ? null : value));
 }
@@ -87,7 +89,7 @@ export async function recordVersion(
     return version;
   } catch (err) {
     // 版本记录失败不影响主流程，仅打印
-    console.error("recordVersion failed:", (err as Error).message);
+    rootLogger.warn({ event: "asset.version.failed", entityType, entityId, err }, "recordVersion failed");
     return null;
   }
 }
@@ -245,10 +247,22 @@ type CharacterInput = {
   tags?: string[];
 };
 
-export async function listCharacters(ctx: AppContext, projectId?: string): Promise<Character[]> {
-  const filter: Partial<Character> = projectId ? { project_id: projectId } : {};
+export async function listCharacters(
+  ctx: AppContext,
+  projectId?: string,
+  name?: string,
+): Promise<Character[]> {
+  const filter: Partial<Character> = { ...(projectId ? { project_id: projectId } : {}) };
+  if (name) filter.name = name;
   const items = await ctx.characters.findMany(filter, { sort: "desc" });
   return items.filter((item) => !item.deleted_at);
+}
+
+/** 获取单个角色（已过滤软删除）。找不到返回 null，让上层返回 404。 */
+export async function getCharacter(ctx: AppContext, characterId: string): Promise<Character | null> {
+  const ch = await ctx.characters.findById(characterId);
+  if (!ch || ch.deleted_at) return null;
+  return ch;
 }
 
 export async function createCharacter(ctx: AppContext, input: CharacterInput): Promise<Character> {
@@ -315,12 +329,30 @@ export async function updateCharacter(ctx: AppContext, characterId: string, inpu
 }
 
 export async function deleteCharacter(ctx: AppContext, characterId: string): Promise<void> {
+  const existing = await ctx.characters.findById(characterId);
   await ctx.characters.update(characterId, { deleted_at: nowIso() } as Partial<Character>);
+  void recordAppLog(ctx, {
+    entityType: "character",
+    entityId: characterId,
+    action: "asset.soft_deleted",
+    event: "asset.soft_deleted",
+    payload: { assetType: "character" },
+    projectId: existing?.project_id,
+  });
 }
 
 /** 恢复被软删除的角色（清空 deleted_at）。 */
 export async function restoreCharacter(ctx: AppContext, characterId: string): Promise<void> {
+  const existing = await ctx.characters.findById(characterId);
   await ctx.characters.update(characterId, { deleted_at: "" } as Partial<Character>);
+  void recordAppLog(ctx, {
+    entityType: "character",
+    entityId: characterId,
+    action: "asset.restored",
+    event: "asset.restored",
+    payload: { assetType: "character" },
+    projectId: existing?.project_id,
+  });
 }
 
 /** 列出已软删除的角色（仅 deleted_at 非空）。 */
@@ -399,7 +431,23 @@ export async function copyCharactersToProjects(
     await ctx.characters.insert(copy);
     result.push(copy);
     copied += 1;
+    // 评审 P1-H5 修复：跨项目复制也落版本快照，方便审计与回滚
+    await recordVersion(ctx, {
+      entityType: "character",
+      entityId: copy.id,
+      entity: copy,
+      changeType: "create",
+      changeNote: `cross-project copy from ${sourceId} to ${projectId}`,
+    });
   }
+  void recordAppLog(ctx, {
+    entityType: "character",
+    entityId: sourceId,
+    action: "asset.copied",
+    event: "asset.copied",
+    payload: { assetType: "character", sourceId, targetProjectIds, copied, skipped },
+    projectId: source.project_id,
+  });
   return { copied, skipped, items: result };
 }
 
@@ -441,6 +489,14 @@ export async function copyScenesToProjects(
     await ctx.scenes.insert(copy);
     result.push(copy);
     copied += 1;
+    // 评审 P1-H5 修复：跨项目复制也落版本快照
+    await recordVersion(ctx, {
+      entityType: "scene",
+      entityId: copy.id,
+      entity: copy,
+      changeType: "create",
+      changeNote: `cross-project copy from ${sourceId} to ${projectId}`,
+    });
   }
   return { copied, skipped, items: result };
 }
@@ -484,7 +540,23 @@ export async function copyPropsToProjects(
     await ctx.props.insert(copy);
     result.push(copy);
     copied += 1;
+    // 评审 P1-H5 修复：跨项目复制也落版本快照
+    await recordVersion(ctx, {
+      entityType: "prop",
+      entityId: copy.id,
+      entity: copy,
+      changeType: "create",
+      changeNote: `cross-project copy from ${sourceId} to ${projectId}`,
+    });
   }
+  void recordAppLog(ctx, {
+    entityType: "prop",
+    entityId: sourceId,
+    action: "asset.copied",
+    event: "asset.copied",
+    payload: { assetType: "prop", sourceId, targetProjectIds, copied, skipped },
+    projectId: source.project_id,
+  });
   return { copied, skipped, items: result };
 }
 
@@ -502,8 +574,13 @@ type SceneInput = {
   weather?: string;
 };
 
-export async function listScenes(ctx: AppContext, projectId?: string): Promise<Scene[]> {
-  const filter: Partial<Scene> = projectId ? { project_id: projectId } : {};
+export async function listScenes(
+  ctx: AppContext,
+  projectId?: string,
+  name?: string,
+): Promise<Scene[]> {
+  const filter: Partial<Scene> = { ...(projectId ? { project_id: projectId } : {}) };
+  if (name) filter.name = name;
   const items = await ctx.scenes.findMany(filter, { sort: "desc" });
   return items.filter((item) => !item.deleted_at);
 }
@@ -571,12 +648,29 @@ export async function updateScene(ctx: AppContext, sceneId: string, input: Scene
 }
 
 export async function deleteScene(ctx: AppContext, sceneId: string): Promise<void> {
+  const existing = await ctx.scenes.findById(sceneId);
   await ctx.scenes.update(sceneId, { deleted_at: nowIso() } as Partial<Scene>);
+  void recordAppLog(ctx, {
+    entityType: "scene",
+    entityId: sceneId,
+    action: "asset.soft_deleted",
+    event: "asset.soft_deleted",
+    payload: { assetType: "scene" },
+    projectId: existing?.project_id,
+  });
 }
 
-/** 恢复被软删除的场景（清空 deleted_at）。 */
 export async function restoreScene(ctx: AppContext, sceneId: string): Promise<void> {
+  const existing = await ctx.scenes.findById(sceneId);
   await ctx.scenes.update(sceneId, { deleted_at: "" } as Partial<Scene>);
+  void recordAppLog(ctx, {
+    entityType: "scene",
+    entityId: sceneId,
+    action: "asset.restored",
+    event: "asset.restored",
+    payload: { assetType: "scene" },
+    projectId: existing?.project_id,
+  });
 }
 
 /** 列出已软删除的场景。 */
@@ -628,8 +722,13 @@ export type PropInput = {
   tags?: string[];
 };
 
-export async function listProps(ctx: AppContext, projectId?: string): Promise<Prop[]> {
-  const filter: Partial<Prop> = projectId ? { project_id: projectId } : {};
+export async function listProps(
+  ctx: AppContext,
+  projectId?: string,
+  name?: string,
+): Promise<Prop[]> {
+  const filter: Partial<Prop> = { ...(projectId ? { project_id: projectId } : {}) };
+  if (name) filter.name = name;
   const items = await ctx.props.findMany(filter, { sort: "desc" });
   return items.filter((item) => !item.deleted_at);
 }
@@ -1022,7 +1121,16 @@ export async function getPropUsage(ctx: AppContext, propId: string): Promise<Ass
 export async function batchDeleteProps(ctx: AppContext, ids: string[]): Promise<void> {
   const ts = nowIso();
   for (const id of ids) {
+    const existing = await ctx.props.findById(id);
     await ctx.props.update(id, { deleted_at: ts } as Partial<Prop>);
+    void recordAppLog(ctx, {
+      entityType: "prop",
+      entityId: id,
+      action: "asset.soft_deleted",
+      event: "asset.soft_deleted",
+      payload: { assetType: "prop", batch: true },
+      projectId: existing?.project_id,
+    });
   }
 }
 
@@ -1362,7 +1470,7 @@ export async function deleteModuleVideoTask(ctx: AppContext, taskId: string): Pr
  * 通用软删除：将记录标记为 deleted_at，物理不删除，5 秒撤销期内可恢复。
  * 用于分镜 / 音频 / 视频 / 剪辑 4 个独立模块。
  */
-async function softDelete(ctx: AppContext, repo: CsvRepository<any>, id: string): Promise<{ id: string }> {
+async function softDelete(ctx: AppContext, repo: Repository<any>, id: string): Promise<{ id: string }> {
   const existing = await repo.findById(id);
   if (!existing) throw new Error("记录不存在");
   const deletedAt = nowIso();
@@ -1371,7 +1479,7 @@ async function softDelete(ctx: AppContext, repo: CsvRepository<any>, id: string)
 }
 
 /** 恢复软删除：清空 deleted_at。 */
-async function restoreDeleted(ctx: AppContext, repo: CsvRepository<any>, id: string): Promise<void> {
+async function restoreDeleted(ctx: AppContext, repo: Repository<any>, id: string): Promise<void> {
   const existing = await repo.findById(id);
   if (!existing) throw new Error("记录不存在或已被永久删除");
   const restoredAt = nowIso();
@@ -1379,21 +1487,21 @@ async function restoreDeleted(ctx: AppContext, repo: CsvRepository<any>, id: str
 }
 
 /** 列出回收站中的软删除记录。 */
-async function listDeletedInRepo(repo: CsvRepository<any>, projectId?: string): Promise<any[]> {
+async function listDeletedInRepo(repo: Repository<any>, projectId?: string): Promise<any[]> {
   const filter: any = projectId ? { project_id: projectId } : {};
   const all = await repo.findMany(filter);
   return all.filter((it: any) => !!it.deleted_at);
 }
 
 /** 永久删除。 */
-async function permanentDelete(ctx: AppContext, repo: CsvRepository<any>, id: string): Promise<void> {
+async function permanentDelete(ctx: AppContext, repo: Repository<any>, id: string): Promise<void> {
   await repo.delete(id);
 }
 
 /** 跨项目复制。 */
 async function copyToProject<T extends { id: string; project_id: string; created_at: string; name?: string; title?: string }>(
   ctx: AppContext,
-  repo: CsvRepository<T>,
+  repo: Repository<T>,
   sourceId: string,
   targetProjectId: string
 ): Promise<T> {

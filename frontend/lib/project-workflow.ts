@@ -1,4 +1,5 @@
 import type {
+  AspectRatioOption,
   AssetDraft,
   ChatSettings,
   ImageRatio,
@@ -12,6 +13,7 @@ import type {
   ProjectFormDraft,
   ProjectHealth,
   ProjectIssue,
+  StyleOption,
   ProjectMilestone,
   ProjectReview,
   ProjectScript,
@@ -137,11 +139,73 @@ export const imageSizeOptions: { value: ImageSize; label: string; ratio: ImageRa
   { value: "768x1024", label: "768 × 1024", ratio: "3:4" },
   { value: "1152x768", label: "1152 × 768", ratio: "3:2" },
   { value: "768x1152", label: "768 × 1152", ratio: "2:3" },
+  { value: "1152x1728", label: "1152 × 1728", ratio: "2:3" },
+  { value: "1728x1152", label: "1728 × 1152", ratio: "3:2" },
 ];
 
 /** 根据图片尺寸返回对应画幅比例。 */
 export function imageRatioFromSize(size: ImageSize): ImageRatio {
   return imageSizeOptions.find((option) => option.value === size)?.ratio ?? "1:1";
+}
+
+/** 默认比例下推荐的输出尺寸。 */
+export function defaultSizeFromRatio(ratio: ImageRatio): ImageSize {
+  switch (ratio) {
+    case "1:1":
+      return "1024x1024";
+    case "4:3":
+      return "1024x768";
+    case "3:4":
+      return "768x1024";
+    case "3:2":
+      return "1152x768";
+    case "2:3":
+      return "768x1152";
+    case "9:16":
+      return "768x1152";
+    case "16:9":
+      return "1152x768";
+    default:
+      return "1024x1024";
+  }
+}
+
+/**
+ * 比例选择器 6 个核心选项（用户截图样式：比例 + 用途）。
+ * 13:9（横幅）和 5:4（证件照）暂未列入主面板，避免视觉拥挤，需要时可扩。
+ */
+export const aspectRatioOptions: AspectRatioOption[] = [
+  { value: "1:1", label: "1:1", useCase: "正方形，头像", size: defaultSizeFromRatio("1:1") },
+  { value: "2:3", label: "2:3", useCase: "社交媒体，自拍", size: defaultSizeFromRatio("2:3") },
+  { value: "3:4", label: "3:4", useCase: "经典比例，拍照", size: defaultSizeFromRatio("3:4") },
+  { value: "4:3", label: "4:3", useCase: "文章配图，插画", size: defaultSizeFromRatio("4:3") },
+  { value: "9:16", label: "9:16", useCase: "手机壁纸，人像", size: defaultSizeFromRatio("9:16") },
+  { value: "16:9", label: "16:9", useCase: "桌面壁纸，风景", size: defaultSizeFromRatio("16:9") },
+];
+
+/**
+ * 风格选择器 12 个选项（用户截图样式：emoji + 名称）。
+ * `promptSuffix` 是追加到 prompt 末尾的修饰文本，仅文生图生效。
+ */
+export const styleOptions: StyleOption[] = [
+  { value: "", label: "默认", emoji: "🎨", promptSuffix: "" },
+  { value: "portrait_photo", label: "人像摄影", emoji: "👤", promptSuffix: ", portrait photography, natural skin texture, 85mm lens" },
+  { value: "cinematic", label: "电影写真", emoji: "🎬", promptSuffix: ", cinematic still, film grain, anamorphic" },
+  { value: "chinese_style", label: "中国风", emoji: "🏯", promptSuffix: ", traditional Chinese style, ink and color, hanfu" },
+  { value: "anime", label: "动漫", emoji: "🗾", promptSuffix: ", anime style, vibrant colors, cel shading" },
+  { value: "3d_render", label: "3D渲染", emoji: "💎", promptSuffix: ", 3D render, octane, soft lighting" },
+  { value: "cyberpunk", label: "赛博朋克", emoji: "🌃", promptSuffix: ", cyberpunk, neon lights, dystopian" },
+  { value: "cg_animation", label: "CG动画", emoji: "🎮", promptSuffix: ", CG animation, Pixar style, soft subsurface scattering" },
+  { value: "ink_painting", label: "水墨画", emoji: "🖌️", promptSuffix: ", Chinese ink wash painting, brush strokes, minimalist" },
+  { value: "oil_painting", label: "油画", emoji: "🖼️", promptSuffix: ", oil painting, thick brushstrokes, impasto" },
+  { value: "classical", label: "古典", emoji: "🏛️", promptSuffix: ", classical realism, Renaissance painting style" },
+  { value: "watercolor", label: "水彩画", emoji: "💧", promptSuffix: ", watercolor, soft washes, paper texture" },
+  { value: "cartoon", label: "卡通", emoji: "✨", promptSuffix: ", cartoon style, bold outlines, flat colors" },
+];
+
+/** 根据 value 查风格项。 */
+export function findStyleOption(value: string): StyleOption | undefined {
+  return styleOptions.find((option) => option.value === value);
 }
 
 /** 根据视频画幅返回默认宽高。 */

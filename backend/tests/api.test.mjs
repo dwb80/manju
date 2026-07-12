@@ -6,9 +6,15 @@ import test from "node:test";
 import { createServer } from "../dist/src/http/router.js";
 import { createAppContext } from "../dist/src/services/app.js";
 
+// 测试环境必须提供 AGNES_API_KEY（已废弃 mock 模式，无法不提供 Key 启动服务）
+if (!process.env.AGNES_API_KEY) {
+  process.env.AGNES_API_KEY = "test-key-for-integration";
+}
+
 async function withServer(fn) {
   const root = await mkdtemp(path.join(os.tmpdir(), "agnes-api-"));
-  const server = createServer(createAppContext(root, { mediaCacheEnabled: false }));
+  const ctx = createAppContext(root, { mediaCacheEnabled: false });
+  const server = createServer(ctx);
   await new Promise(resolve => server.listen(0, resolve));
   const address = server.address();
   const base = `http://127.0.0.1:${address.port}`;
@@ -16,6 +22,7 @@ async function withServer(fn) {
     await fn(base, root);
   } finally {
     await new Promise(resolve => server.close(resolve));
+    ctx.close();
     for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
         await rm(root, { recursive: true, force: true });
@@ -110,9 +117,12 @@ test("projects group conversations by project id and storage folder", async () =
     const project = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "短剧项目", storage_mode: "existing", storage_path: "client-a/short-video" }) });
     assert.equal(project.storage_mode, "existing");
     assert.equal(project.storage_path, "client-a/short-video");
-    await stat(path.join(root, "data", "projects", "client-a", "short-video", "csv"));
+    // 评审 P0-H14 修复：createProject 会自动建约定的项目目录树
+    // （主数据走 SQLite，目录只承担媒体/导出/上传），测试同步检查这几个目录
+    await stat(path.join(root, "data", "projects", "client-a", "short-video", "exports"));
     await stat(path.join(root, "data", "projects", "client-a", "short-video", "media", "images"));
     await stat(path.join(root, "data", "projects", "client-a", "short-video", "media", "videos"));
+    await stat(path.join(root, "data", "projects", "client-a", "short-video", "uploads"));
     await writeFile(path.join(root, "data", "projects", "client-a", "short-video", "media", "images", "sample.png"), Buffer.from([137, 80, 78, 71]));
     const projectMedia = await fetch(`${base}/project-media/${project.id}/images/sample.png`);
     assert.equal(projectMedia.status, 200);
@@ -138,7 +148,8 @@ test("media endpoint serves local files and rejects path traversal", async () =>
   const mediaDir = path.join(root, "data", "media", "images", "2026-07-02");
   await mkdir(mediaDir, { recursive: true });
   await writeFile(path.join(mediaDir, "sample.png"), Buffer.from([137, 80, 78, 71]));
-  const server = createServer(createAppContext(root, { mediaCacheEnabled: false }));
+  const ctx = createAppContext(root, { mediaCacheEnabled: false });
+  const server = createServer(ctx);
   await new Promise(resolve => server.listen(0, resolve));
   const address = server.address();
   const base = `http://127.0.0.1:${address.port}`;
@@ -152,6 +163,7 @@ test("media endpoint serves local files and rejects path traversal", async () =>
     assert.equal(blocked.status, 404);
   } finally {
     await new Promise(resolve => server.close(resolve));
+    ctx.close();
     await rm(root, { recursive: true, force: true });
   }
 });

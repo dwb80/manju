@@ -3,15 +3,19 @@ import { appendFile, mkdir, readFile } from "node:fs/promises";
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
+import { rootLogger, withLogContext, logLineToFile } from "../logger.js";
 import { getRuntimeConfig } from "../config/env.js";
 import type { AppContext } from "../services/app.js";
 import { addFavorite, addMessage, createConversation, createLocalImageTask, deleteConversation, ensureConversation, generateImage, generateVideo, listConversations, listImages, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateSettings } from "../services/domain.js";
 import { createProject, listProjects, updateProject, deleteProject } from "../services/domain/project.js";
 import { saveUploadedImage, type UploadInput } from "../services/media.js";
 import { listCharacters, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters, listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes, listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps, getCharacterUsage, getSceneUsage, getPropUsage, copyCharactersToProjects, copyScenesToProjects, copyPropsToProjects, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets, listVersions, getVersion, restoreVersion, listStoryboards, createStoryboard, updateStoryboard, deleteStoryboard, softDeleteStoryboard, restoreStoryboard as restoreStoryboardById, listDeletedStoryboards, permanentDeleteStoryboard, copyStoryboardToProject, generateVideoFromStoryboard, listAudios, createAudio, updateAudio, deleteAudio, softDeleteAudio, restoreAudio as restoreAudioById, listDeletedAudios, permanentDeleteAudio, copyAudioToProject, generateTTS, listModuleVideoTasks, createModuleVideoTask, updateModuleVideoTask, deleteModuleVideoTask, softDeleteVideo, restoreVideo as restoreVideoById, listDeletedVideos, permanentDeleteVideo, copyVideoToProject, syncVideoTaskStatus, retryVideoTask, regenerateVideo, softDeleteClip, restoreClip, listDeletedClips, permanentDeleteClip, copyClipToProject, listScripts, createScript, updateScript as updateScriptRecord, deleteScript as deleteScriptRecord } from "../services/module-domain.js";
-import { listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment, listScriptDocuments, getScriptDocument, createScriptDocument, updateScriptDocument, deleteScriptDocument, createScriptEpisode, createScriptScene, createScriptDialogue } from "../services/script-center-impl.js";
+import { listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment, listScriptDocuments, getScriptDocument, createScriptDocument, updateScriptDocument, deleteScriptDocument, listScriptEpisodes, listScriptScenes, createScriptEpisode, createScriptScene, createScriptDialogue } from "../services/script-center-impl.js";
+import { matchFactoryRoute } from "./factory-router.js";
 import { analyzeScriptWithAI } from "../services/script-analyze-ai.js";
 import { listProjectClips, createProjectClip, updateProjectClip, softDeleteProjectClip, syncProjectClipsFromStoryboards } from "../services/domain/storyboard.js";
+import { recordAppLog } from "../services/audit-log.js";
 import type { Conversation, Message, Project } from "../types.js";
 import { DEFAULT_MODEL, estimateTokens, requireString } from "../utils.js";
 
@@ -30,30 +34,40 @@ const mediaTypes: Record<string, string> = {
 
 /** 同时把日志打印到终端并写入 backend/data/logs。 */
 function logLine(ctx: AppContext, message: string): void {
-  const line = `[${new Date().toISOString()}] ${message}`;
-  console.log(line);
-  const date = new Date().toISOString().slice(0, 10);
-  const directory = path.join(ctx.root, "data", "logs");
-  void mkdir(directory, { recursive: true })
-    .then(() => appendFile(path.join(directory, `${date}.log`), `${line}\n`, "utf8"))
-    .catch(() => undefined);
+  // 评审增量改造 P0：同时写 pino（stdout JSON）和原文件日志（兼容旧 grep）
+  rootLogger.info({ event: "compat", msg: message });
+  void logLineToFile(message);
 }
 
 /** 给每个请求挂上完成日志，记录方法、路径、状态码和耗时。 */
-function attachRequestLogger(ctx: AppContext, req: IncomingMessage, res: ServerResponse): void {
+function attachRequestLogger(ctx: AppContext, req: IncomingMessage, res: ServerResponse, traceId: string): void {
   const started = Date.now();
   let logged = false;
   const method = req.method ?? "GET";
   const url = req.url ?? "/";
+  const log = rootLogger.child({ traceId, method, url });
   /** 只记录一次请求结束事件，避免 finish 和 close 重复写日志。 */
   const finish = (event: "finish" | "close") => {
     if (logged) return;
     logged = true;
     const ms = Date.now() - started;
-    logLine(ctx, `${method} ${url} ${res.statusCode} ${ms}ms ${event}`);
+    const statusCode = res.statusCode;
+    const level = statusCode >= 500 ? "error" : statusCode >= 400 ? "warn" : "info";
+    log[level]({ event: "http.request", statusCode, durationMs: ms, lifecycle: event }, `${method} ${url} ${statusCode} ${ms}ms ${event}`);
+    // 兼容旧 grep：单行写到 data/logs
+    void logLineToFile(`${method} ${url} ${statusCode} ${ms}ms ${event} traceId=${traceId}`);
   };
   res.once("finish", () => finish("finish"));
   res.once("close", () => finish("close"));
+}
+
+/** 从请求头解析或生成 traceId（评审增量改造 P0）。 */
+function resolveTraceId(req: IncomingMessage): string {
+  const header = req.headers["x-request-id"];
+  if (typeof header === "string" && header.trim().length > 0 && header.length <= 128) {
+    return header.trim();
+  }
+  return `tr-${randomUUID()}`;
 }
 
 /** 读取 JSON 请求体，并解析成普通对象。 */
@@ -83,10 +97,25 @@ function sendJson<T>(res: ServerResponse, data: T, status = 200): void {
   res.end(JSON.stringify({ code: 0, message: "ok", data }));
 }
 
+/** 统一错误码（评审 P1-H12 修复） */
+const ERROR_CODE_BAD_REQUEST = 1002;
+const ERROR_CODE_UNAUTHORIZED = 1003;
+const ERROR_CODE_NOT_FOUND = 1004;
+const ERROR_CODE_SERVER = 1005;
+
+/** 把 HTTP 状态码映射到业务错误码。 */
+function errorCodeForStatus(status: number): number {
+  if (status === 400) return ERROR_CODE_BAD_REQUEST;
+  if (status === 401 || status === 403) return ERROR_CODE_UNAUTHORIZED;
+  if (status === 404) return ERROR_CODE_NOT_FOUND;
+  if (status >= 500) return ERROR_CODE_SERVER;
+  return 1001;
+}
+
 /** 发送统一格式的错误 JSON 响应。 */
 function sendError(res: ServerResponse, error: unknown, status = 400): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify({ code: status === 404 ? 1004 : 1001, message: (error as Error).message ?? "error", data: null }));
+  res.end(JSON.stringify({ code: errorCodeForStatus(status), message: (error as Error).message ?? "error", data: null }));
 }
 
 /** 设置跨域响应头，允许前端开发服务器调用后端。 */
@@ -343,8 +372,33 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     if (method === "POST" && parts.join("/") === "api/script-episodes") {
       return sendJson(res, await createScriptEpisode(ctx, await readJson(req) as any));
     }
+    if (method === "GET" && parts.join("/") === "api/script-episodes") {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const projectId = url.searchParams.get("projectId") ?? "";
+      const documentId = url.searchParams.get("documentId") ?? undefined;
+      // 若提供 documentId，先查出该 doc 所属项目，再用 projectId 过滤
+      if (documentId) {
+        const doc = await getScriptDocument(ctx, documentId);
+        return sendJson(res, await listScriptEpisodes(ctx, doc?.project_id ?? projectId));
+      }
+      return sendJson(res, await listScriptEpisodes(ctx, projectId));
+    }
     if (method === "POST" && parts.join("/") === "api/script-scenes") {
       return sendJson(res, await createScriptScene(ctx, await readJson(req) as any));
+    }
+    if (method === "GET" && parts.join("/") === "api/script-scenes") {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const projectId = url.searchParams.get("projectId") ?? undefined;
+      const episodeId = url.searchParams.get("episodeId") ?? undefined;
+      const documentId = url.searchParams.get("documentId") ?? undefined;
+      // 若提供 documentId，则过滤出该 doc 的所有剧集下场景
+      if (documentId) {
+        const eps = await listScriptEpisodes(ctx, (await getScriptDocument(ctx, documentId))?.project_id ?? "");
+        const epIds = new Set(eps.map((e) => e.id));
+        const allScenes = await listScriptScenes(ctx, undefined, projectId);
+        return sendJson(res, allScenes.filter((s) => epIds.has(s.episode_id)));
+      }
+      return sendJson(res, await listScriptScenes(ctx, episodeId, projectId));
     }
     if (method === "POST" && parts.join("/") === "api/script-dialogues") {
       return sendJson(res, await createScriptDialogue(ctx, await readJson(req) as any));
@@ -382,6 +436,37 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const lastUser = messages.find((message) => message.role === "user");
       return sendJson(res, { conversationId, message: lastUser?.content ?? "" });
     }
+    // 客户端日志：前端批量上报 debug/info/warn/error，统一落到 file logger + app_logs。
+    // 仅写 error / warn 级别到 app_logs（与 P1 业务事件审计区分），debug/info 仅写文件日志。
+    if (method === "POST" && parts.join("/") === "api/client-logs") {
+      const body = await readJson(req);
+      const logs = Array.isArray(body.logs) ? body.logs : [];
+      let received = 0;
+      for (const item of logs) {
+        if (!item || typeof item !== "object") continue;
+        const level = typeof item.level === "string" ? item.level : "info";
+        const moduleName = typeof item.module === "string" ? item.module : "frontend";
+        const message = typeof item.message === "string" ? item.message : "";
+        const payload = item.payload && typeof item.payload === "object" ? item.payload as Record<string, unknown> : {};
+        const url = typeof item.url === "string" ? item.url : "";
+        const userAgent = typeof item.userAgent === "string" ? item.userAgent : "";
+        const sessionId = typeof item.sessionId === "string" ? item.sessionId : "";
+        const pinoLevel: "debug" | "info" | "warn" | "error" = level === "error" ? "error" : level === "warn" ? "warn" : level === "debug" ? "debug" : "info";
+        rootLogger[pinoLevel]({ event: "client.log", source: "frontend", module: moduleName, url, userAgent, sessionId, ...payload }, `[client][${moduleName}] ${message}`);
+        if (level === "error" || level === "warn") {
+          void recordAppLog(ctx, {
+            entityType: "project",
+            entityId: sessionId || url || "frontend",
+            action: level === "error" ? "client.error" : "client.warn",
+            event: level === "error" ? "client.error" : "client.warn",
+            payload: { module: moduleName, message, url, userAgent, ...payload },
+            operator: "frontend",
+          });
+        }
+        received += 1;
+      }
+      return sendJson(res, { received });
+    }
     if (method === "POST" && parts.join("/") === "api/images/generate") return sendJson(res, await generateImage(ctx, await readJson(req)));
     if (method === "POST" && parts.join("/") === "api/images/local") return sendJson(res, await createLocalImageTask(ctx, await readJson(req)));
     if (method === "GET" && parts.join("/") === "api/images") {
@@ -411,270 +496,27 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     if (method === "GET" && parts.join("/") === "api/settings") return sendJson(res, await ctx.settings.get());
     if (method === "PUT" && parts.join("/") === "api/settings") return sendJson(res, await updateSettings(ctx, await readJson(req)));
-    // 角色模块
-    if (method === "GET" && parts.join("/") === "api/characters") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listCharacters(ctx, projectId));
+    // 审计日志查询（评审增量改造 P2-2）：按 entity_type / action / 时间窗过滤。
+    if (method === "GET" && parts.join("/") === "api/logs") {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const entityType = url.searchParams.get("entityType") ?? undefined;
+      const action = url.searchParams.get("action") ?? undefined;
+      const limit = Math.min(500, Math.max(1, Number(url.searchParams.get("limit") ?? "100")));
+      const filter: Record<string, unknown> = {};
+      if (entityType) filter.entity_type = entityType;
+      if (action) filter.action = action;
+      const items = await ctx.appLogs.findMany(filter, { sort: "desc", limit });
+      return sendJson(res, items);
     }
-    if (method === "POST" && parts.join("/") === "api/characters") return sendJson(res, await createCharacter(ctx, await readJson(req) as any));
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "characters" && parts[2]) return sendJson(res, await updateCharacter(ctx, parts[2], await readJson(req) as any));
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "characters" && parts[2]) {
-      await deleteCharacter(ctx, parts[2]);
-      return sendJson(res, { deleted: true });
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "characters" && parts[2] && parts[3] === "restore") {
-      await restoreCharacter(ctx, parts[2]);
-      return sendJson(res, { restored: true });
-    }
-    // 角色引用查询
-    if (method === "GET" && parts[0] === "api" && parts[1] === "characters" && parts[2] && parts[3] === "usage") {
-      return sendJson(res, await getCharacterUsage(ctx, parts[2]));
-    }
-    if (method === "POST" && parts.join("/") === "api/characters/batch") {
-      const body = await readJson(req);
-      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
-      if (body.action === "delete") {
-        await batchDeleteCharacters(ctx, ids);
-        return sendJson(res, { deleted: ids.length });
-      }
-      if (body.action === "update") {
-        await batchUpdateCharacters(ctx, ids, (body.patch ?? {}) as any);
-        return sendJson(res, { updated: ids.length });
-      }
-      throw new Error("unknown batch action");
-    }
-    // 角色回收站（已软删除列表 + 永久删除）
-    if (method === "GET" && parts[0] === "api" && parts[1] === "characters" && parts[2] === "deleted") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listDeletedCharacters(ctx, projectId));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "characters" && parts[2] === "permanent") {
-      const body = await readJson(req);
-      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
-      await permanentDeleteCharacters(ctx, ids);
-      return sendJson(res, { deleted: ids.length });
-    }
-    // 跨项目复制角色
-    if (method === "POST" && parts.join("/") === "api/characters/copy") {
-      const body = await readJson(req);
-      const sourceId = requireString(body.sourceId, "sourceId");
-      const targetProjectIds = Array.isArray(body.targetProjectIds) ? (body.targetProjectIds as string[]).filter(Boolean) : [];
-      if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
-      return sendJson(res, await copyCharactersToProjects(ctx, sourceId, targetProjectIds));
-    }
-    // 场景模块
-    if (method === "GET" && parts.join("/") === "api/scenes") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listScenes(ctx, projectId));
-    }
-    if (method === "POST" && parts.join("/") === "api/scenes") return sendJson(res, await createScene(ctx, await readJson(req) as any));
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "scenes" && parts[2]) return sendJson(res, await updateScene(ctx, parts[2], await readJson(req) as any));
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "scenes" && parts[2]) {
-      await deleteScene(ctx, parts[2]);
-      return sendJson(res, { deleted: true });
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "scenes" && parts[2] && parts[3] === "restore") {
-      await restoreScene(ctx, parts[2]);
-      return sendJson(res, { restored: true });
-    }
-    // 场景引用查询
-    if (method === "GET" && parts[0] === "api" && parts[1] === "scenes" && parts[2] && parts[3] === "usage") {
-      return sendJson(res, await getSceneUsage(ctx, parts[2]));
-    }
-    if (method === "POST" && parts.join("/") === "api/scenes/batch") {
-      const body = await readJson(req);
-      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
-      if (body.action === "delete") {
-        await batchDeleteScenes(ctx, ids);
-        return sendJson(res, { deleted: ids.length });
-      }
-      if (body.action === "update") {
-        await batchUpdateScenes(ctx, ids, (body.patch ?? {}) as any);
-        return sendJson(res, { updated: ids.length });
-      }
-      throw new Error("unknown batch action");
-    }
-    // 场景回收站（已软删除列表 + 永久删除）
-    if (method === "GET" && parts[0] === "api" && parts[1] === "scenes" && parts[2] === "deleted") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listDeletedScenes(ctx, projectId));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "scenes" && parts[2] === "permanent") {
-      const body = await readJson(req);
-      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
-      await permanentDeleteScenes(ctx, ids);
-      return sendJson(res, { deleted: ids.length });
-    }
-    // 跨项目复制场景
-    if (method === "POST" && parts.join("/") === "api/scenes/copy") {
-      const body = await readJson(req);
-      const sourceId = requireString(body.sourceId, "sourceId");
-      const targetProjectIds = Array.isArray(body.targetProjectIds) ? (body.targetProjectIds as string[]).filter(Boolean) : [];
-      if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
-      return sendJson(res, await copyScenesToProjects(ctx, sourceId, targetProjectIds));
-    }
-    // 道具模块
-    if (method === "GET" && parts.join("/") === "api/props") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listProps(ctx, projectId));
-    }
-    if (method === "POST" && parts.join("/") === "api/props") return sendJson(res, await createProp(ctx, await readJson(req) as any));
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "props" && parts[2]) return sendJson(res, await updateProp(ctx, parts[2], await readJson(req) as any));
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "props" && parts[2]) {
-      await deleteProp(ctx, parts[2]);
-      return sendJson(res, { deleted: true });
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "props" && parts[2] && parts[3] === "restore") {
-      await restoreProp(ctx, parts[2]);
-      return sendJson(res, { restored: true });
-    }
-    // 道具引用查询
-    if (method === "GET" && parts[0] === "api" && parts[1] === "props" && parts[2] && parts[3] === "usage") {
-      return sendJson(res, await getPropUsage(ctx, parts[2]));
-    }
-    if (method === "POST" && parts.join("/") === "api/props/batch") {
-      const body = await readJson(req);
-      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
-      if (body.action === "delete") {
-        await batchDeleteProps(ctx, ids);
-        return sendJson(res, { deleted: ids.length });
-      }
-      if (body.action === "update") {
-        await batchUpdateProps(ctx, ids, (body.patch ?? {}) as any);
-        return sendJson(res, { updated: ids.length });
-      }
-      throw new Error("unknown batch action");
-    }
-    // 道具回收站（已软删除列表 + 永久删除）
-    if (method === "GET" && parts[0] === "api" && parts[1] === "props" && parts[2] === "deleted") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listDeletedProps(ctx, projectId));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "props" && parts[2] === "permanent") {
-      const body = await readJson(req);
-      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
-      await permanentDeleteProps(ctx, ids);
-      return sendJson(res, { deleted: ids.length });
-    }
-    // 跨项目复制道具
-    if (method === "POST" && parts.join("/") === "api/props/copy") {
-      const body = await readJson(req);
-      const sourceId = requireString(body.sourceId, "sourceId");
-      const targetProjectIds = Array.isArray(body.targetProjectIds) ? (body.targetProjectIds as string[]).filter(Boolean) : [];
-      if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
-      return sendJson(res, await copyPropsToProjects(ctx, sourceId, targetProjectIds));
-    }
-    // ============ 分镜模块（工业化 P0-1/P0-2） ============
-    if (method === "GET" && parts.join("/") === "api/storyboards") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listStoryboards(ctx, projectId));
-    }
-    if (method === "POST" && parts.join("/") === "api/storyboards") return sendJson(res, await createStoryboard(ctx, await readJson(req) as any));
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "storyboards" && parts[2]) return sendJson(res, await updateStoryboard(ctx, parts[2], await readJson(req) as any));
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "storyboards" && parts[2]) {
-      await deleteStoryboard(ctx, parts[2]);
-      return sendJson(res, { deleted: true });
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] && parts[3] === "restore") {
-      await restoreStoryboardById(ctx, parts[2]);
-      return sendJson(res, { restored: true });
-    }
-    if (method === "GET" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] === "deleted") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listDeletedStoryboards(ctx, projectId));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] === "permanent") {
-      const body = await readJson(req);
-      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
-      for (const id of ids) await permanentDeleteStoryboard(ctx, id);
-      return sendJson(res, { deleted: ids.length });
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] && parts[3] === "generate-video") {
-      const body = await readJson(req);
-      return sendJson(res, await generateVideoFromStoryboard(ctx, parts[2], body ?? {}));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "storyboards" && parts[2] && parts[3] === "copy") {
-      const body = await readJson(req);
-      const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
-      return sendJson(res, await copyStoryboardToProject(ctx, parts[2], targetProjectId));
-    }
-    // ============ 音频模块（工业化 P0-2/P1-2） ============
-    if (method === "GET" && parts.join("/") === "api/audios") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listAudios(ctx, projectId));
-    }
-    if (method === "POST" && parts.join("/") === "api/audios") return sendJson(res, await createAudio(ctx, await readJson(req) as any));
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "audios" && parts[2]) return sendJson(res, await updateAudio(ctx, parts[2], await readJson(req) as any));
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "audios" && parts[2]) {
-      await deleteAudio(ctx, parts[2]);
-      return sendJson(res, { deleted: true });
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "audios" && parts[2] && parts[3] === "restore") {
-      await restoreAudioById(ctx, parts[2]);
-      return sendJson(res, { restored: true });
-    }
-    if (method === "GET" && parts[0] === "api" && parts[1] === "audios" && parts[2] === "deleted") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listDeletedAudios(ctx, projectId));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "audios" && parts[2] === "permanent") {
-      const body = await readJson(req);
-      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
-      for (const id of ids) await permanentDeleteAudio(ctx, id);
-      return sendJson(res, { deleted: ids.length });
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "audios" && parts[2] && parts[3] === "copy") {
-      const body = await readJson(req);
-      const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
-      return sendJson(res, await copyAudioToProject(ctx, parts[2], targetProjectId));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "audios" && parts[2] && parts[3] === "tts") {
-      const body = await readJson(req);
-      return sendJson(res, await generateTTS(ctx, { ...(body as any), audio_id: parts[2] }));
-    }
-    if (method === "POST" && parts.join("/") === "api/tts/generate") {
-      return sendJson(res, await generateTTS(ctx, await readJson(req) as any));
-    }
-    // ============ 视频任务模块（工业化 P0-2/P1-1） ============
-    if (method === "GET" && parts.join("/") === "api/module-videos") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listModuleVideoTasks(ctx, projectId));
-    }
-    if (method === "POST" && parts.join("/") === "api/module-videos") return sendJson(res, await createModuleVideoTask(ctx, await readJson(req) as any));
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "module-videos" && parts[2]) return sendJson(res, await updateModuleVideoTask(ctx, parts[2], await readJson(req) as any));
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "module-videos" && parts[2]) {
-      await deleteModuleVideoTask(ctx, parts[2]);
-      return sendJson(res, { deleted: true });
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "restore") {
-      await restoreVideoById(ctx, parts[2]);
-      return sendJson(res, { restored: true });
-    }
-    if (method === "GET" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] === "deleted") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
-      return sendJson(res, await listDeletedVideos(ctx, projectId));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] === "permanent") {
-      const body = await readJson(req);
-      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
-      for (const id of ids) await permanentDeleteVideo(ctx, id);
-      return sendJson(res, { deleted: ids.length });
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "copy") {
-      const body = await readJson(req);
-      const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
-      return sendJson(res, await copyVideoToProject(ctx, parts[2], targetProjectId));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "retry") {
-      return sendJson(res, await retryVideoTask(ctx, parts[2]));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "regenerate") {
-      return sendJson(res, await regenerateVideo(ctx, parts[2]));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "module-videos" && parts[2] && parts[3] === "sync-status") {
-      const body = await readJson(req);
-      return sendJson(res, await syncVideoTaskStatus(ctx, parts[2], body as any));
-    }
+    // 评审 P1-H9 修复：工厂类路由（角色/场景/道具/分镜/音频/视频/剪辑 GET）
+    // 拆到 factory-router.ts，handleApi 保持扁平
+    if (await matchFactoryRoute(ctx, req, res, {
+      method,
+      parts,
+      readJson,
+      sendJson,
+      sendError,
+    })) return;
     // ============ 剪辑模块（工业化 P0-3） ============
     // 顶层 CRUD：与分镜/视频/音频对齐，使用 ?projectId= 查询参数
     if (method === "GET" && parts.join("/") === "api/clips") {
@@ -764,26 +606,53 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
 /** 创建 Node HTTP Server，并挂载 API、媒体和静态页面路由。 */
 export function createServer(ctx: AppContext): http.Server {
   return http.createServer(async (req, res) => {
-    attachRequestLogger(ctx, req, res);
-    applyCors(req, res);
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-    if ((req.url ?? "").startsWith("/api/")) {
-      await handleApi(ctx, req, res);
-      return;
-    }
-    if ((req.url ?? "").startsWith("/media/")) {
-      await serveMedia(ctx, req, res);
-      return;
-    }
-    if ((req.url ?? "").startsWith("/project-media/")) {
-      await serveProjectMedia(ctx, req, res);
-      return;
-    }
-    await ensureConversation(ctx);
-    await serveStatic(req, res);
+    // 评审增量改造 P0：每个请求生成 traceId，AsyncLocalStorage 绑定，
+    // 业务内任意 logger.child() 都自动带上 traceId，便于全链路关联。
+    const traceId = resolveTraceId(req);
+    res.setHeader("x-request-id", traceId);
+    withLogContext({ traceId }, () => {
+      // 同步完成所有操作（createServer 的 handler 是 async，用 .then() 处理）
+      Promise.resolve(handleRequest(ctx, req, res, traceId)).catch((err) => {
+        rootLogger.error({ event: "http.unhandled", err }, "unhandled error in request");
+        try {
+          if (!res.headersSent) {
+            res.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ code: 1005, message: (err as Error).message ?? "internal error", data: null }));
+          }
+        } catch {
+          // ignore
+        }
+      });
+    });
   });
+}
+
+/** 实际处理一个 HTTP 请求（被 createServer 包在 traceId 上下文中）。 */
+async function handleRequest(
+  ctx: AppContext,
+  req: IncomingMessage,
+  res: ServerResponse,
+  traceId: string,
+): Promise<void> {
+  attachRequestLogger(ctx, req, res, traceId);
+  applyCors(req, res);
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+  if ((req.url ?? "").startsWith("/api/")) {
+    await handleApi(ctx, req, res);
+    return;
+  }
+  if ((req.url ?? "").startsWith("/media/")) {
+    await serveMedia(ctx, req, res);
+    return;
+  }
+  if ((req.url ?? "").startsWith("/project-media/")) {
+    await serveProjectMedia(ctx, req, res);
+    return;
+  }
+  await ensureConversation(ctx);
+  await serveStatic(req, res);
 }

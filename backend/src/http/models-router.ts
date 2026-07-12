@@ -13,6 +13,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AppContext } from "../services/app.js";
 import type { ModelType } from "../types.js";
+import { rootLogger } from "../logger.js";
 import {
   listModels,
   getModelById,
@@ -166,9 +167,7 @@ export async function handleModelsRouter(
     // 未匹配的路由
     sendErrorResponse(res, new Error("未找到模型中心路由"), 404);
   } catch (error) {
-    console.error(
-      `模型中心路由错误: ${(error as Error).stack ?? (error as Error).message ?? String(error)}`
-    );
+    rootLogger.error({ event: "router.error", route: "models", err: error }, `模型中心路由错误`);
     sendErrorResponse(res, error);
   }
 }

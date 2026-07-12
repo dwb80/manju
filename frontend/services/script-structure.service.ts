@@ -42,6 +42,9 @@ export interface ScriptDialoguePayload {
 }
 
 export interface ScriptDocumentPayload {
+  /** 可选：显式指定文档 ID。若不传，后端会生成新 ID。
+   *  建议在"导入"流程传入与 Script.id 一致的值，便于编辑器通过 docId 直接找到对应文档。 */
+  id?: string;
   project_id: string;
   editor_json: string;
   version?: number;

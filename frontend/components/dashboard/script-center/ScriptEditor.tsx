@@ -249,13 +249,32 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
     )
   }
 
+  // 编辑器是否处于空白状态：用于显示引导卡片
+  const charCount = editor.storage.characterCount?.characters?.() ?? 0
+  const isEmpty =
+    charCount === 0 &&
+    (!document.editor_json ||
+      (typeof document.editor_json === 'object' &&
+        (!document.editor_json.content || document.editor_json.content.length === 0)) ||
+      (typeof document.editor_json === 'string' && document.editor_json.trim() === ''))
+
   return (
-    <div className="script-editor bg-[#1a1a1a] rounded-lg border border-white/10">
+    <div className="script-editor bg-[#1a1a1a] rounded-lg border border-white/10 relative">
       {/* AI Bubble Menu - 选中文本时显示 */}
       <AIBubbleMenu editor={editor} />
       {/* Slash Command Menu - 输入 / 触发命令 */}
       <SlashCommandMenu editor={editor} />
       <EditorContent editor={editor} />
+      {/* 空白状态：明确引导用户如何开始 */}
+      {isEmpty && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          <div className="text-sm text-[#888] mb-2">剧本内容为空</div>
+          <div className="text-xs text-[#666] max-w-sm">
+            点击此处开始编写；或使用顶部"导入导出"粘贴 TXT 文本；
+            也可点击"分析"按钮让 AI 提取角色/场景/道具。
+          </div>
+        </div>
+      )}
       {editor.storage.characterCount && (
         <div className="text-xs text-[#666] p-2 border-t border-white/10">
           字数: {editor.storage.characterCount.characters()} / 50,000

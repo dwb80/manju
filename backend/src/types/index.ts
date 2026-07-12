@@ -12,3 +12,5 @@ export * from "./review.js";
 export * from "./video.js";
 export * from "./model.js";
 export * from "./image.js";
+export * from "./todo.js";
+export * from "./work-item.js";

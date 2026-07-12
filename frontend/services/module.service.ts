@@ -16,6 +16,7 @@
 export {
   listCharacters,
   createCharacter,
+  getCharacter,
   updateCharacter,
   deleteCharacter,
   restoreCharacter,

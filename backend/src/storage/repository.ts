@@ -1,3 +1,12 @@
+/** SQLite 字段类型；统一为 4 种以便在 SQL 层用 TEXT/INTEGER 存储。 */
+export type FieldType = "string" | "number" | "boolean" | "json";
+
+/** 业务字段定义，描述一个字段在数据库中的列类型。 */
+export interface FieldSpec<T> {
+  key: keyof T & string;
+  type: FieldType;
+}
+
 export interface QueryOptions {
   /** 最多返回多少条记录，常用于分页或只取第一条。 */
   limit?: number;
@@ -5,7 +14,7 @@ export interface QueryOptions {
   sort?: "asc" | "desc";
 }
 
-/** 业务数据仓储的统一契约，SQLite 和历史 CSV 实现都按这套方法工作。 */
+/** 业务数据仓储的统一契约，所有持久化实现（SQLite）都按这套方法工作。 */
 export interface Repository<T extends { id: string; created_at: string }> {
   /** 新增一条业务记录。 */
   insert(record: T): Promise<void>;

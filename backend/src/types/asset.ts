@@ -14,7 +14,7 @@ export interface Asset {
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
-  // 兼容 ProjectAsset 字段（CSV 存储共用同一张表 assets.csv）。
+  // 兼容 ProjectAsset 字段（SQLite 存储共用同一张表 assets）。
   kind?: ProjectAssetKind;
   prompt?: string;
   image_url?: string;

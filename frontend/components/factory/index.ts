@@ -9,6 +9,17 @@ export { FactoryCRUDPage } from "./FactoryCRUDPage";
 export { useFactoryEntity } from "./useFactoryEntity";
 export { CopyToProjectDialog } from "@/components/shared/copy-to-project-dialog";
 export { VersionHistoryDialog } from "@/components/shared/version-history-dialog";
+
+// 评审优化（P1）：工厂页 Tab 筛选
+export { FilterTabsBar } from "./filter-tabs-bar";
+export type { FilterTabsBarProps } from "./filter-tabs-bar";
+export { useFilterState } from "@/hooks/use-filter-state";
+export type {
+  UseFilterStateParams,
+  UseFilterStateResult,
+  FilterTabConfig,
+  FilterTabId,
+} from "@/hooks/use-filter-state";
 export type {
   FactoryCRUDPageProps,
   FactoryEntity,

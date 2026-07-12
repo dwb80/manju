@@ -49,6 +49,9 @@ interface ScriptCharacter {
   description?: string
   color: string
   thumbnail?: string
+  image?: string
+  role?: string
+  gender?: string
 }
 
 interface ScriptProp {
@@ -58,6 +61,18 @@ interface ScriptProp {
   description?: string
   category?: string
   color?: string
+  thumbnail?: string
+  image?: string
+}
+
+/** 场景工厂资产（与 ScriptScene 区分：这是可复用的工厂场景，不是剧本内的场景） */
+interface ScriptSceneAsset {
+  id: string
+  name: string
+  assetId?: string
+  description?: string
+  location?: string
+  time?: string
   thumbnail?: string
 }
 
@@ -75,8 +90,12 @@ interface ScriptState {
   currentDocument: ScriptDocument | null
   episodes: ScriptEpisode[]
   scenes: ScriptScene[]
+  /** 角色工厂资产（按项目加载） */
   characters: ScriptCharacter[]
+  /** 道具工厂资产（按项目加载） */
   props: ScriptProp[]
+  /** 场景工厂资产（按项目加载） */
+  sceneAssets: ScriptSceneAsset[]
   versions: ScriptVersion[]
   selectedEpisode: string | null
   selectedScene: string | null
@@ -88,10 +107,10 @@ interface ScriptState {
   // Actions
   loadDocument: (id: string) => Promise<void>
   saveDocument: () => Promise<void>
-  createEpisode: (data: Partial<ScriptEpisode>) => Promise<void>
+  createEpisode: (data: Partial<ScriptEpisode>) => Promise<ScriptEpisode | null>
   updateEpisode: (id: string, data: Partial<ScriptEpisode>) => Promise<void>
   deleteEpisode: (id: string) => Promise<void>
-  createScene: (episodeId: string, data: Partial<ScriptScene>) => Promise<void>
+  createScene: (episodeId: string, data: Partial<ScriptScene>) => Promise<ScriptScene | null>
   updateScene: (id: string, data: Partial<ScriptScene>) => Promise<void>
   deleteScene: (id: string) => Promise<void>
   selectEpisode: (id: string | null) => void
@@ -102,6 +121,16 @@ interface ScriptState {
   addProp: (prop: ScriptProp) => void
   updateProp: (id: string, data: Partial<ScriptProp>) => void
   removeProp: (id: string) => void
+  /** 用工厂返回的资产批量覆盖/追加当前 store 中的角色/场景/道具 */
+  setFactoryAssets: (assets: {
+    characters?: ScriptCharacter[]
+    props?: ScriptProp[]
+    sceneAssets?: ScriptSceneAsset[]
+  }) => void
+  /** 追加单个工厂资产（分析结果落库后回填） */
+  appendFactoryAsset: (kind: 'character' | 'prop' | 'scene', asset: any) => void
+  /** 从 store 中移除一条工厂资产（按 id） */
+  removeFactoryAsset: (kind: 'character' | 'prop' | 'scene', id: string) => void
   loadVersions: () => Promise<void>
   restoreVersion: (versionId: string) => Promise<void>
   deleteVersion: (versionId: string) => Promise<void>
@@ -120,6 +149,7 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
   scenes: [],
   characters: [],
   props: [],
+  sceneAssets: [],
   versions: [],
   selectedEpisode: null,
   selectedScene: null,
@@ -131,23 +161,51 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
   // 加载剧本文档
   loadDocument: async (docId: string) => {
     set({ isLoading: true, error: null })
+    // 进度回调（页面上展示"正在加载中，请耐心等待"）
+    const setProgress = (stage: string) => {
+      if (typeof window !== 'undefined') {
+        // 让 UI 能在加载阶段显示当前进度
+        ;(window as any).__scriptLoadProgress = stage
+      }
+    }
+    setProgress('正在加载剧本…')
     try {
       // 后端统一响应格式为 { code, message, data }，需要解包
       // 1. 先获取所有模块 Script 列表，用于查找元数据（title 等）
+      setProgress('正在查询剧本元数据…')
       const scriptResponse = await fetch(`${API_BASE}/scripts`)
       const scriptPayload = scriptResponse.ok ? await scriptResponse.json() : null
       const scripts: any[] = scriptPayload?.data ?? []
       const moduleScript = scripts.find((s: any) => s.id === docId) || null
 
-      // 2. 尝试加载 ScriptDocument（编辑器内容）
-      const docResponse = await fetch(`${API_BASE}/script-documents/${docId}`)
+      // 2. 优先按 docId 直接尝试加载 ScriptDocument（兼容旧数据：文档 ID = 剧本 ID）
       let doc: any = null
-      if (docResponse.ok) {
-        const docPayload = await docResponse.json()
-        doc = docPayload?.data ?? null
+      const directDocResponse = await fetch(`${API_BASE}/script-documents/${docId}`)
+      if (directDocResponse.ok) {
+        const directPayload = await directDocResponse.json()
+        doc = directPayload?.data ?? null
       }
 
-      // 3. ScriptDocument 不存在但有模块 Script → 创建对应的 ScriptDocument
+      // 3. 若直接查找失败且已知项目，按项目列出所有 ScriptDocument，
+      //    选取与本剧本标题最匹配（或最新一条）的文档。
+      //    导入流程会在 POST scripts 后再 POST script-documents，两次返回的 id 不同，
+      //    所以需要按"项目内最新文档"回退匹配。
+      if (!doc && moduleScript?.project_id) {
+        try {
+          const listResp = await fetch(`${API_BASE}/script-documents?projectId=${encodeURIComponent(moduleScript.project_id)}`)
+          if (listResp.ok) {
+            const listPayload = await listResp.json()
+            const documents: any[] = listPayload?.data ?? []
+            // 优先按"标题一致"匹配；否则取最新一条
+            const matched = documents.find((d) => d.title && moduleScript.title && d.title === moduleScript.title)
+            doc = matched || (documents.length > 0 ? documents[0] : null)
+          }
+        } catch {
+          // 列表查询失败时忽略，继续走"按需创建"逻辑
+        }
+      }
+
+      // 4. ScriptDocument 仍不存在但有模块 Script → 创建对应的 ScriptDocument
       if (!doc && moduleScript) {
         const createResponse = await fetch(`${API_BASE}/script-documents`, {
           method: 'POST',
@@ -180,10 +238,11 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
           }
         }
         const projectId = moduleScript?.project_id || doc.project_id || ''
-        // 加载该剧本对应的剧集列表
+        const documentId = doc.id as string
+        // 加载该剧本对应的剧集列表（优先按 documentId 过滤，避免拉到项目下的其他剧本剧集）
         let loadedEpisodes: ScriptEpisode[] = []
         try {
-          const epResponse = await fetch(`${API_BASE}/script-episodes?projectId=${projectId}`)
+          const epResponse = await fetch(`${API_BASE}/script-episodes?documentId=${encodeURIComponent(documentId)}`)
           if (epResponse.ok) {
             const epPayload = await epResponse.json()
             const rawEpisodes: any[] = epPayload?.data ?? []
@@ -193,6 +252,21 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
               documentId: ep.document_id,
               scenes: [],
             }))
+          } else {
+            // 后端缺少 documentId 过滤时回退到 projectId
+            const fallback = await fetch(`${API_BASE}/script-episodes?projectId=${encodeURIComponent(projectId)}`)
+            if (fallback.ok) {
+              const fbPayload = await fallback.json()
+              const rawEpisodes: any[] = fbPayload?.data ?? []
+              loadedEpisodes = rawEpisodes
+                .filter((ep) => !ep.document_id || ep.document_id === documentId)
+                .map((ep) => ({
+                  ...ep,
+                  episodeNo: ep.episode_no,
+                  documentId: ep.document_id,
+                  scenes: [],
+                }))
+            }
           }
         } catch {
           // 剧集加载失败不阻塞编辑器
@@ -200,7 +274,7 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
         // 加载所有场景并按 episode_id 分组挂到剧集上
         let loadedScenes: ScriptScene[] = []
         try {
-          const scResponse = await fetch(`${API_BASE}/script-scenes?projectId=${projectId}`)
+          const scResponse = await fetch(`${API_BASE}/script-scenes?projectId=${encodeURIComponent(projectId)}`)
           if (scResponse.ok) {
             const scPayload = await scResponse.json()
             const rawScenes: any[] = scPayload?.data ?? []
@@ -219,21 +293,92 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
           ...ep,
           scenes: loadedScenes.filter((sc) => sc.episodeId === ep.id),
         }))
+
+        // 加载工厂的角色 / 道具 / 场景（按项目过滤），
+        // 这样右侧"角色/道具/场景"面板就能看到导入时已自动建好的资产。
+        let loadedCharacters: ScriptCharacter[] = []
+        let loadedProps: ScriptProp[] = []
+        let loadedSceneAssets: ScriptSceneAsset[] = []
+        if (projectId) {
+          try {
+            const charRes = await fetch(`${API_BASE}/characters?projectId=${encodeURIComponent(projectId)}`)
+            if (charRes.ok) {
+              const charPayload = await charRes.json()
+              const rawChars: any[] = charPayload?.data ?? []
+              loadedCharacters = rawChars.map((c) => ({
+                id: c.id,
+                name: c.name,
+                description: c.description ?? '',
+                color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'),
+                assetId: c.id,
+                image: c.image,
+                role: c.role,
+                gender: c.gender,
+              }))
+            }
+          } catch {
+            // 角色加载失败不阻塞编辑器
+          }
+          try {
+            const propRes = await fetch(`${API_BASE}/props?projectId=${encodeURIComponent(projectId)}`)
+            if (propRes.ok) {
+              const propPayload = await propRes.json()
+              const rawProps: any[] = propPayload?.data ?? []
+              loadedProps = rawProps.map((p) => ({
+                id: p.id,
+                name: p.name,
+                description: p.description ?? '',
+                category: p.category,
+                assetId: p.id,
+                image: p.image,
+              }))
+            }
+          } catch {
+            // 道具加载失败不阻塞编辑器
+          }
+          try {
+            const sceneRes = await fetch(`${API_BASE}/scenes?projectId=${encodeURIComponent(projectId)}`)
+            if (sceneRes.ok) {
+              const scenePayload = await sceneRes.json()
+              const rawScenes: any[] = scenePayload?.data ?? []
+              loadedSceneAssets = rawScenes.map((s) => ({
+                id: s.id,
+                name: s.name,
+                description: s.description ?? '',
+                // 兼容后端字段：场景工厂用 name 存地点，时间段在 time_of_day
+                location: s.name,
+                time: s.time_of_day,
+                assetId: s.id,
+                thumbnail: s.image,
+              }))
+            }
+          } catch {
+            // 场景工厂加载失败不阻塞编辑器
+          }
+        }
+
         set({
           currentDocument: {
             ...moduleScript,
             ...doc,
-            id: doc.id,
+            id: documentId,
             editor_json: editorJson,
           },
           episodes: loadedEpisodes,
           scenes: loadedScenes,
+          characters: loadedCharacters,
+          props: loadedProps,
+          sceneAssets: loadedSceneAssets,
           isLoading: false,
         })
         return
       }
 
-      throw new Error(moduleScript ? '创建剧本文档失败' : '剧本不存在或已删除')
+      throw new Error(
+        moduleScript
+          ? `剧本文档创建失败（ID=${docId}，项目=${moduleScript.project_id || '未知'}）。可能是 SQLite 写入权限或数据库被占用`
+          : `剧本不存在或已删除（ID=${docId}）。请检查：1)剧本是否被删除；2)后端服务是否运行；3)URL 中的剧本 ID 是否正确`,
+      )
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : '未知错误',
@@ -283,7 +428,7 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
   // 创建剧集
   createEpisode: async (data: Partial<ScriptEpisode>) => {
     const { currentDocument } = get()
-    if (!currentDocument) return
+    if (!currentDocument) return null
 
     set({ isLoading: true, error: null })
     try {
@@ -317,11 +462,13 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
         episodes: [...get().episodes, mapped],
         isLoading: false,
       })
+      return mapped
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : '未知错误',
         isLoading: false,
       })
+      return null
     }
   },
 
@@ -425,11 +572,13 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
         ),
         isLoading: false,
       })
+      return mapped
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : '未知错误',
         isLoading: false,
       })
+      return null
     }
   },
 
@@ -545,6 +694,83 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
     set({ props: get().props.filter((p) => p.id !== id) })
   },
 
+  /** 用工厂返回的资产批量覆盖 store 中角色/道具/场景（按资产去重） */
+  setFactoryAssets: (assets) => {
+    const patch: Partial<Pick<ScriptState, 'characters' | 'props' | 'sceneAssets'>> = {}
+    if (assets.characters) patch.characters = assets.characters
+    if (assets.props) patch.props = assets.props
+    if (assets.sceneAssets) patch.sceneAssets = assets.sceneAssets
+    set(patch as any)
+  },
+
+  /** 把一条新建的工厂资产追加到 store（去重） */
+  appendFactoryAsset: (kind, asset) => {
+    if (!asset || !asset.id) return
+    if (kind === 'character') {
+      const list = get().characters
+      if (list.some((c) => c.id === asset.id)) return
+      set({
+        characters: [
+          ...list,
+          {
+            id: asset.id,
+            name: asset.name,
+            description: asset.description ?? '',
+            color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'),
+            assetId: asset.id,
+            image: asset.image,
+            role: asset.role,
+            gender: asset.gender,
+          },
+        ],
+      })
+    } else if (kind === 'prop') {
+      const list = get().props
+      if (list.some((p) => p.id === asset.id)) return
+      set({
+        props: [
+          ...list,
+          {
+            id: asset.id,
+            name: asset.name,
+            description: asset.description ?? '',
+            category: asset.category,
+            assetId: asset.id,
+            image: asset.image,
+          },
+        ],
+      })
+    } else if (kind === 'scene') {
+      const list = get().sceneAssets
+      if (list.some((s) => s.id === asset.id)) return
+      set({
+        sceneAssets: [
+          ...list,
+          {
+            id: asset.id,
+            name: asset.name,
+            description: asset.description ?? '',
+            location: asset.name,
+            time: asset.time_of_day,
+            assetId: asset.id,
+            thumbnail: asset.image,
+          },
+        ],
+      })
+    }
+  },
+
+  /** 从 store 中移除一条工厂资产（按 id） */
+  removeFactoryAsset: (kind, id) => {
+    if (kind === 'character') {
+      set({ characters: get().characters.filter((c) => c.id !== id) })
+    } else if (kind === 'prop') {
+      set({ props: get().props.filter((p) => p.id !== id) })
+    } else if (kind === 'scene') {
+      set({ sceneAssets: get().sceneAssets.filter((s) => s.id !== id) })
+    }
+  },
+
   // 加载版本历史
   loadVersions: async () => {
     const { currentDocument } = get()
@@ -552,12 +778,25 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
 
     set({ isLoading: true, error: null })
     try {
-      const response = await fetch(`${API_BASE}/script-documents/${currentDocument.id}/versions`)
+      const response = await fetch(`${API_BASE}/script-versions?documentId=${encodeURIComponent(currentDocument.id)}`)
       if (!response.ok) {
         throw new Error('加载版本历史失败')
       }
       const versionsPayload = await response.json()
-      const versions = versionsPayload?.data ?? []
+      const rawVersions: any[] = versionsPayload?.data ?? []
+      // 后端返回的是 ScriptBackup 结构，映射为前端 ScriptVersion
+      const versions: ScriptVersion[] = rawVersions.map((v) => {
+        const typeLabel = v.type === 'auto' ? '自动保存' : v.type === 'scheduled' ? '定时备份' : '手动保存'
+        return {
+          id: v.id,
+          version: v.content?.version ?? 1,
+          timestamp: v.created_at,
+          changes: typeLabel,
+          author: v.created_by,
+          // 前端预览/恢复时直接用 script_document 字符串
+          content: v.content?.script_document ?? '',
+        }
+      })
       set({ versions, isLoading: false })
     } catch (error) {
       set({
@@ -638,6 +877,7 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
       scenes: [],
       characters: [],
       props: [],
+      sceneAssets: [],
       versions: [],
       selectedEpisode: null,
       selectedScene: null,
@@ -656,6 +896,7 @@ export type {
   ScriptScene,
   ScriptCharacter,
   ScriptProp,
+  ScriptSceneAsset,
   ScriptVersion,
   ScriptState,
 }

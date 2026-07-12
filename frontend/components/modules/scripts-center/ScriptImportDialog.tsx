@@ -945,9 +945,12 @@ export function ScriptImportDialog({
       const scriptId = (script as any).id;
       const documentId = (script as any).document_id || scriptId;
 
-      // 2. 创建剧本文档（写入 Tiptap editor_json）
+      // 2. 创建剧本文档（写入 Tiptap editor_json）。
+      //    关键：显式传入 id=scriptId，使 ScriptDocument.id 与 Script.id 一致，
+      //    这样 loadDocument 才能用 docId 找到对应的剧本文档，剧集的 document_id 也能正确关联。
       try {
         await createScriptDocumentApi({
+          id: scriptId,
           project_id: projectId,
           editor_json: JSON.stringify(preview.editor_json),
           version: 1,
@@ -958,6 +961,8 @@ export function ScriptImportDialog({
       }
 
       // 3. 处理未匹配角色：自动创建
+      //    关键：把 AI 提取的 role/gender/appearance/personality/traits 全部写入角色工厂，
+      //    这样后续在"角色图片生成"页能基于这些字段拼出更丰富的提示词（不再只靠 name+description）。
       const charIdMap = new Map<string, string>();
       for (const pc of preview.characters) {
         if (pc.matchedCharacterId) {
@@ -968,11 +973,32 @@ export function ScriptImportDialog({
           // 匹配未完成的，按"将创建"处理
         }
         try {
+          // 组合多段描述：AI 提取的 appearance/personality 优先，其次是 dialogueCount 摘要
+          const descParts: string[] = [];
+          if (pc.appearance) descParts.push(`【外貌】${pc.appearance}`);
+          if (pc.personality) descParts.push(`【性格】${pc.personality}`);
+          if (!descParts.length) {
+            descParts.push(`从剧本《${preview.title}》自动导入 · 出现于 ${pc.dialogueCount} 句对白`);
+          }
+          if (pc.description) descParts.push(pc.description);
+          const mergedDescription = descParts.join("\n");
+
+          // 合并 tags：基础标签 + AI 提取的 traits
+          const mergedTags = Array.from(
+            new Set([
+              "从剧本导入",
+              ...((pc.traits || []).filter(Boolean) as string[]),
+            ])
+          );
+
           const created = await createCharacter({
             project_id: projectId,
             name: pc.name,
-            description: `从剧本《${preview.title}》自动导入 · 出现于 ${pc.dialogueCount} 句对白`,
-            tags: ["从剧本导入"],
+            role: pc.role || "minor",
+            gender: pc.gender || "other",
+            description: mergedDescription,
+            traits: pc.traits || [],
+            tags: mergedTags,
           } as any);
           charIdMap.set(pc.name, (created as any).id);
         } catch (err) {

@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AppContext } from "../services/app.js";
 import type { ImageTask, VideoTask, Message, ProjectScript, ProjectStoryboard } from "../types.js";
+import { rootLogger } from "../logger.js";
 
 /**
  * 时间范围类型定义
@@ -649,7 +650,7 @@ export async function handleDataRouter(
     // 未匹配的路由
     sendErrorResponse(res, new Error("未找到数据中心路由"), 404);
   } catch (error) {
-    console.error(`数据中心路由错误: ${(error as Error).stack ?? (error as Error).message ?? String(error)}`);
+    rootLogger.error({ event: "router.error", route: "data", err: error }, `数据中心路由错误`);
     sendErrorResponse(res, error);
   }
 }

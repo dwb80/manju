@@ -2,11 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { RealAgnesClient, createAgnesClient, MockAgnesClient } from "../dist/src/ai/agnes-client.js";
 
+test("createAgnesClient throws when AGNES_API_KEY is missing", () => {
+  assert.throws(
+    () => createAgnesClient({ AGNES_API_KEY: "" }),
+    /AGNES_API_KEY 未配置/,
+  );
+});
+
 test("createAgnesClient selects real mode when API key exists", () => {
   const real = createAgnesClient({ AGNES_API_KEY: "test-key", AGNES_API_BASE_URL: "https://example.test" });
   assert.ok(real instanceof RealAgnesClient);
-  const mock = createAgnesClient({ AGNES_API_KEY: "test-key", AGNES_USE_REAL_API: "false" });
-  assert.ok(mock instanceof MockAgnesClient);
+});
+
+test("MockAgnesClient is deprecated and throws on construction", () => {
+  // 不再支持任何 mock 行为：构造时必须抛错
+  assert.throws(() => new MockAgnesClient(), /MockAgnesClient 已废弃/);
 });
 
 test("RealAgnesClient parses streaming chat chunks", async () => {

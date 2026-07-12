@@ -2,6 +2,7 @@ import type { AppContext } from "./app.js";
 import type { Conversation, Favorite, FavoriteType, ImageParams, ImageTask, Message, Project, Settings, VideoParams, VideoTask } from "../types.js";
 import { cacheMediaUrl, cacheMediaUrls, resolveMediaInput, resolveMediaInputs } from "./media.js";
 import { DEFAULT_MODEL, clampNumber, estimateTokens, id, nowIso, requireString } from "../utils.js";
+import { rootLogger } from "../logger.js";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -48,13 +49,12 @@ function projectStorageTarget(ctx: AppContext, storagePath: string): string {
   return target;
 }
 
-/** 创建项目约定目录，包括 CSV、图片、视频和上传目录。 */
+/** 创建项目约定目录：媒体文件按项目分仓，业务数据统一在全局 SQLite。 */
 async function ensureProjectStorage(ctx: AppContext, storagePath: string): Promise<void> {
   const target = projectStorageTarget(ctx, storagePath);
-  // 先创建约定目录。当前主数据仍在全局 CSV 中按 project_id 归属，
-  // 这些子目录用于项目媒体落盘，并为后续按项目分仓保存 CSV 预留位置。
+  // 当前主数据在全局 SQLite 中按 project_id 归属。
+  // 这些子目录用于项目媒体落盘（图片 / 视频 / 上传文件），业务表统一在 data/sqlite.db。
   await Promise.all([
-    mkdir(path.join(target, "csv"), { recursive: true }),
     mkdir(path.join(target, "media", "images"), { recursive: true }),
     mkdir(path.join(target, "media", "videos"), { recursive: true }),
     mkdir(path.join(target, "uploads"), { recursive: true }),
@@ -185,7 +185,7 @@ function isDefaultTitle(title: string): boolean {
   return ["新的创作会话", "新会话"].includes(title.trim());
 }
 
-/** 压缩图片入参在 CSV 中的展示，避免把大段 data URL 写入记录。 */
+/** 压缩图片入参在数据库中的展示，避免把大段 data URL 写入记录。 */
 function compactMediaInput(value: string | undefined): string | undefined {
   if (!value) return undefined;
   if (value.startsWith("data:")) return `[uploaded-image:${Math.round(value.length / 1024)}KB]`;
@@ -201,7 +201,7 @@ function compactImageParams(params: ImageParams): ImageParams {
   };
 }
 
-/** 压缩视频任务参数，避免本地图片内容写进 CSV。 */
+/** 压缩视频任务参数，避免本地图片内容写进数据库。 */
 function compactVideoParams(params: VideoParams): VideoParams {
   return {
     ...params,
@@ -276,7 +276,7 @@ function scheduleImageTaskCache(ctx: AppContext, task: ImageTask): void {
       }
       return undefined;
     })
-    .catch((error: unknown) => console.error(error));
+    .catch((error: unknown) => rootLogger.error({ event: "image.background.failed", err: error }, "image task background error"));
 }
 
 /** 后台缓存视频任务中的远程视频，并把任务 URL 更新为本地地址。 */
@@ -291,7 +291,7 @@ function scheduleVideoTaskCache(ctx: AppContext, task: VideoTask): void {
       }
       return undefined;
     })
-    .catch((error: unknown) => console.error(error));
+    .catch((error: unknown) => rootLogger.error({ event: "image.background.failed", err: error }, "image task background error"));
 }
 
 /** 删除会话及其关联消息、图片任务、视频任务和相关收藏记录。 */
@@ -352,7 +352,7 @@ export async function generateImage(ctx: AppContext, body: Record<string, unknow
     steps: clampNumber(body.steps, 25, 1, 50),
     cfg: clampNumber(body.cfg, 7, 1, 20),
   };
-  // 本地上传图在 CSV 里保存 URL，调用 Agnes 前再转成 data URL。
+  // 本地上传图保存 URL，调用 Agnes 前再转成 data URL。
   const result = await ctx.ai.generateImage({ ...params, image: aiImages[0], images: aiImages });
   const taskId = id("img");
   const task: ImageTask = {

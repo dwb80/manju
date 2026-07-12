@@ -15,7 +15,7 @@ export interface Script {
   version: number;
   created_at: string;
   updated_at: string;
-  // 兼容 ProjectScript 字段（CSV 存储共用同一张表 scripts.csv）。
+  // 兼容 ProjectScript 字段（SQLite 存储共用同一张表 scripts）。
   episode?: number;
   content?: string;
   notes?: string;
@@ -183,14 +183,18 @@ export interface ScriptApproval {
 export interface ScriptBackup {
   id: string;
   project_id: string;
+  /** 关联的剧本文档 ID（用于按文档过滤版本历史） */
+  document_id?: string;
   type: 'auto' | 'manual' | 'scheduled';
   size: number;
   content: {
     script_document: string;
-    script_episodes: any[];
-    script_scenes: any[];
-    script_dialogues: any[];
+    script_episodes?: any[];
+    script_scenes?: any[];
+    script_dialogues?: any[];
     version: number;
+    /** 变更摘要（用于 /api/script-versions 列表展示） */
+    changes?: string;
   };
   status: 'creating' | 'completed' | 'failed';
   created_by: string;

@@ -386,17 +386,53 @@ export interface PromptEnhancement {
   mode: "image" | "video";
 }
 
-export type ImageRatio = "1:1" | "3:2" | "2:3" | "16:9" | "9:16" | "4:3" | "3:4";
-export type ImageSize = "1024x768" | "768x1024" | "1024x1024" | "1152x768" | "768x1152";
+export type ImageRatio = "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "9:16" | "16:9";
+export type ImageSize = "1024x768" | "768x1024" | "1024x1024" | "1152x768" | "768x1152" | "1152x1728" | "1728x1152";
 export type ImageResponseFormat = "url" | "b64_json";
+/** 图片生成模型（与后端 ImageModel 保持一致）。 */
+export type ImageModel = "agnes-image-2.1-flash";
 
 export type ImageSettings = {
+  model: ImageModel;
   ratio: ImageRatio;
   size: ImageSize;
   n: number;
   seed: string;
   negative_prompt: string;
   response_format: ImageResponseFormat;
+  style: string;
+};
+
+/** 图片比例选项（前端 UI 选择器用）。 */
+export type AspectRatioOption = {
+  value: ImageRatio;
+  label: string;
+  useCase: string;
+  size: ImageSize;
+};
+
+/** 风格修饰 value（"" 表示不追加；其余追加到 prompt 末尾）。 */
+export type StyleValue =
+  | ""
+  | "portrait_photo"
+  | "cinematic"
+  | "chinese_style"
+  | "anime"
+  | "3d_render"
+  | "cyberpunk"
+  | "cg_animation"
+  | "ink_painting"
+  | "oil_painting"
+  | "classical"
+  | "watercolor"
+  | "cartoon";
+
+/** 风格选择器项（前端 UI 用）。 */
+export type StyleOption = {
+  value: StyleValue;
+  label: string;
+  emoji: string;
+  promptSuffix: string;
 };
 
 export type VideoRatio = "16:9" | "9:16" | "1:1" | "4:3" | "3:4";

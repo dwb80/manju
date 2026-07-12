@@ -11,6 +11,7 @@ import {
   CheckCircle,
   BarChart3,
   ChevronRight,
+  Package,
 } from "lucide-react";
 import { Pagination } from "@/components/shared";
 import { PublishedVideo, PublishPlan as PublishPlanType, PublishPlatform } from "./published-videos-list";
@@ -49,6 +50,8 @@ export type PublishCenterProps = {
   onPreviewVideo?: (video: PublishedVideo) => void;
   /** 下载视频回调 */
   onDownloadVideo?: (video: PublishedVideo) => void;
+  /** 一键打包回调（评审优化 P2）。 */
+  onPackageVideo?: (video: PublishedVideo) => void;
 };
 
 /**
@@ -79,6 +82,7 @@ export function PublishCenter({
   onViewStatistics,
   onPreviewVideo,
   onDownloadVideo,
+  onPackageVideo,
 }: PublishCenterProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "videos" | "plans">("overview");
 
@@ -414,6 +418,16 @@ export function PublishCenter({
                           >
                             下载
                           </button>
+                          {onPackageVideo && (
+                            <button
+                              onClick={() => onPackageVideo(video)}
+                              className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-300 transition-colors hover:bg-amber-500/20"
+                              title="一键打包（生成发布 manifest）"
+                            >
+                              <Package className="h-3 w-3" />
+                              打包
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

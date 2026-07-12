@@ -1,6 +1,7 @@
-import type { AppContext } from "../app.js";
+﻿import type { AppContext } from "../app.js";
 import type { Conversation, Favorite, FavoriteType, ImageParams, ImageTask } from "../../types.js";
-import { DEFAULT_MODEL, clampNumber, id, nowIso, requireString } from "../../utils.js";
+import { AI_TIMEOUTS, DEFAULT_MODEL, clampNumber, id, nowIso, requireString, withTimeout } from "../../utils.js";
+import { rootLogger } from "../../logger.js";
 import { cacheMediaUrls, resolveMediaInputs } from "../media.js";
 import { maybeTitleConversation } from "../chat.js";
 
@@ -57,7 +58,7 @@ function scheduleImageTaskCache(ctx: AppContext, task: ImageTask): void {
       }
       return undefined;
     })
-    .catch((error: unknown) => console.error(error));
+    .catch((error: unknown) => rootLogger.error({ event: "image.background.failed", taskId: task.id, err: error }, "image task background cache failed"));
 }
 
 /** 获取图片任务列表，并按会话过滤和触发本地缓存。 */
@@ -87,7 +88,11 @@ export async function generateImage(ctx: AppContext, body: Record<string, unknow
   if (typeof body.image === "string" && body.image.length > 0) inputImages.push(body.image);
   const aiImages = await resolveMediaInputs(ctx, inputImages);
   const responseFormat = body.response_format === "b64_json" ? "b64_json" : "url";
+  // 显式接受 model 字段（默认 agnes-image-2.1-flash），允许前端切换
+  const rawModel = typeof body.model === "string" ? body.model.trim() : "";
+  const model: ImageParams["model"] = rawModel === "agnes-image-2.1-flash" ? rawModel : "agnes-image-2.1-flash";
   const params: ImageParams = {
+    model,
     prompt,
     negative_prompt: typeof body.negative_prompt === "string" ? body.negative_prompt : "",
     image: inputImages[0],
@@ -101,7 +106,14 @@ export async function generateImage(ctx: AppContext, body: Record<string, unknow
     response_format: responseFormat,
   };
   // 本地上传图在任务记录里保存 URL，调用 Agnes 前再转成 data URL。
-  const result = await ctx.ai.generateImage({ ...params, image: aiImages[0], images: aiImages });
+  // 60s 超时，超时自动 abort 网络请求，避免连接挂死阻塞用户。
+  const imgCtrl = new AbortController();
+  const result = await withTimeout(
+    ctx.ai.generateImage({ ...params, image: aiImages[0], images: aiImages }, imgCtrl.signal),
+    AI_TIMEOUTS.generateImage,
+    "generateImage",
+    imgCtrl
+  );
   const taskId = id("img");
   const task: ImageTask = {
     id: taskId,
@@ -168,8 +180,26 @@ export async function enhancePrompt(ctx: AppContext, input: EnhancePromptInput):
     prompt,
   ].join("\n");
   let enhanced = "";
-  for await (const chunk of ctx.ai.chat({ conversationId: "", message: instruction, model: DEFAULT_MODEL })) {
-    enhanced += chunk.content;
+  // 30s 超时；chat 是流式，但 enhancePrompt 用的是同步消费模式
+  const enhanceCtrl = new AbortController();
+  const chatIter = ctx.ai.chat(
+    { conversationId: "", message: instruction, model: DEFAULT_MODEL },
+    enhanceCtrl.signal
+  );
+  try {
+    await withTimeout(
+      (async () => {
+        for await (const chunk of chatIter) {
+          enhanced += chunk.content;
+        }
+      })(),
+      AI_TIMEOUTS.enhancePrompt,
+      "enhancePrompt",
+      enhanceCtrl
+    );
+  } catch (err) {
+    enhanceCtrl.abort();
+    throw err;
   }
   return {
     prompt,

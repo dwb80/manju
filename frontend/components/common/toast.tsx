@@ -170,7 +170,7 @@ export function ToastContainer() {
 
   // 全局方法：添加 Toast
   const addToast = (toast: Omit<ToastItem, "id">) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const id = `toast-${crypto.randomUUID()}`;
     setToasts((items) => [...items, { ...toast, id }]);
     return id;
   };

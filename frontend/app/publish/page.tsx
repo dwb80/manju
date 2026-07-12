@@ -10,8 +10,9 @@
  * - 提供预览、下载等快捷操作
  *
  * 页面布局：
- * - 顶部：页面标题 + 返回首页按钮 + 面包屑导航
- * - 主体：PublishCenter组件
+ * - 顶部：StandalonePageHeader + StatsOverview
+ * - 主体：PublishCenter 组件
+ * - 底部：数据来源 + 最后更新时间
  *
  * 数据来源：
  * - 通过真实API接口获取数据
@@ -21,12 +22,21 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, LayoutDashboard, Upload } from "lucide-react";
+import { Rocket, Video, Calendar, CheckCircle2, Clock } from "lucide-react";
 import { PublishCenter, PublishStatistics } from "@/components/publish/publish-center";
 import type {
   PublishedVideo,
   PublishPlan,
 } from "@/components/publish/published-videos-list";
+import {
+  StandalonePageHeader,
+  StatsOverview,
+  Alert,
+} from "@/components/layout";
+import { notify } from "@/lib/notify";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger('publish-page')
 
 /**
  * API响应格式
@@ -73,14 +83,15 @@ interface PublishPlanResponse {
  * 发布中心页面组件
  */
 export default function PublishCenterPage() {
-  // 路由导航
+  // 路由
   const router = useRouter();
 
   // 加载状态
   const [loading, setLoading] = useState(false);
-
-  // 最后更新时间（避免hydration错误）
+  // 最后更新时间
   const [lastUpdate, setLastUpdate] = useState<string>("");
+  // 加载错误
+  const [loadError, setLoadError] = useState<string>("");
 
   // 发布统计数据
   const [statistics, setStatistics] = useState<PublishStatistics>({
@@ -98,44 +109,39 @@ export default function PublishCenterPage() {
 
   /**
    * 加载发布中心数据
-   * 通过真实API获取数据
    */
   async function loadData() {
     setLoading(true);
+    setLoadError("")
+    log.debug('load data')
 
     try {
-      // 并行调用2个API接口
       const [videosResponse, plansResponse] = await Promise.all([
         fetch("/api/publish/videos"),
         fetch("/api/publish/plans"),
       ]);
 
-      // 解析响应
       const videosResult: ApiResponse<PublishedVideoResponse[]> = await videosResponse.json();
       const plansResult: ApiResponse<PublishPlanResponse[]> = await plansResponse.json();
 
-      // 处理成片列表数据
+      // 处理成片
       if (videosResult.code === 0 && videosResult.data) {
         const videos = videosResult.data;
-
-        // 转换为前端PublishedVideo格式
         const convertedVideos: PublishedVideo[] = videos.map(video => ({
           id: video.id,
           name: video.name,
           projectId: video.projectId,
-          projectName: "", // API未返回项目名称，需要单独查询
+          projectName: "",
           duration: video.duration,
           createdAt: video.createdAt,
-          publishStatus: video.publishStatus === "scheduled" ? "pending" : video.publishStatus as "pending" | "published", // 映射状态
-          publishedPlatform: video.publishPlatforms[0] as any || "other", // 取第一个平台
-          publishedAt: "", // API未返回发布时间
+          publishStatus: video.publishStatus === "scheduled" ? "pending" : video.publishStatus as "pending" | "published",
+          publishedPlatform: video.publishPlatforms[0] as any || "other",
+          publishedAt: "",
           videoUrl: video.videoUrl,
-          thumbnailUrl: "", // API未返回缩略图URL
+          thumbnailUrl: "",
         }));
-
         setRecentVideos(convertedVideos);
 
-        // 计算统计数据
         const now = new Date();
         const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const thisMonthVideos = videos.filter(v => new Date(v.createdAt) >= thisMonthStart);
@@ -146,35 +152,37 @@ export default function PublishCenterPage() {
           pendingCount: videos.filter(v => v.publishStatus === "unpublished" || v.publishStatus === "scheduled").length,
           thisMonthCount: thisMonthVideos.length,
         });
+        log.info('videos loaded', { total: videos.length })
       } else {
-        console.error("获取成片列表失败:", videosResult.message);
-        setRecentVideos([]);
+        log.warn('videos load failed', { message: videosResult.message })
       }
 
-      // 处理发布计划数据
+      // 处理计划
       if (plansResult.code === 0 && plansResult.data) {
         const plansData = plansResult.data;
-
-        // 转换为前端PublishPlan格式
         const convertedPlans: PublishPlan[] = plansData.map(plan => ({
           id: plan.id,
           name: plan.name,
           status: plan.status as "planned" | "executing" | "completed" | "cancelled",
           date: plan.plannedDate || plan.created_at,
-          videos: recentVideos.filter(v => plan.videos.includes(v.id)), // 关联视频列表
-          platforms: plan.platforms as any[], // 平台列表
+          videos: recentVideos.filter(v => plan.videos.includes(v.id)),
+          platforms: plan.platforms as any[],
           owner: plan.assignee,
           createdAt: plan.created_at,
           updatedAt: plan.updated_at,
         }));
-
         setPlans(convertedPlans);
+        log.info('plans loaded', { total: plansData.length })
       } else {
-        console.error("获取发布计划列表失败:", plansResult.message);
-        setPlans([]);
+        log.warn('plans load failed', { message: plansResult.message })
       }
-    } catch (error) {
-      console.error("API调用失败:", error);
+
+      if (videosResult.code !== 0 || plansResult.code !== 0) {
+        setLoadError("部分数据加载失败")
+      }
+    } catch (err) {
+      log.error('API call failed', { error: (err as Error).message })
+      setLoadError(`API 调用失败：${(err as Error).message}`)
       setRecentVideos([]);
       setPlans([]);
     } finally {
@@ -182,56 +190,33 @@ export default function PublishCenterPage() {
     }
   }
 
-  /**
-   * 页面加载时获取数据和设置时间
-   */
   useEffect(() => {
     loadData();
     setLastUpdate(new Date().toLocaleString("zh-CN"));
   }, []);
 
-  /**
-   * 查看所有成片
-   */
   function handleViewAllVideos() {
-    // TODO: 跳转到成片列表页面或打开成片详情弹窗
-    console.log("查看所有成片");
+    log.debug('view all videos')
     router.push("/videos");
   }
 
-  /**
-   * 创建发布计划
-   */
   async function handleCreatePlan() {
-    // TODO: 打开创建发布计划弹窗
-    console.log("创建发布计划");
+    log.debug('create plan')
+    notify.info("创建发布计划功能即将上线")
   }
 
-  /**
-   * 查看发布统计
-   */
   function handleViewStatistics() {
-    // TODO: 跳转到发布统计页面或打开统计详情弹窗
-    console.log("查看发布统计");
+    log.debug('view statistics')
     router.push("/data");
   }
 
-  /**
-   * 预览视频
-   */
   function handlePreviewVideo(video: PublishedVideo) {
-    // TODO: 打开视频预览弹窗或播放器
-    console.log("预览视频:", video.name);
+    log.debug('preview video', { id: video.id, name: video.name })
     router.push(`/videos/${video.id}`);
   }
 
-  /**
-   * 下载视频
-   */
   function handleDownloadVideo(video: PublishedVideo) {
-    // TODO: 实现视频下载功能
-    console.log("下载视频:", video.name);
-    // 模拟下载链接
+    log.info('download video', { id: video.id, name: video.name })
     if (video.videoUrl) {
       const link = document.createElement('a');
       link.href = video.videoUrl;
@@ -239,91 +224,134 @@ export default function PublishCenterPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      notify.success(`已开始下载：${video.name}`)
+    } else {
+      notify.warn("该成片无可用下载地址")
     }
   }
 
   /**
-   * 返回首页
+   * 一键打包（评审优化 P2）
+   *
+   * 把成片 + 元数据打成 publish package manifest，
+   * 生成可下载的 JSON 文件，并提示用户进入发布计划页面继续操作。
    */
-  function goBackToHome() {
-    router.push("/");
+  async function handlePackageVideo(video: PublishedVideo) {
+    log.info('package video', { id: video.id, name: video.name })
+    try {
+      const manifest = {
+        package_version: '1.0',
+        generated_at: new Date().toISOString(),
+        source: {
+          video_id: video.id,
+          name: video.name,
+          project_id: video.projectId,
+          project_name: video.projectName,
+          duration: video.duration,
+          video_url: video.videoUrl,
+          thumbnail_url: video.thumbnailUrl,
+          created_at: video.createdAt,
+        },
+        publishing: {
+          status: video.publishStatus,
+          platform: video.publishedPlatform ?? null,
+          published_at: video.publishedAt ?? null,
+          recommended_platforms: ['douyin', 'bilibili', 'xiaohongshu'],
+          suggested_tags: [`#${video.projectName}`, '#AI漫剧'],
+        },
+        next_steps: [
+          '使用本 manifest 创建发布计划',
+          '上传至目标平台',
+          '回填发布链接 / 发布时间',
+        ],
+      }
+
+      const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `publish-package-${video.id}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      notify.success('已生成发布包', `${video.name} 打包完成，已下载 manifest`)
+    } catch (err) {
+      log.error('package video failed', { error: (err as Error).message })
+      notify.error('打包失败', (err as Error).message)
+    }
   }
 
-  /**
-   * 刷新数据
-   */
   function handleRefresh() {
     loadData();
   }
 
   return (
     <main className="min-h-screen bg-[#181818] text-[#ececec]">
-      {/* 页面头部 */}
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-[#181818]/95 px-6 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          {/* 左侧：返回按钮和标题 */}
+      {/* === 统一页面头 === */}
+      <StandalonePageHeader
+        title="发布中心"
+        description="管理成片与发布计划，追踪发布进度。支持多平台发布管理和成片预览下载。"
+        breadcrumbs={["首页", "发布中心"]}
+        extraRight={
           <div className="flex items-center gap-4">
-            {/* 返回首页按钮 */}
-            <button
-              onClick={goBackToHome}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#888] transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="返回首页"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>返回首页</span>
-            </button>
-
-            {/* 分隔线 */}
-            <div className="h-4 w-px bg-white/20" />
-
-            {/* 面包屑导航 */}
-            <nav className="flex items-center gap-2 text-sm text-[#888]">
-              <button
-                onClick={goBackToHome}
-                className="flex items-center gap-1 hover:text-white"
-              >
-                <LayoutDashboard className="h-3 w-3" />
-                <span>首页</span>
-              </button>
-              <span className="text-white/40">/</span>
-              <span className="flex items-center gap-1 text-white font-medium">
-                <Upload className="h-3 w-3" />
-                <span>发布中心</span>
-              </span>
-            </nav>
-          </div>
-
-          {/* 右侧：页面信息和刷新按钮 */}
-          <div className="flex items-center gap-4">
-            {/* 数据统计提示 */}
-            <div className="text-xs text-[#888]">
-              共 {statistics.totalVideos} 个成片
+            <div className="flex items-center gap-2">
+              <Rocket className="h-4 w-4" />
+              <span>共 {statistics.totalVideos} 个成片</span>
             </div>
-
-            {/* 刷新按钮 */}
             <button
               onClick={handleRefresh}
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#888] transition-colors hover:bg-white/10 hover:text-white"
               aria-label="刷新数据"
               disabled={loading}
             >
-              <span>{loading ? "加载中..." : "刷新"}</span>
+              {loading ? "加载中..." : "刷新"}
             </button>
           </div>
-        </div>
+        }
+      />
 
-        {/* 页面标题和描述 */}
-        <div className="mt-4">
-          <h1 className="text-2xl font-bold text-white">
-            发布中心
-          </h1>
-          <p className="mt-1 text-sm text-[#888]">
-            管理成片与发布计划，追踪发布进度。支持多平台发布管理和成片预览下载。
-          </p>
-        </div>
-      </header>
+      <div className="px-6 py-4 space-y-4">
+        {/* === 错误提示 === */}
+        {loadError && <Alert tone="error">{loadError}</Alert>}
 
-      {/* 页面主体：发布中心组件 */}
+        {/* === 统一统计卡组 === */}
+        <StatsOverview
+          columns={4}
+          cards={[
+            {
+              tone: "blue",
+              icon: <Video className="h-4 w-4" />,
+              title: "总成片",
+              value: statistics.totalVideos,
+              sub: "全部成片",
+            },
+            {
+              tone: "emerald",
+              icon: <CheckCircle2 className="h-4 w-4" />,
+              title: "已发布",
+              value: statistics.publishedCount,
+              sub: "成功发布",
+            },
+            {
+              tone: "amber",
+              icon: <Clock className="h-4 w-4" />,
+              title: "待发布",
+              value: statistics.pendingCount,
+              sub: "排期中",
+            },
+            {
+              tone: "purple",
+              icon: <Calendar className="h-4 w-4" />,
+              title: "本月新增",
+              value: statistics.thisMonthCount,
+              sub: "本月创建",
+            },
+          ]}
+        />
+      </div>
+
       <section className="px-6 py-6">
         <PublishCenter
           statistics={statistics}
@@ -334,15 +362,13 @@ export default function PublishCenterPage() {
           onViewStatistics={handleViewStatistics}
           onPreviewVideo={handlePreviewVideo}
           onDownloadVideo={handleDownloadVideo}
+          onPackageVideo={handlePackageVideo}
         />
       </section>
 
-      {/* 页面底部信息 */}
       <footer className="border-t border-white/10 px-6 py-4 text-xs text-[#666]">
         <div className="flex items-center justify-between">
-          <div>
-            数据来源：真实API接口
-          </div>
+          <div>数据来源：真实API接口</div>
           <div suppressHydrationWarning>
             最后更新：{lastUpdate || "加载中..."}
           </div>

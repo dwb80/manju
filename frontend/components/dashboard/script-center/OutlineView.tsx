@@ -10,6 +10,7 @@ import {
   GripVertical,
   Plus,
   MoreVertical,
+  Edit3,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -29,6 +30,8 @@ interface OutlineViewProps {
   onAddNode?: (type: 'episode' | 'scene' | 'character', parentId?: string) => void
   onNodeDelete?: (nodeId: string) => void
   onNodeRename?: (nodeId: string, newTitle: string) => void
+  /** 切回编辑模式的回调；提供时会在标题栏显示"返回编辑"按钮 */
+  onBackToEdit?: () => void
 }
 
 export function OutlineView({
@@ -38,6 +41,7 @@ export function OutlineView({
   onAddNode,
   onNodeDelete,
   onNodeRename,
+  onBackToEdit,
 }: OutlineViewProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [draggedNode, setDraggedNode] = useState<OutlineNode | null>(null)
@@ -197,30 +201,44 @@ export function OutlineView({
   return (
     <div className="outline-view bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden h-full flex flex-col">
       {/* 标题栏 */}
-      <div className="p-3 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+      <div className="p-3 border-b border-white/10 flex items-center justify-between flex-shrink-0 gap-2">
         <h3 className="text-sm font-medium text-white">大纲视图</h3>
-        {onAddNode && (
-          <div className="flex gap-1">
+        <div className="flex items-center gap-1">
+          {onAddNode && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onAddNode('episode')}
+                className="h-6 w-6 p-0"
+                title="添加剧集"
+              >
+                <Film className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onAddNode('character')}
+                className="h-6 w-6 p-0"
+                title="添加角色"
+              >
+                <User className="h-3 w-3" />
+              </Button>
+            </>
+          )}
+          {onBackToEdit && (
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
-              onClick={() => onAddNode('episode')}
-              className="h-6 w-6 p-0"
-              title="添加剧集"
+              onClick={onBackToEdit}
+              className="h-7 px-2 ml-1 text-xs bg-emerald-500 hover:bg-emerald-600"
+              title="返回编辑器"
             >
-              <Film className="h-3 w-3" />
+              <Edit3 className="h-3 w-3 mr-1" />
+              返回编辑
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onAddNode('character')}
-              className="h-6 w-6 p-0"
-              title="添加角色"
-            >
-              <User className="h-3 w-3" />
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* 大纲树 */}

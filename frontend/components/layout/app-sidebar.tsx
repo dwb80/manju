@@ -19,6 +19,13 @@ import {
   ChevronDown,
   ChevronRight,
   Scissors,
+  ListChecks,
+  Cpu,
+  LayoutGrid,
+  Wallet,
+  BarChart3,
+  Inbox,
+  CheckSquare,
 } from "lucide-react";
 
 /**
@@ -46,12 +53,23 @@ type MenuGroup = {
   items: MenuItem[];
 };
 
-// 将菜单配置移到组件外部，避免每次渲染重新创建
+// 菜单配置（移到组件外部，避免每次渲染重新创建）
+//
+// 评审优化记录：
+// - v2 (P0)：将"模型中心"从"管理中心"归位到"AI生产中心"（按业务语义，模型属于生产链路）
+// - v2 (P0)：在"AI生产中心"补"AI任务队列"入口（此前仅在首页跳转）
+// - v2 (P1)：侧边栏三大分组重组：
+//     · 生产创作：直接产生内容的链路（剧本 → 工厂 → 后期）
+//     · 资产与数据：沉淀的资产与监控数据
+//     · 运营与管控：流程闭环（项目、审核、发布）
 const MENU_GROUPS: MenuGroup[] = [
+  // 第一组：生产创作（按内容生产链路）
   {
     id: "production",
-    name: "AI生产中心",
+    name: "生产创作",
+    icon: LayoutGrid,
     items: [
+      { id: "ai-tasks", name: "AI 任务队列", icon: ListChecks, href: "/ai-tasks" },
       { id: "script", name: "剧本中心", icon: FileText, href: "/scripts" },
       { id: "character", name: "角色工厂", icon: Users, href: "/characters" },
       { id: "scene", name: "场景工厂", icon: Image, href: "/scenes" },
@@ -60,16 +78,27 @@ const MENU_GROUPS: MenuGroup[] = [
       { id: "video-production", name: "视频生产线", icon: Video, href: "/video-production" },
       { id: "audio", name: "音频中心", icon: Music, href: "/audio" },
       { id: "clip", name: "剪辑中心", icon: Scissors, href: "/clips" },
+      { id: "models", name: "模型中心", icon: Cpu, href: "/models" },
     ],
   },
+  // 第二组：资产与数据（沉淀层）
   {
-    id: "management",
-    name: "管理中心",
+    id: "assets",
+    name: "资产与数据",
+    icon: Wallet,
+    items: [
+      { id: "assets", name: "资产中心", icon: Database, href: "/assets" },
+      { id: "data", name: "数据中心", icon: BarChart3, href: "/data" },
+    ],
+  },
+  // 第三组：运营与管控（流程闭环）
+  {
+    id: "operations",
+    name: "运营与管控",
+    icon: Inbox,
     items: [
       { id: "projects", name: "项目中心", icon: FolderOpen, href: "/projects" },
       { id: "review", name: "审核中心", icon: CheckCircle, href: "/review" },
-      { id: "assets", name: "资产中心", icon: Database, href: "/assets" },
-      { id: "models", name: "模型中心", icon: Settings, href: "/models" },
       { id: "publish", name: "发布中心", icon: Rocket, href: "/publish" },
     ],
   },
@@ -84,7 +113,12 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
   // 内部使用 usePathname 获取真实当前路径，避免 layout 传入空字符串导致菜单不高亮
   const pathname = usePathname();
   const activePath = currentPath || pathname || "";
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(["production", "management"]);
+  // 默认展开所有分组
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([
+    "production",
+    "assets",
+    "operations",
+  ]);
 
   const handleToggleGroup = (groupId: string) => {
     setExpandedGroups((prev) =>
@@ -127,6 +161,19 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           >
             <Home className={`h-4 w-4 ${activePath === "/" ? "text-emerald-400" : "text-[#888]"}`} />
             <span className="flex-1 text-left">驾驶舱</span>
+          </button>
+
+          {/* 我的待办：个人维度的一级菜单（评审优化 P1） */}
+          <button
+            onClick={() => router.push("/todos")}
+            className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${activePath.startsWith("/todos")
+                ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500"
+                : "text-[#ccc] hover:bg-white/5 hover:text-white"
+              }`}
+            aria-current={activePath.startsWith("/todos") ? "page" : "false"}
+          >
+            <CheckSquare className={`h-4 w-4 ${activePath.startsWith("/todos") ? "text-emerald-400" : "text-[#888]"}`} />
+            <span className="flex-1 text-left">我的待办</span>
           </button>
         </div>
 
@@ -200,10 +247,26 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           </div>
           <button
             onClick={() => router.push("/settings")}
-            className="rounded-lg p-1.5 hover:bg-white/10 transition-colors"
-            aria-label="系统设置"
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors ${
+              activePath.startsWith("/settings")
+                ? "bg-emerald-500/10 text-emerald-400"
+                : "hover:bg-white/10"
+            }`}
+            aria-label="系统管理"
           >
             <Settings className="h-4 w-4" />
+            <span>系统管理</span>
+          </button>
+          <button
+            onClick={() => router.push("/logs")}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors ${
+              activePath.startsWith("/logs")
+                ? "bg-emerald-500/10 text-emerald-400"
+                : "hover:bg-white/10"
+            }`}
+            aria-label="审计日志"
+          >
+            <span>审计日志</span>
           </button>
         </div>
       </div>
