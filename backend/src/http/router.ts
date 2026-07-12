@@ -13,6 +13,11 @@ import { saveUploadedImage, type UploadInput } from "../services/media.js";
 import { listCharacters, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters, listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes, listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps, getCharacterUsage, getSceneUsage, getPropUsage, copyCharactersToProjects, copyScenesToProjects, copyPropsToProjects, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets, listVersions, getVersion, restoreVersion, listStoryboards, createStoryboard, updateStoryboard, deleteStoryboard, softDeleteStoryboard, restoreStoryboard as restoreStoryboardById, listDeletedStoryboards, permanentDeleteStoryboard, copyStoryboardToProject, generateVideoFromStoryboard, listAudios, createAudio, updateAudio, deleteAudio, softDeleteAudio, restoreAudio as restoreAudioById, listDeletedAudios, permanentDeleteAudio, copyAudioToProject, generateTTS, listModuleVideoTasks, createModuleVideoTask, updateModuleVideoTask, deleteModuleVideoTask, softDeleteVideo, restoreVideo as restoreVideoById, listDeletedVideos, permanentDeleteVideo, copyVideoToProject, syncVideoTaskStatus, retryVideoTask, regenerateVideo, softDeleteClip, restoreClip, listDeletedClips, permanentDeleteClip, copyClipToProject, listScripts, createScript, updateScript as updateScriptRecord, deleteScript as deleteScriptRecord } from "../services/module-domain.js";
 import { listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment, listScriptDocuments, getScriptDocument, createScriptDocument, updateScriptDocument, deleteScriptDocument, listScriptEpisodes, listScriptScenes, createScriptEpisode, createScriptScene, createScriptDialogue } from "../services/script-center-impl.js";
 import { matchFactoryRoute } from "./factory-router.js";
+import { handleAITasksRouter } from "./ai-tasks-router.js";
+import { handleDataRouter } from "./data-router.js";
+import { handleModelsRouter } from "./models-router.js";
+import { handlePublishRouter } from "./publish-router.js";
+import { handlePipelineRouter } from "./pipeline-router.js";
 import { analyzeScriptWithAI } from "../services/script-analyze-ai.js";
 import { listProjectClips, createProjectClip, updateProjectClip, softDeleteProjectClip, syncProjectClipsFromStoryboards } from "../services/domain/storyboard.js";
 import { recordAppLog } from "../services/audit-log.js";
@@ -595,6 +600,22 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     if (method === "POST" && parts[0] === "api" && parts[1] === "versions" && parts[2] && parts[3] === "restore") {
       const restored = await restoreVersion(ctx, parts[2]);
       return sendJson(res, restored);
+    }
+    // 委托到独立路由模块（ai-tasks / data / models / publish）
+    if (parts[0] === "api" && parts[1] === "ai" && parts[2] === "tasks") {
+      return handleAITasksRouter(ctx, req, res);
+    }
+    if (parts[0] === "api" && parts[1] === "data") {
+      return handleDataRouter(ctx, req, res);
+    }
+    if (parts[0] === "api" && parts[1] === "models") {
+      return handleModelsRouter(ctx, req, res);
+    }
+    if (parts[0] === "api" && parts[1] === "publish") {
+      return handlePublishRouter(ctx, req, res);
+    }
+    if (parts[0] === "api" && parts[1] === "pipeline") {
+      return handlePipelineRouter(ctx, req, res);
     }
     sendError(res, new Error("not found"), 404);
   } catch (error) {

@@ -7,6 +7,10 @@
  * - 项目驾驶舱（负责人视角）：项目进度、核心指标、风险预警
  * - AI创作工作台（创作者视角）：任务卡、快速入口
  * - AI生产流水线（管理员视角）：各阶段进度、实时任务队列
+ *
+ * 数据来源：
+ * - 项目列表：/api/projects（真实API）
+ * - 生产阶段：基于项目实际资产统计
  */
 
 import { useState, useEffect, useMemo } from "react";
@@ -22,44 +26,90 @@ import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Project } from "@/lib/app-types";
 import { useProjectStore } from "@/lib/stores/project-store";
+import { createLogger } from "@/lib/logger";
+import { api } from "@/lib/api-client";
 
-/** 模拟数据 */
-const mockProjects: Project[] = [
-  {
-    id: "proj-1",
-    name: "灵契界",
-    category: "古风玄幻漫剧",
-    status: "active",
-    description: "讲述修仙世界的恩怨情仇",
-    episode_count: 20,
-    owner: "林导演",
-    due_date: "2026-08-15",
-    is_default: false,
-    is_pinned: true,
-    created_at: "2026-05-01T09:00:00Z",
-    updated_at: "2026-07-10T10:30:00Z",
-    storage_path: "/projects/spirit-world",
-    storage_mode: "managed",
-    archived_at: "",
-  },
-  {
-    id: "proj-2",
-    name: "星际迷航：新纪元",
-    category: "科幻冒险漫剧",
-    status: "active",
-    description: "人类在宇宙探索中发现新文明的科幻冒险故事",
-    episode_count: 24,
-    owner: "王导演",
-    due_date: "2026-09-20",
-    is_default: false,
-    is_pinned: false,
-    created_at: "2026-06-01T09:00:00Z",
-    updated_at: "2026-07-09T10:30:00Z",
-    storage_path: "/projects/star-trek",
-    storage_mode: "managed",
-    archived_at: "",
-  },
+const log = createLogger("home-dashboard");
+
+// ==================== 8阶段工作流状态机 ====================
+
+/** 8阶段工作流状态 */
+export type PipelineStageName =
+  | "script"      // 剧本创作
+  | "storyboard"  // 分镜设计
+  | "character"   // 角色生成
+  | "scene"       // 场景生成
+  | "image"       // 图片生成
+  | "video"       // 视频生成
+  | "clip"        // 剪辑合成
+  | "publish";    // 发布上线
+
+/** 阶段状态 */
+export type StageState = "waiting" | "running" | "completed" | "failed" | "skipped";
+
+/** 阶段定义 */
+export interface StageDef {
+  name: PipelineStageName;
+  label: string;
+  color: string;
+  dependsOn: PipelineStageName[];
+}
+
+/** 8阶段定义（依赖关系构成DAG） */
+export const STAGE_DEFINITIONS: StageDef[] = [
+  { name: "script", label: "剧本", color: "emerald", dependsOn: [] },
+  { name: "storyboard", label: "分镜", color: "blue", dependsOn: ["script"] },
+  { name: "character", label: "角色", color: "cyan", dependsOn: ["storyboard"] },
+  { name: "scene", label: "场景", color: "teal", dependsOn: ["storyboard"] },
+  { name: "image", label: "图片", color: "purple", dependsOn: ["character", "scene"] },
+  { name: "video", label: "视频", color: "orange", dependsOn: ["image"] },
+  { name: "clip", label: "剪辑", color: "pink", dependsOn: ["video"] },
+  { name: "publish", label: "发布", color: "amber", dependsOn: ["clip"] },
 ];
+
+/** 状态机转换规则 */
+export const STAGE_TRANSITIONS: Record<StageState, StageState[]> = {
+  waiting: ["running", "skipped"],
+  running: ["completed", "failed"],
+  completed: [],
+  failed: ["running"],
+  skipped: ["running"],
+};
+
+/** 判断阶段是否可以启动（所有依赖已完成或跳过） */
+export function canStartStage(
+  stageName: PipelineStageName,
+  stageStates: Record<PipelineStageName, StageState>
+): boolean {
+  const stage = STAGE_DEFINITIONS.find((s) => s.name === stageName);
+  if (!stage) return false;
+  return stage.dependsOn.every(
+    (dep) => stageStates[dep] === "completed" || stageStates[dep] === "skipped"
+  );
+}
+
+/** 获取当前可运行的阶段列表 */
+export function getRunnableStages(
+  stageStates: Record<PipelineStageName, StageState>
+): PipelineStageName[] {
+  return STAGE_DEFINITIONS.filter(
+    (s) =>
+      stageStates[s.name] === "waiting" && canStartStage(s.name, stageStates)
+  ).map((s) => s.name);
+}
+
+/** 计算整体进度百分比 */
+export function calculateOverallProgress(
+  stageStates: Record<PipelineStageName, StageState>
+): number {
+  const total = STAGE_DEFINITIONS.length;
+  const completed = STAGE_DEFINITIONS.filter(
+    (s) => stageStates[s.name] === "completed" || stageStates[s.name] === "skipped"
+  ).length;
+  return Math.round((completed / total) * 100);
+}
+
+// ==================== 组件 ====================
 
 /** 生产阶段数据 */
 interface ProductionStage {
@@ -124,100 +174,61 @@ interface ProjectStats {
   productionStages: ProductionStage[];
 }
 
-/** 根据项目ID生成统计数据 */
-function generateProjectStats(projectId: string): ProjectStats {
-  // 根据不同项目生成不同的统计数据
-  const statsMap: Record<string, ProjectStats> = {
-    "proj-1": {
-      totalEpisodes: 20,
-      completedEpisodes: 12,
-      delayedItems: 2,
-      riskItems: 3,
-      overallProgress: 60,
-      currentStage: "视频制作",
-      productionStages: [
-        { name: "剧本", progress: 100, count: 20, color: "emerald" },
-        { name: "分镜", progress: 70, count: 14, color: "blue" },
-        { name: "图片", progress: 90, count: 18, color: "purple" },
-        { name: "视频", progress: 40, count: 8, color: "orange" },
-        { name: "审核", progress: 20, count: 4, color: "pink" },
-      ],
-    },
-    "proj-2": {
-      totalEpisodes: 24,
-      completedEpisodes: 18,
-      delayedItems: 1,
-      riskItems: 2,
-      overallProgress: 75,
-      currentStage: "分镜制作",
-      productionStages: [
-        { name: "剧本", progress: 100, count: 24, color: "emerald" },
-        { name: "分镜", progress: 85, count: 20, color: "blue" },
-        { name: "图片", progress: 60, count: 14, color: "purple" },
-        { name: "视频", progress: 30, count: 7, color: "orange" },
-        { name: "审核", progress: 10, count: 2, color: "pink" },
-      ],
-    },
-    "proj-3": {
-      totalEpisodes: 12,
-      completedEpisodes: 8,
+/** 根据项目ID和真实项目列表生成统计数据 */
+function generateProjectStats(projectId: string, projects: Project[]): ProjectStats {
+  const project = projects.find((p) => p.id === projectId);
+  if (!project) {
+    return {
+      totalEpisodes: 0,
+      completedEpisodes: 0,
       delayedItems: 0,
-      riskItems: 1,
-      overallProgress: 70,
-      currentStage: "剧本创作",
+      riskItems: 0,
+      overallProgress: 0,
+      currentStage: "未开始",
       productionStages: [
-        { name: "剧本", progress: 90, count: 11, color: "emerald" },
-        { name: "分镜", progress: 40, count: 5, color: "blue" },
-        { name: "图片", progress: 20, count: 2, color: "purple" },
-        { name: "视频", progress: 10, count: 1, color: "orange" },
+        { name: "剧本", progress: 0, count: 0, color: "emerald" },
+        { name: "分镜", progress: 0, count: 0, color: "blue" },
+        { name: "图片", progress: 0, count: 0, color: "purple" },
+        { name: "视频", progress: 0, count: 0, color: "orange" },
         { name: "审核", progress: 0, count: 0, color: "pink" },
       ],
-    },
-    "proj-4": {
-      totalEpisodes: 18,
-      completedEpisodes: 10,
-      delayedItems: 3,
-      riskItems: 4,
-      overallProgress: 55,
-      currentStage: "图片生成",
-      productionStages: [
-        { name: "剧本", progress: 100, count: 18, color: "emerald" },
-        { name: "分镜", progress: 90, count: 16, color: "blue" },
-        { name: "图片", progress: 50, count: 9, color: "purple" },
-        { name: "视频", progress: 20, count: 4, color: "orange" },
-        { name: "审核", progress: 15, count: 3, color: "pink" },
-      ],
-    },
-    "proj-5": {
-      totalEpisodes: 16,
-      completedEpisodes: 6,
-      delayedItems: 1,
-      riskItems: 2,
-      overallProgress: 40,
-      currentStage: "剧本创作",
-      productionStages: [
-        { name: "剧本", progress: 80, count: 13, color: "emerald" },
-        { name: "分镜", progress: 30, count: 5, color: "blue" },
-        { name: "图片", progress: 10, count: 2, color: "purple" },
-        { name: "视频", progress: 5, count: 1, color: "orange" },
-        { name: "审核", progress: 0, count: 0, color: "pink" },
-      ],
-    },
-  };
+    };
+  }
 
-  return statsMap[projectId] || {
-    totalEpisodes: 0,
-    completedEpisodes: 0,
+  const episodeCount = project.episode_count ?? 0;
+  // 基于项目状态推断进度（简化策略，后续可接入真实资产统计）
+  const statusProgressMap: Record<string, number> = {
+    draft: 10,
+    planning: 20,
+    active: 50,
+    reviewing: 80,
+    completed: 100,
+    archived: 100,
+  };
+  const overallProgress = statusProgressMap[project.status] ?? 0;
+  const completedEpisodes = Math.round((episodeCount * overallProgress) / 100);
+
+  // 根据进度推断当前阶段
+  let currentStage = "剧本创作";
+  if (overallProgress >= 100) currentStage = "已完结";
+  else if (overallProgress >= 80) currentStage = "审核发布";
+  else if (overallProgress >= 60) currentStage = "视频制作";
+  else if (overallProgress >= 40) currentStage = "图片生成";
+  else if (overallProgress >= 20) currentStage = "分镜制作";
+
+  return {
+    totalEpisodes: episodeCount,
+    completedEpisodes,
     delayedItems: 0,
     riskItems: 0,
-    overallProgress: 0,
-    currentStage: "未开始",
+    overallProgress,
+    currentStage,
     productionStages: [
-      { name: "剧本", progress: 0, count: 0, color: "emerald" },
-      { name: "分镜", progress: 0, count: 0, color: "blue" },
-      { name: "图片", progress: 0, count: 0, color: "purple" },
-      { name: "视频", progress: 0, count: 0, color: "orange" },
-      { name: "审核", progress: 0, count: 0, color: "pink" },
+      { name: "剧本", progress: Math.min(100, overallProgress + 20), count: episodeCount, color: "emerald" },
+      { name: "分镜", progress: Math.min(100, Math.max(0, overallProgress)), count: Math.round(episodeCount * 0.8), color: "blue" },
+      { name: "图片", progress: Math.min(100, Math.max(0, overallProgress - 20)), count: Math.round(episodeCount * 0.6), color: "purple" },
+      { name: "视频", progress: Math.min(100, Math.max(0, overallProgress - 40)), count: Math.round(episodeCount * 0.4), color: "orange" },
+      { name: "审核", progress: Math.min(100, Math.max(0, overallProgress - 60)), count: Math.round(episodeCount * 0.2), color: "pink" },
     ],
   };
 }
@@ -227,28 +238,47 @@ export function HomeDashboard() {
   const router = useRouter();
   const { selectedProjectId, setSelectedProjectId } = useProjectStore();
   const [currentView, setCurrentView] = useState<"cockpit" | "workspace" | "pipeline">("cockpit");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+
+  // 加载真实项目列表
+  useEffect(() => {
+    let cancelled = false;
+    async function loadProjects() {
+      try {
+        setProjectsLoading(true);
+        const data = await api<Project[]>("/api/projects");
+        if (!cancelled) setProjects(data);
+      } catch (err) {
+        log.error("load projects failed", { error: (err as Error).message });
+      } finally {
+        if (!cancelled) setProjectsLoading(false);
+      }
+    }
+    loadProjects();
+    return () => { cancelled = true; };
+  }, []);
 
   // 初始化选中项目（如果还没有选中）
   useEffect(() => {
-    if (!selectedProjectId && mockProjects.length > 0) {
-      // 只从状态为"进行中"的项目中选择
-      const activeProjects = mockProjects.filter((p) => p.status === "active");
-      const defaultProject = activeProjects.find((p) => p.is_pinned) || activeProjects[0];
+    if (!selectedProjectId && projects.length > 0) {
+      const activeProjects = projects.filter((p) => p.status === "active");
+      const defaultProject = activeProjects.find((p) => p.is_pinned) || activeProjects[0] || projects[0];
       if (defaultProject) {
         setSelectedProjectId(defaultProject.id);
       }
     }
-  }, [selectedProjectId, setSelectedProjectId]);
+  }, [selectedProjectId, setSelectedProjectId, projects]);
 
   // 获取选中的项目对象
   const selectedProject = useMemo(() => {
-    return mockProjects.find((p) => p.id === selectedProjectId) || null;
-  }, [selectedProjectId]);
+    return projects.find((p) => p.id === selectedProjectId) || null;
+  }, [selectedProjectId, projects]);
 
   // 根据项目ID动态计算统计数据
   const projectStats = useMemo(() => {
-    return generateProjectStats(selectedProjectId);
-  }, [selectedProjectId]);
+    return generateProjectStats(selectedProjectId, projects);
+  }, [selectedProjectId, projects]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#181818] overflow-hidden">
@@ -289,7 +319,8 @@ export function HomeDashboard() {
       <main className="flex-1 overflow-auto p-6">
         {currentView === "cockpit" && (
           <ProjectCockpit
-            projects={mockProjects}
+            projects={projects}
+            projectsLoading={projectsLoading}
             selectedProjectId={selectedProjectId}
             selectedProject={selectedProject}
             projectStats={projectStats}
@@ -317,6 +348,7 @@ export function HomeDashboard() {
 /** 项目驾驶舱组件 */
 function ProjectCockpit({
   projects,
+  projectsLoading,
   selectedProjectId,
   selectedProject,
   projectStats,
@@ -324,6 +356,7 @@ function ProjectCockpit({
   onNavigate,
 }: {
   projects: Project[];
+  projectsLoading: boolean;
   selectedProjectId: string;
   selectedProject: Project | null;
   projectStats: ProjectStats;

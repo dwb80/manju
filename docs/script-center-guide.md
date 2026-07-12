@@ -1,9 +1,10 @@
 # AI漫剧工业化生产平台 - 剧本中心完整指南
 
-**文档版本**: 2.0.0  
+**文档版本**: 2.1.0  
 **编制日期**: 2026-07-10  
-**最后更新**: 2026-07-10  
+**最后更新**: 2026-07-12  
 **文档类型**: 需求规格说明书 + 技术设计文档 + 数据库设计  
+**更新说明**: 同步实际实现中的表名（复数形式）、接口路径（`/api/script-documents` 等）、状态枚举值（SQLite 字符串类型），以及 AI 接口实现方式（分散函数而非统一接口）  
 **整合来源**: 
 - script-center-requirements.md（需求规格）
 - script-center-database-design.md（数据库设计）
@@ -2072,34 +2073,19 @@ CREATE TABLE script_scene_location (...);
 **用途**: 存储Tiptap编辑器的原始JSON，用于编辑器恢复、Undo、Diff、AI改写、导出
 
 ```sql
-CREATE TABLE script_document (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    project_id      BIGINT NOT NULL,
-    version_no      INT NOT NULL DEFAULT 1,
-    
-    -- 剧本标题
-    title           VARCHAR(200) NOT NULL,
-    
-    -- 编辑器原始JSON（Tiptap/ProseMirror格式）
-    editor_json     LONGTEXT NOT NULL,
-    
-    -- Markdown格式（用于导出和分享）
-    markdown        LONGTEXT,
-    
-    -- 统计信息
-    word_count      INT DEFAULT 0,
-    scene_count     INT DEFAULT 0,
-    character_count INT DEFAULT 0,
-    
-    -- 元数据
-    status          ENUM('draft', 'active', 'review', 'completed') DEFAULT 'draft',
-    created_by      BIGINT,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    INDEX idx_project_version (project_id, version_no),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='剧本文档表（编辑器原始数据）';
+-- 实际表名：script_documents（SQLite，复数命名）
+-- 对应 backend/src/storage/schema.ts 中 scriptDocumentFields
+CREATE TABLE script_documents (
+    id              TEXT PRIMARY KEY,    -- UUID，如 sd-xxx
+    project_id      TEXT NOT NULL,       -- 关联项目 ID
+    editor_json     TEXT NOT NULL,       -- Tiptap/ProseMirror JSON
+    version         INTEGER DEFAULT 1,
+    created_at      TEXT NOT NULL,       -- ISO 8601
+    updated_at      TEXT NOT NULL
+);
+
+-- 索引（SQLite 语法）
+CREATE INDEX idx_script_documents_project ON script_documents(project_id);
 ```
 
 **editor_json示例**:
@@ -2165,25 +2151,20 @@ CREATE TABLE script_document (
 #### script_version（剧本版本历史表）
 
 ```sql
-CREATE TABLE script_version (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    document_id     BIGINT NOT NULL,
-    version_no      INT NOT NULL,
-    
-    -- 版本快照
-    editor_json     LONGTEXT NOT NULL,
-    
-    -- 变更信息
-    change_summary  TEXT,
-    change_type     ENUM('manual', 'auto', 'ai') DEFAULT 'manual',
-    
-    -- 元数据
-    created_by      BIGINT,
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    
-    INDEX idx_document_version (document_id, version_no),
-    FOREIGN KEY (document_id) REFERENCES script_document(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='剧本版本历史表';
+-- 实际表名：script_backups（复用备份表做版本历史，SQLite）
+-- 对应 backend/src/storage/schema.ts 中 scriptBackup 相关字段
+CREATE TABLE script_backups (
+    id              TEXT PRIMARY KEY,
+    project_id      TEXT NOT NULL,
+    document_id     TEXT,                -- 关联剧本文档 ID
+    type            TEXT NOT NULL,       -- 'auto' | 'manual' | 'scheduled'
+    size            INTEGER,
+    content         TEXT,                -- JSON：{ script_document, version, changes }
+    status          TEXT DEFAULT 'completed',
+    created_by      TEXT,
+    created_at      TEXT NOT NULL,
+    expires_at      TEXT
+);
 ```
 
 ---
@@ -2195,31 +2176,20 @@ CREATE TABLE script_version (
 **用途**: 管理剧集层级结构
 
 ```sql
-CREATE TABLE script_episode (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    project_id      BIGINT NOT NULL,
-    
-    -- 剧集信息
-    episode_no      VARCHAR(20) NOT NULL,  -- EP01, EP02等
-    title           VARCHAR(200) NOT NULL,
-    summary         TEXT,
-    
-    -- 状态和排序
-    status          ENUM('draft', 'active', 'review', 'completed') DEFAULT 'draft',
-    sort_order      INT DEFAULT 0,
-    
-    -- 统计
-    scene_count     INT DEFAULT 0,
-    word_count      INT DEFAULT 0,
-    
-    -- 元数据
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    UNIQUE KEY uk_project_episode (project_id, episode_no),
-    INDEX idx_project_status (project_id, status),
-    FOREIGN KEY (project_id) REFERENCES project(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='剧集表';
+-- 实际表名：script_episodes（SQLite）
+-- 对应 backend/src/storage/schema.ts 中 scriptEpisodeFields
+-- 状态值：'draft' | 'review' | 'approved' | 'production'
+CREATE TABLE script_episodes (
+    id              TEXT PRIMARY KEY,
+    project_id      TEXT NOT NULL,
+    document_id     TEXT NOT NULL,       -- 关联剧本文档
+    episode_no      INTEGER NOT NULL,    -- 1, 2, 3...
+    title           TEXT NOT NULL,
+    synopsis        TEXT,
+    status          TEXT DEFAULT 'draft',
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
 ```
 
 ---
@@ -2229,38 +2199,20 @@ CREATE TABLE script_episode (
 **用途**: 管理场景层级，一场戏就是一个Scene
 
 ```sql
-CREATE TABLE script_scene (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    episode_id      BIGINT NOT NULL,
-    
-    -- 场景信息
-    scene_no        VARCHAR(20) NOT NULL,  -- Scene01, Scene02等
-    title           VARCHAR(200),
-    
-    -- 场景属性
-    location_name   VARCHAR(200),          -- 茶信馆门口
-    time_name       VARCHAR(50),           -- 白天、夜晚等
-    
-    -- 场景内容
-    summary         TEXT,                  -- 场景摘要
-    content         TEXT,                  -- 场景正文
-    
-    -- 状态和排序
-    status          ENUM('draft', 'active', 'review', 'completed') DEFAULT 'draft',
-    sort_order      INT DEFAULT 0,
-    
-    -- 统计
-    word_count      INT DEFAULT 0,
-    dialogue_count  INT DEFAULT 0,
-    
-    -- 元数据
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    UNIQUE KEY uk_episode_scene (episode_id, scene_no),
-    INDEX idx_episode_status (episode_id, status),
-    FOREIGN KEY (episode_id) REFERENCES script_episode(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='场景表（核心业务表）';
+-- 实际表名：script_scenes（SQLite）
+-- 对应 backend/src/storage/schema.ts 中 scriptSceneFields
+CREATE TABLE script_scenes (
+    id              TEXT PRIMARY KEY,
+    project_id      TEXT NOT NULL,
+    episode_id      TEXT NOT NULL,
+    scene_no        INTEGER NOT NULL,     -- 1, 2, 3...
+    location_name   TEXT,                 -- 茶信馆门口
+    time_of_day     TEXT DEFAULT 'day',  -- 'day' | 'night' | 'dawn' | 'dusk'
+    description     TEXT,                 -- 场景描述
+    notes           TEXT,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
 ```
 
 ---
@@ -2270,29 +2222,19 @@ CREATE TABLE script_scene (
 **用途**: 单独存储对白，支持AI配音、角色统计等
 
 ```sql
-CREATE TABLE script_dialogue (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    scene_id        BIGINT NOT NULL,
-    
-    -- 角色引用（关键：存储资产ID，不是名字）
-    character_id    BIGINT NOT NULL,       -- 引用角色资产库
-    character_name  VARCHAR(100),          -- 冗余字段，便于查询
-    
-    -- 对白内容
+-- 实际表名：script_dialogues（SQLite）
+-- 对应 backend/src/storage/schema.ts 中 scriptDialogueFields
+-- 角色引用 character_id 关联 characters 表（不是 character_assets）
+CREATE TABLE script_dialogues (
+    id              TEXT PRIMARY KEY,
+    project_id      TEXT NOT NULL,
+    scene_id        TEXT NOT NULL,
+    character_id    TEXT NOT NULL,        -- 引用 characters 表 ID
     dialogue        TEXT NOT NULL,
-    emotion         VARCHAR(50),           -- 情绪指示
-    
-    -- 排序
-    sort_order      INT DEFAULT 0,
-    
-    -- 元数据
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    
-    INDEX idx_scene (scene_id),
-    INDEX idx_character (character_id),
-    FOREIGN KEY (scene_id) REFERENCES script_scene(id),
-    FOREIGN KEY (character_id) REFERENCES character_asset(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='对白表';
+    emotion         TEXT,
+    "order"         INTEGER DEFAULT 0,   -- 排序（SQLite 关键字需引号）
+    created_at      TEXT NOT NULL
+);
 ```
 
 **示例数据**:
@@ -2351,25 +2293,17 @@ CREATE TABLE script_action (
 **设计原则**: 不要存储角色名字字符串，而是存储角色资产ID
 
 ```sql
-CREATE TABLE script_scene_character (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    scene_id        BIGINT NOT NULL,
-    
-    -- 角色资产引用（关键）
-    character_asset_id  BIGINT NOT NULL,  -- 引用角色资产库
-    
-    -- 角色在场景中的角色
-    role_type       ENUM('main', 'support', 'guest') DEFAULT 'support',
-    is_speaking     BOOLEAN DEFAULT true, -- 是否有台词
-    
-    -- 元数据
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    
-    UNIQUE KEY uk_scene_character (scene_id, character_asset_id),
-    INDEX idx_character (character_asset_id),
-    FOREIGN KEY (scene_id) REFERENCES script_scene(id),
-    FOREIGN KEY (character_asset_id) REFERENCES character_asset(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='场景-角色引用表';
+-- 实际表名：script_scene_characters（SQLite）
+-- 对应 backend/src/storage/schema.ts 中 scriptSceneCharacterFields
+CREATE TABLE script_scene_characters (
+    id                  TEXT PRIMARY KEY,
+    project_id          TEXT NOT NULL,
+    scene_id            TEXT NOT NULL,
+    character_asset_id  TEXT NOT NULL,    -- 引用 characters 表 ID
+    role_type           TEXT DEFAULT 'support',  -- 'main' | 'support' | 'guest'
+    is_speaking         INTEGER DEFAULT 1,
+    created_at          TEXT NOT NULL
+);
 ```
 
 **为什么不要存储名字？**
@@ -2408,20 +2342,15 @@ WHERE s.scene_id = 101;
 #### script_scene_location（场景-地点引用表）
 
 ```sql
-CREATE TABLE script_scene_location (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    scene_id        BIGINT NOT NULL,
-    
-    -- 场景资产引用
-    location_asset_id  BIGINT NOT NULL,
-    
-    -- 元数据
-    created_time    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    
-    UNIQUE KEY uk_scene_location (scene_id, location_asset_id),
-    FOREIGN KEY (scene_id) REFERENCES script_scene(id),
-    FOREIGN KEY (location_asset_id) REFERENCES location_asset(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='场景-地点引用表';
+-- 实际表名：script_scene_locations（SQLite）
+-- 对应 backend/src/storage/schema.ts 中 scriptSceneLocationFields
+CREATE TABLE script_scene_locations (
+    id                  TEXT PRIMARY KEY,
+    project_id          TEXT NOT NULL,
+    scene_id            TEXT NOT NULL,
+    location_asset_id   TEXT NOT NULL,    -- 引用 scenes 表 ID
+    created_at          TEXT NOT NULL
+);
 ```
 
 **为什么不要存储地点名字？**
@@ -2832,26 +2761,29 @@ class ScriptParserService {
 #### 触发时机
 
 ```typescript
-// 在保存编辑器内容时触发解析
-router.post('/api/script/save', async (req, res) => {
-  const { documentId, editorJson } = req.body;
+// 实际接口路径：/api/script-documents（PUT）
+// 文件：backend/src/http/router.ts
+// 解析服务目前为简化实现（backend/src/services/script-center-impl.ts:parseScriptDocument）
+// 返回空数组，待后续接入完整解析器
+
+// 保存剧本文档
+router.put('/api/script-documents/:id', async (req, res) => {
+  const { id } = req.params;
+  const body = await readJson(req);
   
-  // 1. 保存editor_json
-  await db.query(`
-    UPDATE script_document 
-    SET editor_json = ?, updated_time = NOW()
-    WHERE id = ?
-  `, [JSON.stringify(editorJson), documentId]);
+  // 1. 保存 editor_json（version 自动 +1）
+  const updated = await updateScriptDocument(ctx, id, {
+    editor_json: body.editor_json,
+  });
   
   // 2. 异步触发解析服务（不阻塞用户）
-  scriptParserService.parseAndSync(documentId, editorJson)
+  parseScriptDocument(ctx, id)
     .catch(error => {
-      console.error('Script parsing failed:', error);
-      // 发送告警
+      rootLogger.warn({ event: 'script.parse.failed', error: error.message });
     });
   
-  // 3. 立即返回成功（用户无需等待解析）
-  res.json({ success: true });
+  // 3. 立即返回成功
+  res.json({ code: 0, message: 'ok', data: updated });
 });
 ```
 
@@ -2909,45 +2841,28 @@ router.post('/api/script/save', async (req, res) => {
 
 **接口定义**:
 ```typescript
-POST /api/ai/script-action
-
-Request:
-{
-  action: 'optimize' | 'expand' | 'shorten' | 
-          'generate-shots' | 'generate-character' | 
-          'generate-scene' | 'generate-prompt',
-  
-  content: string,          // 选中的文本或场景描述
-  
-  context?: {
-    projectId: string,
-    sceneId?: string,
-    characterNames?: string[]
-  },
-  
-  options?: {
-    targetLength?: number,
-    maxShots?: number,
-    style?: string
-  }
+// 实际实现中暂无统一的 /api/ai/script-action 接口
+// 而是分散在 backend/src/services/script-center-impl.ts 中的独立函数：
+// - generateScriptWithAI()      → AI 剧本生成
+// - optimizeScriptWithAI()      → AI 剧本优化/扩写
+// - generateSceneWithAI()       → AI 场景生成
+// - generateDialogueWithAI()    → AI 对白生成
+// - splitStoryboardWithAI()     → AI 分镜拆分
+//
+// 这些函数内部通过 executeModelCall() 调用模型中心，
+// 前端如需使用需通过各自独立的路由或组件直接调用。
+//
+// 示例：optimizeScriptWithAI 入参
+interface AIScriptOptimizationRequest {
+  project_id?: string;
+  script_id?: string;           // 文档模式：指定剧本文档 ID
+  optimization_type?: 'grammar' | 'style' | 'dialogue' | 'structure' | 'pacing';
+  target_sections?: string[];
+  custom_instructions?: string;
+  content?: string;             // 纯文本模式：直接传入文本
 }
 
-Response:
-{
-  success: boolean,
-  data: {
-    content?: string,       // 生成的文本
-    shots?: Array<object>,  // 生成的镜头
-    character?: object,     // 生成的角色
-    scene?: object          // 生成的场景
-  },
-  metadata: {
-    action: string,
-    model: string,
-    usage: object,
-    duration: number
-  }
-}
+// 返回：{ optimizedContent: string }
 ```
 
 **优势**:
@@ -3462,9 +3377,9 @@ async function handleScriptAction(req, res) {
 | outline | object | 否 | - | {} | 剧情大纲 |
 | episodes | array | 否 | - | [] | 章节剧集列表 |
 | version | number | 是 | >=1 | 1 | 当前版本号 |
-| status | enum | 是 | draft/active/review/completed | draft | 项目状态 |
-| created_at | datetime | 是 | ISO 8601 | 自动生成 | 创建时间 |
-| updated_at | datetime | 是 | ISO 8601 | 自动更新 | 更新时间 |
+| status | string | 是 | draft/active/review/completed/archived | draft | 项目状态 |
+| created_at | string | 是 | ISO 8601 | 自动生成 | 创建时间 |
+| updated_at | string | 是 | ISO 8601 | 自动更新 | 更新时间 |
 
 ---
 
@@ -3474,17 +3389,13 @@ async function handleScriptAction(req, res) {
 |--------|------|------|----------|--------|----------|
 | id | string | 是 | UUID格式 | 自动生成 | 章节唯一标识 |
 | project_id | string | 是 | 外键约束 | - | 所属项目ID |
-| episode_number | number | 是 | >=1 | 自动递增 | 集数序号 |
-| title | string | 是 | 1-100字符 | "EP01" | 章节标题 |
-| content | text | 否 | 0-500000字符 | "" | 剧本内容（文本） |
-| structured_data | object | 否 | - | {} | 结构化数据（JSON） |
-| word_count | number | 否 | >=0 | 0 | 字数统计 |
-| scene_count | number | 否 | >=0 | 0 | 场景数量 |
-| character_count | number | 否 | >=0 | 0 | 角色数量 |
-| status | enum | 是 | draft/active/review/completed | draft | 章节状态 |
-| version | number | 是 | >=1 | 1 | 章节版本号 |
-| created_at | datetime | 是 | ISO 8601 | 自动生成 | 创建时间 |
-| updated_at | datetime | 是 | ISO 8601 | 自动更新 | 更新时间 |
+| document_id | string | 是 | 外键约束 | - | 所属剧本文档ID |
+| episode_no | number | 是 | >=1 | 自动递增 | 集数序号 |
+| title | string | 是 | 1-100字符 | "第1集" | 章节标题 |
+| synopsis | text | 否 | 0-5000字符 | "" | 剧集简介 |
+| status | string | 是 | draft/review/approved/production | draft | 剧集状态 |
+| created_at | string | 是 | ISO 8601 | 自动生成 | 创建时间 |
+| updated_at | string | 是 | ISO 8601 | 自动更新 | 更新时间 |
 
 ---
 
@@ -3493,13 +3404,15 @@ async function handleScriptAction(req, res) {
 | 字段名 | 类型 | 必填 | 校验规则 | 默认值 | 业务含义 |
 |--------|------|------|----------|--------|----------|
 | id | string | 是 | UUID格式 | 自动生成 | 版本唯一标识 |
-| episode_id | string | 是 | 外键约束 | - | 所属章节ID |
-| version_number | number | 是 | >=1 | 自动递增 | 版本序号 |
-| version_name | string | 否 | 1-50字符 | "V1.0" | 版本名称 |
-| content | text | 是 | - | - | 版本内容快照 |
-| change_summary | string | 否 | 0-500字符 | "" | 变更摘要 |
+| project_id | string | 是 | 外键约束 | - | 所属项目ID |
+| document_id | string | 否 | 外键约束 | - | 所属剧本文档ID |
+| type | string | 是 | auto/manual/scheduled | manual | 版本类型 |
+| size | number | 否 | >=0 | 0 | 内容大小（字节） |
+| content | object | 是 | - | - | 版本内容快照 {script_document, version, changes} |
+| status | string | 是 | creating/completed/failed | completed | 版本状态 |
 | created_by | string | 是 | 用户ID | - | 创建者ID |
-| created_at | datetime | 是 | ISO 8601 | 自动生成 | 创建时间 |
+| created_at | string | 是 | ISO 8601 | 自动生成 | 创建时间 |
+| expires_at | string | 否 | ISO 8601 | 30天后 | 过期时间 |
 
 ---
 
@@ -4488,36 +4401,37 @@ Tab 键顺序:
 
 ### 11.4 实施检查清单
 
-#### 第一阶段：基础表结构
+#### 第一阶段：基础表结构（已创建）
 
-- [ ] 创建script_document表（editor_json存储）
-- [ ] 创建script_version表（版本历史）
-- [ ] 创建script_episode表（剧集）
-- [ ] 创建script_scene表（场景）⭐核心
-- [ ] 创建script_dialogue表（对白）
-- [ ] 创建script_action表（动作）
+- [x] 创建 script_documents 表（editor_json 存储，SQLite）
+- [x] 创建 script_episodes 表（剧集，SQLite）
+- [x] 创建 script_scenes 表（场景）⭐核心
+- [x] 创建 script_dialogues 表（对白）
+- [x] 创建 script_backups 表（版本历史，复用备份表）
+- [ ] 创建 script_actions 表（动作）—— 暂未实现，待后续补充
 
-#### 第二阶段：资产引用表
+#### 第二阶段：资产引用表（已创建）
 
-- [ ] 创建script_scene_character表（角色引用）⭐
-- [ ] 创建script_scene_location表（场景引用）⭐
-- [ ] 创建script_scene_prop表（道具引用）⭐
+- [x] 创建 script_scene_characters 表（角色引用）⭐
+- [x] 创建 script_scene_locations 表（场景引用）⭐
+- [ ] 创建 script_scene_props 表（道具引用）⭐ —— 暂未实现，待后续补充
 
-#### 第三阶段：解析服务
+#### 第三阶段：解析服务（部分实现）
 
-- [ ] 实现ScriptParserService
-- [ ] 实现Episode节点解析
-- [ ] 实现Scene节点解析
-- [ ] 实现Dialogue节点解析
-- [ ] 实现资产引用提取
+- [x] 实现 parseScriptDocument()（基础框架，backend/src/services/script-center-impl.ts）
+- [ ] 实现完整 Episode 节点解析（从 editor_json 提取）
+- [ ] 实现完整 Scene 节点解析（从 editor_json 提取）
+- [ ] 实现完整 Dialogue 节点解析（从 editor_json 提取）
+- [ ] 实现资产引用自动提取（角色/场景/道具）
 
-#### 第四阶段：接口开发
+#### 第四阶段：接口开发（已完成）
 
-- [ ] 实现剧本保存接口（触发解析）
-- [ ] 实现角色查询接口
-- [ ] 实现场景查询接口
-- [ ] 实现对白查询接口
-- [ ] 实现资产关联接口
+- [x] 实现剧本文档 CRUD 接口：`/api/script-documents`（GET/POST/PUT/DELETE）
+- [x] 实现剧集 CRUD 接口：`/api/script-episodes`（GET/POST）
+- [x] 实现场景 CRUD 接口：`/api/script-scenes`（GET/POST）
+- [x] 实现对白 CRUD 接口：`/api/script-dialogues`（GET/POST）
+- [x] 实现评论 CRUD 接口：`/api/script-comments`（GET/POST/PUT/DELETE）
+- [x] 实现剧本导入接口：`/api/script-documents`（POST，支持 JSON 解析+AI 分析）
 
 ---
 
