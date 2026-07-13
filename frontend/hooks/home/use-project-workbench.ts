@@ -617,15 +617,53 @@ export function useProjectWorkbench({
   const deleteProjectScriptItem = useCallback((selectedProject: Project | undefined, script: ProjectScript) => {
     if (!selectedProject) return;
     const projectId = selectedProject.id;
-    requestConfirm("删除剧本", `确认删除剧本"${script.title}"？`, "删除剧本", async () => {
+    requestConfirm("删除剧本", `确认将剧本"${script.title}"移到回收站？30 天内可在回收站恢复或彻底删除。`, "移到回收站", async () => {
       try {
-        await api(`/api/projects/${projectId}/scripts/${script.id}`, { method: "DELETE" });
-        showNotice("剧本已删除");
+        const result = await api<{ deleted_at: string }>(`/api/projects/${projectId}/scripts/${script.id}`, { method: "DELETE" });
+        // 软删后从默认列表移除
+        setProjectScripts((items) => items.filter((item) => item.id !== script.id));
+        showNotice(`剧本已移到回收站，30 天后自动清理（删除于 ${new Date(result.deleted_at).toLocaleString()}）`);
       } catch (error) {
         showNotice((error as Error).message || "剧本删除失败");
       }
     });
   }, [requestConfirm, showNotice]);
+
+  const restoreProjectScriptItem = useCallback(async (selectedProject: Project | undefined, script: ProjectScript) => {
+    if (!selectedProject) return;
+    try {
+      const restored = await api<ProjectScript>(`/api/projects/${selectedProject.id}/scripts/${script.id}/restore`, { method: "POST" });
+      // 从当前 projectScripts 列表移除（如果还在），由 reload 接管
+      setProjectScripts((items) => items.filter((item) => item.id !== script.id));
+      showNotice(`剧本"${restored.title}"已恢复`);
+      return restored;
+    } catch (error) {
+      showNotice((error as Error).message || "剧本恢复失败");
+    }
+  }, [showNotice]);
+
+  const purgeProjectScriptItem = useCallback((selectedProject: Project | undefined, script: ProjectScript) => {
+    if (!selectedProject) return;
+    const projectId = selectedProject.id;
+    requestConfirm("彻底删除剧本", `确认彻底删除"${script.title}"？此操作会级联清理剧集、场景、对白、备份等所有关联数据，且不可恢复。`, "彻底删除", async () => {
+      try {
+        const result = await api<{ script_id: string; cascade: Record<string, number> }>(`/api/projects/${projectId}/scripts/${script.id}/purge`, { method: "DELETE" });
+        const total = Object.values(result.cascade ?? {}).reduce((sum, count) => sum + count, 0);
+        showNotice(`剧本已彻底清理（联动删除 ${total} 条记录）`);
+      } catch (error) {
+        showNotice((error as Error).message || "剧本彻底删除失败");
+      }
+    });
+  }, [requestConfirm, showNotice]);
+
+  // 计算回收站剧本距 30 天保留期还差几天（负数表示可彻底删除）
+  const scriptRecycleBinRemainingDays = useCallback((deletedAt: string | undefined): number => {
+    if (!deletedAt) return 0;
+    const deletedTime = new Date(deletedAt).getTime();
+    if (Number.isNaN(deletedTime)) return 0;
+    const graceMs = 30 * 24 * 60 * 60 * 1000;
+    return Math.ceil((deletedTime + graceMs - Date.now()) / (24 * 60 * 60 * 1000));
+  }, []);
 
   const breakdownSavedScript = useCallback(async (selectedProject: Project | undefined, script: ProjectScript) => {
     if (!selectedProject) return;
@@ -1326,6 +1364,9 @@ export function useProjectWorkbench({
     resetProjectScriptForm,
     submitProjectScriptForm,
     deleteProjectScriptItem,
+    restoreProjectScriptItem,
+    purgeProjectScriptItem,
+    scriptRecycleBinRemainingDays,
     breakdownSavedScript,
 
     // Reviews

@@ -4,7 +4,7 @@ Agnes AI Studio 是一个本地运行的 AI 创作工具，支持聊天、图片
 
 这个项目是前后端分离结构：
 
-- `backend/`：Node.js 后端，负责 API、Agnes 接口调用、CSV 数据存储、本地图片/视频缓存。
+- `backend/`：Node.js 后端，负责 API、Agnes 接口调用、SQLite 数据存储、本地图片/视频缓存。
 - `frontend/`：Next.js + React + Tailwind 前端，负责聊天页面、图片页、视频页和历史会话列表。
 - `docs/`：给开发者和新手看的说明文档。
 - `start-all.bat`：一键启动前端和后端。

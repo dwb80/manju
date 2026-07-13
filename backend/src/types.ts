@@ -22,6 +22,7 @@ export type {
   AIStoryboardSplitRequest,
 } from "./types/script.js";
 export type { Character, CharacterRole, CharacterGender } from "./types/character.js";
+export type { CharacterImageHistory } from "./types/character-image-history.js";
 export type { Scene, SceneType } from "./types/scene.js";
 export type { Prop, PropCategory } from "./types/prop.js";
 export type { Storyboard, StoryboardStatus, ProjectStoryboard, ProjectStoryboardStatus } from "./types/storyboard.js";

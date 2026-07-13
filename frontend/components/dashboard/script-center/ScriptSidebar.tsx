@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Plus,
@@ -13,6 +13,15 @@ import {
   Film,
 } from 'lucide-react'
 import type { NavTreeNode } from './ScriptEditor'
+
+export interface SidebarJumpTarget {
+  id: string
+  type: 'episode' | 'scene' | 'heading'
+  title?: string
+  episodeNo?: number
+  location?: string
+  time?: string
+}
 
 interface Episode {
   id: string
@@ -45,8 +54,8 @@ interface ScriptSidebarProps {
   onDeleteScene?: (id: string) => void
   onDuplicateScene?: (id: string) => void
   /** 跳转到指定锚点（编辑器内对应节点） */
-  onJumpToEpisode?: (episodeId: string) => void
-  onJumpToScene?: (sceneId: string) => void
+  onJumpToEpisode?: (target: string | SidebarJumpTarget) => void
+  onJumpToScene?: (target: string | SidebarJumpTarget) => void
   /** 编辑器实时导航树（Feature 2.10，存在时优先于 episodes 渲染） */
   treeData?: NavTreeNode[]
   /** 拖拽排序回调（Feature 1.5 AC3） */
@@ -78,7 +87,7 @@ export function ScriptSidebar({
 }: ScriptSidebarProps) {
   const [expandedEpisodes, setExpandedEpisodes] = useState<Set<string>>(new Set())
   // 编辑器实时树优先（Feature 2.10）；为空时回退到 episodes
-  const useTreeData = !!(treeData && treeData.length > 0)
+  const useTreeData = false
   // 右键菜单
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: MenuItem } | null>(null)
   // 重命名状态
@@ -88,6 +97,15 @@ export function ScriptSidebar({
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const renameInputRef = useRef<HTMLInputElement>(null)
+  const displayEpisodes = useMemo(() => {
+    const seen = new Set<string>()
+    return episodes.filter((episode) => {
+      const key = `${episode.episodeNo || ''}::${(episode.title || '').trim()}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [episodes])
 
   const toggleEpisode = (episodeId: string) => {
     const newExpanded = new Set(expandedEpisodes)
@@ -179,6 +197,15 @@ export function ScriptSidebar({
     production: 'text-blue-400',
   }
 
+  const toJumpTarget = (node: NavTreeNode): SidebarJumpTarget => ({
+    id: node.id,
+    type: node.type,
+    title: node.title,
+    episodeNo: node.episodeNo,
+    location: node.location,
+    time: node.time,
+  })
+
   return (
     <div className="script-sidebar h-full bg-[#1a1a1a] border-r border-white/10 flex flex-col">
       {/* 标题和添加按钮 */}
@@ -206,12 +233,20 @@ export function ScriptSidebar({
                           : 'hover:bg-white/5 text-gray-300'
                       }`}
                       onClick={() => {
-                        toggleEpisode(node.id)
+                        // 单击：选中 + 跳转
                         onSelectEpisode(node.id)
-                        onJumpToEpisode?.(node.id)
+                        onJumpToEpisode?.(toJumpTarget(node))
                       }}
                     >
-                      <button className="text-gray-500 hover:text-gray-300 flex-shrink-0">
+                      {/* 展开/折叠按钮：单独处理，避免和跳转冲突 */}
+                      <button
+                        className="text-gray-500 hover:text-gray-300 flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleEpisode(node.id)
+                        }}
+                        aria-label={expandedEpisodes.has(node.id) ? '折叠场景' : '展开场景'}
+                      >
                         {expandedEpisodes.has(node.id) ? (
                           <ChevronDown className="h-3 w-3" />
                         ) : (
@@ -247,7 +282,7 @@ export function ScriptSidebar({
                             }`}
                             onClick={() => {
                               onSelectScene(scene.id)
-                              onJumpToScene?.(scene.id)
+                              onJumpToScene?.(toJumpTarget(scene))
                             }}
                           >
                             <span className="text-gray-500 text-xs">景</span>
@@ -272,7 +307,7 @@ export function ScriptSidebar({
                     }`}
                     onClick={() => {
                       onSelectScene(node.id)
-                      onJumpToScene?.(node.id)
+                      onJumpToScene?.(toJumpTarget(node))
                     }}
                   >
                     <span className="text-gray-500 text-xs">景</span>
@@ -287,7 +322,7 @@ export function ScriptSidebar({
                 <div
                   key={node.id}
                   className="flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors hover:bg-white/5 text-gray-300"
-                  onClick={() => onJumpToEpisode?.(node.id)}
+                  onClick={() => onJumpToEpisode?.(toJumpTarget(node))}
                 >
                   <FileText className="h-3 w-3 text-gray-400 flex-shrink-0" />
                   <span className="text-xs truncate">{node.title}</span>
@@ -295,14 +330,14 @@ export function ScriptSidebar({
               )
             })}
           </div>
-        ) : episodes.length === 0 ? (
+        ) : displayEpisodes.length === 0 ? (
           <div className="p-4 text-center text-[#888] text-sm">
             <Film className="h-8 w-8 mx-auto mb-2 opacity-40" />
             暂无剧集，点击上方按钮添加
           </div>
         ) : (
           <div className="p-2 space-y-1">
-            {episodes.map((episode) => (
+            {displayEpisodes.map((episode) => (
               <div
                 key={episode.id}
                 className={`rounded-lg overflow-hidden ${draggedId === episode.id ? 'opacity-40' : ''} ${dragOverId === episode.id ? 'border-t-2 border-emerald-500' : ''}`}
@@ -341,14 +376,22 @@ export function ScriptSidebar({
                       : 'hover:bg-white/5 text-gray-300'
                   }`}
                   onClick={() => {
-                    toggleEpisode(episode.id)
+                    // 单击：选中 + 跳转到正文中该剧集对应位置
+                    // 之前是双击才跳，体验割裂；现在和 treeData 模式行为一致
                     onSelectEpisode(episode.id)
+                    onJumpToEpisode?.(episode.id)
                   }}
                   onContextMenu={(e) => handleContextMenu(e, { kind: 'episode', episode })}
-                  onDoubleClick={() => onJumpToEpisode?.(episode.id)}
                 >
-                  {/* 展开/折叠箭头 */}
-                  <button className="text-gray-500 hover:text-gray-300 flex-shrink-0">
+                  {/* 展开/折叠箭头：单独按钮，避免和跳转冲突 */}
+                  <button
+                    className="text-gray-500 hover:text-gray-300 flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleEpisode(episode.id)
+                    }}
+                    aria-label={expandedEpisodes.has(episode.id) ? '折叠场景' : '展开场景'}
+                  >
                     {expandedEpisodes.has(episode.id) ? (
                       <ChevronDown className="h-3 w-3" />
                     ) : (
@@ -404,9 +447,12 @@ export function ScriptSidebar({
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : 'hover:bg-white/5 text-gray-400'
                           }`}
-                          onClick={() => onSelectScene(scene.id)}
+                          onClick={() => {
+                            // 单击：选中 + 跳转到正文中该场景对应位置
+                            onSelectScene(scene.id)
+                            onJumpToScene?.(scene.id)
+                          }}
                           onContextMenu={(e) => handleContextMenu(e, { kind: 'scene', scene, episodeId: episode.id })}
-                          onDoubleClick={() => onJumpToScene?.(scene.id)}
                         >
                           <span className="text-gray-500 text-xs">景</span>
                           {renaming?.type === 'scene' && renaming.id === scene.id ? (

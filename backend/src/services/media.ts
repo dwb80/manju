@@ -1,7 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import sharp from "sharp";
 import type { AppContext } from "./app.js";
+import { rootLogger } from "../logger.js";
 
 const contentTypeExtensions: Record<string, string> = {
   "image/jpeg": ".jpg",
@@ -12,6 +14,16 @@ const contentTypeExtensions: Record<string, string> = {
   "video/webm": ".webm",
   "video/quicktime": ".mov",
 };
+
+/**
+ * Agnes 图片生成 API 对单张参考图的硬限是 10MB(base64 解码后的字节数,10485760 bytes)。
+ * 用户上传的 12MB 图,base64 编码后约 16MB,会触发 `image queue input image size exceeds max` 错误。
+ * 这里把"压缩后的 data URL 长度"控制在 9MB 以内,留约 10% 余量。
+ */
+const AGNES_IMAGE_MAX_BASE64_BYTES = 9 * 1024 * 1024; // 9MB(留 10% 余量,防止边界)
+const AGNES_IMAGE_MAX_RAW_BYTES = Math.floor((AGNES_IMAGE_MAX_BASE64_BYTES * 3) / 4); // base64 系数 4/3
+const SHARP_MAX_DIMENSION = 2048; // 最长边缩放到 2048(满足生成模型参考图需求,又不会过于笨重)
+const SHARP_MIN_QUALITY = 35; // webp 最低质量阈值,再低就明显糊了
 
 /** 判断 URL 是否已经是本系统可直接访问的本地媒体地址。 */
 function isLocalMediaUrl(url: string): boolean {
@@ -168,14 +180,116 @@ export async function saveUploadedImage(ctx: AppContext, upload: UploadInput): P
   };
 }
 
-/** 把本地媒体 URL 转成 data URL，供真实 Agnes 接口作为参考图输入。 */
+/**
+ * 用 sharp 把图片压缩到指定 base64 字节上限以内。
+ * 策略:最长边先缩到 2048,然后转 webp 并按质量梯度(85→70→55→40→35)多次重试,
+ * 直到 base64 编码后字节数 ≤ 上限;仍超限说明是源图维度极端(物理上无法缩),
+ * 由调用方决定是否回退 / 报错。
+ */
+async function compressImageForAgnes(
+  bytes: Buffer,
+  maxBase64Bytes: number
+): Promise<{ dataUrl: string; originalBytes: number; compressedBytes: number; contentType: string }> {
+  const qualities = [85, 70, 55, 40, SHARP_MIN_QUALITY];
+  let best: Buffer | null = null;
+  let bestType = "image/webp";
+  // 逐档降低 webp 质量,直到 base64 长度满足上限
+  for (const quality of qualities) {
+    const candidate = await sharp(bytes, { failOn: "none" })
+      .rotate() // 自动按 EXIF 旋转,避免竖拍照片上传后被旋转
+      .resize({ width: SHARP_MAX_DIMENSION, height: SHARP_MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+      .webp({ quality, effort: 4 })
+      .toBuffer();
+    if (!best || candidate.length < best.length) {
+      best = candidate;
+      bestType = "image/webp";
+    }
+    // base64 长度 ≈ 原始字节 × 4/3(忽略 padding 误差)
+    if (Math.ceil(candidate.length * 4 / 3) <= maxBase64Bytes) {
+      return {
+        dataUrl: `data:${bestType};base64,${candidate.toString("base64")}`,
+        originalBytes: bytes.length,
+        compressedBytes: candidate.length,
+        contentType: bestType,
+      };
+    }
+  }
+  // 走到这里说明即使用最低质量 + 最大缩放仍然超限,返回能得到的最小结果
+  // (调用方会判定超限并报错,避免传 16MB 触发 API 400)
+  return {
+    dataUrl: `data:${bestType};base64,${best!.toString("base64")}`,
+    originalBytes: bytes.length,
+    compressedBytes: best!.length,
+    contentType: bestType,
+  };
+}
+
+/** 判断一个 content-type 是否是 sharp 能处理的图片(排除 svg/ico)。 */
+function isCompressibleImageMime(mime: string): boolean {
+  return mime.startsWith("image/") && mime !== "image/svg+xml" && mime !== "image/x-icon" && mime !== "image/vnd.microsoft.icon";
+}
+
+/** 把本地媒体 URL 转成 data URL,供真实 Agnes 接口作为参考图输入。
+ *  对超过 Agnes 10MB 硬限的图片自动用 sharp 压缩(base64 目标 < 9MB,留 10% 余量)。
+ *  早期直接 return 原始 base64 没问题,但 12MB 图片 base64 后约 16MB,会触发
+ *  `image queue input image size exceeds max 10485760 bytes` 错误。 */
 export async function resolveMediaInput(ctx: AppContext, value: string | undefined): Promise<string | undefined> {
   if (!value) return undefined;
   const target = await localMediaPath(ctx, value);
   if (!target) return value;
   const bytes = await readFile(target);
-  const type = contentTypeFromExtension(path.extname(target));
-  return `data:${type};base64,${bytes.toString("base64")}`;
+  const mime = contentTypeFromExtension(path.extname(target));
+
+  // sharp 不能处理的格式(svg/ico 等):原样返回,让 Agnes 自己决定
+  if (!isCompressibleImageMime(mime)) {
+    return `data:${mime};base64,${bytes.toString("base64")}`;
+  }
+
+  // 估算 base64 长度:原始 × 4/3
+  const estimatedBase64 = Math.ceil(bytes.length * 4 / 3);
+  if (estimatedBase64 <= AGNES_IMAGE_MAX_BASE64_BYTES) {
+    // 已满足:跳过压缩,保留原画质
+    return `data:${mime};base64,${bytes.toString("base64")}`;
+  }
+
+  // 超限:用 sharp 压缩
+  try {
+    const compressed = await compressImageForAgnes(bytes, AGNES_IMAGE_MAX_BASE64_BYTES);
+    const compressedBase64 = Math.ceil(compressed.compressedBytes * 4 / 3);
+    if (compressedBase64 > AGNES_IMAGE_MAX_BASE64_BYTES) {
+      // 物理上已经无法压到 9MB(base64 后)以内(源图维度/复杂度极端)
+      rootLogger.warn(
+        {
+          event: "media.compress.oversize",
+          sourcePath: target,
+          sourceBytes: compressed.originalBytes,
+          compressedBytes: compressed.compressedBytes,
+          compressedBase64,
+          limitBase64: AGNES_IMAGE_MAX_BASE64_BYTES,
+        },
+        "reference image cannot be compressed under Agnes 10MB limit; Agnes API will likely return 400"
+      );
+    } else {
+      rootLogger.info(
+        {
+          event: "media.compress.success",
+          sourcePath: target,
+          sourceBytes: compressed.originalBytes,
+          compressedBytes: compressed.compressedBytes,
+          ratio: (compressed.compressedBytes / compressed.originalBytes).toFixed(2),
+        },
+        "reference image compressed for Agnes 10MB limit"
+      );
+    }
+    return compressed.dataUrl;
+  } catch (err) {
+    // sharp 失败(GIF/损坏图):降级用原图,让 API 自己报错给用户看
+    rootLogger.warn(
+      { event: "media.compress.failed", sourcePath: target, mime, err },
+      "sharp compress failed; falling back to original bytes (Agnes may 400)"
+    );
+    return `data:${mime};base64,${bytes.toString("base64")}`;
+  }
 }
 
 /** 批量解析参考图输入，过滤掉空值。 */

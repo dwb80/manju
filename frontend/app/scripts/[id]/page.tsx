@@ -21,6 +21,7 @@
 import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { ScriptEditor, ScriptToolbar, ScriptSidebar, OutlineView } from '@/components/dashboard/script-center'
+import type { SidebarJumpTarget } from '@/components/dashboard/script-center/ScriptSidebar'
 import type { NavTreeNode } from '@/components/dashboard/script-center'
 import { ScriptEditRightPanel } from '@/components/dashboard/script-center/ScriptEditRightPanel'
 import { VersionHistoryModal } from '@/components/dashboard/script-center/modals/VersionHistoryModal'
@@ -498,14 +499,6 @@ export default function ScriptEditPage() {
           <Button variant="ghost" size="sm" onClick={() => setShowImportExport(true)}>
             导入导出
           </Button>
-          <Button
-            variant={viewMode === 'outline' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode(viewMode === 'outline' ? 'edit' : 'outline')}
-            title={viewMode === 'outline' ? '返回编辑器' : '切换到大纲视图'}
-          >
-            {viewMode === 'outline' ? '返回编辑' : '大纲'}
-          </Button>
           <Button variant={rightPanelTab === 'comment' ? 'default' : 'ghost'} size="sm" onClick={handleCommentToggle}>
             评论
           </Button>
@@ -695,6 +688,7 @@ export default function ScriptEditPage() {
           data={analyzePreview}
           onApply={handleApplyAnalyze}
           onCancel={() => setAnalyzePreview(null)}
+          applying={isApplyingAnalyze}
         />
       )}
     </div>
@@ -714,30 +708,50 @@ export default function ScriptEditPage() {
  *    最近邻段落，滚动并加高亮
  */
 function jumpToNode(successMsg: string, failMsg: string) {
-  return (nodeId: string) => {
+  return (target: string | SidebarJumpTarget) => {
+    const nodeId = typeof target === 'string' ? target : target.id
     // 1) 结构化定位：data-id 直接命中
-    let el: HTMLElement | null = document.querySelector(`[data-id="${nodeId}"]`)
+    let el: HTMLElement | null = queryByDataId(nodeId)
+    let highlightEls: HTMLElement[] = []
     let via: 'structured' | 'text' = 'structured'
+    let targetEpisodeNo: number | undefined
 
     if (!el) {
       // 2) 纯文本回退：在 store 中找节点元数据，构造候选关键词
       const { episodes, scenes } = useScriptStore.getState()
       const keywords: string[] = []
       const ep = episodes.find((e) => e.id === nodeId)
-      if (ep) {
-        if (typeof ep.episodeNo === 'number' && ep.episodeNo > 0) {
-          keywords.push(`第${ep.episodeNo}集`)
+      const targetMeta = typeof target === 'string' ? null : target
+      const targetIsEpisode = targetMeta?.type === 'episode' || targetMeta?.type === 'heading'
+      const targetIsScene = targetMeta?.type === 'scene'
+      if (ep || targetIsEpisode) {
+        const episodeNo = ep?.episodeNo ?? targetMeta?.episodeNo
+        targetEpisodeNo = episodeNo
+        const title = ep?.title || targetMeta?.title || ''
+        if (typeof episodeNo === 'number' && episodeNo > 0) {
+          // 兼容多种写法：第1集 / 第01集 / 第一集
+          const no = episodeNo
+          const cnDigit = toChineseNumber(no)
+          keywords.push(`第${no}集`)
+          // 前导零写法：第01集、第1集（去前导零后等价）
+          if (no < 10) keywords.push(`第0${no}集`)
+          if (cnDigit) keywords.push(`第${cnDigit}集`)
         }
-        if (ep.title) {
-          keywords.push(ep.title)
+        if (title) {
+          keywords.push(title)
         }
       } else {
         const sc = scenes.find((s) => s.id === nodeId)
-        if (sc) {
-          if (sc.location) keywords.push(sc.location)
-          if (sc.location && sc.time) {
-            keywords.push(`${sc.location} · ${sc.time}`)
-            keywords.push(`${sc.location} ${sc.time}`)
+        if (sc || targetIsScene) {
+          const location = sc?.location || targetMeta?.location || targetMeta?.title || ''
+          const time = sc?.time || targetMeta?.time || ''
+          if (location) keywords.push(location)
+          if (location && time) {
+            // 兼容多种分隔符：· / - / 空格 / 全角空格
+            keywords.push(`${location} · ${time}`)
+            keywords.push(`${location} - ${time}`)
+            keywords.push(`${location} ${time}`)
+            keywords.push(`${location}　${time}`)
           }
         }
       }
@@ -745,10 +759,21 @@ function jumpToNode(successMsg: string, failMsg: string) {
       if (el) via = 'text'
     }
 
+    if (!el && targetEpisodeNo === 1) {
+      el = document.querySelector('.ProseMirror > *') as HTMLElement | null
+      via = 'text'
+    }
+
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      el.classList.add('episode-highlight-flash')
-      setTimeout(() => el.classList.remove('episode-highlight-flash'), 1500)
+      highlightEls =
+        via === 'text' && targetEpisodeNo
+          ? collectEpisodeTextRange(el)
+          : [el]
+      highlightEls.forEach((targetEl) => targetEl.classList.add('episode-highlight-flash'))
+      setTimeout(() => {
+        highlightEls.forEach((targetEl) => targetEl.classList.remove('episode-highlight-flash'))
+      }, 1500)
       // 第二层定位时通过 toast 文本告知用户，提示内容为文本匹配
       toast.success(
         successMsg,
@@ -772,28 +797,104 @@ function jumpToNode(successMsg: string, failMsg: string) {
   }
 }
 
+function collectEpisodeTextRange(start: HTMLElement): HTMLElement[] {
+  const editor = document.querySelector('.ProseMirror') as HTMLElement | null
+  if (!editor) return [start]
+  const blocks = Array.from(editor.querySelectorAll<HTMLElement>(getEditorBlockSelector()))
+  const startIndex = blocks.indexOf(start)
+  if (startIndex < 0) return [start]
+  const result: HTMLElement[] = []
+  for (let i = startIndex; i < blocks.length; i++) {
+    const block = blocks[i]
+    if (i > startIndex && isEpisodeHeadingBlock(block)) break
+    result.push(block)
+  }
+  return result.length > 0 ? result : [start]
+}
+
+function isEpisodeHeadingBlock(block: HTMLElement): boolean {
+  const text = normalizeWhitespace(block.textContent || '')
+  return /^第(?:0?\d{1,3}|[一二三四五六七八九十]{1,4})集(?:\s|$|[：:，,.-])/.test(text)
+}
+
+function queryByDataId(id: string): HTMLElement | null {
+  if (!id) return null
+  const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id.replace(/"/g, '\\"')
+  return document.querySelector(`[data-id="${escaped}"]`)
+}
+
+/**
+ * 阿拉伯数字 → 中文数字（用于兼容「第1集」/「第一集」两种写法）
+ * 仅支持 1..99；超过 99 返回 null（不常用，跳过避免误判）
+ */
+function toChineseNumber(n: number): string | null {
+  if (n < 1 || n > 99) return null
+  const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+  if (n < 10) return digits[n]
+  if (n === 10) return '十'
+  if (n < 20) return `十${digits[n - 10]}`
+  const tens = Math.floor(n / 10)
+  const ones = n % 10
+  return ones === 0 ? `${digits[tens]}十` : `${digits[tens]}十${digits[ones]}`
+}
+
 /**
  * 在 .ProseMirror 内部按关键词列表查找首个匹配的块级元素。
- * 仅当关键词非空时匹配；返回的是最近的段落/标题/自定义块容器。
+ * 增强点：
+ *   - 关键词归一化（去除全/半角空格、零宽字符等），降低误判
+ *   - "第N集" 关键词额外做段首优先匹配，避免命中"第10集"中间
+ *   - 跳过命中所在 block 是其他剧集/场景结构化节点（避免被父节点先吸走）
  */
 function findBlockByText(keywords: string[]): HTMLElement | null {
   const editor = document.querySelector('.ProseMirror') as HTMLElement | null
   if (!editor) return null
   const cleaned = keywords
-    .map((k) => (k || '').toString().trim())
+    .map((k) => normalizeWhitespace((k || '').toString()))
     .filter((k) => k.length > 0)
   if (cleaned.length === 0) return null
   // 检索 block 容器：包含自定义节点 + 标准块
-  const blockSelector =
-    'p, h1, h2, h3, h4, h5, h6, blockquote, li, [data-type="episode"], [data-type="scene"]'
-  const blocks = editor.querySelectorAll<HTMLElement>(blockSelector)
+  const blocks = editor.querySelectorAll<HTMLElement>(getEditorBlockSelector())
+
+  // 把"第N集"类的关键词单独标记走"段首优先"匹配
+  const isEpisodeKey = (k: string) => /^第.{1,4}集$/.test(k)
+
   for (const keyword of cleaned) {
+    const isEp = isEpisodeKey(keyword)
+    // 先做一次段首优先扫描：块的 textContent 前 8 个字符（归一化后）包含关键词
+    if (isEp) {
+      for (const block of Array.from(blocks)) {
+        const text = (block.textContent || '').trim()
+        if (!text) continue
+        const head = normalizeWhitespace(text).slice(0, 8)
+        if (head.includes(keyword)) {
+          return block
+        }
+      }
+    }
+    // 通用包含匹配（兜底）
     for (const block of Array.from(blocks)) {
       const text = (block.textContent || '').trim()
-      if (text && text.includes(keyword)) {
+      if (!text) continue
+      if (normalizeWhitespace(text).includes(keyword)) {
         return block
       }
     }
   }
   return null
+}
+
+function getEditorBlockSelector(): string {
+  return 'p, h1, h2, h3, h4, h5, h6, blockquote, li, [data-type="episode"], [data-type="scene"]'
+}
+
+/**
+ * 归一化空白字符：全角空格 → 半角、多余空白折叠、去除零宽
+ * 主要解决"内景/外景"、"第 1 集"等混用全/半角空格带来的关键词 miss
+ */
+function normalizeWhitespace(s: string): string {
+  return s
+    .replace(/[\u3000\u2000-\u200a\u2028\u2029]/g, ' ') // 全角空格、hair spaces
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // 零宽字符
+    .replace(/\s+/g, ' ')
+    .trim()
 }

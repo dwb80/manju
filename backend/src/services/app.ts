@@ -1,6 +1,6 @@
 import path from "node:path";
 import { createAgnesClient, type AgnesClient } from "../ai/agnes-client.js";
-import type { Conversation, Favorite, ImageTask, Message, Project, Settings, VideoTask, ScriptComment, AssetVersion, Todo, Script, AppLog, WorkItem } from "../types.js";
+import type { Conversation, Favorite, ImageTask, Message, Project, Settings, VideoTask, ScriptComment, AssetVersion, CharacterImageHistory, Todo, Script, AppLog, WorkItem } from "../types.js";
 import type { Character } from "../types/character.js";
 import type { Scene } from "../types/scene.js";
 import type { Prop } from "../types/prop.js";
@@ -15,7 +15,7 @@ import type { ScriptDocument, ScriptEpisode, ScriptScene, ScriptDialogue, Script
 import { SqliteRepository, SqliteSettingsRepository, closeDatabase } from "../storage/sqlite.js";
 import { Repository, KeyValueRepository } from "../storage/repository.js";
 import {
-  conversationFields, favoriteFields, imageTaskFields, messageFields, projectFields, videoTaskFields, scriptCommentFields, assetVersionFields, todoFields, appLogFields, workItemFields,
+  conversationFields, favoriteFields, imageTaskFields, messageFields, projectFields, videoTaskFields, scriptCommentFields, assetVersionFields, characterImageHistoryFields, todoFields, appLogFields, workItemFields,
   characterFields, sceneFields, propFields, storyboardFields, audioFields, moduleVideoTaskFields, projectClipFields, projectStoryboardFields,
   scriptFields, assetFields, reviewFields, projectScriptFields, projectAssetFields, projectReviewFields,
   scriptDocumentFields, scriptEpisodeFields, scriptSceneFields, scriptDialogueFields, scriptSceneCharacterFields, scriptSceneLocationFields,
@@ -39,6 +39,8 @@ export interface AppContext {
   scriptComments: Repository<ScriptComment>;
   /** 三厂共性：资产版本历史仓储（任务12：统一版本管理）。 */
   assetVersions: Repository<AssetVersion>;
+  /** 角色图片生成历史仓储：每次 AI 生成图、设为角色资产、删除都走这里（跨设备持久化）。 */
+  characterImageHistory: Repository<CharacterImageHistory>;
   settings: KeyValueRepository<Settings>;
   aborts: Map<string, AbortController>;
   /** 三大工厂：角色 / 场景 / 道具。 */
@@ -119,6 +121,7 @@ export function createAppContext(root = process.cwd(), options: { mediaCacheEnab
     favorites: new SqliteRepository<Favorite>(databaseFile, "favorites", favoriteFields),
     scriptComments: new SqliteRepository<ScriptComment>(databaseFile, "script_comments", scriptCommentFields),
     assetVersions: new SqliteRepository<AssetVersion>(databaseFile, "asset_versions", assetVersionFields),
+    characterImageHistory: new SqliteRepository<CharacterImageHistory>(databaseFile, "character_image_history", characterImageHistoryFields),
     settings: new SqliteSettingsRepository<Settings>(databaseFile, defaultSettings),
     aborts: new Map(),
     // 三大工厂

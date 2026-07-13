@@ -2,7 +2,7 @@
  * 种子数据：把项目工作台演示用的工作项写入 SQLite 的 work_items 表。
  * 用于在没有真实数据时让前端能看到示例条目。
  *
- * 状态映射（与 migrate-to-work-items 一致）：
+ * 状态映射：
  *   todo → pending；script/storyboard/image/video/review → doing；done → done
  */
 

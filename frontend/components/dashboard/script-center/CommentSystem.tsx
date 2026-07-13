@@ -121,7 +121,7 @@ export function CommentSystem({
     setIsSubmitting(true)
     try {
       await scriptCenterService.createComment({
-        scriptId,
+        script_id: scriptId,
         content: newCommentText,
         user_name: '当前用户',
         selected_text: selectedText,
@@ -148,7 +148,7 @@ export function CommentSystem({
       setIsSubmitting(true)
       try {
         await scriptCenterService.createComment({
-          scriptId,
+          script_id: scriptId,
           content: replyText,
           user_name: '当前用户',
           parent_id: commentId,

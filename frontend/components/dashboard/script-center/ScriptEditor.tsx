@@ -3,7 +3,8 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import Underline from '@tiptap/extension-underline'
+// 注意:@tiptap/starter-kit v3 已默认包含 Underline,无需单独导入,
+// 否则会触发 "Duplicate extension names found: ['underline']" 警告
 import TextAlign from '@tiptap/extension-text-align'
 import Highlight from '@tiptap/extension-highlight'
 import CharacterCount from '@tiptap/extension-character-count'
@@ -179,7 +180,7 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
       Placeholder.configure({
         placeholder: '开始编写你的剧本...',
       }),
-      Underline,
+      // Underline 由 StarterKit v3 默认提供,不再单独注册(避免 Duplicate extension 警告)
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
@@ -206,6 +207,8 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
       TransitionNode,
     ],
     content: document.editor_json || '',
+    // 整个组件是 'use client',无 SSR,立即渲染编辑器避免 Tiptap 在 Next.js 下发"hydration mismatch"警告
+    immediatelyRender: true,
     editorProps: {
       attributes: {
         class: 'prose prose-invert max-w-none focus:outline-none min-h-[500px] p-4',
@@ -229,7 +232,7 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
       }
       // 文档加载后立即生成一次导航树（Feature 2.10）
       if (onTreeUpdate) {
-        onTreeUpdate(parseDocToTree(editor.getJSON()))
+        onTreeUpdate(parseDocToTree(document.editor_json))
       }
     }
   }, [editor, document.id])

@@ -24,6 +24,8 @@ import {
   Loader2,
   CheckCircle,
   ArrowLeft,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import {
@@ -41,6 +43,9 @@ import {
   createScript,
   updateScript,
   deleteScript as deleteScriptApi,
+  restoreScript as restoreScriptApi,
+  purgeScript as purgeScriptApi,
+  listDeletedScripts as listDeletedScriptsApi,
   createCharacter,
   createScene,
   createProp,
@@ -117,8 +122,15 @@ export function ScriptsCenterPage({
   const [editingScript, setEditingScript] = useState<Script | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // 删除确认状态
+  // 删除确认状态（统一改为软删语义：移到回收站）
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
+
+  // 回收站对话框
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
+  const [deletedScripts, setDeletedScripts] = useState<Script[]>([]);
+  const [isRecycleBinLoading, setIsRecycleBinLoading] = useState(false);
+  // 回收站确认（恢复 / 彻底删除）操作状态
+  const [recycleBinAction, setRecycleBinAction] = useState<{ type: "restore" | "purge"; script: Script } | null>(null);
 
   // 高级功能对话框状态
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
@@ -266,13 +278,70 @@ export function ScriptsCenterPage({
     }
   };
 
-  // 确认删除
+  // 软删剧本：移到回收站
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
-    await deleteScriptApi(selectedProjectId, deleteConfirm.id);
-    setDeleteConfirm(null);
-    clearApiCache();
-    await reloadScripts();
+    try {
+      const result = await deleteScriptApi(selectedProjectId, deleteConfirm.id);
+      setDeleteConfirm(null);
+      clearApiCache();
+      await reloadScripts();
+      console.log(`剧本已移到回收站：${result.deleted_at}`);
+    } catch (err) {
+      console.error("剧本删除失败:", err);
+      alert("剧本删除失败，请重试");
+    }
+  };
+
+  // 回收站：打开对话框并加载
+  const openRecycleBin = async () => {
+    setShowRecycleBin(true);
+    if (!selectedProjectId) return;
+    setIsRecycleBinLoading(true);
+    try {
+      const data = await listDeletedScriptsApi(selectedProjectId);
+      setDeletedScripts(data as unknown as Script[]);
+    } catch (err) {
+      console.error("加载回收站失败:", err);
+      alert("加载回收站失败");
+    } finally {
+      setIsRecycleBinLoading(false);
+    }
+  };
+
+  // 回收站：恢复剧本
+  const handleRestoreScript = async (script: Script) => {
+    try {
+      await restoreScriptApi(selectedProjectId, script.id);
+      // 从回收站移除 + 重新加载主列表
+      setDeletedScripts((prev) => prev.filter((s) => s.id !== script.id));
+      clearApiCache();
+      await reloadScripts();
+    } catch (err) {
+      console.error("恢复失败:", err);
+      alert(`恢复失败：${(err as Error).message}`);
+    }
+  };
+
+  // 回收站：彻底删除剧本
+  const handlePurgeScript = async (script: Script) => {
+    try {
+      const result = await purgeScriptApi(selectedProjectId, script.id);
+      setDeletedScripts((prev) => prev.filter((s) => s.id !== script.id));
+      const total = Object.values(result.cascade ?? {}).reduce((sum, count) => sum + count, 0);
+      console.log(`剧本已彻底删除（联动删除 ${total} 条记录）`);
+    } catch (err) {
+      console.error("彻底删除失败:", err);
+      alert(`彻底删除失败：${(err as Error).message}`);
+    }
+  };
+
+  // 距 30 天保留期还差几天（负数 = 已可彻底删除）
+  const scriptRemainingDays = (deletedAt?: string): number => {
+    if (!deletedAt) return 0;
+    const deletedTime = new Date(deletedAt).getTime();
+    if (Number.isNaN(deletedTime)) return 0;
+    return Math.ceil((deletedTime + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (24 * 60 * 60 * 1000));
   };
 
   // AI生成剧本
@@ -731,6 +800,10 @@ export function ScriptsCenterPage({
         }
         right={
           <>
+            <Button variant="secondary" size="sm" onClick={openRecycleBin}>
+              <Archive className="mr-2 h-4 w-4" />
+              回收站
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
               <Upload className="mr-2 h-4 w-4" />
               导入剧本
@@ -847,14 +920,121 @@ export function ScriptsCenterPage({
         isLoading={isAIGenerating}
       />
 
-      {/* 删除确认对话框 */}
+      {/* 删除确认对话框（软删：移到回收站） */}
       {deleteConfirm && (
         <ConfirmDialog
           title="删除剧本"
-          description={`确定要删除剧本「${deleteConfirm.title}」吗？此操作无法撤销。`}
-          confirmLabel="删除"
+          description={`将剧本「${deleteConfirm.title}」移到回收站？剧本可在 30 天保留期内恢复或彻底删除。`}
+          confirmLabel="移到回收站"
           onClose={() => setDeleteConfirm(null)}
           onConfirm={handleDeleteConfirm}
+        />
+      )}
+
+      {/* 回收站对话框 */}
+      {showRecycleBin && (
+        <DialogOverlay
+          title="剧本回收站"
+          onClose={() => setShowRecycleBin(false)}
+          wide
+        >
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-200">
+              回收站内的剧本会在 30 天后自动清理。30 天内可恢复剧本或彻底删除（会级联清理剧集/场景/对白等所有关联数据）。
+            </div>
+            {isRecycleBinLoading ? (
+              <div className="flex items-center justify-center py-12 text-[#888]">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                加载中...
+              </div>
+            ) : deletedScripts.length === 0 ? (
+              <div className="rounded-lg border border-white/10 bg-[#1f1f1f] py-12 text-center text-[#888]">
+                回收站是空的
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-[#888]">
+                      <th className="px-3 py-2 text-left">标题</th>
+                      <th className="px-3 py-2 text-left">作者</th>
+                      <th className="px-3 py-2 text-left">删除时间</th>
+                      <th className="px-3 py-2 text-left">剩余天数</th>
+                      <th className="px-3 py-2 text-right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deletedScripts.map((script) => {
+                      const remaining = scriptRemainingDays(script.deleted_at);
+                      const canPurge = remaining <= 0;
+                      return (
+                        <tr key={script.id} className="border-b border-white/5">
+                          <td className="px-3 py-2 text-white">{script.title}</td>
+                          <td className="px-3 py-2 text-[#888]">{script.author}</td>
+                          <td className="px-3 py-2 text-[#888]">
+                            {script.deleted_at ? new Date(script.deleted_at).toLocaleString() : "—"}
+                          </td>
+                          <td className="px-3 py-2">
+                            {canPurge ? (
+                              <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-400">
+                                可清理
+                              </span>
+                            ) : (
+                              <span className="text-[#888]">{remaining} 天后自动清理</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="inline-flex items-center gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleRestoreScript(script)}
+                              >
+                                <RotateCcw className="mr-1 h-3 w-3" />
+                                恢复
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                disabled={!canPurge}
+                                title={canPurge ? "彻底删除（级联清理所有关联数据）" : `需软删满 30 天才能彻底删除（还剩 ${remaining} 天）`}
+                                onClick={() => setRecycleBinAction({ type: "purge", script })}
+                              >
+                                <Trash2 className="mr-1 h-3 w-3" />
+                                彻底删除
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </DialogOverlay>
+      )}
+
+      {/* 回收站二次确认（恢复/彻底删除） */}
+      {recycleBinAction && (
+        <ConfirmDialog
+          title={recycleBinAction.type === "restore" ? "恢复剧本" : "彻底删除剧本"}
+          description={
+            recycleBinAction.type === "restore"
+              ? `确认将剧本「${recycleBinAction.script.title}」恢复到剧本列表？`
+              : `确认彻底删除「${recycleBinAction.script.title}」？此操作会级联清理所有剧集、场景、对白、备份等关联数据，且不可恢复。`
+          }
+          confirmLabel={recycleBinAction.type === "restore" ? "恢复" : "彻底删除"}
+          onClose={() => setRecycleBinAction(null)}
+          onConfirm={async () => {
+            if (recycleBinAction.type === "restore") {
+              await handleRestoreScript(recycleBinAction.script);
+            } else {
+              await handlePurgeScript(recycleBinAction.script);
+            }
+            setRecycleBinAction(null);
+          }}
         />
       )}
 

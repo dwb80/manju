@@ -99,6 +99,9 @@ export {
   createScript,
   updateScript,
   deleteScript,
+  restoreScript,
+  purgeScript,
+  listDeletedScripts,
 } from "./script.service";
 
 // ==================== 剧本富文本结构（剧集/场景/对白） ====================

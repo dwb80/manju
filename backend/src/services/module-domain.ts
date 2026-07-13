@@ -195,7 +195,16 @@ type ScriptInput = {
 
 export async function listScripts(ctx: AppContext, projectId?: string): Promise<Script[]> {
   const filter: Partial<Script> = projectId ? { project_id: projectId } : {};
-  return ctx.scripts.findMany(filter, { sort: "desc" });
+  const all = await ctx.scripts.findMany(filter, { sort: "desc" });
+  // 回收站里的剧本不进入默认列表；listDeletedScripts() 单独提供回收站视图
+  return all.filter((s) => !s.deleted_at);
+}
+
+/** 列出回收站中的剧本（按项目过滤）。 */
+export async function listDeletedScripts(ctx: AppContext, projectId?: string): Promise<Script[]> {
+  const filter: Partial<Script> = projectId ? { project_id: projectId } : {};
+  const all = await ctx.scripts.findMany(filter, { sort: "desc" });
+  return all.filter((s) => !!s.deleted_at);
 }
 
 export async function createScript(ctx: AppContext, input: ScriptInput): Promise<Script> {
@@ -229,8 +238,166 @@ export async function updateScript(ctx: AppContext, scriptId: string, input: Scr
   return { ...existing, ...patch } as Script;
 }
 
-export async function deleteScript(ctx: AppContext, scriptId: string): Promise<void> {
+/**
+ * 软删剧本：写入 deleted_at，物理记录保留 30 天；前端默认列表里会过滤掉,
+ * 回收站面板里可以看到,30 天内可恢复;30 天后才允许 purgeScript 硬删。
+ */
+export async function deleteScript(ctx: AppContext, scriptId: string): Promise<{ deleted_at: string }> {
+  const existing = await ctx.scripts.findById(scriptId);
+  if (!existing) throw new Error("剧本不存在");
+  if (existing.deleted_at) {
+    // 已经是软删状态,直接返回,不重复写时间戳
+    return { deleted_at: existing.deleted_at };
+  }
+  const deletedAt = nowIso();
+  await ctx.scripts.update(scriptId, {
+    deleted_at: deletedAt,
+    updated_at: deletedAt,
+  } as Partial<Script>);
+  void recordAppLog(ctx, {
+    entityType: "script",
+    entityId: scriptId,
+    action: "script.soft_deleted",
+    event: "script.soft_deleted",
+    payload: { title: existing.title, project_id: existing.project_id },
+    projectId: existing.project_id,
+  });
+  return { deleted_at: deletedAt };
+}
+
+/** 恢复被软删的剧本（清空 deleted_at）。 */
+export async function restoreScript(ctx: AppContext, scriptId: string): Promise<void> {
+  const existing = await ctx.scripts.findById(scriptId);
+  if (!existing) throw new Error("剧本不存在或已被彻底删除");
+  if (!existing.deleted_at) throw new Error("剧本未处于软删状态");
+  const restoredAt = nowIso();
+  await ctx.scripts.update(scriptId, {
+    deleted_at: "",
+    updated_at: restoredAt,
+  } as Partial<Script>);
+  void recordAppLog(ctx, {
+    entityType: "script",
+    entityId: scriptId,
+    action: "script.restored",
+    event: "script.restored",
+    payload: { title: existing.title, project_id: existing.project_id },
+    projectId: existing.project_id,
+  });
+}
+
+/** 软删后需保留的天数（可被环境变量 SCRIPT_PURGE_GRACE_DAYS 覆盖）。 */
+const SCRIPT_PURGE_GRACE_DAYS = (() => {
+  const raw = process.env.SCRIPT_PURGE_GRACE_DAYS;
+  const n = raw ? Number(raw) : 30;
+  return Number.isFinite(n) && n > 0 ? n : 30;
+})();
+
+/**
+ * 硬删剧本（purge）:必须满足
+ *  1) 已被软删（deleted_at 非空）
+ *  2) 软删时间距今 ≥ 30 天（可由 SCRIPT_PURGE_GRACE_DAYS 覆盖）
+ * 通过后,级联删除 5 张关联表:script_backups / script_comments / script_approvals /
+ * script_quality_assessments / script_documents / script_episodes / script_scenes /
+ * script_dialogues / script_scene_characters / script_scene_locations,最后删 scripts 自身。
+ */
+export async function purgeScript(ctx: AppContext, scriptId: string): Promise<{
+  script_id: string;
+  deleted_at: string;
+  purged_at: string;
+  grace_days: number;
+  cascade: Record<string, number>;
+}> {
+  const existing = await ctx.scripts.findById(scriptId);
+  if (!existing) throw new Error("剧本不存在");
+  if (!existing.deleted_at) {
+    throw new Error("剧本未处于软删状态,无法彻底删除");
+  }
+  const deletedAtMs = Date.parse(existing.deleted_at);
+  if (!Number.isFinite(deletedAtMs)) {
+    throw new Error("软删时间戳格式异常,无法校验保留期");
+  }
+  const ageDays = (Date.now() - deletedAtMs) / 86_400_000;
+  if (ageDays < SCRIPT_PURGE_GRACE_DAYS) {
+    const remain = Math.ceil(SCRIPT_PURGE_GRACE_DAYS - ageDays);
+    throw new Error(`剧本软删不足 ${SCRIPT_PURGE_GRACE_DAYS} 天,还需等待 ${remain} 天`);
+  }
+
+  // 5 级级联：先删子表记录,再删父表,最后删 scripts 自身
+  // 1) 通过 script_id 直接引用
+  const comments = await ctx.scriptComments.findMany({ script_id: scriptId } as any);
+  const approvals = await ctx.scriptApprovals.findMany({ script_id: scriptId } as any);
+  const assessments = await ctx.scriptQualityAssessments.findMany({ script_id: scriptId } as any);
+  // 2) 通过 document_id (= scriptId) 引用
+  const backups = await ctx.scriptBackups.findMany({ document_id: scriptId } as any);
+  const episodes = await ctx.scriptEpisodes.findMany({ document_id: scriptId } as any);
+  // 3) 通过 episode_id 引用
+  const scenes = await ctx.scriptScenes.findMany({
+    episode_id: episodes.map((e) => e.id),
+  } as any);
+  // 4) 通过 scene_id 引用
+  const sceneIds = scenes.map((s) => s.id);
+  const dialogues = sceneIds.length
+    ? await ctx.scriptDialogues.findMany({ scene_id: sceneIds } as any)
+    : [];
+  const sceneCharacters = sceneIds.length
+    ? await ctx.scriptSceneCharacters.findMany({ scene_id: sceneIds } as any)
+    : [];
+  const sceneLocations = sceneIds.length
+    ? await ctx.scriptSceneLocations.findMany({ scene_id: sceneIds } as any)
+    : [];
+
+  for (const r of dialogues) await ctx.scriptDialogues.delete(r.id);
+  for (const r of sceneCharacters) await ctx.scriptSceneCharacters.delete(r.id);
+  for (const r of sceneLocations) await ctx.scriptSceneLocations.delete(r.id);
+  for (const s of scenes) await ctx.scriptScenes.delete(s.id);
+  for (const e of episodes) await ctx.scriptEpisodes.delete(e.id);
+  for (const r of backups) await ctx.scriptBackups.delete(r.id);
+  for (const r of comments) await ctx.scriptComments.delete(r.id);
+  for (const r of approvals) await ctx.scriptApprovals.delete(r.id);
+  for (const r of assessments) await ctx.scriptQualityAssessments.delete(r.id);
+  // 5) 剧本文档本身（id = scriptId,共用 Path B 存储）
+  try {
+    await ctx.scriptDocuments.delete(scriptId);
+  } catch {
+    // 文档不存在不阻塞 purge
+  }
+  // 6) Path A 剧本记录
   await ctx.scripts.delete(scriptId);
+
+  const cascade = {
+    script_comments: comments.length,
+    script_approvals: approvals.length,
+    script_quality_assessments: assessments.length,
+    script_backups: backups.length,
+    script_episodes: episodes.length,
+    script_scenes: scenes.length,
+    script_dialogues: dialogues.length,
+    script_scene_characters: sceneCharacters.length,
+    script_scene_locations: sceneLocations.length,
+  };
+  const purgedAt = nowIso();
+  void recordAppLog(ctx, {
+    entityType: "script",
+    entityId: scriptId,
+    action: "script.purged",
+    event: "script.purged",
+    payload: {
+      title: existing.title,
+      project_id: existing.project_id,
+      deleted_at: existing.deleted_at,
+      purged_at: purgedAt,
+      grace_days: SCRIPT_PURGE_GRACE_DAYS,
+      cascade,
+    },
+    projectId: existing.project_id,
+  });
+  return {
+    script_id: scriptId,
+    deleted_at: existing.deleted_at,
+    purged_at: purgedAt,
+    grace_days: SCRIPT_PURGE_GRACE_DAYS,
+    cascade,
+  };
 }
 
 // ==================== 角色模块 ====================

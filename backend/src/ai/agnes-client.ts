@@ -1,4 +1,5 @@
 import type { ChatChunk, ChatParams, ImageParams, TaskStatus, VideoParams } from "../types.js";
+import { rootLogger } from "../logger.js";
 
 /**
  * Agnes API 限流错误（HTTP 429 / 配额用尽）。
@@ -153,7 +154,11 @@ export class RealAgnesClient implements AgnesClient {
     yield { content, done: true };
   }
 
-  /** 调用 Agnes 图片生成接口，返回可展示或缓存的图片地址。 */
+  /** 调用 Agnes 图片生成接口，返回可展示或缓存的图片地址。
+   *  根据 images.txt 文档:响应 `data: [{url, b64_json, ...}]` 是单元素数组,无 `n` 参数文档,
+   *  因此 n>1 时必须由客户端并发调用 N 次,然后合并 URL 列表。
+   *  使用 Promise.allSettled 保证"部分失败"也能拿到部分结果(2/4 比 0/4 强),
+   *  限流错误 (429) 立即 reject 全部 + abort,避免继续打 API 加重限流。 */
   async generateImage(params: ImageParams, signal?: AbortSignal): Promise<{ imageUrls: string[] }> {
     // response_format 必须是 extra_body.response_format（顶层会被忽略），
     // 默认 url；调用方可通过 params.response_format 显式切换为 b64_json。
@@ -163,28 +168,104 @@ export class RealAgnesClient implements AgnesClient {
       : params.image
         ? [params.image]
         : undefined;
+    const n = Math.max(1, Math.min(4, params.n ?? 1));
+
+    // 单张:n === 1,保持原行为(单次 POST,简单快速)
+    if (n === 1) {
+      const response = await this.post(this.imagePath, {
+        model: params.model ?? "agnes-image-2.1-flash",
+        prompt: params.prompt,
+        size: params.size ?? "1024x768",
+        n: 1,
+        quality: "standard",
+        extra_body: {
+          ...(referenceImages ? { image: referenceImages } : {}),
+          negative_prompt: params.negative_prompt || undefined,
+          ratio: params.ratio,
+          seed: params.seed,
+          steps: params.steps,
+          cfg: params.cfg,
+          response_format: responseFormat,
+        },
+      }, signal);
+      const payload = await response.json();
+      const imageUrls = parseImageUrls(payload);
+      if (imageUrls.length === 0) throw new Error("Agnes image API returned no image URLs");
+      return { imageUrls };
+    }
+
+    // 多张:N 次并行 POST(每张独立随机种子,得到差异化的图;同时请求耗时从 N×30s 缩到 ~30s)
+    // 用 allSettled 而不是 all:允许部分失败(用户能看到 3/4 也比 0/4 强)
+    const tasks = Array.from({ length: n }, () => this.callSingleImageGeneration(params, referenceImages, responseFormat, signal));
+    const results = await Promise.allSettled(tasks);
+
+    // 限流错误:任何一个 reject 是 429,立即终止整批(其他并行请求继续打也只会得到 429)
+    // AbortSignal 是只读的,无法在 signal 上调 abort();但上层 withTimeout 60s 后会自动 abort,
+    // 期间已 in-flight 的请求会陆续收到 429 自然 reject,服务端负载不会显著加重
+    for (const result of results) {
+      if (result.status === "rejected" && isAgnesRateLimitError(result.reason)) {
+        throw result.reason;
+      }
+    }
+
+    // 合并成功的 URL
+    const imageUrls: string[] = [];
+    let successCount = 0;
+    let failCount = 0;
+    const firstError = (results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined)?.reason;
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        imageUrls.push(...result.value);
+        successCount += 1;
+      } else {
+        failCount += 1;
+      }
+    }
+    if (successCount === 0) {
+      // 全部失败:抛首个错误,让上层有具体的失败原因
+      throw firstError instanceof Error ? firstError : new Error("Agnes image API returned no image URLs");
+    }
+    if (failCount > 0) {
+      // 部分失败:不抛错,只记日志(前端能拿到部分结果,体验更好)
+      rootLogger.warn(
+        {
+          event: "ai.image.partial_failure",
+          requested: n,
+          succeeded: successCount,
+          failed: failCount,
+          err: firstError,
+        },
+        "Agnes image generation partially failed; returning successful URLs only"
+      );
+    }
+    return { imageUrls };
+  }
+
+  /** 单次图片生成 POST 调用,供 generateImage 并发复用。 */
+  private async callSingleImageGeneration(
+    params: ImageParams,
+    referenceImages: string[] | undefined,
+    responseFormat: "url" | "b64_json",
+    signal?: AbortSignal
+  ): Promise<string[]> {
     const response = await this.post(this.imagePath, {
       model: params.model ?? "agnes-image-2.1-flash",
       prompt: params.prompt,
       size: params.size ?? "1024x768",
-      n: params.n ?? 1,
+      n: 1,
       quality: "standard",
+      // 不传 seed:让 API 自己随机,这样 N 次并行能产生不同结果
       extra_body: {
-        // 图生图：参考图 URL/Base64 数组放在 extra_body.image
-        // 文生图：不传 image 字段（或传 undefined）
         ...(referenceImages ? { image: referenceImages } : {}),
         negative_prompt: params.negative_prompt || undefined,
         ratio: params.ratio,
-        seed: params.seed,
         steps: params.steps,
         cfg: params.cfg,
         response_format: responseFormat,
       },
     }, signal);
     const payload = await response.json();
-    const imageUrls = parseImageUrls(payload);
-    if (imageUrls.length === 0) throw new Error("Agnes image API returned no image URLs");
-    return { imageUrls };
+    return parseImageUrls(payload);
   }
 
   /** 调用 Agnes 视频生成接口，创建异步视频任务并返回任务 ID。 */

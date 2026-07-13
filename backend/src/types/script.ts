@@ -19,6 +19,8 @@ export interface Script {
   episode?: number;
   content?: string;
   notes?: string;
+  /** 软删时间戳（ISO 8601）。存在即视为已软删；硬删（purge）必须 ≥ 30 天。 */
+  deleted_at?: string;
 }
 
 /** 剧本文档，一般按集数保存，后续可拆成分镜。 */

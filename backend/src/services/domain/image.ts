@@ -1,4 +1,4 @@
-﻿import type { AppContext } from "../app.js";
+import type { AppContext } from "../app.js";
 import type { Conversation, Favorite, FavoriteType, ImageParams, ImageTask } from "../../types.js";
 import { AI_TIMEOUTS, DEFAULT_MODEL, clampNumber, id, nowIso, requireString, withTimeout } from "../../utils.js";
 import { rootLogger } from "../../logger.js";
@@ -105,7 +105,6 @@ export async function generateImage(ctx: AppContext, body: Record<string, unknow
     cfg: clampNumber(body.cfg, 7, 1, 20),
     response_format: responseFormat,
   };
-  // 本地上传图在任务记录里保存 URL，调用 Agnes 前再转成 data URL。
   // 60s 超时，超时自动 abort 网络请求，避免连接挂死阻塞用户。
   const imgCtrl = new AbortController();
   const result = await withTimeout(
@@ -114,6 +113,19 @@ export async function generateImage(ctx: AppContext, body: Record<string, unknow
     "generateImage",
     imgCtrl
   );
+  // 部分失败提示:用户请求 N 张,实际拿回 M 张(M < N),记日志便于排查
+  if (result.imageUrls.length < (params.n ?? 1)) {
+    rootLogger.warn(
+      {
+        event: "image.partial_result",
+        requested: params.n ?? 1,
+        returned: result.imageUrls.length,
+        prompt: prompt.slice(0, 80),
+        hasReferences: aiImages.length > 0,
+      },
+      "image generation returned fewer URLs than requested; client will display partial result"
+    );
+  }
   const taskId = id("img");
   const task: ImageTask = {
     id: taskId,

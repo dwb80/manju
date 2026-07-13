@@ -91,6 +91,9 @@ export type AppLogAction =
   | "asset.restored"
   | "script.imported"
   | "script.exported"
+  | "script.soft_deleted"
+  | "script.restored"
+  | "script.purged"
   | "client.error"
   | "client.warn";
 

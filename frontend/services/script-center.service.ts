@@ -2,6 +2,47 @@
 
 const API_BASE = '/api'
 
+/**
+ * 从后端错误响应里提取对用户友好的提示。
+ * 后端统一返回 `{ code, message, data: null }`，这里优先用它的 message，
+ * 再把那些一看就是给开发者的报错（带下划线字段名、堆栈痕迹）翻译成大白话。
+ */
+async function extractApiError(response: Response, fallback: string): Promise<string> {
+  let backendMessage = ''
+  try {
+    const body = await response.clone().json()
+    if (body && typeof body.message === 'string' && body.message.trim()) {
+      backendMessage = body.message.trim()
+    }
+  } catch {
+    // 响应体不是 JSON 或为空，忽略
+  }
+
+  if (!backendMessage) {
+    return fallback
+  }
+
+  // 把后端面向开发者的字段校验错误转成用户能看懂的提示
+  const fieldErrorMap: Record<string, string> = {
+    'script_id 不能为空': '无法添加评论：缺少剧本信息，请刷新页面后重试',
+    '评论内容不能为空': '评论内容不能为空',
+    'parent_id 不能为空': '回复失败：找不到要回复的评论',
+    '评论不存在': '操作失败：评论已被删除',
+  }
+  for (const [developerText, friendlyText] of Object.entries(fieldErrorMap)) {
+    if (backendMessage.includes(developerText)) {
+      return friendlyText
+    }
+  }
+
+  // 500 之类的服务端错误，避免把堆栈信息直接甩给用户
+  if (response.status >= 500) {
+    return '服务器开小差了，请稍后再试'
+  }
+
+  return backendMessage
+}
+
 // 类型定义
 interface ScriptDocument {
   id: string
@@ -677,21 +718,21 @@ export const scriptCenterService = {
   getComments: async (scriptId: string): Promise<ScriptComment[]> => {
     const response = await fetch(`${API_BASE}/script-comments?scriptId=${encodeURIComponent(scriptId)}`)
     if (!response.ok) {
-      throw new Error('获取评论失败')
+      throw new Error(await extractApiError(response, '获取评论失败'))
     }
     const payload = await response.json()
     return (payload?.data ?? payload) as ScriptComment[]
   },
 
-  /** 创建评论或回复（reply 场景下传 parentId） */
-  createComment: async (data: Partial<ScriptComment> & { scriptId: string; content: string }): Promise<ScriptComment> => {
+  /** 创建评论或回复（reply 场景下传 parent_id） */
+  createComment: async (data: Partial<ScriptComment> & { script_id: string; content: string }): Promise<ScriptComment> => {
     const response = await fetch(`${API_BASE}/script-comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     })
     if (!response.ok) {
-      throw new Error('创建评论失败')
+      throw new Error(await extractApiError(response, '创建评论失败'))
     }
     const payload = await response.json()
     return (payload?.data ?? payload) as ScriptComment
@@ -705,7 +746,7 @@ export const scriptCenterService = {
       body: JSON.stringify(data),
     })
     if (!response.ok) {
-      throw new Error('更新评论失败')
+      throw new Error(await extractApiError(response, '更新评论失败'))
     }
     const payload = await response.json()
     return (payload?.data ?? payload) as ScriptComment
@@ -717,7 +758,7 @@ export const scriptCenterService = {
       method: 'DELETE',
     })
     if (!response.ok) {
-      throw new Error('删除评论失败')
+      throw new Error(await extractApiError(response, '删除评论失败'))
     }
   },
 }

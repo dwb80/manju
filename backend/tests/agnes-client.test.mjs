@@ -88,3 +88,103 @@ test("RealAgnesClient sends official image and video request shapes", async () =
     globalThis.fetch = originalFetch;
   }
 });
+
+/**
+ * 根据 images.txt 文档,Agnes 图片接口响应是单元素数组,无 n 参数。
+ * 因此 n>1 时由客户端并发 N 次调用,合并 URL 列表。
+ * 此测试验证 n=4 时:
+ *  1) fetch 被并行调用 4 次
+ *  2) 每次调用独立随机种子(不传 seed)
+ *  3) 4 个 URL 合并按顺序返回
+ */
+test("RealAgnesClient.generateImage with n>1 fans out N parallel calls and merges URLs", async () => {
+  const originalFetch = globalThis.fetch;
+  let imageCallCount = 0;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).endsWith("/v1/images/generations")) {
+      imageCallCount += 1;
+      const idx = imageCallCount;
+      return Response.json({ data: [{ url: `https://cdn.example/img-${idx}.png` }] });
+    }
+    return Response.json({ error: "unexpected" }, { status: 404 });
+  };
+
+  try {
+    const client = new RealAgnesClient({ AGNES_API_KEY: "test-key", AGNES_API_BASE_URL: "https://example.test" });
+    const result = await client.generateImage({
+      prompt: "海边的神秘角色",
+      size: "1024x1024",
+      n: 4,
+      response_format: "url",
+    });
+    // 4 个 URL 按调用顺序合并
+    assert.equal(imageCallCount, 4);
+    assert.deepEqual(result.imageUrls, [
+      "https://cdn.example/img-1.png",
+      "https://cdn.example/img-2.png",
+      "https://cdn.example/img-3.png",
+      "https://cdn.example/img-4.png",
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+/**
+ * n=4 并发调用时,如果部分失败(1/4 失败),应该返回成功的 3 个 URL,不抛错。
+ * 全部失败(0/4)才抛首个错误。
+ */
+test("RealAgnesClient.generateImage with n>1 tolerates partial failures", async () => {
+  const originalFetch = globalThis.fetch;
+  let imageCallCount = 0;
+  globalThis.fetch = async (url, _init) => {
+    if (String(url).endsWith("/v1/images/generations")) {
+      imageCallCount += 1;
+      // 第 2 次调用模拟 500 错误(其他 3 次成功)
+      if (imageCallCount === 2) {
+        return new Response(JSON.stringify({ error: "transient" }), { status: 500, headers: { "content-type": "application/json" } });
+      }
+      return Response.json({ data: [{ url: `https://cdn.example/img-${imageCallCount}.png` }] });
+    }
+    return Response.json({ error: "unexpected" }, { status: 404 });
+  };
+
+  try {
+    const client = new RealAgnesClient({ AGNES_API_KEY: "test-key", AGNES_API_BASE_URL: "https://example.test" });
+    const result = await client.generateImage({ prompt: "测试", size: "1024x1024", n: 4 });
+    // 3/4 成功,部分失败不抛错
+    assert.equal(imageCallCount, 4);
+    assert.equal(result.imageUrls.length, 3);
+    assert.ok(result.imageUrls.includes("https://cdn.example/img-1.png"));
+    assert.ok(result.imageUrls.includes("https://cdn.example/img-3.png"));
+    assert.ok(result.imageUrls.includes("https://cdn.example/img-4.png"));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+/**
+ * 限流错误(429):任何一次返回 429,整批立即 reject(避免继续打 API 加重限流)。
+ */
+test("RealAgnesClient.generateImage with n>1 aborts batch on rate limit (429)", async () => {
+  const originalFetch = globalThis.fetch;
+  let imageCallCount = 0;
+  globalThis.fetch = async (url, _init) => {
+    if (String(url).endsWith("/v1/images/generations")) {
+      imageCallCount += 1;
+      // 第 1 次返回 429
+      return new Response(JSON.stringify({ error: "rate limit" }), { status: 429, headers: { "content-type": "application/json" } });
+    }
+    return Response.json({ error: "unexpected" }, { status: 404 });
+  };
+
+  try {
+    const client = new RealAgnesClient({ AGNES_API_KEY: "test-key", AGNES_API_BASE_URL: "https://example.test" });
+    await assert.rejects(
+      () => client.generateImage({ prompt: "test", size: "1024x1024", n: 4 }),
+      /Agnes API 429|rate.?limit|quota.?exceed/i
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

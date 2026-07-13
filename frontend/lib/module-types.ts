@@ -69,6 +69,8 @@ export interface Script extends BaseEntity {
   project_id?: string;
   tags: string[];
   version: number;
+  /** 软删除时间戳；空字符串表示未删除 */
+  deleted_at?: string;
 }
 
 /** 剧本章节数据 */
@@ -116,6 +118,40 @@ export interface CharacterRelationship {
   related_character_id: string;
   relationship_type: string;
   description?: string;
+}
+
+/**
+ * 角色图片生成历史（与后端 CharacterImageHistory 对齐）。
+ *
+ * 持久化位置：后端 SQLite `character_image_history` 表。
+ * - 每次 AI 生成图 → 追加一条（is_applied=false）
+ * - 「设为角色资产」 → 标记 is_applied=true
+ * - 移除角色资产不影响 is_applied（保留在「已选资产历史」中）
+ * - 单条删除才真正消失
+ *
+ * 前端用同一份数据驱动两个 UI 区块：
+ * - 「历史图片」= 全部记录
+ * - 「已选资产历史」= 过滤 is_applied=true
+ */
+export interface CharacterImageHistory {
+  id: string;
+  character_id: string;
+  project_id: string;
+  url: string;
+  /** 生图时提交的比例（9:16 / 16:9 等），用于卡片正确还原预览比例。 */
+  ratio: string;
+  model: string;
+  size: string;
+  prompt: string;
+  negative_prompt?: string;
+  response_format: string;
+  /** 当次生成数量（用于历史卡片显示「1张/2张」）。 */
+  n: number;
+  /** 是否曾被设为角色资产。true 后不再变 false。 */
+  is_applied: boolean;
+  /** 最后一次被设为角色资产的时间（ISO）。 */
+  applied_at: string;
+  created_at: string;
 }
 
 // ==================== 场景工厂类型 ====================

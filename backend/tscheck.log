@@ -1,0 +1,1 @@
+﻿src/ai/agnes-client.ts(205,17): error TS2551: Property 'abort' does not exist on type 'AbortSignal'. Did you mean 'aborted'?

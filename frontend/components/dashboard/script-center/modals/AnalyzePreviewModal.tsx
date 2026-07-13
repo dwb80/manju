@@ -42,12 +42,14 @@ export interface AnalyzePreviewModalProps {
   data: AnalyzePreviewData
   onApply: () => void | Promise<void>
   onCancel: () => void
+  /** 应用中(防止双击/重复提交);为 true 时禁用应用按钮 */
+  applying?: boolean
 }
 
 /**
  * AI 分析结果预览弹窗组件
  */
-export function AnalyzePreviewModal({ data, onApply, onCancel }: AnalyzePreviewModalProps) {
+export function AnalyzePreviewModal({ data, onApply, onCancel, applying }: AnalyzePreviewModalProps) {
   log.debug('open', {
     source: data.source,
     counts: {
@@ -139,10 +141,11 @@ export function AnalyzePreviewModal({ data, onApply, onCancel }: AnalyzePreviewM
           <Button
             size="sm"
             onClick={onApply}
+            disabled={applying}
             className="bg-emerald-500 hover:bg-emerald-600"
           >
             <Check className="mr-1 h-3 w-3" />
-            应用结果
+            {applying ? '应用中…' : '应用结果'}
           </Button>
         </div>
       </div>

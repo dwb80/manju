@@ -11,7 +11,7 @@
  * - 与现有 FormDialog / ConfirmDialog / AIGenerateImageDialog 协同工作。
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Sparkles, Pencil, Trash2, CheckSquare, Square, X, LayoutTemplate, History, Copy, Inbox, RotateCcw, Archive, ChevronRight } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import {
@@ -995,23 +995,25 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
               </div>
             )}
             <div className={`grid ${gridClassName} gap-4`}>
-              {pagedItems.map((item) =>
-                renderCard(item, {
-                  selected: selectedIds.has(item.id),
-                  onToggleSelect: () => toggleSelect(item.id),
-                  onEdit: () => openEdit(item),
-                  onDelete: () => requestDelete(item),
-                  onViewHistory: fetchVersions ? () => setVersionHistory({ id: item.id, name: getEntityLabel(item) }) : undefined,
-                  onCopyToProjects: copyToProjects ? () => setCopyDialogItem(item) : undefined,
-                  usage: referencesMap[item.id],
-                  onOpenSource: fetchReferences ? () => handleOpenSource(item) : undefined,
-                  onInsertToStoryboard: insertToStoryboard
-                    ? insertingId === item.id
-                      ? undefined // 正在加载，临时隐藏按钮避免重复点击
-                      : () => handleInsertToStoryboard(item)
-                    : undefined,
-                }),
-              )}
+              {pagedItems.map((item) => (
+                <Fragment key={item.id}>
+                  {renderCard(item, {
+                    selected: selectedIds.has(item.id),
+                    onToggleSelect: () => toggleSelect(item.id),
+                    onEdit: () => openEdit(item),
+                    onDelete: () => requestDelete(item),
+                    onViewHistory: fetchVersions ? () => setVersionHistory({ id: item.id, name: getEntityLabel(item) }) : undefined,
+                    onCopyToProjects: copyToProjects ? () => setCopyDialogItem(item) : undefined,
+                    usage: referencesMap[item.id],
+                    onOpenSource: fetchReferences ? () => handleOpenSource(item) : undefined,
+                    onInsertToStoryboard: insertToStoryboard
+                      ? insertingId === item.id
+                        ? undefined // 正在加载，临时隐藏按钮避免重复点击
+                        : () => handleInsertToStoryboard(item)
+                      : undefined,
+                  })}
+                </Fragment>
+              ))}
             </div>
             {usePagination && totalPages > 1 && (
               <div className="mt-4">

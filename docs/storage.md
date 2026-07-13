@@ -38,8 +38,6 @@ backend/src/storage/schema.ts
 
 `scripts` / `project_assets` / `project_reviews` 等表同时被 Path A（`Script`/`Asset`/`Review`）和 Path B（`ProjectScript`/`ProjectAsset`/`ProjectReview`）共用——通过 `id` 主键保持一致。
 
-> 历史说明：v1.1 之前的版本曾使用 CSV 按天分文件存储（`backend/data/csv/`）。该方案已下线，所有运行时数据统一进入 SQLite（2026-07-12）。
-
 ## 项目目录
 
 新建项目时，可以选择：

@@ -6,7 +6,7 @@
 backend/data/sqlite.db
 ```
 
-WAL 模式下还会伴随 `sqlite.db-shm` 与 `sqlite.db-wal` 两个文件。CSV 不再承担持久化角色。
+WAL 模式下还会伴随 `sqlite.db-shm` 与 `sqlite.db-wal` 两个文件。
 
 ## 为什么使用 SQLite
 
@@ -22,7 +22,7 @@ AI 漫剧项目会产生大量关联数据：
 - 风格和提示词资产
 - 审核和导出记录
 
-这些数据需要稳定查询、更新和关联。SQLite 提供事务、参数化语句与软删除友好的列式字段，比按天分文件 CSV 更适合做长期主存储。
+这些数据需要稳定查询、更新和关联。SQLite 提供事务、参数化语句与软删除友好的列式字段，适合做长期主存储。
 
 ## 仓储抽象
 
@@ -102,7 +102,3 @@ backend/data/projects/{project}/media/
 ## 连接释放
 
 后端使用 Node 24 自带的 `node:sqlite`。HTTP server 关闭时会调用应用上下文的 `close()`，释放 SQLite 连接，避免 Windows 下 `sqlite.db` 文件被锁住。
-
-## 历史背景
-
-v1.1 之前的版本曾以 CSV 按天分文件存储（`backend/data/csv/`）。该方案已于 2026-07-12 全面下线——`CsvRepository` 不再被任何运行时路径引用，`backend/data/csv/` 目录已删除，所有业务表统一走 SQLite。

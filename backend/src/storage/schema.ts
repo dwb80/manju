@@ -1,4 +1,4 @@
-import type { Conversation, Favorite, ImageTask, Message, Project, Settings, VideoTask, ScriptComment, AssetVersion, Todo, AppLog, WorkItem } from "../types.js";
+import type { Conversation, Favorite, ImageTask, Message, Project, Settings, VideoTask, ScriptComment, AssetVersion, CharacterImageHistory, Todo, AppLog, WorkItem } from "../types.js";
 import type { Script, ProjectScript } from "../types/script.js";
 import type { Character } from "../types/character.js";
 import type { Scene } from "../types/scene.js";
@@ -110,6 +110,29 @@ export const assetVersionFields: FieldSpec<AssetVersion>[] = [
   { key: "change_type", type: "string" },
   { key: "created_at", type: "string" },
   { key: "created_by", type: "string" },
+];
+
+/**
+ * 角色图片生成历史表字段。
+ *
+ * 用于角色图片生成器右侧「历史图片」+「已选资产历史」两个区块的持久化。
+ * 单表 + is_applied 区分两种记录；同一 character 下同一 url 唯一（前端调用前会做 URL dedup）。
+ */
+export const characterImageHistoryFields: FieldSpec<CharacterImageHistory>[] = [
+  { key: "id", type: "string" },
+  { key: "character_id", type: "string" },
+  { key: "project_id", type: "string" },
+  { key: "url", type: "string" },
+  { key: "ratio", type: "string" },
+  { key: "model", type: "string" },
+  { key: "size", type: "string" },
+  { key: "prompt", type: "string" },
+  { key: "negative_prompt", type: "string" },
+  { key: "response_format", type: "string" },
+  { key: "n", type: "number" },
+  { key: "is_applied", type: "boolean" },
+  { key: "applied_at", type: "string" },
+  { key: "created_at", type: "string" },
 ];
 
 /** 我的待办字段（评审优化 P1）。 */
@@ -377,6 +400,8 @@ export const scriptFields: FieldSpec<Script>[] = [
   { key: "version", type: "number" },
   { key: "created_at", type: "string" },
   { key: "updated_at", type: "string" },
+  /** 软删时间戳(ISO),null/未设置 = 未删除。30 天后才能"彻底删除"。 */
+  { key: "deleted_at", type: "string" },
 ];
 
 /** 评审 P1-H11 修复：Path B（ProjectScript）的 schema，与 Path A 共用同一张 SQLite 表（scripts）。 */

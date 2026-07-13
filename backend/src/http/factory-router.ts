@@ -74,6 +74,13 @@ import {
   regenerateVideo,
 } from "../services/module-domain.js";
 import { listProjectClips } from "../services/domain/storyboard.js";
+import {
+  listImageHistory,
+  appendImageHistory,
+  markImageApplied,
+  deleteImageHistory,
+  clearImageHistory,
+} from "../services/character-image-history.js";
 import { requireString } from "../utils.js";
 
 /** 角色子路径保留字，避免与具体 ID 冲突 */
@@ -487,6 +494,64 @@ export async function matchFactoryRoute(
       const projectId = queryParam(req, "projectId");
       if (!projectId) throw new Error("projectId 必填");
       sendJson(res, await listProjectClips(ctx, projectId));
+      return true;
+    }
+    return false;
+  }
+
+  // ===== 角色图片生成历史 =====
+  // 与 character/factory 解耦：单表存所有 AI 生成的图，is_applied 区分「历史图片」和「已选资产历史」。
+  // 路由：
+  //   GET    /api/character-image-history?characterId=xxx         列出该角色所有历史
+  //   POST   /api/character-image-history                        追加一条（AI 生成图后调用）
+  //   PATCH  /api/character-image-history/:id/apply               标记已应用
+  //   PATCH  /api/character-image-history/:id/unapply             取消应用标记
+  //   DELETE /api/character-image-history/:id                    删除单条
+  //   POST   /api/character-image-history/clear                  清空某角色所有
+  if (seg0 === "api" && seg1 === "character-image-history") {
+    if (method === "GET" && parts.join("/") === "api/character-image-history") {
+      const characterId = requireString(queryParam(req, "characterId"), "characterId");
+      sendJson(res, await listImageHistory(ctx, characterId));
+      return true;
+    }
+    if (method === "POST" && parts.join("/") === "api/character-image-history") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const characterId = requireString(body.character_id, "character_id");
+      const url = requireString(body.url, "url");
+      const record = await appendImageHistory(ctx, {
+        character_id: characterId,
+        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        url,
+        ratio: typeof body.ratio === "string" ? body.ratio : "1:1",
+        model: typeof body.model === "string" ? body.model : "",
+        size: typeof body.size === "string" ? body.size : "",
+        prompt: typeof body.prompt === "string" ? body.prompt : "",
+        negative_prompt: typeof body.negative_prompt === "string" ? body.negative_prompt : "",
+        response_format: typeof body.response_format === "string" ? body.response_format : "url",
+        n: typeof body.n === "number" ? body.n : 1,
+      });
+      sendJson(res, record);
+      return true;
+    }
+    if (method === "PATCH" && seg2 && seg3 === "apply") {
+      const record = await markImageApplied(ctx, seg2);
+      if (!record) {
+        sendError(res, new Error("记录不存在"), 404);
+        return true;
+      }
+      sendJson(res, record);
+      return true;
+    }
+    if (method === "DELETE" && seg2) {
+      const ok = await deleteImageHistory(ctx, seg2);
+      sendJson(res, { deleted: ok });
+      return true;
+    }
+    if (method === "POST" && parts.join("/") === "api/character-image-history/clear") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const characterId = requireString(body.character_id, "character_id");
+      const count = await clearImageHistory(ctx, characterId);
+      sendJson(res, { deleted: count });
       return true;
     }
     return false;

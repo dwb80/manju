@@ -1,11 +1,10 @@
 # Agnes AI Studio 详细需求规格说明书
 
-> 版本：v1.2
+> 版本：v1.3
 > 文档状态：待评审
 > 最后更新：2026-07-12
 > 适用阶段：MVP + V2 全量规划
-> **v1.2 变更**：将持久化存储从 CSV 文件存储调整为 **SQLite（`backend/data/sqlite.db`）**，统一业务数据写入一份数据库。
-> **v1.1 变更**：将持久化存储由 MySQL 调整为 CSV 文件存储（按天分文件）——该方案已于 2026-07-12 全面下线。
+> **v1.3 变更**：持久化存储统一为 **SQLite（`backend/data/sqlite.db`）**，状态机收敛到 `work_items`，新增 `app_logs` 审计日志。
 
 ---
 
@@ -408,9 +407,6 @@ class AgnesClient {
 | 每周日 03:00 | 全量 tar 备份至 OSS / S3 |
 | 实时 | 通过 `rclone` / `rsync` 同步至异地 |
 
-### 7.8 历史背景
-v1.1 曾以 CSV 按天分文件存储（`backend/data/csv/`）。该方案已于 2026-07-12 全面下线——`CsvRepository` 不再被任何运行时路径引用，`backend/data/csv/` 目录已删除，所有业务表统一走 SQLite。
-
 ## 8. API 设计
 
 ### 8.1 设计原则
@@ -649,9 +645,9 @@ v1.1 曾以 CSV 按天分文件存储（`backend/data/csv/`）。该方案已于
 | 版本 | 日期 | 变更 | 作者 |
 |------|------|------|------|
 | v1.0 | 2026-07-01 | 初始版本 | 产品/BA |
-| v1.1 | 2026-07-01 | 存储介质由 MySQL 改为 CSV 按天分文件，新增 CsvRepository 设计（**该方案已于 v1.3 下线**） | 产品/BA |
+| v1.1 | 2026-07-01 | 存储介质由 MySQL 调整为本地文件存储方案（**该方案已于 v1.3 下线**） | 产品/BA |
 | v1.2 | 2026-07-01 | 调整为**个人本地使用**模式：移除登录/注册、用户管理、RBAC、后台管理、JWT 鉴权等模块；简化数据存储（移除 users/login_logs/operation_logs 表）；简化安全设计；调整里程碑 | 产品/BA |
-| v1.3 | 2026-07-12 | 持久化存储由 CSV 改为 **SQLite（`backend/data/sqlite.db`）**：删除 CsvRepository，新增 SqliteRepository，删除 `data/csv/` 目录；状态机收敛到 `work_items`；新增 `app_logs` 审计日志 | 产品/BA |
+| v1.3 | 2026-07-12 | 持久化存储统一为 **SQLite（`backend/data/sqlite.db`）**：新增 SqliteRepository；状态机收敛到 `work_items`；新增 `app_logs` 审计日志 | 产品/BA |
 
 ---
 

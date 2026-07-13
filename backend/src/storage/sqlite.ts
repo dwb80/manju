@@ -75,13 +75,29 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
   private readonly database: DatabaseSync;
   private readonly table: string;
   private readonly fields: FieldSpec<T>[];
+  /**
+   * true = 正常仓储（fields 有定义、表已建好）；
+   * false = legacy 仓储（fields 为空、表未创建），所有读操作返回空、写入必须抛错，
+   *        避免 `no such table: <name>` 一路冒泡到 HTTP 响应里。
+   */
+  private readonly isConfigured: boolean;
 
   /** 为一个业务实体创建 SQLite 表，并按字段定义读写记录。 */
   constructor(databaseFile: string, entity: string, fields: FieldSpec<T>[]) {
     this.database = openDatabase(databaseFile);
     this.table = entity;
     this.fields = fields;
+    this.isConfigured = fields.length > 0;
     this.ensureTable();
+  }
+
+  /**
+   * legacy 表守卫：在 fields 为空时拒绝任何写入，避免静默丢数据。
+   * 调用方必须看到清晰错误并把对应的旧字段/逻辑迁到新表（work_items 等）。
+   */
+  private assertConfigured(method: string): void {
+    if (this.isConfigured) return;
+    throw new Error(`[${this.table}] 表未配置 schema（legacy table）:${method} 不可用,请将数据迁到新表`);
   }
 
   /** 创建表结构；当前统一使用 TEXT/INTEGER 存储，类型转换由仓储层负责。 */
@@ -114,12 +130,14 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
 
   /** 插入单条记录。 */
   async insert(record: T): Promise<void> {
+    this.assertConfigured("insert");
     await this.insertBatch([record]);
   }
 
   /** 批量插入记录，使用事务降低半写入风险。 */
   async insertBatch(records: T[]): Promise<void> {
     if (records.length === 0) return;
+    this.assertConfigured("insertBatch");
     const columns = this.fields.map((field) => quoteIdentifier(field.key)).join(", ");
     const placeholders = this.fields.map(() => "?").join(", ");
     const statement = this.database.prepare(`INSERT INTO ${quoteIdentifier(this.table)} (${columns}) VALUES (${placeholders})`);
@@ -137,6 +155,7 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
 
   /** 根据 ID 查找单条记录。 */
   async findById(id: string): Promise<T | null> {
+    if (!this.isConfigured) return null;
     return this.findOne({ id } as Partial<T>);
   }
 
@@ -148,6 +167,8 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
 
   /** 查询记录列表，支持等值筛选、创建时间排序和数量限制。 */
   async findMany(filter: Partial<T> = {}, options: QueryOptions = {}): Promise<T[]> {
+    // legacy 表(无 fields)未建表,直接返回空数组,避免 SELECT 报 "no such table"
+    if (!this.isConfigured) return [];
     const clauses: string[] = [];
     const values: unknown[] = [];
     for (const [key, value] of Object.entries(filter)) {
@@ -167,6 +188,7 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
 
   /** 根据 ID 合并更新字段。 */
   async update(id: string, patch: Partial<T>): Promise<void> {
+    this.assertConfigured("update");
     const entries = Object.entries(patch).filter(([, value]) => value !== undefined);
     if (entries.length === 0) return;
     const sets = entries.map(([key]) => `${quoteIdentifier(key)} = ?`).join(", ");
@@ -176,11 +198,13 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
 
   /** 根据 ID 删除记录。 */
   async delete(id: string): Promise<void> {
+    this.assertConfigured("delete");
     this.database.prepare(`DELETE FROM ${quoteIdentifier(this.table)} WHERE ${quoteIdentifier("id")} = ?`).run(id);
   }
 
   /** 统计满足条件的记录数量。 */
   async count(filter: Partial<T> = {}): Promise<number> {
+    if (!this.isConfigured) return 0;
     const records = await this.findMany(filter);
     return records.length;
   }

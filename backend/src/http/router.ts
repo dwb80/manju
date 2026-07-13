@@ -8,10 +8,11 @@ import { rootLogger, withLogContext, logLineToFile } from "../logger.js";
 import { getRuntimeConfig } from "../config/env.js";
 import type { AppContext } from "../services/app.js";
 import { addFavorite, addMessage, createConversation, createLocalImageTask, deleteConversation, ensureConversation, generateImage, generateVideo, listConversations, listImages, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateSettings } from "../services/domain.js";
+import { enhancePrompt } from "../services/domain/image.js";
 import { createProject, listProjects, updateProject, deleteProject } from "../services/domain/project.js";
 import { saveUploadedImage, type UploadInput } from "../services/media.js";
-import { listCharacters, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters, listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes, listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps, getCharacterUsage, getSceneUsage, getPropUsage, copyCharactersToProjects, copyScenesToProjects, copyPropsToProjects, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets, listVersions, getVersion, restoreVersion, listStoryboards, createStoryboard, updateStoryboard, deleteStoryboard, softDeleteStoryboard, restoreStoryboard as restoreStoryboardById, listDeletedStoryboards, permanentDeleteStoryboard, copyStoryboardToProject, generateVideoFromStoryboard, listAudios, createAudio, updateAudio, deleteAudio, softDeleteAudio, restoreAudio as restoreAudioById, listDeletedAudios, permanentDeleteAudio, copyAudioToProject, generateTTS, listModuleVideoTasks, createModuleVideoTask, updateModuleVideoTask, deleteModuleVideoTask, softDeleteVideo, restoreVideo as restoreVideoById, listDeletedVideos, permanentDeleteVideo, copyVideoToProject, syncVideoTaskStatus, retryVideoTask, regenerateVideo, softDeleteClip, restoreClip, listDeletedClips, permanentDeleteClip, copyClipToProject, listScripts, createScript, updateScript as updateScriptRecord, deleteScript as deleteScriptRecord } from "../services/module-domain.js";
-import { listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment, listScriptDocuments, getScriptDocument, createScriptDocument, updateScriptDocument, deleteScriptDocument, listScriptEpisodes, listScriptScenes, createScriptEpisode, createScriptScene, createScriptDialogue } from "../services/script-center-impl.js";
+import { listCharacters, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters, listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes, listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps, getCharacterUsage, getSceneUsage, getPropUsage, copyCharactersToProjects, copyScenesToProjects, copyPropsToProjects, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets, listVersions, getVersion, restoreVersion, listStoryboards, createStoryboard, updateStoryboard, deleteStoryboard, softDeleteStoryboard, restoreStoryboard as restoreStoryboardById, listDeletedStoryboards, permanentDeleteStoryboard, copyStoryboardToProject, generateVideoFromStoryboard, listAudios, createAudio, updateAudio, deleteAudio, softDeleteAudio, restoreAudio as restoreAudioById, listDeletedAudios, permanentDeleteAudio, copyAudioToProject, generateTTS, listModuleVideoTasks, createModuleVideoTask, updateModuleVideoTask, deleteModuleVideoTask, softDeleteVideo, restoreVideo as restoreVideoById, listDeletedVideos, permanentDeleteVideo, copyVideoToProject, syncVideoTaskStatus, retryVideoTask, regenerateVideo, softDeleteClip, restoreClip, listDeletedClips, permanentDeleteClip, copyClipToProject, listScripts, createScript, updateScript as updateScriptRecord, deleteScript as deleteScriptRecord, restoreScript, purgeScript, listDeletedScripts } from "../services/module-domain.js";
+import { listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment, listScriptDocuments, getScriptDocument, createScriptDocument, updateScriptDocument, deleteScriptDocument, listScriptEpisodes, listScriptScenes, createScriptEpisode, createScriptScene, createScriptDialogue, optimizeScriptWithAI } from "../services/script-center-impl.js";
 import { matchFactoryRoute } from "./factory-router.js";
 import { handleAITasksRouter } from "./ai-tasks-router.js";
 import { handleDataRouter } from "./data-router.js";
@@ -257,19 +258,25 @@ function parseMultipartImages(req: IncomingMessage, body: Buffer): UploadInput[]
     if (!filename) continue;
 
     const bytes = part.subarray(headerEnd + 4);
-    if (bytes.length > 10 * 1024 * 1024) throw new Error("single image must be less than 10MB");
+    // 单张图片上限 200MB（与前端 MAX_REFERENCE_IMAGE_SIZE 对齐）。
+    // 注意：Agnes 官方文档对参考图附件大小无硬限（10MB 是 base64 后的硬限,见 image queue input image size）；
+    // 此 200MB 是后端传输防御,避免恶意大文件耗尽服务器内存/带宽。
+    // 实际传给 Agnes 前,resolveMediaInput 会用 sharp 压缩到 9MB(base64)以内,base64 编码后也不会超 12MB。
+    if (bytes.length > 200 * 1024 * 1024) throw new Error("single image must be less than 200MB");
     uploads.push({
       filename,
       contentType: headerValue(headers, "content-type") || "application/octet-stream",
       bytes,
     });
   }
-  return uploads.slice(0, 8);
+  // 单次最多 4 张参考图（与前端 MAX_REFERENCE_IMAGES 对齐）
+  return uploads.slice(0, 4);
 }
 
 /** 处理图片附件上传，并返回本地媒体 URL。 */
 async function handleUpload(ctx: AppContext, req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const body = await readBody(req, 80 * 1024 * 1024);
+  // body 上限 = 200MB × 4 张 + multipart 开销 = 850MB（按 4 张 200MB 满载估算）
+  const body = await readBody(req, 850 * 1024 * 1024);
   const uploads = parseMultipartImages(req, body);
   if (uploads.length === 0) throw new Error("missing image file");
   const stored = [];
@@ -350,9 +357,17 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4]) {
       return sendJson(res, await updateScriptRecord(ctx, parts[4], await readJson(req) as any));
     }
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4]) {
-      await deleteScriptRecord(ctx, parts[4]);
-      return sendJson(res, { deleted: true });
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4] && !parts[5]) {
+      return sendJson(res, await deleteScriptRecord(ctx, parts[4]));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4] && parts[5] === "restore") {
+      return sendJson(res, await restoreScript(ctx, parts[4]));
+    }
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4] && parts[5] === "purge") {
+      return sendJson(res, await purgeScript(ctx, parts[4]));
+    }
+    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4] === "recycle-bin") {
+      return sendJson(res, await listDeletedScripts(ctx, parts[2]));
     }
     // 剧本富文本结构（剧集/场景/对白）—— 给剧本导入用，POST 单条写入
     if (method === "POST" && parts.join("/") === "api/script-documents") {
@@ -426,6 +441,15 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const body = (await readJson(req)) as { content?: string; format?: string; useLocal?: boolean };
       return sendJson(res, await analyzeScriptWithAI(ctx, { content: body.content || "", format: body.format || "txt", useLocal: body.useLocal }));
     }
+    if (method === "POST" && parts.join("/") === "api/ai/script-optimize") {
+      const body = await readJson(req);
+      const content = typeof body.content === "string" ? body.content : "";
+      const scriptId = typeof body.script_id === "string" ? body.script_id : undefined;
+      if (!content.trim() && !scriptId) {
+        return sendError(res, new Error("content 或 script_id 不能为空"), 400);
+      }
+      return sendJson(res, await optimizeScriptWithAI(ctx, "local-user", body as any));
+    }
     if (method === "POST" && parts.join("/") === "api/uploads") return handleUpload(ctx, req, res);
     if (method === "POST" && parts.join("/") === "api/chat/stop") {
       const body = await readJson(req);
@@ -473,6 +497,14 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       return sendJson(res, { received });
     }
     if (method === "POST" && parts.join("/") === "api/images/generate") return sendJson(res, await generateImage(ctx, await readJson(req)));
+    // ===== 提示词强化 =====
+    // 角色图片生成器右侧「强化提示词」按钮使用。
+    // 输入：{ prompt: string, mode?: "image" | "video" }；输出：{ prompt, enhanced, mode }。
+    // 后端 chat 流式有 30s 超时（AI_TIMEOUTS.enhancePrompt），失败时返回 500。
+    if (method === "POST" && parts.join("/") === "api/prompts/enhance") {
+      const body = (await readJson(req)) as { prompt?: string; mode?: string };
+      return sendJson(res, await enhancePrompt(ctx, { prompt: body.prompt, mode: body.mode }));
+    }
     if (method === "POST" && parts.join("/") === "api/images/local") return sendJson(res, await createLocalImageTask(ctx, await readJson(req)));
     if (method === "GET" && parts.join("/") === "api/images") {
       const conversationId = new URL(req.url ?? "/", "http://localhost").searchParams.get("conversationId");

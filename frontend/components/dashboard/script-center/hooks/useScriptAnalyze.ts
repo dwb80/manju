@@ -73,7 +73,7 @@ export interface UseScriptAnalyzeParams {
 
   // store 状态（用于去重判断）
   episodes: Array<{ id: string; title: string }>
-  scenes: Array<{ id: string; location: string }>
+  scenes: Array<{ id: string; location: string; time?: string; episodeId?: string }>
   sceneAssets: Array<{ id: string; name: string }>
   characters: Array<{ id: string; name: string }>
   propAssets: Array<{ id: string; name: string }>
@@ -157,16 +157,46 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
     const newEpisodes: EpisodeMeta[] = []
     const newScriptScenes: SceneMeta[] = []
 
+    // === 去重基础设施（修复剧集/场景重复入库） ===
+    // 1) 本地 seen Set：避免 preview 数组内部含重复项时反复入库
+    // 2) 拿最新 store 状态（useScriptStore.getState）：闭包里的 props/episodes 可能是过期快照
+    //    —— 用户在上一轮 apply 还没完成 / 还没回流到 store 时,可能再次点击"应用"导致重入
+    const seenEpisodeTitles = new Set<string>()
+    const seenCharacterNames = new Set<string>()
+    const seenSceneLocations = new Set<string>()  // 工厂资产去重
+    const seenScriptSceneLocs = new Set<string>() // 剧本侧去重（key: `${epNo}::${location}`）
+    const seenPropNames = new Set<string>()
+    const freshStore = useScriptStore.getState()
+    const freshEpisodes = freshStore.episodes
+    const freshScenes = freshStore.scenes
+    const freshSceneAssets = freshStore.sceneAssets
+    const freshCharacters = freshStore.characters
+    const freshProps = freshStore.props
+
     try {
       const projectId = document.project_id || ''
 
-      // 1) 剧集：去重添加
+      // 1) 剧集：去重添加（三层去重）
+      //    - 本次 apply 内 seen Set
+      //    - props 闭包快照（首次 apply 时也用得到）
+      //    - 最新 store 状态（避免连续 apply 时第二次拿不到第一次的写入）
       for (const ep of preview.episodes) {
-        const exist = episodes.find((e) => e.title === ep.title)
-        if (exist) continue
+        const title = (ep.title || '').trim()
+        if (!title) continue
+        if (seenEpisodeTitles.has(title)) continue
+        seenEpisodeTitles.add(title)
+        const existingEpisode = episodes.find((e) => e.title === title) || freshEpisodes.find((e: any) => e.title === title)
+        if (existingEpisode) {
+          newEpisodes.push({
+            id: existingEpisode.id,
+            episodeNo: (existingEpisode as any).episodeNo ?? ep.episode_no ?? newEpisodes.length + 1,
+            title: existingEpisode.title || title,
+          })
+          continue
+        }
         const created = await createEpisode({
           episodeNo: ep.episode_no,
-          title: ep.title,
+          title,
           synopsis: ep.synopsis,
         })
         // createEpisode 现已返回新创建的剧集（见 script-store.ts 改造）
@@ -174,14 +204,18 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
           newEpisodes.push({
             id: created.id,
             episodeNo: created.episodeNo ?? ep.episode_no ?? newEpisodes.length + 1,
-            title: created.title || ep.title || '',
+            title: created.title || title,
           })
         }
       }
 
       // 2) 角色：去重 + 落库到角色工厂 + 追加工厂资产
       for (const char of preview.characters) {
-        if (characters.find((c) => c.name === char.name)) {
+        const cName = (char.name || '').trim()
+        if (!cName) continue
+        if (seenCharacterNames.has(cName)) continue
+        seenCharacterNames.add(cName)
+        if (characters.find((c) => c.name === cName) || freshCharacters.find((c: any) => c.name === cName)) {
           existingChars++
           continue
         }
@@ -194,7 +228,7 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
         try {
           const created = await createCharacter({
             project_id: projectId,
-            name: char.name,
+            name: cName,
             role: char.role || 'supporting',
             gender: char.gender || 'other',
             description: mergedDescription,
@@ -204,11 +238,11 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
           appendFactoryAsset('character', created)
           createdChars++
         } catch (err) {
-          log.warn('create character failed', { name: char.name, error: (err as Error).message })
+          log.warn('create character failed', { name: cName, error: (err as Error).message })
           // 落库失败时回退到仅写 store
           addCharacter({
-            id: `temp-${Date.now()}-${char.name}`,
-            name: char.name,
+            id: `temp-${Date.now()}-${cName}`,
+            name: cName,
             description: mergedDescription,
             color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'),
             assetId: undefined,
@@ -216,19 +250,15 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
         }
       }
 
-      // 3) 场景：去重 + 落库到场景工厂 + 写入剧本侧
-      //    若当前还没有剧集，从 store 重读（异步一致性兜底）
-      const targetEpisodes: Array<{ id: string; title: string; episodeNo?: number }> =
-        episodes.length > 0 ? (episodes as any) : (useScriptStore.getState().episodes as any)
-      for (let i = 0; i < preview.scenes.length; i++) {
-        const scene = preview.scenes[i]
-        const locationName = scene.location_name || scene.name || '未命名场景'
-        const inScript = scenes.find((s) => s.location === locationName)
-        const inFactory = sceneAssets.find((s) => s.name === locationName)
-        if (inScript || inFactory) {
-          existingScenes++
-          continue
-        }
+      // 3a) 场景工厂资产：preview.scenes(扁平列表) → 按唯一地点去重 → 落库到场景工厂
+      //     工厂资产与剧本侧场景解耦：工厂只关心"哪些地点需要资产图",
+      //     剧本侧关心"哪些 scene 节点需要写到正文里并打 data-id 锚点"
+      for (const scene of preview.scenes) {
+        const locationName = (scene.location_name || scene.name || '').trim() || '未命名场景'
+        if (seenSceneLocations.has(locationName)) continue
+        seenSceneLocations.add(locationName)
+        if (sceneAssets.find((s) => s.name === locationName)) continue
+        if (freshSceneAssets.find((s: any) => s.name === locationName)) continue
         try {
           const createdScene = await createFactoryScene({
             name: locationName,
@@ -242,25 +272,55 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
         } catch (err) {
           log.warn('create scene factory asset failed', { name: locationName, error: (err as Error).message })
         }
-        if (targetEpisodes.length > 0) {
+      }
+
+      // 3b) 剧本侧场景：preview.episodes[].scenes(嵌套) → 按"剧集归属"创建
+      //     锚定功能的关键：每条新场景必须挂到它真正属于的剧集下,
+      //     sceneMap 按 `${episodeNo}-${sceneNo}` 与 preview 严格对齐,
+      //     这样 restructure 出来的 scene 节点 attrs.id 才是有效的后端 ID,
+      //     侧栏 jumpToNode 通过 [data-id] 才能精确命中
+      const episodeNoToNew = new Map<number, EpisodeMeta>()
+      for (const e of newEpisodes) episodeNoToNew.set(e.episodeNo, e)
+
+      for (const previewEp of preview.episodes) {
+        const epNo = previewEp.episode_no || 1
+        const hostEp = episodeNoToNew.get(epNo)
+        if (!hostEp) continue
+        const innerScenes = previewEp.scenes || []
+        for (let sIdx = 0; sIdx < innerScenes.length; sIdx++) {
+          const sc = innerScenes[sIdx]
+          const locationName = (sc.location_name || '').trim() || '未命名场景'
+          const sceneNo = sc.scene_no || sIdx + 1
+          const dedupKey = `${epNo}::${locationName}`
+          if (seenScriptSceneLocs.has(dedupKey)) continue
+          seenScriptSceneLocs.add(dedupKey)
+          // 已经在 store 里(本剧集 + 同地点)就跳过
+          const existingScriptScene =
+            scenes.find((s) => s.episodeId === hostEp.id && s.location === locationName) ||
+            freshScenes.find((s: any) => s.episodeId === hostEp.id && s.location === locationName)
+          if (existingScriptScene) {
+            newScriptScenes.push({
+              id: existingScriptScene.id,
+              episodeNo: epNo,
+              sceneNo,
+              location: existingScriptScene.location || locationName,
+              time: existingScriptScene.time || sc.time_of_day || 'day',
+            })
+            continue
+          }
           try {
-            // 默认归属到第一个剧集；多集归属留给后续按 AI first_appearance 解析
-            const hostEp = targetEpisodes[0]
             const createdScriptScene = await createScene(hostEp.id, {
               location: locationName,
-              time: scene.time_of_day,
-              description: scene.description,
+              time: sc.time_of_day,
+              description: sc.description,
             })
             if (createdScriptScene && createdScriptScene.id) {
               newScriptScenes.push({
                 id: createdScriptScene.id,
-                // 兜底按 i 编号；与 AI episodes 内嵌 scenes 的下标不一定完全对齐
-                // （因为 AI 的 scenes 在每个 episode 内独立编号 1..N），
-                // 此处用绝对顺序作为 SceneMeta.sceneNo，restructure 侧用此顺序与 preview.scenes 对应
-                episodeNo: hostEp.episodeNo ?? 1,
-                sceneNo: i + 1,
+                episodeNo: epNo,
+                sceneNo,
                 location: createdScriptScene.location || locationName,
-                time: createdScriptScene.time || scene.time_of_day || 'day',
+                time: createdScriptScene.time || sc.time_of_day || 'day',
               })
             }
           } catch (err) {
@@ -271,14 +331,18 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
 
       // 4) 道具：去重 + 落库到道具工厂 + 追加工厂资产
       for (const p of preview.props) {
-        if (propAssets.find((pp) => pp.name === p.name)) {
+        const pName = (p.name || '').trim()
+        if (!pName) continue
+        if (seenPropNames.has(pName)) continue
+        seenPropNames.add(pName)
+        if (propAssets.find((pp) => pp.name === pName) || freshProps.find((pp: any) => pp.name === pName)) {
           existingProps++
           continue
         }
         try {
           const createdProp = await createFactoryProp({
             project_id: projectId,
-            name: p.name,
+            name: pName,
             category: (p.category as any) || 'other',
             description: p.description,
             tags: ['剧本分析提取'],
@@ -286,10 +350,10 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
           appendFactoryAsset('prop', createdProp)
           createdProps++
         } catch (err) {
-          log.warn('create prop failed', { name: p.name, error: (err as Error).message })
+          log.warn('create prop failed', { name: pName, error: (err as Error).message })
           addProp({
-            id: `temp-${Date.now()}-${p.name}`,
-            name: p.name,
+            id: `temp-${Date.now()}-${pName}`,
+            name: pName,
             category: p.category,
             description: p.description,
           })
@@ -298,7 +362,7 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
 
       // 5) 重建 Tiptap 文档：让剧集/场景与正文锚定
       //    - 仅在原文不含 episode/scene 节点时执行（避免覆盖用户手动结构）
-      //    - 仅在成功创建了至少一个剧集时执行
+      //    - 已存在 / 新创建的剧集都参与映射，否则重复应用分析时无法补齐正文锚点
       //    - 重建后通过回调让 page.tsx 调用 editor.setContent
       if (
         newEpisodes.length > 0 &&
@@ -307,20 +371,12 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
         onContentRestructured
       ) {
         try {
+          // episodeMap: key=episode_no → 落库后的剧集元数据(含后端 id)
           const episodeMap = new Map<number, EpisodeMeta>()
           for (const e of newEpisodes) episodeMap.set(e.episodeNo, e)
-          // sceneMap key: `${epNo}-${sceneNo}`
-          // preview.scenes（顶层）只包含位置/time_of_day/description，
-          // 没有 episode 归属，因此这里把全部 newScriptScenes 放进第一个剧集
-          // （与上面 createScene 实际行为一致）。
-          // 若用户实际是按剧集分布结构（AI 返回嵌套 scenes），下面会按 preview.episodes 重组。
-          const sceneMap = new Map<string, SceneMeta>()
-          for (const s of newScriptScenes) {
-            sceneMap.set(`${s.episodeNo}-${s.sceneNo}`, s)
-          }
 
-          // 重组 preview.scenes → 按 preview.episodes 内嵌 scenes 重新编号
-          // 让 restore 的 sceneNo 与 store 的 sceneMap 一一对应
+          // 强制把 preview 内部的 scene_no 按所在剧集重排为 1..N
+          // (与 newScriptScenes 里的 sceneNo 严格对齐,sceneMap 才能命中)
           const rewrittenPreviewEpisodes: AIAnalyzeEpisode[] = preview.episodes.map((ep) => {
             const epNo = ep.episode_no || 1
             const innerScenes = (ep.scenes || []).map((sc: any, idx: number) => ({
@@ -334,17 +390,13 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
               scenes: innerScenes,
             }
           })
-          // 重新生成 sceneMap key：按 epNo 与 (ep.scenes 的顺序) 对应
-          //   newScriptScenes[i] 对应 rewrittenPreviewEpisodes[0].scenes[i]？
-          //   上面 createScene 全部塞到 targetEpisodes[0]，但 AI 可能把场景归属到不同剧集。
-          //   这里采取保守策略：把 newScriptScenes 全部归属到 rewrittenPreviewEpisodes 的第一个剧集，
-          //   sceneNo 按 i+1。后续若多剧集归属，按 AI 的 first_appearance 进一步切分（此处仅做最简版）。
+
+          // sceneMap: key=`${episodeNo}-${sceneNo}` → 已落库的场景元数据
+          // newScriptScenes 已经在 3b 步骤里按"剧集归属"正确创建,
+          // 所以这里直接做扁平化即可,无需再走"塞到第一个剧集"的老路
           const sceneMapByEp: Map<string, SceneMeta> = new Map()
-          if (rewrittenPreviewEpisodes.length > 0) {
-            const firstEpNo = rewrittenPreviewEpisodes[0].episode_no
-            for (let i = 0; i < newScriptScenes.length; i++) {
-              sceneMapByEp.set(`${firstEpNo}-${i + 1}`, newScriptScenes[i])
-            }
+          for (const s of newScriptScenes) {
+            sceneMapByEp.set(`${s.episodeNo}-${s.sceneNo}`, s)
           }
 
           const newContent = restructureScriptFromAI(
@@ -357,9 +409,11 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
             onContentRestructured(newContent)
             log.info('editor content restructured', {
               episodes: rewrittenPreviewEpisodes.length,
-              scenes: newScriptScenes.length,
+              episodesWithScenes: newScriptScenes.length,
             })
             notify.info('剧本结构已重建，左侧剧集/场景可点击锚定正文')
+          } else {
+            log.warn('restructure returned null - 原文与 AI 场景匹配度可能过低,保持原文本')
           }
         } catch (err) {
           log.warn('restructure content failed', { error: (err as Error).message })
