@@ -2,6 +2,25 @@ import type { UploadedFile } from "@/lib/app-types";
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_AGNES_BACKEND_URL ?? "").replace(/\/+$/, "");
 
+/** Agnes API 错误翻译：将英文技术错误转换为友好中文提示 */
+function translateAgnesError(raw: string): string {
+  const map: Record<string, string> = {
+    "image queue is full, please retry later": "AI 生图队列已满，请稍后重试",
+    "image queue is full": "AI 生图队列已满，请稍后重试",
+    "please retry later": "请稍后重试",
+    "do_request_failed": "请求处理失败",
+    "video queue is full": "AI 视频生成队列已满，请稍后重试",
+    "rate limit exceeded": "请求过于频繁，请稍后再试",
+    "timeout": "请求超时，请稍后重试",
+    "network error": "网络异常，请检查网络连接",
+  };
+  const lower = raw.toLowerCase();
+  for (const [key, value] of Object.entries(map)) {
+    if (lower.includes(key)) return value;
+  }
+  return raw;
+}
+
 /** 请求缓存机制，用于GET请求的短期缓存（默认15秒）
  *
  * 优化说明：
@@ -72,8 +91,16 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
       throw new Error(response.ok ? message : `请求失败 ${response.status}: ${message}`);
     }
   }
-  if (!response.ok) throw new Error(payload?.message || `请求失败 ${response.status}`);
-  if (payload?.code !== 0) throw new Error(payload?.message || "请求失败");
+  if (!response.ok) {
+    const rawMsg = payload?.message || `请求失败 ${response.status}`;
+    // 将 Agnes API 的英文错误翻译成友好中文
+    const friendlyMsg = translateAgnesError(rawMsg);
+    throw new Error(friendlyMsg);
+  }
+  if (payload?.code !== 0) {
+    const rawMsg = payload?.message || "请求失败";
+    throw new Error(translateAgnesError(rawMsg));
+  }
 
   const data = payload.data as T;
 

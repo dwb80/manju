@@ -88,9 +88,8 @@ export function Toast({ type, title, description, progress, onCancel, duration =
 
   return (
     <div
-      className={`fixed right-4 bottom-4 z-50 flex min-w-[320px] max-w-md items-start gap-3 rounded-xl border ${typeStyles[type]} p-4 shadow-lg backdrop-blur transition-all duration-300 ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-      }`}
+      className={`fixed right-4 bottom-4 z-50 flex min-w-[320px] max-w-md items-start gap-3 rounded-xl border ${typeStyles[type]} p-4 shadow-lg backdrop-blur transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        }`}
     >
       {/* 图标 */}
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">{typeIcons[type]}</div>
@@ -162,6 +161,8 @@ type ToastItem = {
   progress?: number;
   onCancel?: () => void;
   duration?: number;
+  /** 操作按钮（type="action" 时使用） */
+  action?: ToastAction;
 };
 
 /** Toast 容器：管理多个 Toast 消息。 */
@@ -208,6 +209,7 @@ export function ToastContainer() {
           progress={toast.progress}
           onCancel={toast.onCancel}
           duration={toast.duration}
+          action={toast.action}
           onClose={removeToast}
         />
       ))}

@@ -85,6 +85,7 @@ export interface ScriptDialogue {
   emotion: string;
   order: number;
   created_at: string;
+  updated_at: string;
 }
 
 /** 场景-角色引用 */

@@ -50,9 +50,19 @@ export function ScriptFormDialog({
   editingScript: Script | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (values: Record<string, string | number | string[]>) => void;
+  onSave: (values: Record<string, string | number>) => void;
   isSaving: boolean;
 }) {
+  const handleSave = (values: Record<string, string | number | string[]>) => {
+    const simpleValues: Record<string, string | number> = {};
+    for (const [key, value] of Object.entries(values)) {
+      if (typeof value === "string" || typeof value === "number") {
+        simpleValues[key] = value;
+      }
+    }
+    onSave(simpleValues);
+  };
+
   return (
     <FormDialog
       title={editingScript ? "编辑剧本" : "新建剧本"}
@@ -71,7 +81,7 @@ export function ScriptFormDialog({
       }
       isOpen={isOpen}
       onClose={onClose}
-      onSave={onSave}
+      onSave={handleSave}
       isLoading={isSaving}
     />
   );

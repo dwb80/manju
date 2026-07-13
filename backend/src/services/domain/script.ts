@@ -67,7 +67,7 @@ function fallbackScriptShots(script: string): ProjectStoryboardInput[] {
 export async function listProjectScripts(ctx: AppContext, projectId: string): Promise<ProjectScript[]> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const scripts = await ctx.projectScripts.findMany({ project_id: projectId } as Partial<ProjectScript>, { sort: "asc" });
-  return scripts.sort((left: any, right: any) => left.episode - right.episode || left.created_at.localeCompare(right.created_at));
+  return scripts.sort((left: ProjectScript, right: ProjectScript) => left.episode - right.episode || left.created_at.localeCompare(right.created_at));
 }
 
 /** 在项目下保存一份剧本文档。 */
@@ -189,17 +189,17 @@ export async function breakdownProjectScript(ctx: AppContext, projectId: string,
   const parsed = parseJsonArray(text);
   const drafts = parsed.length > 0 ? parsed as ProjectStoryboardInput[] : fallbackScriptShots(script);
   const assets = await ctx.projectAssets.findMany({ project_id: projectId } as Partial<ProjectAsset>);
-  const characterAssets = assets.filter((asset: any) => asset.kind === "character");
-  const sceneAssets = assets.filter((asset: any) => asset.kind === "scene");
+  const characterAssets = assets.filter((asset: ProjectAsset) => asset.kind === "character");
+  const sceneAssets = assets.filter((asset: ProjectAsset) => asset.kind === "scene");
   const created: import("../../types.js").ProjectStoryboard[] = [];
 
   for (const [index, draft] of drafts.slice(0, 80).entries()) {
     const characters = normalizeStringList(draft.characters);
     const matchedCharacterIds = characterAssets
-      .filter((asset: any) => characters.some((name) => asset.name.includes(name) || name.includes(asset.name)) || script.includes(asset.name))
-      .map((asset: any) => asset.id);
+      .filter((asset: ProjectAsset) => characters.some((name) => asset.name.includes(name) || name.includes(asset.name)) || script.includes(asset.name))
+      .map((asset: ProjectAsset) => asset.id);
     const location = draft.location?.trim() || "";
-    const matchedScene = sceneAssets.find((asset: any) => (location && (asset.name.includes(location) || location.includes(asset.name))) || draft.description?.includes(asset.name));
+    const matchedScene = sceneAssets.find((asset: ProjectAsset) => (location && (asset.name.includes(location) || location.includes(asset.name))) || draft.description?.includes(asset.name));
     created.push(await createProjectStoryboard(ctx, projectId, {
       ...draft,
       episode,

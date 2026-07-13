@@ -437,18 +437,6 @@ export const projectAssetFields: FieldSpec<ProjectAsset>[] = [
   { key: "project_id", type: "string" },
   { key: "kind", type: "string" },
   { key: "name", type: "string" },
-  { key: "prompt", type: "string" },
-  { key: "image_url", type: "string" },
-  { key: "video_url", type: "string" },
-  { key: "folder", type: "string" },
-  { key: "tags", type: "json" },
-  { key: "is_favorite", type: "boolean" },
-  { key: "resolution", type: "string" },
-  { key: "duration", type: "string" },
-  { key: "role_images", type: "json" },
-  { key: "role_traits", type: "json" },
-  { key: "style_keywords", type: "json" },
-  { key: "notes", type: "string" },
   { key: "created_at", type: "string" },
   { key: "updated_at", type: "string" },
 ];
@@ -524,6 +512,7 @@ export const scriptDialogueFields: FieldSpec<ScriptDialogue>[] = [
   { key: "emotion", type: "string" },
   { key: "order", type: "number" },
   { key: "created_at", type: "string" },
+  { key: "updated_at", type: "string" },
 ];
 
 export const scriptSceneCharacterFields: FieldSpec<ScriptSceneCharacter>[] = [

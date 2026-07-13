@@ -94,8 +94,12 @@ export interface ScriptEditRightPanelProps {
   scriptId: string
   selectedText: string
   selectionPosition?: { from: number; to: number }
+  /** 新增评论后回调（父组件可借此刷新计数/列表） */
+  onCommentAdded?: (comment: { id: string; content: string; created_at: string }) => void
 
   // === 受控/非受控 Tab 状态（可选） ===
+  /** 是否走受控模式（用显式标志区分"未传值"和"传了 undefined"两种语义） */
+  controlled?: boolean
   /** 受控模式：当前 Tab 由外部传入 */
   activeTab?: RightPanelTab
   /** 受控模式：Tab 切换回调 */
@@ -112,9 +116,9 @@ const FACTORY_SHORTCUTS: Array<{
   label: string
   url: string
 }> = [
-  { key: 'character', label: '角色工厂', url: FACTORY_SHORTCUT_URLS.character },
-  { key: 'prop', label: '道具工厂', url: FACTORY_SHORTCUT_URLS.prop },
-]
+    { key: 'character', label: '角色工厂', url: FACTORY_SHORTCUT_URLS.character },
+    { key: 'prop', label: '道具工厂', url: FACTORY_SHORTCUT_URLS.prop },
+  ]
 
 /**
  * 面板渲染注册表（评审 P1-H7 修复）
@@ -166,6 +170,7 @@ const PANEL_REGISTRY: Record<RightPanelTab, PanelRenderer> = {
         scriptId={p.scriptId}
         selectedText={p.selectedText}
         selectionPosition={p.selectionPosition}
+        onCommentAdded={p.onCommentAdded}
       />
     </Suspense>
   ),
@@ -175,10 +180,10 @@ const PANEL_REGISTRY: Record<RightPanelTab, PanelRenderer> = {
  * 剧本编辑器右侧面板组件
  */
 export function ScriptEditRightPanel(props: ScriptEditRightPanelProps) {
-  // 受控/非受控：优先使用外部传入的 activeTab
-  const isControlled = props.activeTab !== undefined
+  // 受控/非受控：用显式 `controlled` 布尔标志区分"父组件未传值"和"父组件传 undefined 但想走受控"
+  const isControlled = props.controlled === true
   const [internalTab, setInternalTab] = useState<RightPanelTab>(DEFAULT_RIGHT_PANEL_TAB)
-  const activeTab = isControlled ? props.activeTab! : internalTab
+  const activeTab = isControlled ? (props.activeTab ?? DEFAULT_RIGHT_PANEL_TAB) : internalTab
 
   // 切换 Tab：受控模式回调外部，非受控模式更新内部 state
   const handleTabChange = useCallback(

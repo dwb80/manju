@@ -8,6 +8,7 @@ import { maybeTitleConversation } from "../chat.js";
 type EnhancePromptInput = {
   prompt?: string;
   mode?: string;
+  ratio?: string;
 };
 
 /** 压缩图片入参在任务记录中的展示，避免把大段 data URL 写入数据库。 */
@@ -177,16 +178,20 @@ export async function createLocalImageTask(ctx: AppContext, body: Record<string,
 export async function enhancePrompt(ctx: AppContext, input: EnhancePromptInput): Promise<{ prompt: string; enhanced: string; mode: string }> {
   const prompt = requireString(input.prompt, "prompt").trim();
   const mode = input.mode === "video" ? "video" : "image";
+  const ratio = input.ratio?.trim();
   const instruction = [
     "你是AI漫剧创作的提示词优化师。",
     `请把用户的${mode === "video" ? "视频" : "图片"}生成想法改写成专业、稳定、可直接用于生成的中文提示词。`,
     "要求：",
     "1. 自动补充主体、场景、镜头、光照、构图、风格、质感和技术参数。",
     "2. 保留用户原意，不要改变人物身份、关键动作和关键场景。",
-    "3. 输出只给增强后的提示词，不要解释，不要加标题，不要用 Markdown。",
+    "3. 严格保留用户指定的约束条件（如'禁止改变XX'、'保持原有XX不变'、'不要修改XX'等），不得删除、修改或重新诠释。",
+    "4. 严格保留用户指定的技术参数（如画幅比例、分辨率等），不得改变。",
+    "5. 输出只给增强后的提示词，不要解释，不要加标题，不要用 Markdown。",
     mode === "video"
-      ? "4. 视频提示词需包含镜头运动、节奏、时长感、画面连续性和避免跳变的描述。"
-      : "4. 图片提示词需包含画幅比例、景别、画面结构、细节层次和避免畸形的描述。",
+      ? "6. 视频提示词需包含镜头运动、节奏、时长感、画面连续性和避免跳变的描述。"
+      : "6. 图片提示词需包含景别、画面结构、细节层次和避免畸形的描述。",
+    ratio ? `7. 用户明确要求画幅比例为 ${ratio}，请在提示词末尾追加 --ar ${ratio}。` : "",
     "",
     "用户原始提示词：",
     prompt,

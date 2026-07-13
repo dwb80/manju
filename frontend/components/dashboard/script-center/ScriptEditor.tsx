@@ -24,7 +24,7 @@ import {
 } from '@/lib/tiptap/extensions'
 import { AIBubbleMenu } from './AIBubbleMenu'
 import { SlashCommandMenu } from './SlashCommandMenu'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { debounce } from '@/lib/utils'
 
 // 导航树节点类型（Feature 2.10 实时同步）
@@ -148,26 +148,30 @@ interface ScriptEditorProps {
 }
 
 export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: ScriptEditorProps) {
-  // 自动保存逻辑（防抖）
-  const handleUpdate = useCallback(
+  // 使用 ref 保持回调引用稳定，避免 debounce 实例被重复创建
+  const onSaveRef = useRef(onSave)
+  const onTreeUpdateRef = useRef(onTreeUpdate)
+  useEffect(() => { onSaveRef.current = onSave }, [onSave])
+  useEffect(() => { onTreeUpdateRef.current = onTreeUpdate }, [onTreeUpdate])
+
+  // 自动保存逻辑（防抖）——使用 ref 保持实例稳定
+  const handleUpdateRef = useRef(
     debounce((editor: any) => {
-      if (onSave) {
+      if (onSaveRef.current) {
         const json = editor.getJSON()
-        onSave(json)
+        onSaveRef.current(json)
       }
-    }, 1000),
-    [onSave]
+    }, 1000)
   )
 
-  // 导航树实时同步（100ms 防抖，Feature 2.10）
-  const handleTreeUpdate = useCallback(
+  // 导航树实时同步（100ms 防抖，Feature 2.10）——使用 ref 保持实例稳定
+  const handleTreeUpdateRef = useRef(
     debounce((editor: any) => {
-      if (onTreeUpdate) {
+      if (onTreeUpdateRef.current) {
         const tree = parseDocToTree(editor.getJSON())
-        onTreeUpdate(tree)
+        onTreeUpdateRef.current(tree)
       }
-    }, 100),
-    [onTreeUpdate]
+    }, 100)
   )
 
   const editor = useEditor({
@@ -215,8 +219,8 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
       },
     },
     onUpdate: ({ editor }) => {
-      handleUpdate(editor)
-      handleTreeUpdate(editor)
+      handleUpdateRef.current(editor)
+      handleTreeUpdateRef.current(editor)
     },
   })
 

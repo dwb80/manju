@@ -1,359 +1,240 @@
 "use client";
 
 /**
- * 资产中心模块 - 工厂资产手工同步管理
+ * 资产中心模块
  *
  * 功能：
- * - 资产分类浏览（角色/场景/分镜/风格/提示词）
- * - 网格视图展示（适合图片类资产）
- * - 搜索筛选（类型、标签、收藏状态）
- * - 资产收藏、删除、批量操作
- * - 工厂资产手工同步导入
+ * - 资产列表展示（根据项目选择状态过滤）
+ * - 新建/编辑资产对话框（含必填验证）
+ * - 删除资产确认
  */
 
 import { useState, useMemo, useEffect } from "react";
-import {
-  Database,
-  Star,
-  Search,
-  Filter,
-  Users,
-  Image,
-  Film,
-  Palette,
-  Sparkles,
-  Trash2,
-  Download,
-  MoreHorizontal,
-  Loader2,
-  Heart,
-  BookmarkPlus,
-  Plus,
-} from "lucide-react";
+import { Plus, Download, Pencil, Trash2 } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import { ModuleToolbar, SearchInput, FilterSelect, EmptyState, Pagination } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { FormDialog, type FormFieldConfig } from "@/components/ui/form-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { useProjectStore } from "@/lib/stores/project-store";
-import { listAssets, createAsset, updateAsset, deleteAsset, toggleAssetFavorite } from "@/services/asset.service";
+import { listAssets, createAsset, updateAsset, deleteAsset as deleteAssetApi } from "@/services/module.service";
 import { clearApiCache } from "@/lib/api-client";
-import { toast } from "@/components/common/toast";
-import type { ProjectAsset, ProjectAssetKind } from "@/lib/app-types";
+import type { Asset } from "@/lib/module-types";
 
-/** 资产类型配置 */
-const ASSET_KINDS: Array<{ id: ProjectAssetKind; name: string; icon: React.ComponentType<{ className?: string }>; color: string }> = [
-  { id: "character", name: "角色资产", icon: Users, color: "purple" },
-  { id: "scene", name: "场景资产", icon: Image, color: "orange" },
-  { id: "storyboard", name: "分镜资产", icon: Film, color: "blue" },
-  { id: "style", name: "风格资产", icon: Palette, color: "pink" },
-  { id: "prompt", name: "提示词模板", icon: Sparkles, color: "yellow" },
-];
-
-/** 资产类型颜色映射 */
-const KIND_COLORS: Record<ProjectAssetKind, string> = {
-  character: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  scene: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  storyboard: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  style: "bg-pink-500/20 text-pink-400 border-pink-500/30",
-  prompt: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  image: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  video: "bg-red-500/20 text-red-400 border-red-500/30",
-  project: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+/** 资产类型中文标签映射 */
+const typeLabels: Record<string, string> = {
+  image: "图片",
+  video: "视频",
+  audio: "音频",
+  document: "文档",
 };
+
+/** 资产表单字段配置 */
+const assetFields: FormFieldConfig[] = [
+  { name: "name", label: "资产名称", type: "text", required: true, placeholder: "请输入资产名称" },
+  {
+    name: "type",
+    label: "资产类型",
+    type: "select",
+    required: true,
+    options: [
+      { value: "image", label: "图片" },
+      { value: "video", label: "视频" },
+      { value: "audio", label: "音频" },
+      { value: "document", label: "文档" },
+    ],
+    defaultValue: "image",
+  },
+  { name: "file_url", label: "文件地址", type: "text", placeholder: "请输入文件URL" },
+  { name: "size", label: "大小(字节)", type: "number", placeholder: "0", min: 0 },
+  { name: "format", label: "格式", type: "text", placeholder: "如：png, mp4, mp3, pdf" },
+];
 
 export function AssetsCenterPage() {
   const { selectedProjectId } = useProjectStore();
-  const [assets, setAssets] = useState<ProjectAsset[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // 筛选状态
-  const [selectedKind, setSelectedKind] = useState<ProjectAssetKind | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showFavoriteOnly, setShowFavoriteOnly] = useState(false);
+  const [typeFilter, setTypeFilter] = useState("");
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
-  // 选中状态
-  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+  // 对话框状态
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // 删除确认
+  // 删除确认状态
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
-  // 加载资产数据
+  // 根据 selectedProjectId 加载资产数据
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
-    if (!selectedProjectId) {
-      setAssets([]);
-      return;
-    }
+    if (!selectedProjectId) { setAssets([]); return; }
     setIsLoading(true);
-    const query = new URLSearchParams();
-    if (selectedKind !== "all") query.set("kind", selectedKind);
-    if (searchQuery) query.set("q", searchQuery);
-    if (showFavoriteOnly) query.set("favorite", "true");
-
-    listAssets(selectedProjectId, query.toString())
-      .then((data) => setAssets(data))
-      .catch((err) => {
-        console.error("加载资产失败:", err);
-        toast({ title: "加载资产失败", variant: "error" });
-      })
+    listAssets(selectedProjectId)
+      .then(data => setAssets(data as unknown as Asset[]))
+      .catch(err => console.error("Failed to load assets:", err))
       .finally(() => setIsLoading(false));
-  }, [selectedProjectId, selectedKind, searchQuery, showFavoriteOnly]);
+  }, [selectedProjectId]);
 
-  // 统计各类型资产数量
-  const kindCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: assets.length };
-    for (const kind of ASSET_KINDS) {
-      counts[kind.id] = assets.filter((a) => a.kind === kind.id).length;
-    }
-    counts.favorite = assets.filter((a) => a.is_favorite).length;
-    return counts;
-  }, [assets]);
+  const typeOptions = [
+    { value: "", label: "全部类型" },
+    { value: "image", label: "图片" },
+    { value: "video", label: "视频" },
+    { value: "audio", label: "音频" },
+    { value: "document", label: "文档" },
+  ];
 
-  // 网格分页
+  // 筛选资产列表
+  const filteredAssets = useMemo(() => {
+    return assets.filter((asset) => {
+      const matchesSearch = asset.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = !typeFilter || asset.type === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [assets, searchQuery, typeFilter]);
+
   const paginatedAssets = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return assets.slice(start, start + pageSize);
-  }, [assets, currentPage, pageSize]);
+    return filteredAssets.slice(start, start + pageSize);
+  }, [filteredAssets, currentPage, pageSize]);
 
-  const totalPages = Math.ceil(assets.length / pageSize);
+  const totalPages = Math.ceil(filteredAssets.length / pageSize);
 
-  // 切换资产收藏
-  const handleToggleFavorite = async (assetId: string) => {
+  // 打开新建对话框
+  const handleCreate = () => {
+    setEditingAsset(null);
+    setIsFormOpen(true);
+  };
+
+  // 打开编辑对话框
+  const handleEdit = (asset: Asset) => {
+    setEditingAsset(asset);
+    setIsFormOpen(true);
+  };
+
+  // 保存资产（新建或编辑）
+  const handleSave = async (values: Record<string, string | number | string[]>) => {
+    setIsSaving(true);
     try {
-      await toggleAssetFavorite(selectedProjectId, assetId);
+      const payload = { ...values, project_id: selectedProjectId } as any;
+      if (editingAsset) {
+        await updateAsset(selectedProjectId, editingAsset.id, payload);
+      } else {
+        await createAsset(selectedProjectId, payload);
+      }
+      setIsFormOpen(false);
+      setEditingAsset(null);
+      // Refresh the list
       clearApiCache();
-      const query = new URLSearchParams();
-      if (selectedKind !== "all") query.set("kind", selectedKind);
-      if (searchQuery) query.set("q", searchQuery);
-      if (showFavoriteOnly) query.set("favorite", "true");
-      const data = await listAssets(selectedProjectId, query.toString());
-      setAssets(data);
-      toast({ title: "收藏状态已更新", variant: "success" });
-    } catch (err) {
-      toast({ title: "操作失败", variant: "error" });
+      const data = await listAssets(selectedProjectId);
+      setAssets(data as unknown as Asset[]);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // 删除资产
+  // 确认删除
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
-    try {
-      await deleteAsset(selectedProjectId, deleteConfirm.id);
-      clearApiCache();
-      const query = new URLSearchParams();
-      if (selectedKind !== "all") query.set("kind", selectedKind);
-      if (searchQuery) query.set("q", searchQuery);
-      if (showFavoriteOnly) query.set("favorite", "true");
-      const data = await listAssets(selectedProjectId, query.toString());
-      setAssets(data);
-      setDeleteConfirm(null);
-      toast({ title: "资产已删除", variant: "success" });
-    } catch (err) {
-      toast({ title: "删除失败", variant: "error" });
-    }
-  };
-
-  // 批量删除
-  const handleBatchDelete = async () => {
-    if (selectedAssets.size === 0) return;
-    try {
-      for (const assetId of selectedAssets) {
-        await deleteAsset(selectedProjectId, assetId);
-      }
-      clearApiCache();
-      const query = new URLSearchParams();
-      if (selectedKind !== "all") query.set("kind", selectedKind);
-      if (searchQuery) query.set("q", searchQuery);
-      if (showFavoriteOnly) query.set("favorite", "true");
-      const data = await listAssets(selectedProjectId, query.toString());
-      setAssets(data);
-      setSelectedAssets(new Set());
-      toast({ title: `已删除 ${selectedAssets.size} 个资产`, variant: "success" });
-    } catch (err) {
-      toast({ title: "批量删除失败", variant: "error" });
-    }
-  };
-
-  // 切换选中
-  const handleToggleSelect = (assetId: string) => {
-    const next = new Set(selectedAssets);
-    if (next.has(assetId)) {
-      next.delete(assetId);
-    } else {
-      next.add(assetId);
-    }
-    setSelectedAssets(next);
-  };
-
-  // 全选/取消全选
-  const handleSelectAll = () => {
-    if (selectedAssets.size === paginatedAssets.length) {
-      setSelectedAssets(new Set());
-    } else {
-      setSelectedAssets(new Set(paginatedAssets.map((a) => a.id)));
-    }
+    await deleteAssetApi(selectedProjectId, deleteConfirm.id);
+    setDeleteConfirm(null);
+    clearApiCache();
+    const data = await listAssets(selectedProjectId);
+    setAssets(data as unknown as Asset[]);
   };
 
   return (
-    <PageContainer title="资产中心" description="管理项目的工厂资产（角色/场景/分镜/风格/提示词）">
-      {/* 左侧分类树 + 右侧浏览区布局 */}
-      <div className="flex gap-4 h-[calc(100vh-180px)]">
-        {/* 左侧分类树 */}
-        <div className="w-64 bg-[#1a1a1a] rounded-lg border border-white/10 overflow-y-auto">
-          <div className="p-3 border-b border-white/10">
-            <div className="text-sm font-semibold text-white">资产分类</div>
-          </div>
+    <PageContainer title="资产中心" description="管理项目的所有资产资源">
+      {/* 工具栏 */}
+      <ModuleToolbar
+        left={
+          <>
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="搜索资产..." />
+            <FilterSelect value={typeFilter} onChange={setTypeFilter} options={typeOptions} placeholder="类型筛选" />
+          </>
+        }
+        right={
+          <>
+            <Button size="sm" onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              上传资产
+            </Button>
+          </>
+        }
+      />
 
-          <div className="p-2 space-y-1">
-            {/* 全部 */}
-            <button
-              onClick={() => setSelectedKind("all")}
-              className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-colors ${
-                selectedKind === "all"
-                  ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500"
-                  : "text-[#ccc] hover:bg-white/5"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                <span>全部资产</span>
-              </div>
-              <span className="text-xs bg-white/10 px-1.5 py-0.5 rounded">{kindCounts.all}</span>
-            </button>
-
-            {/* 收藏 */}
-            <button
-              onClick={() => setShowFavoriteOnly(!showFavoriteOnly)}
-              className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-colors ${
-                showFavoriteOnly
-                  ? "bg-yellow-500/10 text-yellow-400 border-l-2 border-yellow-500"
-                  : "text-[#ccc] hover:bg-white/5"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4" />
-                <span>我的收藏</span>
-              </div>
-              <span className="text-xs bg-white/10 px-1.5 py-0.5 rounded">{kindCounts.favorite}</span>
-            </button>
-
-            {/* 分隔线 */}
-            <div className="border-t border-white/10 my-2" />
-
-            {/* 各类型资产 */}
-            {ASSET_KINDS.map((kind) => {
-              const Icon = kind.icon;
-              return (
-                <button
-                  key={kind.id}
-                  onClick={() => {
-                    setSelectedKind(kind.id);
-                    setShowFavoriteOnly(false);
-                  }}
-                  className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-colors ${
-                    selectedKind === kind.id
-                      ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500"
-                      : "text-[#ccc] hover:bg-white/5"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    <span>{kind.name}</span>
-                  </div>
-                  <span className="text-xs bg-white/10 px-1.5 py-0.5 rounded">{kindCounts[kind.id] || 0}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 右侧浏览区 */}
-        <div className="flex-1 flex flex-col gap-4">
-          {/* 工具栏 */}
-          <ModuleToolbar
-            left={
-              <>
-                <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="搜索资产名称、标签..." />
-                <FilterSelect
-                  value={selectedKind}
-                  onChange={(v) => setSelectedKind(v as ProjectAssetKind | "all")}
-                  options={[
-                    { value: "all", label: "全部类型" },
-                    ...ASSET_KINDS.map((k) => ({ value: k.id, label: k.name })),
-                  ]}
-                  placeholder="类型筛选"
-                />
-              </>
-            }
-            right={
-              <>
-                {selectedAssets.size > 0 && (
-                  <div className="flex items-center gap-2 mr-2">
-                    <span className="text-sm text-emerald-400">{selectedAssets.size} 已选中</span>
-                    <Button size="sm" variant="ghost" onClick={handleBatchDelete}>
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      批量删除
-                    </Button>
-                  </div>
-                )}
-                <Button size="sm" onClick={handleSelectAll}>
-                  {selectedAssets.size === paginatedAssets.length ? "取消全选" : "全选"}
-                </Button>
-              </>
-            }
-          />
-
-          {/* 资产网格 */}
-          <PageCard className="flex-1 overflow-hidden">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
-              </div>
-            ) : assets.length > 0 ? (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4 overflow-y-auto h-full">
+      {/* 资产列表 */}
+      <PageCard title="资产列表">
+        {filteredAssets.length > 0 ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">资产名称</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">类型</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">文件大小</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden sm:table-cell">格式</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">更新时间</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-[#888]">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {paginatedAssets.map((asset) => (
-                    <AssetCard
+                    <AssetRow
                       key={asset.id}
                       asset={asset}
-                      isSelected={selectedAssets.has(asset.id)}
-                      onToggleSelect={() => handleToggleSelect(asset.id)}
-                      onToggleFavorite={() => handleToggleFavorite(asset.id)}
+                      onEdit={() => handleEdit(asset)}
                       onDelete={() => setDeleteConfirm({ id: asset.id, name: asset.name })}
                     />
                   ))}
-                </div>
+                </tbody>
+              </table>
+            </div>
 
-                {totalPages > 1 && (
-                  <div className="border-t border-white/10 px-4 py-3">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      totalItems={assets.length}
-                      pageSize={pageSize}
-                      onPageChange={setCurrentPage}
-                      onPageSizeChange={setPageSize}
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              <EmptyState
-                type="no-results"
-                title="暂无资产"
-                description={
-                  searchQuery || selectedKind !== "all"
-                    ? "尝试调整筛选条件"
-                    : "从角色工厂、场景工厂或分镜导演台同步资产"
-                }
-              />
+            {totalPages > 1 && (
+              <div className="mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredAssets.length}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </div>
             )}
-          </PageCard>
-        </div>
-      </div>
+          </>
+        ) : (
+          <EmptyState
+            type="no-results"
+            title="未找到资产"
+            description={searchQuery || typeFilter ? "尝试调整搜索条件" : "点击上方按钮上传新资产"}
+            action={{ label: "上传资产", onClick: handleCreate }}
+          />
+        )}
+      </PageCard>
+
+      {/* 新建/编辑对话框 */}
+      <FormDialog
+        title={editingAsset ? "编辑资产" : "新建资产"}
+        fields={assetFields}
+        initialValues={editingAsset ? {
+          name: editingAsset.name,
+          type: editingAsset.type,
+          file_url: editingAsset.file_url || "",
+          size: editingAsset.size ?? 0,
+          format: editingAsset.format || "",
+        } as Record<string, string | number> : {}}
+        isOpen={isFormOpen}
+        onClose={() => { setIsFormOpen(false); setEditingAsset(null); }}
+        onSave={handleSave}
+        isLoading={isSaving}
+      />
 
       {/* 删除确认对话框 */}
       {deleteConfirm && (
@@ -369,94 +250,66 @@ export function AssetsCenterPage() {
   );
 }
 
-/** 资产卡片组件 */
-function AssetCard({
+/** 资产表格行组件 */
+function AssetRow({
   asset,
-  isSelected,
-  onToggleSelect,
-  onToggleFavorite,
+  onEdit,
   onDelete,
 }: {
-  asset: ProjectAsset;
-  isSelected: boolean;
-  onToggleSelect: () => void;
-  onToggleFavorite: () => void;
+  asset: Asset;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
-  const [showMenu, setShowMenu] = useState(false);
+  const typeColors: Record<string, string> = {
+    image: "bg-emerald-500/20 text-emerald-400",
+    video: "bg-blue-500/20 text-blue-400",
+    audio: "bg-purple-500/20 text-purple-400",
+    document: "bg-orange-500/20 text-orange-400",
+  };
 
-  const colorClass = KIND_COLORS[asset.kind] || KIND_COLORS.image;
+  const formatSize = (bytes: number) => {
+    if (!bytes) return "-";
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(2)} MB`;
+  };
 
   return (
-    <div
-      className={`relative aspect-square rounded-lg overflow-hidden border ${
-        isSelected ? "border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-white/10"
-      } bg-[#1a1a1a] hover:border-white/30 transition-all group cursor-pointer`}
-      onClick={onToggleSelect}
-    >
-      {/* 图片预览 */}
-      {asset.image_url ? (
-        <img src={asset.image_url} alt={asset.name} className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/5 to-white/10">
-          <Database className="h-12 w-12 text-white/30" />
-        </div>
-      )}
-
-      {/* 类型徽章 */}
-      <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-xs font-medium ${colorClass}`}>
-        {ASSET_KINDS.find((k) => k.id === asset.kind)?.name || asset.kind}
-      </div>
-
-      {/* 收藏星星 */}
-      {asset.is_favorite && (
-        <Star className="absolute top-2 right-2 h-4 w-4 text-yellow-400 fill-yellow-400" />
-      )}
-
-      {/* 选中标记 */}
-      {isSelected && (
-        <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
-          <BookmarkPlus className="h-4 w-4 text-white" />
-        </div>
-      )}
-
-      {/* 底部信息 */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="text-sm text-white truncate font-medium">{asset.name}</div>
-        {asset.tags && asset.tags.length > 0 && (
-          <div className="flex items-center gap-1 mt-1 flex-wrap">
-            {asset.tags.slice(0, 3).map((tag, idx) => (
-              <span key={idx} className="text-xs bg-white/20 px-1.5 py-0.5 rounded truncate max-w-[80px]">
-                {tag}
-              </span>
-            ))}
+    <tr className="border-b border-white/5 hover:bg-white/5 transition-colors">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-white/5">
+            <Download className="h-4 w-4 text-emerald-400" />
           </div>
-        )}
-      </div>
-
-      {/* 快捷操作按钮（悬停显示） */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite();
-          }}
-          className="w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center transition-colors"
-          title={asset.is_favorite ? "取消收藏" : "添加收藏"}
-        >
-          <Heart className={`h-4 w-4 ${asset.is_favorite ? "text-red-500 fill-red-500" : "text-gray-600"}`} />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="w-8 h-8 rounded-full bg-red-500/90 hover:bg-red-500 flex items-center justify-center transition-colors"
-          title="删除"
-        >
-          <Trash2 className="h-4 w-4 text-white" />
-        </button>
-      </div>
-    </div>
+          <div>
+            <div className="font-medium text-white">{asset.name}</div>
+            {asset.file_url && (
+              <div className="text-xs text-[#666] line-clamp-1">{asset.file_url}</div>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <span className={`px-2 py-0.5 rounded text-xs ${typeColors[asset.type] ?? "bg-gray-500/20 text-gray-400"}`}>
+          {typeLabels[asset.type] ?? asset.type}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{formatSize(asset.size)}</td>
+      <td className="px-4 py-3 text-sm text-[#888] hidden sm:table-cell">
+        {asset.format || "-"}
+      </td>
+      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">
+        {new Date(asset.updated_at).toLocaleDateString()}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <div className="flex items-center gap-2 justify-end">
+          <Button variant="ghost" size="sm" onClick={onEdit} title="编辑">
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onDelete} title="删除">
+            <Trash2 className="h-4 w-4 text-red-400" />
+          </Button>
+        </div>
+      </td>
+    </tr>
   );
 }

@@ -5,12 +5,17 @@
  *
  * 定位：剧本分析与资产生成中心
  * 核心流程：导入/创作剧本 → AI分析提取角色/场景/道具文字描述 → 确认后流转到各工厂
+ *
+ * 文件结构：
+ * - ./parts/DialogOverlay.tsx       通用对话框覆盖层（其他文件依赖此导出）
+ * - ./parts/ScriptRow.tsx           剧本表格行
+ * - ./parts/SimpleTagManager.tsx    标签管理
+ * - ./parts/utils-script.ts         工具函数（editorJsonToPlainText / loadScriptContentForAnalysis / mergeExtractedAssets）
  */
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  FileText,
   Plus,
   Sparkles,
   Trash2,
@@ -18,15 +23,10 @@ import {
   List as ListIcon,
   Upload,
   BookOpen,
-  Tag as TagIcon,
   Info,
-  X,
   Loader2,
-  CheckCircle,
-  ArrowLeft,
   Archive,
   RotateCcw,
-  Pencil,
 } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import {
@@ -69,94 +69,14 @@ import { ApprovalWorkflowDialog } from "./ApprovalWorkflowDialog";
 import { analyzeScriptContent, generateLocalScriptOutline, textToEditorJson } from "./utils";
 import type { ViewMode, ExtractedAsset } from "./types";
 
-/** 通用对话框覆盖层组件 */
-export function DialogOverlay({
-  title,
-  children,
-  onClose,
-  wide,
-}: {
-  title: string;
-  children: React.ReactNode;
-  onClose: () => void;
-  wide?: boolean;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div
-        className={`relative w-full ${wide ? "max-w-5xl" : "max-w-2xl"} max-h-[85vh] mx-4 rounded-lg bg-[#1a1a1a] border border-white/10 flex flex-col`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 对话框头部 */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-white/10 transition-colors"
-          >
-            <X className="h-5 w-5 text-[#888]" />
-          </button>
-        </div>
-        {/* 对话框内容 */}
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
-      </div>
-    </div>
-  );
-}
+// 子组件 / 工具函数（来自 ./parts）
+import { DialogOverlay } from "./parts/DialogOverlay";
+import { ScriptRow } from "./parts/ScriptRow";
+import { SimpleTagManager } from "./parts/SimpleTagManager";
+import { loadScriptContentForAnalysis, mergeExtractedAssets } from "./parts/utils-script";
 
-async function loadScriptContentForAnalysis(script: Script): Promise<string> {
-  let documentText = "";
-  try {
-    const resp = await fetch(`/api/script-documents/${encodeURIComponent(script.id)}`);
-    if (resp.ok) {
-      const payload = await resp.json();
-      const document = payload?.data ?? payload;
-      documentText = editorJsonToPlainText(document?.editor_json);
-    }
-  } catch (err) {
-    console.warn("读取剧本文档正文失败，回退到 description:", err);
-  }
-  return (documentText || script.description || "").trim();
-}
-
-function editorJsonToPlainText(input: unknown): string {
-  if (!input) return "";
-  let value: any = input;
-  if (typeof value === "string") {
-    try {
-      value = JSON.parse(value);
-    } catch {
-      return value;
-    }
-  }
-  const walk = (node: any): string => {
-    if (!node) return "";
-    if (typeof node === "string") return node;
-    if (typeof node.text === "string") return node.text;
-    if (Array.isArray(node.content)) {
-      const text = node.content.map(walk).filter(Boolean).join(node.type === "doc" ? "\n" : "");
-      return node.type && node.type !== "doc" && node.type !== "text" ? `${text}\n` : text;
-    }
-    return "";
-  };
-  return walk(value).replace(/\n{3,}/g, "\n\n").trim();
-}
-
-function mergeExtractedAssets(primary: ExtractedAsset[], fallback: ExtractedAsset[]): ExtractedAsset[] {
-  const result = [...primary].filter((asset) => asset.name.trim());
-  const seen = new Set(result.map((asset) => `${asset.type}:${asset.name.trim()}`));
-  for (const asset of fallback) {
-    const key = `${asset.type}:${asset.name.trim()}`;
-    if (!asset.name.trim() || seen.has(key)) continue;
-    seen.add(key);
-    result.push({
-      ...asset,
-      id: `local-${asset.id}-${Date.now()}`,
-      confirmed: true,
-    });
-  }
-  return result;
-}
+// 透传 DialogOverlay（保持向后兼容：3 个文件直接从 ScriptsCenterPage 引入）
+export { DialogOverlay } from "./parts/DialogOverlay";
 
 export function ScriptsCenterPage({
   initialProjectId,
@@ -1175,242 +1095,5 @@ export function ScriptsCenterPage({
         }}
       />
     </PageContainer>
-  );
-}
-
-/** 剧本表格行组件 */
-function ScriptRow({
-  script,
-  onOpenEditor,
-  onEdit,
-  onDelete,
-  onTagManager,
-  onAnalysis,
-  onApproval,
-}: {
-  script: Script;
-  onOpenEditor: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onTagManager: () => void;
-  onAnalysis: () => void;
-  onApproval: () => void;
-}) {
-  const statusLabels: Record<string, string> = {
-    draft: "草稿",
-    active: "进行中",
-    review: "审核中",
-    completed: "已完成",
-    archived: "已归档",
-  };
-
-  const statusColors: Record<string, string> = {
-    draft: "bg-gray-500/20 text-gray-400",
-    active: "bg-blue-500/20 text-blue-400",
-    review: "bg-yellow-500/20 text-yellow-400",
-    completed: "bg-emerald-500/20 text-emerald-400",
-    archived: "bg-[#252525] text-[#888]",
-  };
-
-  return (
-    <tr
-      className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
-      onClick={onOpenEditor}
-      title="点击进入编辑器"
-    >
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-white/5">
-            <FileText className="h-4 w-4 text-emerald-400" />
-          </div>
-          <div>
-            <div className="font-medium text-white">{script.title}</div>
-            {script.description && (
-              <div className="text-xs text-[#666] line-clamp-1">{script.description}</div>
-            )}
-            {script.tags && script.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {script.tags.slice(0, 3).map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400"
-                  >
-                    {tag}
-                  </span>
-                ))}
-                {script.tags.length > 3 && (
-                  <span className="text-[10px] text-[#666]">+{script.tags.length - 3}</span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{script.author}</td>
-      <td className="px-4 py-3">
-        <span className={`px-2 py-0.5 rounded text-xs ${statusColors[script.status]}`}>
-          {statusLabels[script.status]}
-        </span>
-      </td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden sm:table-cell">
-        {script.words?.toLocaleString() ?? 0}
-      </td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden lg:table-cell">{script.chapters ?? 0}</td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">
-        {new Date(script.updated_at).toLocaleDateString()}
-      </td>
-      <td
-        className="px-4 py-3 text-right"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2 justify-end">
-          {/* 主操作：进入编辑器继续编辑（替代原先的铅笔图标） */}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onOpenEditor}
-            className="text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10 hover:border-emerald-500/60"
-            title="进入编辑器继续编辑"
-          >
-            继续编辑 →
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onEdit} title="编辑标题和基础信息">
-            <Pencil className="h-4 w-4 text-emerald-400" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onAnalysis} title="剧本分析（提取角色/场景/道具）">
-            <Sparkles className="h-4 w-4 text-blue-400" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onTagManager} title="标签管理">
-            <TagIcon className="h-4 w-4 text-purple-400" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onApproval} title="审批流程">
-            <CheckCircle className="h-4 w-4 text-yellow-400" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete} title="删除">
-            <Trash2 className="h-4 w-4 text-red-400" />
-          </Button>
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-// ==================== 本地组件：标签管理 ====================
-
-function SimpleTagManager({
-  script,
-  onTagsUpdated,
-}: {
-  script: Script;
-  onTagsUpdated: (script: Script) => void;
-}) {
-  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
-  const [tags, setTags] = useState<string[]>(script.tags ?? []);
-  const [newTag, setNewTag] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleAdd = () => {
-    const trimmed = newTag.trim();
-    if (!trimmed || tags.includes(trimmed)) return;
-    setTags([...tags, trimmed]);
-    setNewTag("");
-  };
-
-  const handleRemove = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await updateScript(selectedProjectId, script.id, { tags } as any);
-      onTagsUpdated({ ...script, tags });
-      clearApiCache();
-    } catch (err) {
-      console.error("保存标签失败:", err);
-      alert("保存标签失败");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const presetTags = ["古装", "现代", "科幻", "奇幻", "悬疑", "喜剧", "言情", "动作", "AI生成", "导入", "已审核", "需修改"];
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <div className="text-xs text-[#888] mb-2">当前标签 ({tags.length})</div>
-        {tags.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag, idx) => (
-              <span
-                key={idx}
-                className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-emerald-500/10 text-emerald-400"
-              >
-                {tag}
-                <button onClick={() => handleRemove(tag)} className="ml-1 hover:text-red-400">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div className="text-sm text-[#666]">暂无标签</div>
-        )}
-      </div>
-
-      <div>
-        <div className="text-xs text-[#888] mb-2">添加新标签</div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newTag}
-            onChange={(e) => setNewTag(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            placeholder="输入标签名称后回车"
-            className="flex-1 h-9 px-3 rounded-lg bg-[#252525] border border-white/10 text-sm text-white focus:outline-none focus:border-emerald-500/50"
-          />
-          <Button size="sm" onClick={handleAdd} disabled={!newTag.trim()}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div>
-        <div className="text-xs text-[#888] mb-2">快捷标签</div>
-        <div className="flex flex-wrap gap-2">
-          {presetTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => !tags.includes(tag) && setTags([...tags, tag])}
-              disabled={tags.includes(tag)}
-              className={`px-2 py-1 rounded text-xs transition-colors ${
-                tags.includes(tag)
-                  ? "bg-white/5 text-[#666] cursor-not-allowed"
-                  : "bg-white/5 text-[#888] hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              + {tag}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
-        <Button size="sm" onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              保存中...
-            </>
-          ) : (
-            <>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              保存标签
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
   );
 }

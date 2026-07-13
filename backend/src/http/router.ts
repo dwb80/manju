@@ -8,7 +8,6 @@ import { rootLogger, withLogContext, logLineToFile } from "../logger.js";
 import { getRuntimeConfig } from "../config/env.js";
 import type { AppContext } from "../services/app.js";
 import { addFavorite, addMessage, createConversation, createLocalImageTask, deleteConversation, ensureConversation, generateImage, generateVideo, listConversations, listImages, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateSettings } from "../services/domain.js";
-import { listProjectAssets, createProjectAsset, updateProjectAsset, deleteProjectAsset } from "../services/domain/asset.js";
 import { enhancePrompt } from "../services/domain/image.js";
 import { createProject, listProjects, updateProject, deleteProject } from "../services/domain/project.js";
 import { saveUploadedImage, type UploadInput } from "../services/media.js";
@@ -412,38 +411,33 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const projectId = url.searchParams.get("projectId") ?? undefined;
       const episodeId = url.searchParams.get("episodeId") ?? undefined;
       const documentId = url.searchParams.get("documentId") ?? undefined;
+      // 防御：必须传 episodeId / projectId / documentId 至少一个，避免全表扫描
+      if (!documentId && !episodeId && !projectId) {
+        return sendError(
+          res,
+          new Error("必须提供 episodeId、projectId 或 documentId 至少一个"),
+          400
+        );
+      }
       // 若提供 documentId，则过滤出该 doc 的所有剧集下场景
       if (documentId) {
-        const eps = await listScriptEpisodes(ctx, (await getScriptDocument(ctx, documentId))?.project_id ?? "");
-        const epIds = new Set(eps.map((e) => e.id));
-        const allScenes = await listScriptScenes(ctx, undefined, projectId);
-        return sendJson(res, allScenes.filter((s) => epIds.has(s.episode_id)));
+        const doc = await getScriptDocument(ctx, documentId);
+        const docProjectId = doc?.project_id ?? projectId ?? "";
+        if (!docProjectId) {
+          return sendJson(res, []);
+        }
+        const eps = await listScriptEpisodes(ctx, docProjectId);
+        if (eps.length === 0) return sendJson(res, []);
+        // 按剧集逐个查场景,避免一次性加载整个项目的场景
+        const scenesArrays = await Promise.all(
+          eps.map((ep) => listScriptScenes(ctx, ep.id, docProjectId))
+        );
+        return sendJson(res, scenesArrays.flat());
       }
       return sendJson(res, await listScriptScenes(ctx, episodeId, projectId));
     }
     if (method === "POST" && parts.join("/") === "api/script-dialogues") {
       return sendJson(res, await createScriptDialogue(ctx, await readJson(req) as any));
-    }
-    // 项目资产路由
-    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && !parts[4]) {
-      const url = new URL(req.url ?? "/", "http://localhost");
-      const filters = {
-        kind: url.searchParams.get("kind"),
-        q: url.searchParams.get("q"),
-        tag: url.searchParams.get("tag"),
-        favorite: url.searchParams.get("favorite"),
-      };
-      return sendJson(res, await listProjectAssets(ctx, parts[2], filters));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets") {
-      return sendJson(res, await createProjectAsset(ctx, parts[2], await readJson(req)));
-    }
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && parts[4]) {
-      return sendJson(res, await updateProjectAsset(ctx, parts[2], parts[4], await readJson(req)));
-    }
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && parts[4]) {
-      await deleteProjectAsset(ctx, parts[2], parts[4]);
-      return sendJson(res, { deleted: true });
     }
     if (method === "GET" && parts.join("/") === "api/conversations") {
       const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId");

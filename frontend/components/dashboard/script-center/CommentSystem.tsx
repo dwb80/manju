@@ -44,6 +44,8 @@ interface CommentSystemProps {
   scriptId: string
   selectedText?: string
   selectionPosition?: { from: number; to: number }
+  /** 新增评论后回调（父组件可借此刷新计数/列表） */
+  onCommentAdded?: (comment: { id: string; content: string; created_at: string }) => void
 }
 
 /** 把后端 ScriptComment 拍平为 UI 用的树（顶层 + replies）。 */
@@ -78,6 +80,7 @@ export function CommentSystem({
   scriptId,
   selectedText,
   selectionPosition,
+  onCommentAdded,
 }: CommentSystemProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -120,7 +123,7 @@ export function CommentSystem({
 
     setIsSubmitting(true)
     try {
-      await scriptCenterService.createComment({
+      const created = await scriptCenterService.createComment({
         script_id: scriptId,
         content: newCommentText,
         user_name: '当前用户',
@@ -134,12 +137,17 @@ export function CommentSystem({
       setNewCommentText('')
       setShowAddComment(false)
       toast.success('评论已添加')
+      onCommentAdded?.({
+        id: created.id,
+        content: created.content,
+        created_at: created.created_at,
+      })
     } catch (err) {
       toast.error('添加评论失败', (err as Error).message)
     } finally {
       setIsSubmitting(false)
     }
-  }, [newCommentText, selectedText, selectionPosition, scriptId])
+  }, [newCommentText, selectedText, selectionPosition, scriptId, onCommentAdded])
 
   // 添加回复
   const handleAddReply = useCallback(
@@ -147,7 +155,7 @@ export function CommentSystem({
       if (!replyText.trim() || !scriptId) return
       setIsSubmitting(true)
       try {
-        await scriptCenterService.createComment({
+        const created = await scriptCenterService.createComment({
           script_id: scriptId,
           content: replyText,
           user_name: '当前用户',
@@ -158,13 +166,18 @@ export function CommentSystem({
         setReplyText('')
         setReplyingTo(null)
         toast.success('回复已添加')
+        onCommentAdded?.({
+          id: created.id,
+          content: created.content,
+          created_at: created.created_at,
+        })
       } catch (err) {
         toast.error('添加回复失败', (err as Error).message)
       } finally {
         setIsSubmitting(false)
       }
     },
-    [replyText, scriptId]
+    [replyText, scriptId, onCommentAdded]
   )
 
   // 标记为已解决
@@ -236,31 +249,28 @@ export function CommentSystem({
       <div className="p-2 border-b border-white/10 flex gap-2 flex-shrink-0">
         <button
           onClick={() => setFilter('all')}
-          className={`text-xs px-2 py-1 rounded ${
-            filter === 'all'
-              ? 'bg-white/10 text-white'
-              : 'text-[#888] hover:text-white'
-          }`}
+          className={`text-xs px-2 py-1 rounded ${filter === 'all'
+            ? 'bg-white/10 text-white'
+            : 'text-[#888] hover:text-white'
+            }`}
         >
           全部 ({comments.length})
         </button>
         <button
           onClick={() => setFilter('active')}
-          className={`text-xs px-2 py-1 rounded ${
-            filter === 'active'
-              ? 'bg-blue-500/20 text-blue-400'
-              : 'text-[#888] hover:text-white'
-          }`}
+          className={`text-xs px-2 py-1 rounded ${filter === 'active'
+            ? 'bg-blue-500/20 text-blue-400'
+            : 'text-[#888] hover:text-white'
+            }`}
         >
           活跃 ({activeCount})
         </button>
         <button
           onClick={() => setFilter('resolved')}
-          className={`text-xs px-2 py-1 rounded ${
-            filter === 'resolved'
-              ? 'bg-emerald-500/20 text-emerald-400'
-              : 'text-[#888] hover:text-white'
-          }`}
+          className={`text-xs px-2 py-1 rounded ${filter === 'resolved'
+            ? 'bg-emerald-500/20 text-emerald-400'
+            : 'text-[#888] hover:text-white'
+            }`}
         >
           已解决 ({resolvedCount})
         </button>
@@ -325,9 +335,8 @@ export function CommentSystem({
             {filteredComments.map((comment) => (
               <div
                 key={comment.id}
-                className={`p-3 ${
-                  comment.status === 'resolved' ? 'opacity-60' : ''
-                }`}
+                className={`p-3 ${comment.status === 'resolved' ? 'opacity-60' : ''
+                  }`}
               >
                 {/* 选中的文本 */}
                 <div className="bg-white/5 p-2 rounded mb-2 text-xs text-white border-l-2 border-blue-500">
