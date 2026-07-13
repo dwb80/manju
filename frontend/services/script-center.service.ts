@@ -316,7 +316,14 @@ export const scriptCenterService = {
       body: JSON.stringify(params),
     })
     if (!response.ok) {
-      throw new Error('AI优化剧本失败')
+      let message = 'AI优化剧本失败'
+      try {
+        const payload = await response.json()
+        if (payload?.message) message = payload.message
+      } catch {
+        // ignore
+      }
+      throw new Error(message)
     }
     const payload = await response.json()
     return payload?.data ?? payload

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "./app-sidebar";
+import { GlobalTopBar } from "./global-top-bar";
 
 /**
  * 布局外壳：根据当前路径决定是否显示侧边栏。
@@ -60,7 +61,10 @@ export function LayoutShell({ children }: Readonly<{ children: React.ReactNode }
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#181818]">
       <AppSidebar />
-      <main className="flex-1 min-w-0 min-h-0 overflow-auto">{children}</main>
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <GlobalTopBar />
+        <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+      </main>
     </div>
   )
 }

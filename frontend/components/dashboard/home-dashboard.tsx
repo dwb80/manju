@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Project } from "@/lib/app-types";
 import { useProjectStore } from "@/lib/stores/project-store";
@@ -239,36 +238,31 @@ export function HomeDashboard() {
   const { selectedProjectId, setSelectedProjectId } = useProjectStore();
   const [currentView, setCurrentView] = useState<"cockpit" | "workspace" | "pipeline">("cockpit");
   const [projects, setProjects] = useState<Project[]>([]);
-  const [projectsLoading, setProjectsLoading] = useState(true);
 
-  // 加载真实项目列表
+  // 加载真实项目列表。
+  // - 挂载时拉一次；
+  // - 切到 HomeDashboard 时也会拉（依赖 [selectedProjectId]，防止 store 里的 selectedProjectId
+  //   已经被改了但 HomeDashboard 的 projects 还是旧的——典型场景：用户在 AI 生产中心切了项目
+  //   再切回驾驶舱，projects 数组要保持最新）。
   useEffect(() => {
     let cancelled = false;
     async function loadProjects() {
       try {
-        setProjectsLoading(true);
         const data = await api<Project[]>("/api/projects");
         if (!cancelled) setProjects(data);
       } catch (err) {
         log.error("load projects failed", { error: (err as Error).message });
-      } finally {
-        if (!cancelled) setProjectsLoading(false);
       }
     }
     loadProjects();
     return () => { cancelled = true; };
-  }, []);
+  }, [selectedProjectId]);
 
-  // 初始化选中项目（如果还没有选中）
-  useEffect(() => {
-    if (!selectedProjectId && projects.length > 0) {
-      const activeProjects = projects.filter((p) => p.status === "active");
-      const defaultProject = activeProjects.find((p) => p.is_pinned) || activeProjects[0] || projects[0];
-      if (defaultProject) {
-        setSelectedProjectId(defaultProject.id);
-      }
-    }
-  }, [selectedProjectId, setSelectedProjectId, projects]);
+  // 选中项目由 GlobalTopBar 统一初始化（pin → active → 第一个），这里不再重复。
+  // 重复写会导致：
+  //   1) 多次 network call 拿 /api/projects
+  //   2) 与 GlobalTopBar 的 useEffect 竞争写 selectedProjectId，行为不可预期
+  // 故删去本组件里的默认项目初始化逻辑。
 
   // 获取选中的项目对象
   const selectedProject = useMemo(() => {
@@ -282,49 +276,38 @@ export function HomeDashboard() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#181818] overflow-hidden">
-      {/* 顶部导航栏 */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-white/10 bg-[#202020]">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Film className="h-6 w-6 text-emerald-400" />
-            <h1 className="text-lg font-semibold text-white">AI漫剧生产平台</h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={currentView === "cockpit" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setCurrentView("cockpit")}
-          >
-            项目驾驶舱
-          </Button>
-          <Button
-            variant={currentView === "workspace" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setCurrentView("workspace")}
-          >
-            AI创作工作台
-          </Button>
-          <Button
-            variant={currentView === "pipeline" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setCurrentView("pipeline")}
-          >
-            生产流水线
-          </Button>
-        </div>
-      </header>
+      {/* 视图切换条：原本在顶栏右侧的"项目驾驶舱 / AI创作工作台 / 生产流水线"。
+          抽出作为二级切换条，三视图都能切，避开顶栏拥挤。 */}
+      <div className="flex items-center justify-end gap-2 border-b border-white/10 bg-[#1a1a1a] px-6 py-3">
+        <Button
+          variant={currentView === "cockpit" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setCurrentView("cockpit")}
+        >
+          项目驾驶舱
+        </Button>
+        <Button
+          variant={currentView === "workspace" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setCurrentView("workspace")}
+        >
+          AI创作工作台
+        </Button>
+        <Button
+          variant={currentView === "pipeline" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setCurrentView("pipeline")}
+        >
+          生产流水线
+        </Button>
+      </div>
 
       {/* 主内容区域 */}
       <main className="flex-1 overflow-auto p-6">
         {currentView === "cockpit" && (
           <ProjectCockpit
-            projects={projects}
-            projectsLoading={projectsLoading}
-            selectedProjectId={selectedProjectId}
             selectedProject={selectedProject}
             projectStats={projectStats}
-            onSelectProjectId={setSelectedProjectId}
             onNavigate={router.push}
           />
         )}
@@ -347,40 +330,16 @@ export function HomeDashboard() {
 
 /** 项目驾驶舱组件 */
 function ProjectCockpit({
-  projects,
-  projectsLoading,
-  selectedProjectId,
   selectedProject,
   projectStats,
-  onSelectProjectId,
   onNavigate,
 }: {
-  projects: Project[];
-  projectsLoading: boolean;
-  selectedProjectId: string;
   selectedProject: Project | null;
   projectStats: ProjectStats;
-  onSelectProjectId: (projectId: string) => void;
   onNavigate: (path: string) => void;
 }) {
-  // 下拉框选项 - 只显示状态为"进行中"的项目
-  const projectOptions = projects
-    .filter((p) => p.status === "active")
-    .map((p) => ({ value: p.id, label: p.name }));
-
   return (
     <div className="space-y-6">
-      {/* 项目选择 */}
-      <div className="flex items-center gap-4">
-        <h2 className="text-xl font-semibold text-white">我的项目</h2>
-        <Select
-          value={selectedProjectId}
-          onChange={(e) => onSelectProjectId(e.target.value)}
-          options={projectOptions}
-          className="w-64"
-        />
-      </div>
-
       {/* 核心指标卡片 */}
       <div className="grid grid-cols-6 gap-4">
         <MetricCard

@@ -137,7 +137,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-white/10 bg-[#181818]">
       {/* Logo区域 */}
-      <div className="flex items-center gap-3 border-b border-white/10 px-6 py-5">
+      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
           <Film className="h-6 w-6 text-white" />
         </div>

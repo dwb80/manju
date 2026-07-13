@@ -2,9 +2,15 @@ import type { UploadedFile } from "@/lib/app-types";
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_AGNES_BACKEND_URL ?? "").replace(/\/+$/, "");
 
-/** 简单的请求缓存机制，用于GET请求的短期缓存（默认5秒） */
+/** 请求缓存机制，用于GET请求的短期缓存（默认15秒）
+ *
+ * 优化说明：
+ * - 从 5 秒延长到 15 秒，减少页面切换时的重复请求
+ * - 工厂页面列表数据变化不频繁，15 秒缓存可显著降低请求量
+ * - 写操作（POST/PUT/DELETE）会自动清除缓存
+ */
 const apiCache = new Map<string, { data: unknown; timestamp: number }>();
-const CACHE_DURATION = 5000; // 5秒缓存
+const CACHE_DURATION = 15000; // 15秒缓存
 
 /** 根据环境变量拼出后端接口地址。 */
 export function apiUrl(path: string): string {

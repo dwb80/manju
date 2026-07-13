@@ -4,6 +4,8 @@ import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const backendUrl = process.env.AGNES_BACKEND_URL || "http://127.0.0.1:3000";
+const ignoredWatchPaths =
+  /[\\/]node_modules[\\/]|[\\/]\.git[\\/]|[\\/]\.next[\\/]|[\\/]\.next-build[\\/]|[\\/]test-results[\\/]|[\\/]playwright-report[\\/]|[\\/]System Volume Information([\\/]|$)|[\\/]\$RECYCLE\.BIN([\\/]|$)/;
 
 /** @type {import('next').NextConfig} */
 const createNextConfig = (phase) => ({
@@ -13,7 +15,7 @@ const createNextConfig = (phase) => ({
   webpack(config) {
     config.watchOptions = {
       ...(config.watchOptions ?? {}),
-      ignored: /[\\/]node_modules[\\/]|[\\/]\.git[\\/]|[\\/]\.next[\\/]|[\\/]\.next-build[\\/]|[\\/]test-results[\\/]|[\\/]playwright-report[\\/]/,
+      ignored: ignoredWatchPaths,
     };
     return config;
   },

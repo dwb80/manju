@@ -59,19 +59,19 @@ export function UsageBadge({ entityType, entityId, entityName, initialCount, onO
   const [usage, setUsage] = useState<AssetUsage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 进入页面时先请求一次最新引用次数（让徽标在初次加载时也是准确的）。
+  // 优化：不再在挂载时自动请求引用次数。
+  // 原因：
+  // 1. 列表页可能有几十上百个卡片，每个卡片都请求会产生大量并发请求
+  // 2. initialCount 已由父组件（列表接口）提供，足够展示徽标
+  // 3. 用户点击徽标打开弹窗时才会请求最新数据
+  // 4. 如需刷新，父组件重新加载列表即可更新 initialCount
+  //
+  // 保留 useEffect 仅用于同步 initialCount 变化（如列表刷新后）
   useEffect(() => {
-    let cancelled = false;
-    fetchUsage(entityType, entityId)
-      .then((data) => {
-        if (cancelled) return;
-        setCount(data.usage_count ?? 0);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [entityType, entityId]);
+    if (initialCount !== undefined) {
+      setCount(initialCount);
+    }
+  }, [initialCount]);
 
   // 点击徽标时打开弹窗并按需加载完整清单。
   const handleOpen = async () => {

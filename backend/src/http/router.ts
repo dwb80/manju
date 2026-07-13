@@ -8,6 +8,7 @@ import { rootLogger, withLogContext, logLineToFile } from "../logger.js";
 import { getRuntimeConfig } from "../config/env.js";
 import type { AppContext } from "../services/app.js";
 import { addFavorite, addMessage, createConversation, createLocalImageTask, deleteConversation, ensureConversation, generateImage, generateVideo, listConversations, listImages, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateSettings } from "../services/domain.js";
+import { listProjectAssets, createProjectAsset, updateProjectAsset, deleteProjectAsset } from "../services/domain/asset.js";
 import { enhancePrompt } from "../services/domain/image.js";
 import { createProject, listProjects, updateProject, deleteProject } from "../services/domain/project.js";
 import { saveUploadedImage, type UploadInput } from "../services/media.js";
@@ -128,7 +129,7 @@ function sendError(res: ServerResponse, error: unknown, status = 400): void {
 function applyCors(req: IncomingMessage, res: ServerResponse): void {
   const origin = req.headers.origin;
   res.setHeader("access-control-allow-origin", typeof origin === "string" ? origin : "*");
-  res.setHeader("access-control-allow-methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   res.setHeader("access-control-allow-headers", "content-type,authorization");
   res.setHeader("access-control-max-age", "86400");
 }
@@ -347,7 +348,7 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     if (method === "GET" && parts.join("/") === "api/scripts") {
       return sendJson(res, await listScripts(ctx));
     }
-    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts") {
+    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && !parts[4]) {
       return sendJson(res, await listScripts(ctx, parts[2]));
     }
     if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts") {
@@ -422,6 +423,27 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     if (method === "POST" && parts.join("/") === "api/script-dialogues") {
       return sendJson(res, await createScriptDialogue(ctx, await readJson(req) as any));
+    }
+    // 项目资产路由
+    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && !parts[4]) {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const filters = {
+        kind: url.searchParams.get("kind"),
+        q: url.searchParams.get("q"),
+        tag: url.searchParams.get("tag"),
+        favorite: url.searchParams.get("favorite"),
+      };
+      return sendJson(res, await listProjectAssets(ctx, parts[2], filters));
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets") {
+      return sendJson(res, await createProjectAsset(ctx, parts[2], await readJson(req)));
+    }
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && parts[4]) {
+      return sendJson(res, await updateProjectAsset(ctx, parts[2], parts[4], await readJson(req)));
+    }
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && parts[4]) {
+      await deleteProjectAsset(ctx, parts[2], parts[4]);
+      return sendJson(res, { deleted: true });
     }
     if (method === "GET" && parts.join("/") === "api/conversations") {
       const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId");

@@ -11,7 +11,7 @@
  * - 与现有 FormDialog / ConfirmDialog / AIGenerateImageDialog 协同工作。
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Sparkles, Pencil, Trash2, CheckSquare, Square, X, LayoutTemplate, History, Copy, Inbox, RotateCcw, Archive, ChevronRight } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import {
@@ -326,14 +326,17 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   // 回收站数据
   const [deletedItems, setDeletedItems] = useState<TEntity[]>([]);
   const [isRecycleBinLoading, setIsRecycleBinLoading] = useState(false);
+  // 使用 ref 保存 fetchDeleted，避免函数引用变化导致重复请求
+  const fetchDeletedRef = useRef(fetchDeleted);
+  fetchDeletedRef.current = fetchDeleted;
   const reloadRecycleBin = useCallback(async () => {
-    if (!selectedProjectId || !fetchDeleted) {
+    if (!selectedProjectId || !fetchDeletedRef.current) {
       setDeletedItems([]);
       return;
     }
-    const data = await fetchDeleted(selectedProjectId);
+    const data = await fetchDeletedRef.current(selectedProjectId);
     setDeletedItems(data);
-  }, [selectedProjectId, fetchDeleted]);
+  }, [selectedProjectId]);
 
   useEffect(() => {
     if (activeView !== "recycleBin" || !recycleBinEnabled) return;

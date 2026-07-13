@@ -7,7 +7,7 @@
  * - 列表 / 加载中状态
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
 import type { FactoryEntity } from "./types";
 
@@ -30,6 +30,11 @@ interface UseFactoryEntityResult<TEntity extends FactoryEntity> {
 /**
  * 通用工厂数据 hook：负责根据项目加载实体。
  * @param fetchList - 实际拉取列表的服务函数
+ *
+ * 优化点：
+ * - 使用 useRef 保存 fetchList，避免函数引用变化导致重复请求
+ * - 只在 selectedProjectId 变化时触发加载
+ * - reload 使用最新的 fetchList 引用
  */
 export function useFactoryEntity<TEntity extends FactoryEntity>(
   fetchList: (projectId: string) => Promise<TEntity[]>,
@@ -39,14 +44,18 @@ export function useFactoryEntity<TEntity extends FactoryEntity>(
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // 使用 ref 保存 fetchList，避免函数引用变化导致 useEffect 重复执行
+  const fetchListRef = useRef(fetchList);
+  fetchListRef.current = fetchList;
+
   const reload = useCallback(async () => {
     if (!selectedProjectId) {
       setItems([]);
       return;
     }
-    const data = await fetchList(selectedProjectId);
+    const data = await fetchListRef.current(selectedProjectId);
     setItems(data);
-  }, [selectedProjectId, fetchList]);
+  }, [selectedProjectId]);
 
   useEffect(() => {
     if (!selectedProjectId) {

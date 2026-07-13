@@ -4476,3 +4476,601 @@ Tab 键顺序:
 
 **相关文档**:
 - 整个项目的通用存储方案: [sqlite-plan.md](sqlite-plan.md)
+
+---
+
+# 附录A：剧本中心职责边界与工业化生产阶段划分
+
+> 本文档从 `script-center-scope.md` 合并而来，定义剧本中心在工业化生产流程中的职责边界。
+
+## A.1 核心观点
+
+**剧本中心阶段只需要角色和场景的文字描述，不需要具体图片。**
+
+图片生产在后续阶段进行，这符合工业化生产的阶段划分原则。
+
+## A.2 工业化生产阶段划分
+
+```
+阶段0：项目立项
+└── 确定项目基本信息（标题、类型、风格等）
+
+阶段1：剧本中心（纯文字创作）⭐ 当前讨论
+├── 剧本创作（文字内容）
+├── 角色设定（文字描述）
+├── 场景设定（文字描述）
+├── 对白编写
+├── 剧情结构
+└── 人物关系
+
+阶段2：资产生产（图片生成）
+├── 角色工厂 → 根据角色文字描述生成角色图片
+├── 场景工厂 → 根据场景文字描述生成场景图片
+├── 道具工厂 → 根据道具文字描述生成道具图片
+└── 风格设定 → 确定整体视觉风格
+
+阶段3：分镜中心（镜头设计）
+├── 分镜拆分 → 将剧本拆分为镜头
+├── 镜头设计 → 确定景别、运动、时长
+├── 角色站位 → 确定角色在场景中的位置
+└── 分镜图片 → 生成分镜参考图
+
+阶段4：视频中心（视频生成）
+├── 图片优化 → 优化分镜图片质量
+├── 视频生成 → 生成分镜视频
+├── 视频合成 → 合成完整视频
+└── 后期处理 → 音效、配乐、字幕
+
+阶段5：发布中心（成品输出）
+├── 视频导出 → 导出最终视频
+├── 格式转换 → 转换为不同格式
+└── 发布分发 → 发布到不同平台
+```
+
+## A.3 剧本中心的职责边界
+
+### 负责的内容（纯文字）
+
+| 内容类型 | 详细说明 | 示例 |
+|---------|---------|------|
+| **剧本内容** | 完整的剧本故事文本 | Scene01: 茶信馆门口，林逸推开木门... |
+| **角色设定** | 角色的文字描述（性格、外观、年龄） | 林逸：年轻男性，长发，白衣，性格冷淡... |
+| **场景设定** | 场景的文字描述（地点、氛围、时间） | 茶信馆：古朴茶馆，木质结构，暖色调... |
+| **对白编写** | 角色的对话内容 | 林逸：与你无关。萧晓：终于舍得出来了？ |
+| **剧情结构** | 剧情的起承转合 | 第一集：相遇 → 冲突 → 分离 |
+| **人物关系** | 角色之间的关系 | 林逸（男主角）- 萧晓（女主角）：恋人关系 |
+
+### 不负责的内容
+
+| 内容类型 | 负责阶段 | 原因 |
+|---------|---------|------|
+| **角色图片** | 资产生产（角色工厂） | 图片生成是独立的资产生产环节 |
+| **场景图片** | 资产生产（场景工厂） | 图片生成是独立的资产生产环节 |
+| **道具图片** | 资产生产（道具工厂） | 图片生成是独立的资产生产环节 |
+| **分镜图片** | 分镜中心 | 分镜需要基于资产图片设计 |
+| **视频生成** | 视频中心 | 视频需要基于分镜图片生成 |
+
+## A.4 关键原则
+
+1. **专业分工原则**：每个阶段专注自己的专业领域
+2. **迭代优化原则**：文字修改成本低，图片生成成本高
+3. **成本控制原则**：在低成本阶段（文字）确认后再进行高成本阶段（图片）
+
+---
+
+# 附录B：剧本中心开发前检查清单
+
+> 本文档从 `script-center-development-checklist.md` 合并而来，用于开发前的完整性检查。
+
+## B.1 现有设计文档检查
+
+### 已完成的设计文档
+
+| 文档名称 | 内容范围 | 状态 |
+|---------|---------|------|
+| `script-center-guide.md` | 剧本中心完整需求（25个Feature） | 完成 |
+| `script-center-scope.md` | 职责边界（已合并到附录A） | 已合并 |
+| `script-center-supplement-designs.md` | 补充设计（已合并到附录C） | 已合并 |
+| `02-user-roles-permissions.md` | 用户角色与权限体系 | 完成 |
+
+### 已设计的功能点（25个Feature）
+
+#### Epic 1: 项目概览与设定（5个Feature）
+- Feature 1.1: 项目概览仪表盘（P0）
+- Feature 1.2: 世界观设定（P0）
+- Feature 1.3: 人物设定（P0）
+- Feature 1.4: 剧情大纲（P0）
+- Feature 1.5: 章节剧集管理（P0）
+
+#### Epic 2: 剧本编辑核心（4个Feature）
+- Feature 2.1: 剧本模式（P0）
+- Feature 2.2: 大纲模式（P1）
+- Feature 2.3: 版本管理（P1）
+- Feature 2.4: 自动保存与同步（P0）
+
+#### Epic 3: AI辅助编剧（3个Feature）
+- Feature 3.1: Tiptap自定义节点（P0）
+- Feature 3.2: AI Slash Command（P0）
+- Feature 3.3: AI Bubble Menu（P0）
+
+#### Epic 4: 内容导入与流转（7个Feature）
+- Feature 4.1: 剧本生成（P0）
+- Feature 4.2: 剧本优化（P0）
+- Feature 4.3: 剧本流转（P1）
+- Feature 4.4: 分镜拆解导出（P1）
+- Feature 4.5: 剧本导入功能（P0）
+- Feature 4.6: Final Draft深度解析（P1）
+- Feature 4.7: 批量导入与格式转换（P2）
+
+#### Epic 5: 分析与审核（6个Feature）
+- Feature 5.1: 剧本分析（P1）
+- Feature 5.2: 连续性检查（P1）
+- Feature 5.3: AI评分系统（P1）
+- Feature 5.4: 评论与批注（P2）
+- Feature 5.5: 商业分析（P2）
+- Feature 5.6: 一键修复建议（P2）
+
+**总计**: 25个Feature，设计完整
+
+## B.2 开发优先级建议
+
+### 第一阶段（P0核心功能）
+目标：实现剧本中心核心功能，支持剧本创作和编辑
+
+| Feature | 优先级 | 说明 |
+|---------|--------|------|
+| Feature 1.1 | P0 | 项目概览仪表盘 |
+| Feature 1.2 | P0 | 世界观设定 |
+| Feature 1.3 | P0 | 人物设定 |
+| Feature 1.4 | P0 | 剧情大纲 |
+| Feature 1.5 | P0 | 章节剧集管理 |
+| Feature 2.1 | P0 | 剧本模式（核心） |
+| Feature 2.4 | P0 | 自动保存与同步 |
+| Feature 3.1 | P0 | Tiptap自定义节点 |
+| Feature 3.2 | P0 | AI Slash Command |
+| Feature 3.3 | P0 | AI Bubble Menu |
+| Feature 4.5 | P0 | 剧本导入功能 |
+
+**总计**: 11个Feature
+
+### 第二阶段（P1重要功能）
+目标：实现剧本中心重要功能，提升用户体验
+
+| Feature | 优先级 | 说明 |
+|---------|--------|------|
+| Feature 2.2 | P1 | 大纲模式 |
+| Feature 2.3 | P1 | 版本管理 |
+| Feature 4.3 | P1 | 剧本流转 |
+| Feature 4.4 | P1 | 分镜拆解导出 |
+| Feature 4.6 | P1 | Final Draft深度解析 |
+| Feature 5.1 | P1 | 剧本分析 |
+| Feature 5.2 | P1 | 连续性检查 |
+| Feature 5.3 | P1 | AI评分系统 |
+
+**总计**: 8个Feature
+
+### 第三阶段（P2扩展功能）
+目标：实现剧本中心扩展功能，提升创作效率
+
+| Feature | 优先级 | 说明 |
+|---------|--------|------|
+| Feature 5.4 | P2 | 评论与批注 |
+| Feature 5.5 | P2 | 商业分析 |
+| Feature 5.6 | P2 | 一键修复建议 |
+| Feature 4.7 | P2 | 批量导入与格式转换 |
+
+**总计**: 4个Feature
+
+## B.3 开发前决策建议
+
+**建议**: 核心功能设计完整（25个Feature已设计），可以开始开发。
+
+**推荐的开发顺序**：
+1. 技术准备（数据库、类型定义、服务层、API接口）
+2. 前端准备（Tiptap编辑器、自定义节点、页面组件）
+3. 核心功能开发（P0的11个Feature）
+4. 重要功能开发（P1的8个Feature）
+5. 扩展功能开发（P2的4个Feature）
+
+---
+
+# 附录C：剧本中心补充设计
+
+> 本文档从 `script-center-supplement-designs.md` 合并而来，包含6个重要功能模块的详细设计。
+
+## C.1 剧本模板库设计（P2）
+
+### 需求说明
+
+提供预制的剧本结构模板，帮助编剧快速开始创作，减少重复性工作。
+
+**核心功能**：
+- 提供多种剧本类型模板（短剧、长剧、电影、纪录片等）
+- 支持模板预览和试用
+- 支持基于模板创建新剧本
+- 支持自定义模板的创建和管理
+
+### 数据模型设计
+
+```typescript
+export type ScriptTemplateType = 'short_series' | 'long_series' | 'movie' | 'documentary' | 'commercial' | 'custom';
+export type ScriptTemplateStatus = 'draft' | 'active' | 'archived' | 'deprecated';
+
+export interface ScriptTemplate {
+  id: string;
+  name: string;
+  type: ScriptTemplateType;
+  description: string;
+  status: ScriptTemplateStatus;
+  author: string;
+  version: number;
+  content: {
+    worldview?: string;
+    characters?: Array<{ name: string; role: string; description: string; }>;
+    scenes?: Array<{ name: string; type: string; description: string; }>;
+    plotStructure?: Array<{ episode: number; title: string; summary: string; scenes: string[]; }>;
+    scriptTemplate?: string;
+  };
+  usageCount: number;
+  rating: number;
+  tags: string[];
+  isSystem: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### 主要API接口
+
+- `GET /api/script-templates` - 获取模板列表
+- `POST /api/script-templates` - 创建自定义模板
+- `POST /api/script-templates/:id/create-script` - 基于模板创建剧本
+- `POST /api/script-templates/:id/rate` - 评分模板
+
+## C.2 剧本标签系统设计（P1）
+
+### 需求说明
+
+对剧本进行多维度的标记和分类，支持快速检索和组织管理。
+
+### 数据模型设计
+
+```typescript
+export type ScriptTagType = 'genre' | 'style' | 'theme' | 'mood' | 'setting' | 'custom';
+
+export interface ScriptTag {
+  id: string;
+  name: string;
+  type: ScriptTagType;
+  color: string;
+  description: string;
+  icon?: string;
+  parentId?: string;
+  usageCount: number;
+  isSystem: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScriptTagRelation {
+  id: string;
+  scriptId: string;
+  tagId: string;
+  created_at: string;
+}
+```
+
+### 主要API接口
+
+- `GET /api/script-tags` - 获取标签列表
+- `POST /api/script-tags` - 创建标签
+- `POST /api/scripts/:scriptId/tags` - 为剧本添加标签
+- `GET /api/scripts/by-tags` - 按标签筛选剧本
+
+## C.3 剧本分类管理设计（P1）
+
+### 需求说明
+
+对剧本进行层级化的分类组织，支持项目级别的剧本管理。
+
+### 数据模型设计
+
+```typescript
+export interface ScriptCategory {
+  id: string;
+  name: string;
+  description: string;
+  parentId?: string;
+  path: string;
+  level: number;
+  icon?: string;
+  color?: string;
+  projectId?: string;
+  scriptCount: number;
+  order: number;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### 主要API接口
+
+- `GET /api/script-categories/tree` - 获取分类树
+- `POST /api/script-categories` - 创建分类
+- `POST /api/scripts/:scriptId/category` - 将剧本归类
+
+## C.4 剧本质量评估标准设计（P1）
+
+### 需求说明
+
+建立剧本的质量评分体系，支持AI自动评估和人工评分。
+
+### 评分维度
+
+| 维度 | 权重 | 说明 |
+|------|------|------|
+| 情节结构 | 25% | 故事结构完整性 |
+| 人物塑造 | 20% | 角色丰满度 |
+| 对白质量 | 15% | 对话自然度 |
+| 节奏把控 | 15% | 剧情节奏 |
+| 创意原创性 | 10% | 创新性 |
+| 主题表达 | 10% | 主题深度 |
+| 逻辑连贯性 | 10% | 逻辑一致性 |
+
+### 评分等级
+
+| 分数 | 等级 |
+|------|------|
+| 90-100 | S |
+| 80-89 | A |
+| 70-79 | B |
+| 60-69 | C |
+| 50-59 | D |
+| <50 | F |
+
+### 主要API接口
+
+- `GET /api/evaluation-criteria` - 获取评分标准
+- `POST /api/scripts/:scriptId/evaluate/ai` - AI自动评分
+- `POST /api/scripts/:scriptId/evaluate/manual` - 人工评分
+- `GET /api/scripts/:scriptId/evaluations` - 获取评分历史
+
+## C.5 剧本审批流程设计（P1）
+
+### 需求说明
+
+管理剧本的审核、批准和发布流程，支持多级审批和流转。
+
+### 审批状态
+
+```
+draft → submitted → reviewing → approved → rejected → revision → archived
+```
+
+### 审批流程模板
+
+```
+[提交] → [编剧审核] → [导演审核] → [制片人批准] → [发布]
+```
+
+### 主要API接口
+
+- `GET /api/approval-workflows` - 获取审批流程模板
+- `POST /api/scripts/:scriptId/approval` - 提交审批申请
+- `POST /api/script-approvals/:id/action` - 审批操作（批准/拒绝/批注/委托）
+- `GET /api/my-approvals` - 获取我的审批列表
+
+## C.6 数据备份和恢复设计（P2）
+
+### 需求说明
+
+保障剧本数据的安全性，支持定期备份和灾难恢复。
+
+### 备份类型
+
+| 类型 | 说明 |
+|------|------|
+| 自动备份 | 按配置频率自动创建 |
+| 手动备份 | 用户主动触发 |
+| 定时备份 | 预设时间触发 |
+| 导出备份 | 导出为文件 |
+
+### 备份范围
+
+| 范围 | 说明 |
+|------|------|
+| 全量 | 全部数据 |
+| 增量 | 自上次备份以来的变更 |
+| 单剧本 | 单个剧本 |
+| 单项目 | 单个项目 |
+
+### 主要API接口
+
+- `GET /api/backup-config` - 获取备份配置
+- `PUT /api/backup-config` - 更新备份配置
+- `POST /api/backups` - 创建手动备份
+- `POST /api/backups/:id/restore` - 恢复备份
+- `POST /api/backups/:id/verify` - 校验备份完整性
+
+## C.7 补充设计数据库表结构
+
+### 剧本模板表
+
+```sql
+CREATE TABLE script_template (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'draft',
+  author TEXT,
+  version INTEGER DEFAULT 1,
+  content TEXT,
+  usageCount INTEGER DEFAULT 0,
+  rating REAL DEFAULT 0,
+  tags TEXT,
+  isSystem BOOLEAN DEFAULT FALSE,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+```
+
+### 剧本标签表
+
+```sql
+CREATE TABLE script_tag (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  color TEXT DEFAULT '#999999',
+  description TEXT,
+  icon TEXT,
+  parentId TEXT,
+  usageCount INTEGER DEFAULT 0,
+  isSystem BOOLEAN DEFAULT FALSE,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE script_tag_relation (
+  id TEXT PRIMARY KEY,
+  scriptId TEXT NOT NULL,
+  tagId TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+```
+
+### 剧本分类表
+
+```sql
+CREATE TABLE script_category (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  parentId TEXT,
+  path TEXT,
+  level INTEGER DEFAULT 0,
+  icon TEXT,
+  color TEXT,
+  projectId TEXT,
+  scriptCount INTEGER DEFAULT 0,
+  order INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+```
+
+### 评分标准表
+
+```sql
+CREATE TABLE evaluation_criteria (
+  id TEXT PRIMARY KEY,
+  dimension TEXT NOT NULL,
+  description TEXT,
+  weight REAL NOT NULL,
+  criteria TEXT,
+  aiEnabled BOOLEAN DEFAULT TRUE,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+```
+
+### 剧本评分表
+
+```sql
+CREATE TABLE script_evaluation (
+  id TEXT PRIMARY KEY,
+  scriptId TEXT NOT NULL,
+  version INTEGER DEFAULT 1,
+  type TEXT NOT NULL,
+  evaluator TEXT,
+  dimensions TEXT,
+  totalScore REAL NOT NULL,
+  grade TEXT NOT NULL,
+  suggestions TEXT,
+  created_at TEXT NOT NULL
+);
+```
+
+### 审批流程模板表
+
+```sql
+CREATE TABLE approval_workflow_template (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  nodes TEXT,
+  enabled BOOLEAN DEFAULT TRUE,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+```
+
+### 剧本审批表
+
+```sql
+CREATE TABLE script_approval (
+  id TEXT PRIMARY KEY,
+  scriptId TEXT NOT NULL,
+  applicant TEXT NOT NULL,
+  status TEXT NOT NULL,
+  currentNode TEXT,
+  workflowId TEXT NOT NULL,
+  records TEXT,
+  comments TEXT,
+  version INTEGER DEFAULT 1,
+  submitted_at TEXT,
+  completed_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+```
+
+### 剧本备份表
+
+```sql
+CREATE TABLE script_backup (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  status TEXT NOT NULL,
+  scriptId TEXT,
+  projectId TEXT,
+  backupPath TEXT NOT NULL,
+  size INTEGER,
+  checksum TEXT,
+  format TEXT DEFAULT 'json',
+  content TEXT,
+  systemVersion TEXT,
+  createdBy TEXT,
+  notes TEXT,
+  retentionDays INTEGER DEFAULT 30,
+  expiresAt TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+```
+
+### 备份配置表
+
+```sql
+CREATE TABLE backup_config (
+  id TEXT PRIMARY KEY,
+  autoBackupEnabled BOOLEAN DEFAULT TRUE,
+  backupFrequency INTEGER DEFAULT 1,
+  backupHour INTEGER DEFAULT 2,
+  backupScope TEXT DEFAULT 'full',
+  backupFormat TEXT DEFAULT 'json',
+  retentionPolicy TEXT,
+  storagePath TEXT DEFAULT '/data/backups',
+  compressionEnabled BOOLEAN DEFAULT TRUE,
+  encryptionEnabled BOOLEAN DEFAULT FALSE,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+```
+
+---
+
+**文档整合说明**：本文档已整合 `script-center-scope.md`、`script-center-development-checklist.md` 和 `script-center-supplement-designs.md` 的内容。原独立文档已归档。

@@ -26,6 +26,7 @@ import {
   ArrowLeft,
   Archive,
   RotateCcw,
+  Pencil,
 } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import {
@@ -65,7 +66,7 @@ import { ScriptImportDialog } from "./ScriptImportDialog";
 import { TemplateLibraryDialog } from "./TemplateLibraryDialog";
 import { ScriptAnalysisPanel } from "./ScriptAnalysisPanel";
 import { ApprovalWorkflowDialog } from "./ApprovalWorkflowDialog";
-import { generateLocalScriptOutline, textToEditorJson } from "./utils";
+import { analyzeScriptContent, generateLocalScriptOutline, textToEditorJson } from "./utils";
 import type { ViewMode, ExtractedAsset } from "./types";
 
 /** 通用对话框覆盖层组件 */
@@ -101,6 +102,60 @@ export function DialogOverlay({
       </div>
     </div>
   );
+}
+
+async function loadScriptContentForAnalysis(script: Script): Promise<string> {
+  let documentText = "";
+  try {
+    const resp = await fetch(`/api/script-documents/${encodeURIComponent(script.id)}`);
+    if (resp.ok) {
+      const payload = await resp.json();
+      const document = payload?.data ?? payload;
+      documentText = editorJsonToPlainText(document?.editor_json);
+    }
+  } catch (err) {
+    console.warn("读取剧本文档正文失败，回退到 description:", err);
+  }
+  return (documentText || script.description || "").trim();
+}
+
+function editorJsonToPlainText(input: unknown): string {
+  if (!input) return "";
+  let value: any = input;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  const walk = (node: any): string => {
+    if (!node) return "";
+    if (typeof node === "string") return node;
+    if (typeof node.text === "string") return node.text;
+    if (Array.isArray(node.content)) {
+      const text = node.content.map(walk).filter(Boolean).join(node.type === "doc" ? "\n" : "");
+      return node.type && node.type !== "doc" && node.type !== "text" ? `${text}\n` : text;
+    }
+    return "";
+  };
+  return walk(value).replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function mergeExtractedAssets(primary: ExtractedAsset[], fallback: ExtractedAsset[]): ExtractedAsset[] {
+  const result = [...primary].filter((asset) => asset.name.trim());
+  const seen = new Set(result.map((asset) => `${asset.type}:${asset.name.trim()}`));
+  for (const asset of fallback) {
+    const key = `${asset.type}:${asset.name.trim()}`;
+    if (!asset.name.trim() || seen.has(key)) continue;
+    seen.add(key);
+    result.push({
+      ...asset,
+      id: `local-${asset.id}-${Date.now()}`,
+      confirmed: true,
+    });
+  }
+  return result;
 }
 
 export function ScriptsCenterPage({
@@ -238,6 +293,11 @@ export function ScriptsCenterPage({
     setIsFormOpen(true);
   };
 
+  const handleEdit = (script: Script) => {
+    setEditingScript(script);
+    setIsFormOpen(true);
+  };
+
   // 打开剧本编辑器（新标签页）
   const handleOpenEditor = (scriptId: string) => {
     window.open(`/scripts/${scriptId}`, '_blank');
@@ -250,6 +310,14 @@ export function ScriptsCenterPage({
       const payload = { ...values, project_id: selectedProjectId } as any;
       if (editingScript) {
         await updateScript(selectedProjectId, editingScript.id, payload);
+        try {
+          await scriptCenterService.updateDocument(editingScript.id, {
+            title: String(values.title ?? editingScript.title),
+            project_id: selectedProjectId,
+          } as any);
+        } catch (docErr) {
+          console.warn("同步更新剧本文档标题失败:", docErr);
+        }
       } else {
         // 新建剧本：先创建 scripts 记录，再把 description 同步写入 ScriptDocument.editor_json
         const created = await createScript(selectedProjectId, payload);
@@ -281,11 +349,12 @@ export function ScriptsCenterPage({
   // 软删剧本：移到回收站
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
+    const target = deleteConfirm;
     try {
-      const result = await deleteScriptApi(selectedProjectId, deleteConfirm.id);
+      const result = await deleteScriptApi(selectedProjectId, target.id);
       setDeleteConfirm(null);
       clearApiCache();
-      await reloadScripts();
+      setScripts((prev) => prev.filter((script) => script.id !== target.id));
       console.log(`剧本已移到回收站：${result.deleted_at}`);
     } catch (err) {
       console.error("剧本删除失败:", err);
@@ -467,72 +536,77 @@ export function ScriptsCenterPage({
     setAnalyzeStatus(hasExisting ? "重新分析中..." : "分析中...");
     setIsAnalyzing(true);
     try {
-      const content = selectedScript.description || "";
-      // 始终调用 AI 分析（不使用正则兜底）
+      const content = await loadScriptContentForAnalysis(selectedScript);
+      if (!content.trim()) {
+        throw new Error("剧本文档内容为空，请先在编辑器中保存正文后再分析");
+      }
       let assets: ExtractedAsset[] = [];
       try {
         const response = await fetch("/api/ai/script-analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: selectedScript.title, content }),
+          body: JSON.stringify({ title: selectedScript.title, content, format: "txt" }),
         });
-        if (response.ok) {
-          const payload = await response.json();
-          if (payload?.success === false) {
-            // AI 失败：直接报错，不回退到正则
-            throw new Error(payload.error || "AI 分析失败");
-          }
-          // AI 返回 characters / scenes / props 三个数组，统一映射成 ExtractedAsset 列表
-          const data = payload?.data ?? {};
-          const charList: any[] = Array.isArray(data.characters) ? data.characters : [];
-          const sceneList: any[] = Array.isArray(data.scenes) ? data.scenes : [];
-          const propList: any[] = Array.isArray(data.props) ? data.props : [];
-
-          const mapCharacter = (a: any, idx: number): ExtractedAsset => ({
-            id: `character-${idx + 1}-${Date.now()}`,
-            type: "character",
-            name: a.name || "",
-            description: a.description ?? "",
-            confirmed: true,
-            role: a.role,
-            gender: a.gender,
-            age: a.age,
-            appearance: a.appearance,
-            personality: a.personality,
-            traits: Array.isArray(a.traits) ? a.traits : [],
-          });
-          const mapScene = (a: any, idx: number): ExtractedAsset => ({
-            id: `scene-${idx + 1}-${Date.now()}`,
-            type: "scene",
-            name: a.location_name || a.name || "",
-            description: a.description ?? "",
-            confirmed: true,
-            sceneType: a.sceneType,
-            lighting: a.lighting,
-            timeOfDay: a.time_of_day ?? a.timeOfDay,
-            weather: a.weather,
-          });
-          const mapProp = (a: any, idx: number): ExtractedAsset => ({
-            id: `prop-${idx + 1}-${Date.now()}`,
-            type: "prop",
-            name: a.name || "",
-            description: a.description ?? "",
-            confirmed: true,
-            category: a.category,
-            material: a.material,
-            color: a.color,
-          });
-
-          assets = [
-            ...charList.map(mapCharacter),
-            ...sceneList.map(mapScene),
-            ...propList.map(mapProp),
-          ];
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.message || `AI 分析失败（HTTP ${response.status}）`);
         }
+        const result = payload?.data ?? payload ?? {};
+        if (result?.success === false) {
+          throw new Error(result.error || payload?.message || "AI 分析失败");
+        }
+        // 后端 sendJson 会包一层 data，AI 分析服务内部也有 data 字段：这里必须解两层。
+        const data = result?.data ?? result;
+        const charList: any[] = Array.isArray(data.characters) ? data.characters : [];
+        const sceneList: any[] = Array.isArray(data.scenes) ? data.scenes : [];
+        const propList: any[] = Array.isArray(data.props) ? data.props : [];
+
+        const mapCharacter = (a: any, idx: number): ExtractedAsset => ({
+          id: `character-${idx + 1}-${Date.now()}`,
+          type: "character",
+          name: a.name || "",
+          description: a.description ?? "",
+          confirmed: true,
+          role: a.role,
+          gender: a.gender,
+          age: a.age,
+          appearance: a.appearance,
+          personality: a.personality,
+          traits: Array.isArray(a.traits) ? a.traits : [],
+        });
+        const mapScene = (a: any, idx: number): ExtractedAsset => ({
+          id: `scene-${idx + 1}-${Date.now()}`,
+          type: "scene",
+          name: a.location_name || a.name || "",
+          description: a.description ?? "",
+          confirmed: true,
+          sceneType: a.sceneType,
+          lighting: a.lighting,
+          timeOfDay: a.time_of_day ?? a.timeOfDay,
+          weather: a.weather,
+        });
+        const mapProp = (a: any, idx: number): ExtractedAsset => ({
+          id: `prop-${idx + 1}-${Date.now()}`,
+          type: "prop",
+          name: a.name || "",
+          description: a.description ?? "",
+          confirmed: true,
+          category: a.category,
+          material: a.material,
+          color: a.color,
+        });
+
+        assets = [
+          ...charList.map(mapCharacter),
+          ...sceneList.map(mapScene),
+          ...propList.map(mapProp),
+        ];
+        const localAssets = analyzeScriptContent(content);
+        assets = mergeExtractedAssets(assets, localAssets);
       } catch (err) {
-        // AI 失败直接抛出，不回退到正则
-        console.error("AI 分析失败:", err);
-        throw err;
+        console.warn("AI 分析失败，使用本地提取兜底:", err);
+        assets = analyzeScriptContent(content);
+        if (assets.length === 0) throw err;
       }
       setExtractedAssets(assets);
     } catch (err) {
@@ -866,6 +940,7 @@ export function ScriptsCenterPage({
                       key={script.id}
                       script={script}
                       onOpenEditor={() => handleOpenEditor(script.id)}
+                      onEdit={() => handleEdit(script)}
                       onDelete={() => setDeleteConfirm({ id: script.id, title: script.title })}
                       onTagManager={() => handleOpenTagManager(script)}
                       onAnalysis={() => handleOpenAnalysis(script)}
@@ -1107,6 +1182,7 @@ export function ScriptsCenterPage({
 function ScriptRow({
   script,
   onOpenEditor,
+  onEdit,
   onDelete,
   onTagManager,
   onAnalysis,
@@ -1114,6 +1190,7 @@ function ScriptRow({
 }: {
   script: Script;
   onOpenEditor: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   onTagManager: () => void;
   onAnalysis: () => void;
@@ -1196,6 +1273,9 @@ function ScriptRow({
             title="进入编辑器继续编辑"
           >
             继续编辑 →
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onEdit} title="编辑标题和基础信息">
+            <Pencil className="h-4 w-4 text-emerald-400" />
           </Button>
           <Button variant="ghost" size="sm" onClick={onAnalysis} title="剧本分析（提取角色/场景/道具）">
             <Sparkles className="h-4 w-4 text-blue-400" />
