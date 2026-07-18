@@ -6,6 +6,7 @@ import type { Project } from "@/lib/app-types";
 import { api } from "@/lib/api-client";
 import { createLogger } from "@/lib/logger";
 import { useProjectStore } from "@/lib/stores/project-store";
+import { UserAccountMenu } from "@/components/auth/user-account-menu";
 
 const log = createLogger("global-top-bar");
 
@@ -84,6 +85,7 @@ export function GlobalTopBar() {
           className="w-64"
         />
       </div>
+      <UserAccountMenu />
     </header>
   );
 }

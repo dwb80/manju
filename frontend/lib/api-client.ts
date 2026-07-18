@@ -6,6 +6,22 @@
 import type { UploadedFile } from "@/lib/app-types";
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_AGNES_BACKEND_URL ?? "").replace(/\/+$/, "");
+const CSRF_STORAGE_KEY = "manju:csrf-token";
+
+/** 读取当前登录会话的 CSRF Token，供 SSE / 文件上传等原生 fetch 请求复用。 */
+export function getCsrfToken(): string {
+  return typeof window !== "undefined"
+    ? window.sessionStorage.getItem(CSRF_STORAGE_KEY) ?? ""
+    : "";
+}
+
+export function storeCsrfToken(token: string): void {
+  if (typeof window !== "undefined") window.sessionStorage.setItem(CSRF_STORAGE_KEY, token);
+}
+
+export function clearCsrfToken(): void {
+  if (typeof window !== "undefined") window.sessionStorage.removeItem(CSRF_STORAGE_KEY);
+}
 
 /** Agnes API 错误翻译：将英文技术错误转换为友好中文提示 */
 function translateAgnesError(raw: string): string {
@@ -18,6 +34,7 @@ function translateAgnesError(raw: string): string {
     "rate limit exceeded": "请求过于频繁，请稍后再试",
     "timeout": "请求超时，请稍后重试",
     "network error": "网络异常，请检查网络连接",
+    "fetch failed": "AI 服务网络连接失败，请检查后端网络、代理或防火墙后重试",
     // Agnes 上游偶尔会返回 HTML 错误页 / 空 body / 纯文本，
     // 后端 readJsonSafe 会包装成 "Agnes xxx 返回结果不是有效 JSON（status=...）：..."，
     // 这里给出友好提示并隐藏后端啰嗦细节。
@@ -84,10 +101,13 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     }
   }
 
-  const requestInit: RequestInit = {
-    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
-    ...init,
-  };
+  const headers = new Headers(init?.headers);
+  if (!headers.has("content-type")) headers.set("content-type", "application/json");
+  if (!isGetRequest && typeof window !== "undefined") {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) headers.set("x-csrf-token", csrfToken);
+  }
+  const requestInit: RequestInit = { ...init, headers, credentials: init?.credentials ?? "include" };
   // fetch 的 cache: "no-store" 才会真的绕过浏览器缓存，否则浏览器层也会缓存 GET
   if (bypassCache) requestInit.cache = "no-store";
 
@@ -115,6 +135,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     }
   }
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined" && !path.startsWith("/api/auth/")) {
+      clearCsrfToken();
+      window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
     const rawMsg = payload?.message || `请求失败 ${response.status}`;
     // 将 Agnes API 的英文错误翻译成友好中文
     const friendlyMsg = translateAgnesError(rawMsg);

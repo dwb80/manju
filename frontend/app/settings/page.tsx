@@ -33,6 +33,8 @@ import {
 import { AdminPanels } from "@/components/admin/admin-panels";
 import { createLogger } from "@/lib/logger";
 import { notify } from "@/lib/notify";
+import { api } from "@/lib/api-client";
+import { AdminRouteGuard } from "@/components/auth/admin-route-guard";
 
 // 模块级 logger
 const log = createLogger("settings-page");
@@ -66,7 +68,7 @@ const DEFAULT_SETTINGS: Settings = {
   userEmail: "",
 };
 
-export default function SettingsPage() {
+function SettingsContent() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -75,14 +77,9 @@ export default function SettingsPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch("/api/settings");
-      const data = await res.json();
-      if (data?.code === 0 && data.data) {
-        setSettings({ ...DEFAULT_SETTINGS, ...data.data });
-        log.info("load settings success");
-      } else {
-        log.warn("load settings failed", { message: data?.message });
-      }
+      const data = await api<Settings>("/api/settings", { cache: "no-store" });
+      setSettings({ ...DEFAULT_SETTINGS, ...data });
+      log.info("load settings success");
     } catch (err) {
       log.error("load settings failed", { error: (err as Error).message });
       notify.error("加载设置失败", (err as Error).message);
@@ -102,21 +99,13 @@ export default function SettingsPage() {
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch("/api/settings", {
+      const data = await api<Settings>("/api/settings", {
         method: "PUT",
-        headers: { "content-type": "application/json" },
         body: JSON.stringify(settings),
       });
-      const data = await res.json();
-      if (data?.code === 0) {
-        log.info("save settings success");
-        notify.success("设置已保存", "个性化配置已生效");
-        if (data.data) {
-          setSettings({ ...DEFAULT_SETTINGS, ...data.data, apiKey: "", clearApiKey: false });
-        }
-      } else {
-        throw new Error(data?.message ?? "save failed");
-      }
+      log.info("save settings success");
+      notify.success("设置已保存", "个性化配置已生效");
+      setSettings({ ...DEFAULT_SETTINGS, ...data, apiKey: "", clearApiKey: false });
     } catch (err) {
       log.error("save settings failed", { error: (err as Error).message });
       notify.error("保存失败", (err as Error).message);
@@ -430,4 +419,8 @@ export default function SettingsPage() {
       </div>
     </main>
   );
+}
+
+export default function SettingsPage() {
+  return <AdminRouteGuard><SettingsContent /></AdminRouteGuard>;
 }

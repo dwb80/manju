@@ -19,6 +19,7 @@ import { Activity, RefreshCcw, Filter } from "lucide-react";
 import { StandalonePageHeader, Alert } from "@/components/layout";
 import { api } from "@/lib/api-client";
 import { createLogger } from "@/lib/logger";
+import { AdminRouteGuard } from "@/components/auth/admin-route-guard";
 
 const log = createLogger("logs-page");
 
@@ -64,7 +65,7 @@ const ACTIONS = [
   "client.warn",
 ] as const;
 
-export default function LogsPage() {
+function LogsContent() {
   const [items, setItems] = useState<AppLog[]>([]);
   const [entityType, setEntityType] = useState<string>("");
   const [action, setAction] = useState<string>("");
@@ -220,6 +221,10 @@ export default function LogsPage() {
       </div>
     </div>
   );
+}
+
+export default function LogsPage() {
+  return <AdminRouteGuard><LogsContent /></AdminRouteGuard>;
 }
 
 function formatTime(iso: string): string {

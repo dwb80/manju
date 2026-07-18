@@ -64,6 +64,28 @@ function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl;
 }
 
+/** 从 Node fetch/undici 的 cause 链中提取网络错误码，避免只暴露无信息量的 `fetch failed`。 */
+function collectNetworkErrorCodes(value: unknown, codes = new Set<string>()): Set<string> {
+  if (!value || typeof value !== "object") return codes;
+  const record = value as { code?: unknown; cause?: unknown; errors?: unknown };
+  if (typeof record.code === "string" && record.code) codes.add(record.code);
+  collectNetworkErrorCodes(record.cause, codes);
+  if (Array.isArray(record.errors)) {
+    for (const error of record.errors) collectNetworkErrorCodes(error, codes);
+  }
+  return codes;
+}
+
+/** 把 Agnes 网络异常包装成对用户和日志都有诊断价值的错误。 */
+function createAgnesNetworkError(error: unknown): Error {
+  const codes = [...collectNetworkErrorCodes(error)];
+  const detail = codes.length > 0 ? codes.join(", ") : error instanceof Error ? error.message : String(error);
+  const wrapped = new Error(`无法连接 Agnes API（${detail || "未知网络错误"}），请检查网络、代理或防火墙后重试`);
+  wrapped.name = "AgnesNetworkError";
+  (wrapped as Error & { cause?: unknown }).cause = error;
+  return wrapped;
+}
+
 /** 把未知返回值安全转换成普通对象，避免直接访问时报错。 */
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -168,6 +190,8 @@ export class RealAgnesClient implements AgnesClient {
     const response = await this.post(this.chatPath, {
       model,
       stream: true,
+      ...(params.temperature != null ? { temperature: params.temperature } : {}),
+      ...(params.max_tokens != null ? { max_tokens: params.max_tokens } : {}),
       messages: [{ role: "user", content: params.message }],
     }, signal);
 
@@ -432,7 +456,7 @@ export class RealAgnesClient implements AgnesClient {
     const url = joinUrl(this.baseUrl, route);
     const method = (init.method ?? "POST").toString();
     const debugEnabled = rootLogger.isLevelEnabled("debug");
-    const startedAt = debugEnabled ? Date.now() : 0;
+    const startedAt = Date.now();
 
     if (debugEnabled) {
       // 把 body 截到 1KB 后再打，避免 prompt 很长时日志爆炸
@@ -477,19 +501,18 @@ export class RealAgnesClient implements AgnesClient {
         },
       });
     } catch (err) {
-      if (debugEnabled) {
-        rootLogger.warn(
-          {
-            event: "ai.api.network_error",
-            provider: "agnes",
-            route,
-            durationMs: Date.now() - startedAt,
-            err: err instanceof Error ? { name: err.name, message: err.message } : String(err),
-          },
-          `✗ Agnes 网络异常：${route}`,
-        );
-      }
-      throw err;
+      const networkError = createAgnesNetworkError(err);
+      rootLogger.warn(
+        {
+          event: "ai.api.network_error",
+          provider: "agnes",
+          route,
+          durationMs: Date.now() - startedAt,
+          err: networkError,
+        },
+        `✗ Agnes 网络异常：${route}`,
+      );
+      throw networkError;
     }
 
     if (debugEnabled) {

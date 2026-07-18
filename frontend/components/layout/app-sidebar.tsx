@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Home,
@@ -28,6 +28,7 @@ import {
   CheckSquare,
   Bot,
 } from "lucide-react";
+import { api } from "@/lib/api-client";
 
 /**
  * 主应用侧边栏导航组件
@@ -116,8 +117,17 @@ interface AppSidebarProps {
  */
 export function AppSidebar({ currentPath }: AppSidebarProps) {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
   // 内部使用 usePathname 获取真实当前路径，避免 layout 传入空字符串导致菜单不高亮
   const pathname = usePathname();
+
+  useEffect(() => {
+    let active = true;
+    api<{ user: { role: string } }>("/api/auth/me", { cache: "no-store" })
+      .then((result) => { if (active) setIsAdmin(result.user.role === "admin"); })
+      .catch(() => { if (active) setIsAdmin(false); });
+    return () => { active = false; };
+  }, []);
   const activePath = currentPath || pathname || "";
   // 默认展开所有分组
   const [expandedGroups, setExpandedGroups] = useState<string[]>([
@@ -264,29 +274,31 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
             <div className="h-2 w-2 rounded-full bg-emerald-500" />
             <span>系统正常</span>
           </div>
-          <button
-            onClick={() => router.push("/settings")}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors ${
-              activePath.startsWith("/settings")
-                ? "bg-emerald-500/10 text-emerald-400"
-                : "hover:bg-white/10"
-            }`}
-            aria-label="系统管理"
-          >
-            <Settings className="h-4 w-4" />
-            <span>系统管理</span>
-          </button>
-          <button
-            onClick={() => router.push("/logs")}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors ${
-              activePath.startsWith("/logs")
-                ? "bg-emerald-500/10 text-emerald-400"
-                : "hover:bg-white/10"
-            }`}
-            aria-label="审计日志"
-          >
-            <span>审计日志</span>
-          </button>
+          {isAdmin && <>
+            <button
+              onClick={() => router.push("/settings")}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors ${
+                activePath.startsWith("/settings")
+                  ? "bg-emerald-500/10 text-emerald-400"
+                  : "hover:bg-white/10"
+              }`}
+              aria-label="系统管理"
+            >
+              <Settings className="h-4 w-4" />
+              <span>系统管理</span>
+            </button>
+            <button
+              onClick={() => router.push("/logs")}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors ${
+                activePath.startsWith("/logs")
+                  ? "bg-emerald-500/10 text-emerald-400"
+                  : "hover:bg-white/10"
+              }`}
+              aria-label="审计日志"
+            >
+              <span>审计日志</span>
+            </button>
+          </>}
         </div>
       </div>
     </aside>

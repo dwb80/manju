@@ -8,7 +8,7 @@ const backendUrl = process.env.AGNES_BACKEND_URL || "http://127.0.0.1:3000";
 /** @type {import('next').NextConfig} */
 const createNextConfig = (phase) => ({
   devIndicators: false,
-  distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next" : ".next-build",
+  distDir: process.env.NEXT_DIST_DIR || (phase === PHASE_DEVELOPMENT_SERVER ? ".next" : ".next-build"),
   outputFileTracingRoot: __dirname,
   webpack(config) {
     config.watchOptions = {

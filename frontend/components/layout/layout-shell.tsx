@@ -59,6 +59,8 @@ export function LayoutShell({ children }: Readonly<{ children: React.ReactNode }
   const isCharacterEdit = /^\/characters\/[^/]+\/edit\/?$/.test(pathname ?? "")
   const isPropEdit = /^\/props\/[^/]+\/edit\/?$/.test(pathname ?? "")
 
+  if (pathname === "/login") return <>{children}</>
+
   if (isScriptEditor || isCharacterEdit || isPropEdit) {
     // 独占式编辑页（剧本编辑器、角色图片编辑、道具编辑）不显示侧边栏，
     // 但仍要保留顶部导航栏，让用户能随时切换项目 / 返回其他工作区。

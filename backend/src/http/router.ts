@@ -24,6 +24,8 @@ import { randomUUID } from "node:crypto";
 import { rootLogger, withLogContext, logLineToFile } from "../logger.js";
 import { getRuntimeConfig } from "../config/env.js";
 import type { AppContext } from "../services/app.js";
+import { AuthService, resolveAuthMode, type AuthPrincipal } from "../services/auth.js";
+import { getRawDatabase } from "../storage/sqlite.js";
 import { attachDebugHook } from "./request-debug.js";
 import { addFavorite, addMessage, createConversation, createLocalImageTask, deleteConversation, ensureConversation, generateImage, generateVideo, listConversations, listImages, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateSettings } from "../services/domain.js";
 import { enhancePrompt } from "../services/domain/image.js";
@@ -72,6 +74,7 @@ import { DEFAULT_MODEL, estimateTokens, id, nowIso, requireString, TimeoutError 
 import type { ReviewItem, ReviewStatus, ReviewTargetType, RejectionReasonCode } from "../types/horizontal.js";
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
+const requestPrincipals = new WeakMap<IncomingMessage, AuthPrincipal>();
 
 const mediaTypes: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -241,9 +244,75 @@ function applyCors(req: IncomingMessage, res: ServerResponse): boolean {
     res.setHeader("vary", "Origin");
   }
   res.setHeader("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  res.setHeader("access-control-allow-headers", "content-type,authorization");
+  res.setHeader("access-control-allow-headers", "content-type,authorization,x-csrf-token");
   res.setHeader("access-control-max-age", "86400");
   return true;
+}
+
+function requestProjectId(req: IncomingMessage): string | null {
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const pathMatch = url.pathname.match(/^\/api\/projects\/([^/]+)/);
+  return pathMatch?.[1] ?? url.searchParams.get("projectId");
+}
+
+async function canAccessProject(ctx: AppContext, principal: AuthPrincipal, projectId: string): Promise<boolean> {
+  if (principal.role === "admin") return true;
+  const permission = await ctx.projectPermissions.findOne({ project_id: projectId });
+  if (!permission || permission.visibility === "all") return true;
+  if (permission.visibility === "admin_only") return false;
+  try {
+    const allowed = JSON.parse(permission.allowed_user_ids_json) as unknown;
+    return Array.isArray(allowed) && allowed.includes(principal.userId);
+  } catch {
+    return false;
+  }
+}
+
+async function enforceAuthorization(ctx: AppContext, auth: AuthService, req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  const principal = auth.authenticate(req);
+  if (!principal) {
+    sendError(res, new Error("请先登录"), 401);
+    return false;
+  }
+  requestPrincipals.set(req, principal);
+  if (!auth.verifyCsrf(req, principal)) {
+    sendError(res, new Error("CSRF 校验失败"), 403);
+    return false;
+  }
+  const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
+  const adminOnly = pathname.startsWith("/api/admin/") || pathname === "/api/settings" || pathname === "/api/logs";
+  if (adminOnly && principal.role !== "admin") {
+    sendError(res, new Error("仅管理员可访问系统管理接口"), 403);
+    return false;
+  }
+  const unsafe = !["GET", "HEAD", "OPTIONS"].includes(req.method ?? "GET");
+  if (unsafe && principal.role === "viewer") {
+    sendError(res, new Error("只读用户不能执行写操作"), 403);
+    return false;
+  }
+  const projectId = requestProjectId(req);
+  if (projectId && !(await canAccessProject(ctx, principal, projectId))) {
+    sendError(res, new Error("无权访问该项目"), 403);
+    return false;
+  }
+  return true;
+}
+
+function buildHealth(ctx: AppContext, includeIntegrity = false): { status: "ok" | "degraded"; database: string; authMode: string; uptimeSeconds: number } {
+  let database = "ok";
+  try {
+    const db = getRawDatabase(ctx.databaseFile);
+    const row = includeIntegrity ? db.prepare("PRAGMA quick_check").get() : db.prepare("SELECT 1 AS ok").get();
+    if (!row || (includeIntegrity && !Object.values(row).includes("ok"))) database = "failed";
+  } catch {
+    database = "failed";
+  }
+  return {
+    status: database === "ok" ? "ok" : "degraded",
+    database,
+    authMode: resolveAuthMode(),
+    uptimeSeconds: Math.floor(process.uptime()),
+  };
 }
 
 /**
@@ -457,6 +526,15 @@ async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResp
   const body = await readJson(req);
   const conversationId = requireString(body.conversationId, "conversationId");
   const userText = requireString(body.message, "message");
+  const model = typeof body.model === "string" && body.model.trim()
+    ? body.model.trim().slice(0, 120)
+    : DEFAULT_MODEL;
+  const temperature = typeof body.temperature === "number" && Number.isFinite(body.temperature)
+    ? Math.min(2, Math.max(0, body.temperature))
+    : undefined;
+  const maxTokens = typeof body.max_tokens === "number" && Number.isFinite(body.max_tokens)
+    ? Math.min(65_500, Math.max(1, Math.trunc(body.max_tokens)))
+    : undefined;
   const attachments = Array.isArray(body.attachments)
     ? body.attachments.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
       .map((item) => ({
@@ -475,16 +553,39 @@ async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResp
     "content-type": "text/event-stream; charset=utf-8",
     "cache-control": "no-cache",
     connection: "keep-alive",
+    "x-accel-buffering": "no",
   });
-  req.on("close", () => controller.abort());
+  res.flushHeaders();
+  // 立即发送一个不含正文的事件，避免代理/浏览器等到模型首个 token 才交付响应头。
+  res.write(`event: ready\ndata: ${JSON.stringify({ model })}\n\n`);
+  res.on("close", () => {
+    if (!res.writableEnded) controller.abort();
+  });
 
   let full = "";
+  const startedAt = Date.now();
+  let firstContentAt = 0;
   // 注意：SSE header 已经写完，这里的 for-await 抛错**不能**让 router 顶层兜底变 500，
   // 只能转成 SSE 错误事件推给前端，让前端 EventSource 拿到 error 后再 toast 提示用户。
   try {
-    for await (const chunk of ctx.ai.chat({ conversationId, message: userText, model: DEFAULT_MODEL }, controller.signal)) {
+    for await (const chunk of ctx.ai.chat({
+      conversationId,
+      message: userText,
+      model,
+      temperature,
+      max_tokens: maxTokens,
+    }, controller.signal)) {
       if (controller.signal.aborted) break;
       full += chunk.content;
+      if (!firstContentAt && chunk.content) {
+        firstContentAt = Date.now();
+        const firstContentMs = firstContentAt - startedAt;
+        const log = firstContentMs < 5_000 ? rootLogger.info.bind(rootLogger) : rootLogger.warn.bind(rootLogger);
+        log(
+          { event: "chat.first_content", conversationId, model, firstContentMs, targetMs: 5_000 },
+          `聊天首字耗时 ${firstContentMs}ms（目标 <5000ms）`,
+        );
+      }
       res.write(`data: ${JSON.stringify(chunk)}\n\n`);
     }
   } catch (err) {
@@ -530,7 +631,7 @@ async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResp
         role: "assistant",
         content: full,
         meta: {
-          model: DEFAULT_MODEL,
+          model,
           tokens: estimateTokens(full),
           ...(sensitiveWords.length > 0 ? { sensitiveWords } : {}),
         },
@@ -561,8 +662,21 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
   const method = req.method ?? "GET";
   const parts = routeParts(req);
   try {
-    if (method === "GET" && parts.join("/") === "api/health") return sendJson(res, { status: "ok", config: getRuntimeConfig() });
-    if (method === "GET" && parts.join("/") === "api/projects") return sendJson(res, await listProjects(ctx));
+    if (method === "GET" && parts.join("/") === "api/health") return sendJson(res, { ...buildHealth(ctx), config: getRuntimeConfig() });
+    if (method === "GET" && parts.join("/") === "api/ready") {
+      const health = buildHealth(ctx, true);
+      return sendJson(res, health, health.status === "ok" ? 200 : 503);
+    }
+    if (method === "GET" && parts.join("/") === "api/projects") {
+      const projects = await listProjects(ctx);
+      const principal = requestPrincipals.get(req);
+      if (!principal || principal.role === "admin") return sendJson(res, projects);
+      const visible = [];
+      for (const project of projects) {
+        if (await canAccessProject(ctx, principal, project.id)) visible.push(project);
+      }
+      return sendJson(res, visible);
+    }
     if (method === "POST" && parts.join("/") === "api/projects") return sendJson(res, await createProject(ctx, await readJson(req)));
     if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2] && !parts[3]) return sendJson(res, await updateProject(ctx, parts[2], await readJson(req) as Partial<Project>));
     if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "open-folder") return sendJson(res, await openProjectFolder(ctx, parts[2]));
@@ -1216,6 +1330,7 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
  * @description 创建并配置 HTTP 服务器，挂载 API、媒体和静态页面路由
  */
 export function createServer(ctx: AppContext): http.Server {
+  const auth = new AuthService(ctx.databaseFile, resolveAuthMode());
   return http.createServer(async (req, res) => {
     // 评审增量改造 P0：每个请求生成 traceId，AsyncLocalStorage 绑定，
     // 业务内任意 logger.child() 都自动带上 traceId，便于全链路关联。
@@ -1223,7 +1338,7 @@ export function createServer(ctx: AppContext): http.Server {
     res.setHeader("x-request-id", traceId);
     withLogContext({ traceId }, () => {
       // 同步完成所有操作（createServer 的 handler 是 async，用 .then() 处理）
-      Promise.resolve(handleRequest(ctx, req, res, traceId)).catch((err) => {
+      Promise.resolve(handleRequest(ctx, auth, req, res, traceId)).catch((err) => {
         // AI 流式调用超时（withTimeout 抛 TimeoutError）→ 用 504 Gateway Timeout 区分
         // 真实服务故障（500）。否则前端只能看到 "Internal Server Error"，无法分辨
         // "AI 排队慢" vs "服务挂了"，定位成本极高。
@@ -1292,6 +1407,7 @@ export function createServer(ctx: AppContext): http.Server {
  */
 async function handleRequest(
   ctx: AppContext,
+  auth: AuthService,
   req: IncomingMessage,
   res: ServerResponse,
   traceId: string,
@@ -1313,6 +1429,17 @@ async function handleRequest(
     res.writeHead(204);
     res.end();
     return;
+  }
+  if ((req.url ?? "").startsWith("/api/auth/")) {
+    await auth.handleRoute(req, res);
+    return;
+  }
+  if ((req.url ?? "").startsWith("/api/health") || (req.url ?? "").startsWith("/api/ready")) {
+    await handleApi(ctx, req, res);
+    return;
+  }
+  if ((req.url ?? "").startsWith("/api/") || (req.url ?? "").startsWith("/media/") || (req.url ?? "").startsWith("/project-media/")) {
+    if (!(await enforceAuthorization(ctx, auth, req, res))) return;
   }
   if ((req.url ?? "").startsWith("/api/")) {
     await handleApi(ctx, req, res);

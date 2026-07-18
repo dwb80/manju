@@ -19,6 +19,24 @@ test("RealAgnesClient reports TTS as unsupported instead of returning a false su
   await assert.rejects(() => client.generateTTS({ text: "测试配音" }), /不支持 TTS/);
 });
 
+test("RealAgnesClient preserves the underlying network error code", async () => {
+  const originalFetch = globalThis.fetch;
+  const cause = Object.assign(new Error("connect timed out"), { code: "ETIMEDOUT" });
+  globalThis.fetch = async () => {
+    throw new TypeError("fetch failed", { cause });
+  };
+
+  try {
+    const client = new RealAgnesClient({ AGNES_API_KEY: "test-key", AGNES_API_BASE_URL: "https://example.test" });
+    await assert.rejects(
+      () => client.generateImage({ prompt: "测试网络错误", n: 1 }),
+      /无法连接 Agnes API（ETIMEDOUT）/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("MockAgnesClient is deprecated and throws on construction", () => {
   // 不再支持任何 mock 行为：构造时必须抛错
   assert.throws(() => new MockAgnesClient(), /MockAgnesClient 已废弃/);
@@ -28,6 +46,11 @@ test("RealAgnesClient parses streaming chat chunks", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (_url, init) => {
     assert.equal(init.headers.authorization, "Bearer test-key");
+    const body = JSON.parse(init.body);
+    assert.equal(body.model, "agnes-2.0-flash");
+    assert.equal(body.temperature, 0.3);
+    assert.equal(body.max_tokens, 256);
+    assert.equal(body.stream, true);
     const stream = new ReadableStream({
       start(controller) {
         const encoder = new TextEncoder();
@@ -43,7 +66,13 @@ test("RealAgnesClient parses streaming chat chunks", async () => {
   try {
     const client = new RealAgnesClient({ AGNES_API_KEY: "test-key", AGNES_API_BASE_URL: "https://example.test" });
     const chunks = [];
-    for await (const chunk of client.chat({ conversationId: "c-1", message: "hi" })) chunks.push(chunk);
+    for await (const chunk of client.chat({
+      conversationId: "c-1",
+      message: "hi",
+      model: "agnes-2.0-flash",
+      temperature: 0.3,
+      max_tokens: 256,
+    })) chunks.push(chunk);
     assert.equal(chunks.map((chunk) => chunk.content).join(""), "你好");
   } finally {
     globalThis.fetch = originalFetch;

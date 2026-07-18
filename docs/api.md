@@ -13,7 +13,8 @@
 ## 安全与兼容约定
 
 - 默认仅监听 `127.0.0.1`；允许的浏览器来源由 `CORS_ALLOWED_ORIGINS` 配置。
-- 当前版本尚无登录和强制 RBAC，不能直接部署到公网。
+- `AUTH_MODE=required` 时启用登录、服务端会话、CSRF、三级 RBAC 和项目可见性强制；未登录返回 401，越权返回 403。
+- `/api/admin/*`、`/api/settings` 和 `/api/logs` 仅管理员可访问。
 - 模型列表和详情会移除 `Authorization`、`api-key` 等敏感头，仅返回 `secret_configured`。
 - 模型更新时未传敏感头表示保留服务端已有密钥，客户端不能读取明文。
 - `POST /api/chat` 返回 `text/event-stream`，不是 JSON。
@@ -24,6 +25,7 @@
 | 领域 | 主要接口 | 说明 |
 |---|---|---|
 | 健康 | `GET /api/health` | 服务状态与非敏感运行配置 |
+| 身份与用户 | `/api/auth/login`、`/me`、`/logout`、`/change-password`、`/users`、`/users/:id`、`/users/:id/reset-password` | 登录、本人改密及管理员用户管理 |
 | 项目 | `/api/projects`、`/api/projects/:id/*` | 项目 CRUD、摘要、资产、成员、任务、里程碑等 |
 | 剧本 | `/api/script-documents`、`/api/script-episodes`、`/api/script-scenes`、`/api/script-dialogues`、`/api/script-comments`、`/api/versions` | 结构化剧本、评论与版本 |
 | AI 剧本 | `POST /api/ai/script-analyze`、`/api/ai/script-generate`、`/api/ai/script-optimize` | 分析、生成、优化；失败保持真实失败态 |
@@ -39,7 +41,7 @@
 | 模型 | `GET/POST /api/models`、`GET/PUT/DELETE /api/models/:id`、默认/启停操作 | Provider 配置和模型治理基础能力 |
 | AI 任务 | `GET /api/ai/tasks`、`POST /api/ai/tasks/cancel`、`/retry` | 统一任务监控、取消和重试 |
 | 流程 | `GET /api/pipeline/stages` 及项目流程接口 | 生产阶段和状态 |
-| 系统管理 | `/api/admin/sensitive-words`、`/platform-templates`、`/audit-logs`、`/project-permissions` | 本地管理面；认证接入前不得公网开放 |
+| 系统管理 | `/api/admin/sensitive-words`、`/platform-templates`、`/audit-logs`、`/project-permissions` | 管理员专用的平台配置与项目权限 |
 | 其他 | `/api/favorites`、`/api/todos`、`/api/settings`、`/api/logs`、`/api/client-logs` | 收藏、待办、设置和日志 |
 | 文件 | `POST /api/uploads`、`GET /media/*`、`GET /project-media/:projectId/*` | 上传与本地媒体访问 |
 

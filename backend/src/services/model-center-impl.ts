@@ -404,9 +404,9 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
     id: "sensenova-6.7-flash-lite",
     name: "商汤 SenseNova 6.7 Flash Lite",
     type: "chat",
-    description: "商汤科技 SenseNova 6.7 Flash Lite 模型，轻量级高效对话模型，适合日常对话、文本生成等场景。",
+    description: "实验性接入：当前 Token Plan 兼容端点仅返回推理字段，未通过最终答案质量门槛；完成端点升级前不建议生产使用。",
     isDefault: false,
-    is_enabled: true,
+    is_enabled: false,
     version: "6.7",
     provider: "商汤",
     api_config: {
@@ -423,7 +423,7 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
     },
     performance: { avgResponseTime: 1500, successRate: 95, concurrency: 10 },
     usageStats: { totalCalls: 0, weeklyCalls: 0, monthlyCalls: 0, lastUsedAt: "" },
-    tags: ["商汤", "中文优化", "轻量级", "对话"],
+    tags: ["商汤", "实验性", "未通过质量门槛"],
   },
   {
     id: "glm-5.2",

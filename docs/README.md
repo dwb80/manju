@@ -14,9 +14,10 @@
 1. **[product-design-spec.md](product-design-spec.md)** —— 产品顶层设计（愿景、角色、流程、数据模型、AI体系、信息架构、NFR）
 2. **[functional-specification.md](functional-specification.md)** —— 当前版本可验证的功能、状态、边界、异常与验收基线
 3. **[feature-status.md](feature-status.md)** —— 当前真实能力、产品边界和对外承诺口径
-4. **[requirements-and-acceptance.md](requirements-and-acceptance.md)** —— 功能需求、验收标准、API规范、数据字典
-5. **[architecture-and-development.md](architecture-and-development.md)** —— 技术架构、项目结构、存储方案、开发指南
-6. **[module-relationships.md](module-relationships.md)** —— 模块间关系（剧本↔分镜↔资产↔模型）
+4. **[production-hardening-and-gray-release-2026-07-18.md](production-hardening-and-gray-release-2026-07-18.md)** —— 认证、权限、备份、Provider 质量和灰度操作手册
+5. **[requirements-and-acceptance.md](requirements-and-acceptance.md)** —— 功能需求、验收标准、API规范、数据字典
+6. **[architecture-and-development.md](architecture-and-development.md)** —— 技术架构、项目结构、存储方案、开发指南
+7. **[module-relationships.md](module-relationships.md)** —— 模块间关系（剧本↔分镜↔资产↔模型）
 
 ### 按角色阅读
 
@@ -57,7 +58,7 @@
 | **[code-review-report-2026-07-18.md](code-review-report-2026-07-18.md)** | 2026-07-18 代码评审、风险分级、工程整改与 90 天计划。 |
 | **[feature-status.md](feature-status.md)** | 2026-07-18 当前能力分级、明确边界、对外表达红线和版本准入。 |
 | **[functional-specification.md](functional-specification.md)** | 2026-07-18 功能验证唯一基线，定义模块行为、异常、边界和验收条件。 |
-| **[requirements-traceability-matrix.md](requirements-traceability-matrix.md)** | 72 个功能编号到页面、API、数据和测试证据的追踪矩阵。 |
+| **[requirements-traceability-matrix.md](requirements-traceability-matrix.md)** | 73 个功能编号到页面、API、数据和测试证据的追踪矩阵。 |
 | **[defect-register.md](defect-register.md)** | 功能验证中发现的缺陷、级别、证据、影响和闭环状态。 |
 | **[static-audit-report.md](static-audit-report.md)** | 静态质量、供应链、敏感信息和安全边界审计结论。 |
 | **[verification-and-remediation-report-2026-07-18.md](verification-and-remediation-report-2026-07-18.md)** | 七阶段验证结果、整改证据、残余风险与发布建议。 |

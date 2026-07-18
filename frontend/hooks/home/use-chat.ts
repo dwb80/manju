@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { api, apiCandidates, uploadImages } from "@/lib/api-client";
+import { api, apiCandidates, getCsrfToken, uploadImages } from "@/lib/api-client";
 import type { Attachment, ChatSettings, Message } from "@/lib/app-types";
 import { defaultChatSettings } from "@/lib/project-workflow";
 
@@ -46,12 +46,16 @@ export function useChat({
     async (path: string, body: Record<string, unknown>, targetConversationId: string) => {
       let response: Response | null = null;
       let networkError: unknown = null;
+      const headers = new Headers({ "content-type": "application/json" });
+      const csrfToken = getCsrfToken();
+      if (csrfToken) headers.set("x-csrf-token", csrfToken);
       for (const url of apiCandidates(path)) {
         try {
           response = await fetch(url, {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers,
             body: JSON.stringify(body),
+            credentials: "include",
           });
           break;
         } catch (error) {

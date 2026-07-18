@@ -3,6 +3,7 @@ import "./globals.css";
 import { LayoutShell } from "@/components/layout/layout-shell";
 import { ErrorBoundary } from "@/components/layout/error-boundary";
 import { ToastContainer } from "@/components/common/toast";
+import { AuthGate } from "@/components/auth/auth-gate";
 
 export const metadata: Metadata = {
   title: "AI 漫剧工业化生产平台",
@@ -20,7 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="zh-CN" className="dark">
       <body>
         <ErrorBoundary>
-          <LayoutShell>{children}</LayoutShell>
+          <AuthGate><LayoutShell>{children}</LayoutShell></AuthGate>
         </ErrorBoundary>
         <ToastContainer />
       </body>
