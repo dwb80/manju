@@ -1,7 +1,11 @@
+/**
+ * @file AIBubbleMenu.tsx
+ * @description AI气泡菜单组件，选中文本时显示AI优化、扩写、缩写等快捷操作
+ */
 'use client'
 
 import { useState } from 'react'
-import { BubbleMenu } from '@tiptap/react/menus'
+import { BubbleMenu } from '@tiptap/react'
 import type { Editor } from '@tiptap/react'
 import { scriptCenterService } from '@/services/script-center.service'
 import { createCharacter, createScene } from '@/services/module.service'
@@ -302,7 +306,7 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
     <>
       <BubbleMenu
         editor={editor}
-        options={{ placement: 'top', offset: 8 }}
+        tippyOptions={{ placement: 'top', offset: [0, 8] }}
         shouldShow={({ editor: e, state }) => {
           if (diffView) return false
           const { from, to } = state.selection

@@ -12,6 +12,11 @@ import type { ChatChunk } from "../../types.js";
 /**
  * 辅助函数：从 AsyncIterable<ChatChunk> 中收集完整内容
  */
+/**
+ * collectChatContent - 从AsyncIterable<ChatChunk>中收集完整内容
+ * @param {AsyncIterable<ChatChunk>} chunks - 聊天块迭代器
+ * @returns {Promise<string>} 返回收集的完整内容
+ */
 export async function collectChatContent(chunks: AsyncIterable<ChatChunk>): Promise<string> {
   let content = "";
   for await (const chunk of chunks) {
@@ -34,6 +39,11 @@ export function normalizeTimeOfDay(value: string): "day" | "night" | "dawn" | "d
 /**
  * 从 Tiptap editor_json 中递归提取纯文本。
  * 支持 string/对象两种格式；处理 doc 根节点和 heading/paragraph 等 block。
+ */
+/**
+ * extractPlainText - 从Tiptap editor_json中递归提取纯文本
+ * @param {any} editorJson - 编辑器JSON内容
+ * @returns {string} 返回提取的纯文本
  */
 export function extractPlainText(editorJson: any): string {
   if (!editorJson) return "";
@@ -70,6 +80,11 @@ export function extractPlainText(editorJson: any): string {
  *   "Scene 2 / 茶信馆门口 / 白天"
  *   "场景01 茶信馆门口 白天"
  *   "茶信馆门口 - 白天"
+ */
+/**
+ * parseSceneHeader - 解析场景标题，支持多种分隔符
+ * @param {string} header - 场景标题
+ * @returns {{location: string; time: string; description: string}} 返回地点、时间和描述
  */
 export function parseSceneHeader(header: string): {
   location: string;

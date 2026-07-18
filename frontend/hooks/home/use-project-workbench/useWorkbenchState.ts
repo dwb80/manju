@@ -223,6 +223,7 @@ export function useWorkbenchState(): WorkbenchState {
     image: { ...emptyAssetDraft },
     video: { ...emptyAssetDraft },
     character: { ...emptyAssetDraft },
+    prop: { ...emptyAssetDraft },
     scene: { ...emptyAssetDraft },
     style: { ...emptyAssetDraft },
     prompt: { ...emptyAssetDraft },

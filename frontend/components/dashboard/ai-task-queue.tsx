@@ -26,6 +26,17 @@ interface AITaskQueueProps {
   loading?: boolean;
 }
 
+/**
+ * AITaskQueue - AI任务队列组件
+ * @param {AITaskQueueProps} props - 组件属性
+ * @param {AITask[]} props.tasks - 任务列表数据
+ * @param {Function} props.onRefresh - 刷新任务列表回调
+ * @param {Function} props.onCancel - 取消任务回调
+ * @param {Function} props.onRetry - 重试任务回调
+ * @param {Function} props.onDelete - 删除任务回调
+ * @param {boolean} props.loading - 是否正在加载
+ * @returns {JSX.Element} 渲染的任务队列界面
+ */
 export const AITaskQueue = memo(function AITaskQueue({
   tasks,
   onRefresh,

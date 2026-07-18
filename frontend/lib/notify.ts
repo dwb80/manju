@@ -58,10 +58,11 @@ function emit(
   // 1) 控制台输出（默认仅 error/warn，开发模式下 info 也输出）
   if (logToConsole || kind === 'error' || kind === 'warn') {
     const consoleFn = kind === 'error' ? 'error' : kind === 'warn' ? 'warn' : 'info'
-    log[consoleFn === 'error' ? 'error' : consoleFn === 'warn' ? 'warn' : 'info'](
-      `notify.${kind}`,
-      { message, description, duration },
-    )
+    const logMethod = consoleFn === 'error' ? 'error' : consoleFn === 'warn' ? 'warn' : 'info'
+    // 把字段作为独立参数传入，避免包成对象后 DevTools 折叠显示为 `{}`
+    // 之前：`[notify][ERROR] "notify.error" {}`（看不出内容）
+    // 之后：`[notify][ERROR] "notify.error" "保存失败" "网络错误" 5000`
+    log[logMethod](`notify.${kind}`, message, description, duration)
   }
 
   // 2) 转发到底层 toast

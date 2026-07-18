@@ -14,6 +14,11 @@ test("createAgnesClient selects real mode when API key exists", () => {
   assert.ok(real instanceof RealAgnesClient);
 });
 
+test("RealAgnesClient reports TTS as unsupported instead of returning a false success", async () => {
+  const client = new RealAgnesClient({ AGNES_API_KEY: "test-key", AGNES_API_BASE_URL: "https://example.test" });
+  await assert.rejects(() => client.generateTTS({ text: "测试配音" }), /不支持 TTS/);
+});
+
 test("MockAgnesClient is deprecated and throws on construction", () => {
   // 不再支持任何 mock 行为：构造时必须抛错
   assert.throws(() => new MockAgnesClient(), /MockAgnesClient 已废弃/);

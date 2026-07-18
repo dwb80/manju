@@ -28,6 +28,16 @@ export interface ImageGeneratorSidebarProps {
   onDeleteFromHistory: (id: string) => void;
 }
 
+/**
+ * ImageGeneratorSidebar - 图片生成器侧边栏
+ * @param {ImageGeneratorSidebarProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的 React 元素
+ * 
+ * 展示内容：
+ * - 已选角色资产（预览、打开原图、移除）
+ * - 已选资产历史（应用、删除）
+ * - 历史图片列表（使用、删除）
+ */
 export function ImageGeneratorSidebar({
   character,
   selectedAsset,

@@ -78,7 +78,13 @@ const ActivityItemRow = memo(function ActivityItemRow({ activity }: { activity: 
   );
 });
 
-/** 团队动态组件 */
+/**
+ * TeamActivity - 团队动态组件
+ * @param {TeamActivityProps} props - 组件属性
+ * @param {TeamActivityData[]} props.activities - 活动列表数据
+ * @param {number} props.maxItems - 最大显示数量
+ * @returns {JSX.Element} 渲染的团队动态界面
+ */
 export const TeamActivity = memo(function TeamActivity({
   activities,
   maxItems = 10,

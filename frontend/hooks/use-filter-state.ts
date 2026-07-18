@@ -1,3 +1,8 @@
+/**
+ * @file use-filter-state.ts
+ * @description 通用列表筛选状态管理 Hook，提供全部/最近使用/我创建的/已收藏等快速切换能力
+ */
+
 'use client'
 
 /**

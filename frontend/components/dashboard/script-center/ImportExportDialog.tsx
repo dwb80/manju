@@ -1,3 +1,7 @@
+/**
+ * @file ImportExportDialog.tsx
+ * @description 导入导出对话框组件，支持JSON、TXT、Markdown、HTML、FDX等格式
+ */
 'use client'
 
 import { useState } from 'react'
@@ -11,6 +15,7 @@ import {
   Film,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tip } from '@/components/ui/tip'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { exportScript, importScript, detectFormat } from '@/lib/script-format'
 import type { ScriptFormat } from '@/lib/script-format'
@@ -24,6 +29,17 @@ interface ImportExportDialogProps {
   onImport?: (editorJson: any) => void
 }
 
+/**
+ * ImportExportDialog - 导入导出对话框组件
+ * @param {ImportExportDialogProps} props - 组件属性
+ * @param {boolean} props.isOpen - 是否打开对话框
+ * @param {Function} props.onClose - 关闭回调
+ * @param {any} props.editorJson - 编辑器JSON内容
+ * @param {string} props.title - 剧本标题
+ * @param {Function} props.onExport - 导出回调
+ * @param {Function} props.onImport - 导入回调
+ * @returns {JSX.Element | null} 渲染的对话框界面
+ */
 export function ImportExportDialog({
   isOpen,
   onClose,
@@ -45,37 +61,37 @@ export function ImportExportDialog({
     label: string
     description: string
   }[] = [
-    {
-      format: 'json',
-      icon: <FileJson className="h-4 w-4" />,
-      label: 'JSON 格式',
-      description: '保留完整结构，可重新导入',
-    },
-    {
-      format: 'txt',
-      icon: <FileText className="h-4 w-4" />,
-      label: 'TXT 纯文本',
-      description: '通用纯文本格式',
-    },
-    {
-      format: 'markdown',
-      icon: <FileType className="h-4 w-4" />,
-      label: 'Markdown',
-      description: '带格式的轻量标记语言',
-    },
-    {
-      format: 'html',
-      icon: <FileCode className="h-4 w-4" />,
-      label: 'HTML 网页',
-      description: '可直接在浏览器打开预览',
-    },
-    {
-      format: 'fdx',
-      icon: <Film className="h-4 w-4" />,
-      label: 'Final Draft (.fdx)',
-      description: '专业剧本软件格式',
-    },
-  ]
+      {
+        format: 'json',
+        icon: <FileJson className="h-4 w-4" />,
+        label: 'JSON 格式',
+        description: '保留完整结构，可重新导入',
+      },
+      {
+        format: 'txt',
+        icon: <FileText className="h-4 w-4" />,
+        label: 'TXT 纯文本',
+        description: '通用纯文本格式',
+      },
+      {
+        format: 'markdown',
+        icon: <FileType className="h-4 w-4" />,
+        label: 'Markdown',
+        description: '带格式的轻量标记语言',
+      },
+      {
+        format: 'html',
+        icon: <FileCode className="h-4 w-4" />,
+        label: 'HTML 网页',
+        description: '可直接在浏览器打开预览',
+      },
+      {
+        format: 'fdx',
+        icon: <Film className="h-4 w-4" />,
+        label: 'Final Draft (.fdx)',
+        description: '专业剧本软件格式',
+      },
+    ]
 
   const handleExport = async () => {
     if (!editorJson) {
@@ -86,7 +102,7 @@ export function ImportExportDialog({
     setErrorMsg(null)
     try {
       const { content, filename, mimeType } = exportScript(editorJson, selectedFormat, title)
-      
+
       if (onExport) {
         onExport(selectedFormat, content, filename)
       } else {
@@ -99,7 +115,7 @@ export function ImportExportDialog({
         a.click()
         URL.revokeObjectURL(url)
       }
-      
+
       onClose()
     } catch (error) {
       setErrorMsg((error as Error).message)
@@ -129,11 +145,11 @@ export function ImportExportDialog({
     try {
       const text = await selectedFile.text()
       const doc = importScript(text, selectedFormat)
-      
+
       if (onImport) {
         onImport(doc)
       }
-      
+
       onClose()
     } catch (error) {
       setErrorMsg((error as Error).message)
@@ -201,11 +217,10 @@ export function ImportExportDialog({
                 <button
                   key={item.format}
                   onClick={() => setSelectedFormat(item.format)}
-                  className={`flex items-start gap-3 p-3 rounded border transition-colors text-left ${
-                    selectedFormat === item.format
-                      ? 'border-emerald-500 bg-emerald-500/10'
-                      : 'border-white/10 hover:bg-white/5'
-                  }`}
+                  className={`flex items-start gap-3 p-3 rounded border transition-colors text-left ${selectedFormat === item.format
+                    ? 'border-emerald-500 bg-emerald-500/10'
+                    : 'border-white/10 hover:bg-white/5'
+                    }`}
                 >
                   <div className="text-[#888] mt-0.5">{item.icon}</div>
                   <div className="flex-1 min-w-0">
@@ -261,18 +276,17 @@ export function ImportExportDialog({
             </div>
             <div className="grid grid-cols-5 gap-1">
               {exportFormats.map((item) => (
-                <button
-                  key={item.format}
-                  onClick={() => setSelectedFormat(item.format)}
-                  className={`py-2 px-1 text-xs rounded border transition-colors ${
-                    selectedFormat === item.format
+                <Tip key={item.format} label={item.label} side="top">
+                  <button
+                    onClick={() => setSelectedFormat(item.format)}
+                    className={`w-full py-2 px-1 text-xs rounded border transition-colors ${selectedFormat === item.format
                       ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
                       : 'border-white/10 text-[#888] hover:bg-white/5'
-                  }`}
-                  title={item.label}
-                >
-                  {item.format.toUpperCase()}
-                </button>
+                      }`}
+                  >
+                    {item.format.toUpperCase()}
+                  </button>
+                </Tip>
               ))}
             </div>
 

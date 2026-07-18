@@ -20,14 +20,30 @@ export type StoryboardInput = {
   status?: string;
   tags?: string[];
   order?: number;
+  /** 关联角色资产 ID 列表。 */
+  character_asset_ids?: string[];
+  /** 关联道具资产 ID 列表。 */
+  prop_asset_ids?: string[];
 };
 
+/**
+ * listStoryboards - 列出项目中的分镜（排除已删除）
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 可选的项目 ID 过滤条件
+ * @returns {Promise<Storyboard[]>} 分镜列表
+ */
 export async function listStoryboards(ctx: AppContext, projectId?: string): Promise<Storyboard[]> {
   const filter: Partial<Storyboard> = projectId ? { project_id: projectId } : {};
   const items = await ctx.storyboards.findMany(filter, { sort: "desc" });
   return items.filter((item) => !item.deleted_at);
 }
 
+/**
+ * createStoryboard - 创建新分镜
+ * @param {AppContext} ctx - 应用上下文
+ * @param {StoryboardInput} input - 分镜输入数据
+ * @returns {Promise<Storyboard>} 创建的分镜对象
+ */
 export async function createStoryboard(ctx: AppContext, input: StoryboardInput): Promise<Storyboard> {
   const storyboard: Storyboard = {
     id: id("sb"),
@@ -48,6 +64,8 @@ export async function createStoryboard(ctx: AppContext, input: StoryboardInput):
     status: (input.status as Storyboard["status"]) ?? "draft",
     tags: input.tags ?? [],
     order: input.order ?? 0,
+    character_asset_ids: input.character_asset_ids ?? [],
+    prop_asset_ids: input.prop_asset_ids ?? [],
     usage_count: 0,
     version: 1,
     created_at: nowIso(),
@@ -69,6 +87,12 @@ export async function updateStoryboard(ctx: AppContext, storyboardId: string, in
   return { ...existing, ...patch } as Storyboard;
 }
 
+/**
+ * deleteStoryboard - 删除指定分镜
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} storyboardId - 分镜 ID
+ * @returns {Promise<void>}
+ */
 export async function deleteStoryboard(ctx: AppContext, storyboardId: string): Promise<void> {
   await ctx.storyboards.delete(storyboardId);
 }

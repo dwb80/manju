@@ -13,7 +13,11 @@ type ProjectFormDialogProps = {
     onFieldChange: (key: string, value: string | number) => void;
 };
 
-/** 项目表单弹窗组件，用于新建和编辑项目。 */
+/**
+ * ProjectFormDialog - 项目表单弹窗组件
+ * @param {ProjectFormDialogProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的项目表单弹窗元素
+ */
 export function ProjectFormDialog({ projectFormMode, projectFormTarget, projectFormDraft, onSubmit, onClose, onFieldChange }: ProjectFormDialogProps) {
     return (
         <div className="fixed inset-0 z-[80] grid place-items-center bg-black/60 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={projectFormMode === "edit" ? "编辑项目" : "新建项目"}>

@@ -1,3 +1,8 @@
+/**
+ * @file global-search.tsx
+ * @description 全局搜索组件，支持快捷键激活、实时搜索结果、分类显示和键盘导航
+ */
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";

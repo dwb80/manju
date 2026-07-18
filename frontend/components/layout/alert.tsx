@@ -86,7 +86,9 @@ const TONE_CLASS: Record<AlertTone, {
 };
 
 /**
- * 统一提示条
+ * Alert - 统一提示条组件
+ * @param {AlertProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的提示条元素
  */
 export function Alert({
   children,

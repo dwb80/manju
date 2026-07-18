@@ -13,15 +13,38 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, FileText, Pencil, Trash2, Eye, RefreshCw, Loader2 } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Eye, RefreshCw, Loader2, X } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import { ModuleToolbar, SearchInput, FilterSelect, EmptyState, Pagination } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { FormDialog, type FormFieldConfig } from "@/components/ui/form-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { listProjects, createProject as createProjectApi, updateProject as updateProjectApi, deleteProject as deleteProjectApi } from "@/services/project.service";
-import { listScripts } from "@/services/module.service";
+import { scriptCenterService } from "@/services/script-center.service";
 import { clearApiCache } from "@/lib/api-client";
 import type { Project } from "@/lib/app-types";
 
@@ -133,7 +156,7 @@ export function ProjectsCenterPage() {
     await Promise.all(
       projects.map(async (p) => {
         try {
-          const scripts = await listScripts(p.id);
+          const scripts = await scriptCenterService.getDocuments(p.id);
           counts[p.id] = Array.isArray(scripts) ? scripts.length : 0;
         } catch {
           counts[p.id] = 0;
@@ -194,14 +217,14 @@ export function ProjectsCenterPage() {
     setSelectedProjectId(project.id);
     setOpeningScriptFor(project.id);
     try {
-      const list = await listScripts(project.id);
+      const list = await scriptCenterService.getDocuments(project.id);
       const targetUrl =
         Array.isArray(list) && list.length > 0
           ? `/scripts/${[...list].sort((a: any, b: any) => {
-              const ta = new Date(a.updated_at || 0).getTime();
-              const tb = new Date(b.updated_at || 0).getTime();
-              return tb - ta;
-            })[0].id}`
+            const ta = new Date(a.updated_at || 0).getTime();
+            const tb = new Date(b.updated_at || 0).getTime();
+            return tb - ta;
+          })[0].id}`
           : `/scripts?projectId=${project.id}&action=import`;
       window.open(targetUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
@@ -260,252 +283,277 @@ export function ProjectsCenterPage() {
   };
 
   return (
-    <PageContainer
-      title="项目中心"
-      description="管理和查看所有漫剧项目"
-    >
-      {/* 工具栏 */}
-      <ModuleToolbar
-        left={
-          <>
-            <SearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="搜索项目..."
-            />
-            <FilterSelect
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={statusOptions}
-              placeholder="状态筛选"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={reloadProjects}
-              disabled={isLoading}
-              title="刷新"
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+    <TooltipProvider delayDuration={200}>
+      <PageContainer
+        title="项目中心"
+        description="管理和查看所有漫剧项目"
+      >
+        {/* 工具栏 */}
+        <ModuleToolbar
+          left={
+            <>
+              <SearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="搜索项目..."
+              />
+              <FilterSelect
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={statusOptions}
+                placeholder="状态筛选"
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={reloadProjects}
+                disabled={isLoading}
+                title="刷新"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              </Button>
+            </>
+          }
+          right={
+            <Button size="sm" onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              新建项目
             </Button>
-          </>
-        }
-        right={
-          <Button size="sm" onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            新建项目
-          </Button>
-        }
-      />
+          }
+        />
 
-      <PageCard>
-        {loadError && (
-          <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-            加载项目失败：{loadError}（请确认后端服务已启动）
-          </div>
-        )}
+        <PageCard>
+          {loadError && (
+            <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              加载项目失败：{loadError}（请确认后端服务已启动）
+            </div>
+          )}
 
-        {filteredProjects.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">项目名称</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">类型</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">状态</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden lg:table-cell">负责人</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden sm:table-cell">集数</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">截止日期</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-[#888]">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedProjects.map((project) => {
-                  const scriptCount = scriptCounts[project.id] ?? 0;
-                  return (
-                    <tr key={project.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {project.is_pinned && (
-                            <span className="px-1.5 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">
-                              置顶
-                            </span>
-                          )}
-                          <span className="font-medium text-white">{project.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{project.category}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-xs ${project.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
-                          project.status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
-                          {project.status === 'active' ? '进行中' : project.status === 'completed' ? '已完成' : '已归档'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden lg:table-cell">{project.owner}</td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden sm:table-cell">{project.episode_count}集</td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">
-                        {project.due_date ? new Date(project.due_date).toLocaleDateString() : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center gap-1 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenScripts(project)}
-                            disabled={openingScriptFor === project.id}
-                            title={scriptCount > 0 ? "打开主剧本" : "创建剧本"}
-                            className="gap-1 px-2"
-                          >
-                            {openingScriptFor === project.id ? (
-                              <Loader2 className="h-4 w-4 text-emerald-400 animate-spin" />
-                            ) : (
-                              <FileText className="h-4 w-4 text-emerald-400" />
+          {filteredProjects.length > 0 ? (
+            <div className="rounded-md border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>项目名称</TableHead>
+                    <TableHead className="hidden md:table-cell">类型</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead className="hidden lg:table-cell">负责人</TableHead>
+                    <TableHead className="hidden sm:table-cell">集数</TableHead>
+                    <TableHead className="hidden md:table-cell">截止日期</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedProjects.map((project) => {
+                    const scriptCount = scriptCounts[project.id] ?? 0;
+                    const statusBadge =
+                      project.status === "active" ? (
+                        <Badge variant="success">进行中</Badge>
+                      ) : project.status === "completed" ? (
+                        <Badge variant="info">已完成</Badge>
+                      ) : (
+                        <Badge variant="muted">已归档</Badge>
+                      );
+                    return (
+                      <TableRow key={project.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {project.is_pinned && (
+                              <Badge variant="warning">置顶</Badge>
                             )}
-                            <span className="text-xs text-emerald-400 whitespace-nowrap">
-                              {openingScriptFor === project.id ? "加载中…" : "打开剧本"}
-                            </span>
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleView(project)} title="查看">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(project)} title="编辑">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm({ id: project.id, name: project.name })} title="删除">
-                            <Trash2 className="h-4 w-4 text-red-400" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyState
-            type="no-results"
-            title={loadError ? "无法加载项目" : isLoading ? "加载中..." : "未找到项目"}
-            description={loadError ? "请确认后端服务已启动" : "尝试调整搜索条件或创建新项目"}
-            action={
-              loadError
-                ? { label: "重试", onClick: reloadProjects }
-                : !isLoading
-                ? { label: "新建项目", onClick: handleCreate }
-                : undefined
-            }
+                            <span className="font-medium text-white">{project.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground hidden md:table-cell">{project.category}</TableCell>
+                        <TableCell>{statusBadge}</TableCell>
+                        <TableCell className="text-muted-foreground hidden lg:table-cell">{project.owner}</TableCell>
+                        <TableCell className="text-muted-foreground hidden sm:table-cell">{project.episode_count}集</TableCell>
+                        <TableCell className="text-muted-foreground hidden md:table-cell">
+                          {project.due_date ? new Date(project.due_date).toLocaleDateString() : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center gap-1 justify-end">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenScripts(project)}
+                                  disabled={openingScriptFor === project.id}
+                                  className="gap-1 px-2"
+                                >
+                                  {openingScriptFor === project.id ? (
+                                    <Loader2 className="h-4 w-4 text-emerald-400 animate-spin" />
+                                  ) : (
+                                    <FileText className="h-4 w-4 text-emerald-400" />
+                                  )}
+                                  <span className="text-xs text-emerald-400 whitespace-nowrap">
+                                    {openingScriptFor === project.id ? "加载中…" : "打开剧本"}
+                                  </span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{scriptCount > 0 ? "打开主剧本" : "创建剧本"}</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => handleView(project)} aria-label="查看">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>查看</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(project)} aria-label="编辑">
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>编辑</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setDeleteConfirm({ id: project.id, name: project.name })}
+                                  aria-label="删除"
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-400" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>删除</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <EmptyState
+              type="no-results"
+              title={loadError ? "无法加载项目" : isLoading ? "加载中..." : "未找到项目"}
+              description={loadError ? "请确认后端服务已启动" : "尝试调整搜索条件或创建新项目"}
+              action={
+                loadError
+                  ? { label: "重试", onClick: reloadProjects }
+                  : !isLoading
+                    ? { label: "新建项目", onClick: handleCreate }
+                    : undefined
+              }
+            />
+          )}
+
+          {/* 分页组件 */}
+          {filteredProjects.length > 0 && (
+            <div className="mt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredProjects.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          )}
+        </PageCard>
+
+        {/* 新建/编辑对话框 */}
+        <FormDialog
+          title={editingProject ? "编辑项目" : "新建项目"}
+          fields={projectFields}
+          initialValues={editingProject ? {
+            name: editingProject.name,
+            category: editingProject.category,
+            status: editingProject.status,
+            owner: editingProject.owner,
+            episode_count: editingProject.episode_count,
+            due_date: editingProject.due_date,
+            description: editingProject.description,
+          } as Record<string, string | number> : {}}
+          isOpen={isFormOpen}
+          onClose={() => { setIsFormOpen(false); setEditingProject(null); }}
+          onSave={handleSave}
+          isLoading={isSaving}
+        />
+
+        {/* 删除确认对话框 */}
+        {deleteConfirm && (
+          <ConfirmDialog
+            title="删除项目"
+            description={`确定要删除项目「${deleteConfirm.name}」吗？此操作无法撤销。`}
+            confirmLabel="删除"
+            onClose={() => setDeleteConfirm(null)}
+            onConfirm={handleDeleteConfirm}
           />
         )}
 
-        {/* 分页组件 */}
-        {filteredProjects.length > 0 && (
-          <div className="mt-4">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredProjects.length}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={(size) => {
-                setPageSize(size);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-        )}
-      </PageCard>
-
-      {/* 新建/编辑对话框 */}
-      <FormDialog
-        title={editingProject ? "编辑项目" : "新建项目"}
-        fields={projectFields}
-        initialValues={editingProject ? {
-          name: editingProject.name,
-          category: editingProject.category,
-          status: editingProject.status,
-          owner: editingProject.owner,
-          episode_count: editingProject.episode_count,
-          due_date: editingProject.due_date,
-          description: editingProject.description,
-        } as Record<string, string | number> : {}}
-        isOpen={isFormOpen}
-        onClose={() => { setIsFormOpen(false); setEditingProject(null); }}
-        onSave={handleSave}
-        isLoading={isSaving}
-      />
-
-      {/* 删除确认对话框 */}
-      {deleteConfirm && (
-        <ConfirmDialog
-          title="删除项目"
-          description={`确定要删除项目「${deleteConfirm.name}」吗？此操作无法撤销。`}
-          confirmLabel="删除"
-          onClose={() => setDeleteConfirm(null)}
-          onConfirm={handleDeleteConfirm}
-        />
-      )}
-
-      {/* 查看详情对话框 */}
-      {viewingProject && (
-        <div
-          className="fixed inset-0 z-[90] grid place-items-center bg-black/60 px-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label="项目详情"
-          onClick={() => setViewingProject(null)}
-        >
-          <div
-            className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#202020] p-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-white">项目详情</h2>
-              <button
-                type="button"
-                onClick={() => setViewingProject(null)}
-                className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center"
-                aria-label="关闭"
-              >
-                <span className="text-[#888] text-lg">×</span>
-              </button>
-            </div>
-            {/* 详情内容 - 两列布局 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-              <DetailRow label="项目名称" value={viewingProject.name} />
-              <DetailRow label="项目类型" value={viewingProject.category} />
-              <DetailRow label="项目状态" value={
-                viewingProject.status === 'active' ? '进行中' :
-                viewingProject.status === 'completed' ? '已完成' : '已归档'
-              } />
-              <DetailRow label="负责人" value={viewingProject.owner} />
-              <DetailRow label="集数" value={`${viewingProject.episode_count}集`} />
-              <DetailRow label="截止日期" value={
-                viewingProject.due_date ? new Date(viewingProject.due_date).toLocaleDateString() : "-"
-              } />
-              <DetailRow label="剧本数量" value={`${scriptCounts[viewingProject.id] ?? 0} 个`} />
-              <DetailRow label="创建时间" value={new Date(viewingProject.created_at).toLocaleString()} />
-              <DetailRow label="更新时间" value={new Date(viewingProject.updated_at).toLocaleString()} />
-              <div className="md:col-span-2">
-                <DetailRow label="项目描述" value={viewingProject.description || "-"} />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-white/10">
-              <Button size="sm" variant="secondary" onClick={() => setViewingProject(null)}>
-                关闭
-              </Button>
-              <Button size="sm" onClick={() => {
-                handleEdit(viewingProject);
-                setViewingProject(null);
-              }}>
-                编辑
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </PageContainer>
+        {/* 查看详情对话框 */}
+        <Dialog open={!!viewingProject} onOpenChange={(open) => !open && setViewingProject(null)}>
+          <DialogContent size="wide" className="border-border">
+            {viewingProject && (
+              <>
+                <DialogHeader>
+                  <DialogTitle>项目详情</DialogTitle>
+                  <DialogDescription>查看项目 {viewingProject.name} 的完整信息</DialogDescription>
+                </DialogHeader>
+                {/* 详情内容 - 两列布局 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 px-6">
+                  <DetailRow label="项目名称" value={viewingProject.name} />
+                  <DetailRow label="项目类型" value={viewingProject.category} />
+                  <DetailRow
+                    label="项目状态"
+                    value={
+                      viewingProject.status === "active"
+                        ? "进行中"
+                        : viewingProject.status === "completed"
+                          ? "已完成"
+                          : "已归档"
+                    }
+                  />
+                  <DetailRow label="负责人" value={viewingProject.owner} />
+                  <DetailRow label="集数" value={`${viewingProject.episode_count}集`} />
+                  <DetailRow
+                    label="截止日期"
+                    value={
+                      viewingProject.due_date
+                        ? new Date(viewingProject.due_date).toLocaleDateString()
+                        : "-"
+                    }
+                  />
+                  <DetailRow label="剧本数量" value={`${scriptCounts[viewingProject.id] ?? 0} 个`} />
+                  <DetailRow label="创建时间" value={new Date(viewingProject.created_at).toLocaleString()} />
+                  <DetailRow label="更新时间" value={new Date(viewingProject.updated_at).toLocaleString()} />
+                  <div className="md:col-span-2">
+                    <DetailRow label="项目描述" value={viewingProject.description || "-"} />
+                  </div>
+                </div>
+                <DialogFooter className="gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => setViewingProject(null)}>
+                    关闭
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      handleEdit(viewingProject);
+                      setViewingProject(null);
+                    }}
+                  >
+                    编辑
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      </PageContainer>
+    </TooltipProvider>
   );
 }
 
@@ -513,8 +561,8 @@ export function ProjectsCenterPage() {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs text-[#888]">{label}</span>
-      <span className="text-sm text-white break-words">{value}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm text-foreground break-words">{value}</span>
     </div>
   );
 }

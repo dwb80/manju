@@ -345,6 +345,8 @@ const config: FactoryCRUDPageProps<VideoTask> = {
       { label: "总时长", value: `${hours}h ${minutes}m`, color: "orange" },
     ];
   },
+  // 视频生产线：不展示顶部统计卡片
+  showStats: false,
 };
 
 export function VideoProductionLinePage() {

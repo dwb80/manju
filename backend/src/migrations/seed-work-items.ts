@@ -99,10 +99,10 @@ async function main(): Promise<void> {
     });
     inserted += 1;
   }
-  console.log(`[seed-work-items] inserted ${inserted} work items (existing: ${existing.length})`);
+  console.log(`[seed-work-items] 已插入 ${inserted} 条 work items（已有 ${existing.length} 条）`);
 }
 
 main().catch((err) => {
-  console.error("[seed-work-items] failed:", err);
+  console.error("[seed-work-items] 执行失败：", err);
   process.exitCode = 1;
 });

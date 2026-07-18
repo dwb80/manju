@@ -1,3 +1,8 @@
+/**
+ * @file workspace-panels.tsx
+ * @description 工作区面板组件集合，包含聊天面板、收藏面板、图片面板和视频面板
+ */
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -33,7 +38,11 @@ function ToolCallItem({ toolCall }: { toolCall: ChatToolCall }) {
   );
 }
 
-/** Displays the chat transcript, attachments, reasoning, tool calls and assistant controls. */
+/**
+ * ChatPanel - 聊天面板组件
+ * @param {ChatPanelProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的聊天面板元素
+ */
 export function ChatPanel({ messages, lastAssistantMessageIndex, currentConversationSubmitting, onStopChat, onRegenerateChat }: ChatPanelProps) {
   if (messages.length === 0) {
     return (
@@ -114,7 +123,11 @@ type FavoritePanelProps = {
   onImageLoad: () => void;
 };
 
-/** Displays saved image and video favorites with reuse actions. */
+/**
+ * FavoritePanel - 收藏面板组件
+ * @param {FavoritePanelProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的收藏面板元素
+ */
 export function FavoritePanel({
   favorites,
   onRefresh,
@@ -208,7 +221,11 @@ type ImagePanelProps = {
   onImageLoad: () => void;
 };
 
-/** Displays image generation results and in-flight image requests. */
+/**
+ * ImagePanel - 图片面板组件
+ * @param {ImagePanelProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的图片面板元素
+ */
 export function ImagePanel({
   visibleImages,
   visibleImagesChronological,
@@ -338,7 +355,11 @@ type VideoPanelProps = {
   onDeleteVideo: (videoId: string) => void;
 };
 
-/** Displays video generation dashboard cards and task players. */
+/**
+ * VideoPanel - 视频面板组件
+ * @param {VideoPanelProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的视频面板元素
+ */
 export function VideoPanel({ videos, videoSettings, attachmentCount, renderFavoriteAction, onRefresh, onCopy, onDeleteVideo }: VideoPanelProps) {
   return (
     <section className="mx-auto w-full max-w-[980px] space-y-4">

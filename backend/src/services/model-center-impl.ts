@@ -38,6 +38,43 @@ export type ModelInput = {
   tags?: string[];
 };
 
+const SENSITIVE_HEADER = /^(authorization|proxy-authorization|x-api-key|api-key)$/i;
+
+/** 返回给浏览器的模型配置。服务端密钥永远不进入响应体。 */
+export function toPublicModelConfig(model: ModelConfig): ModelConfig & { secret_configured: boolean } {
+  const sourceHeaders = model.api_config?.headers ?? {};
+  const secretConfigured = Object.entries(sourceHeaders).some(
+    ([key, value]) => SENSITIVE_HEADER.test(key) && Boolean(value?.trim()) && !/YOUR_API_KEY/i.test(value),
+  );
+  const publicHeaders = Object.fromEntries(
+    Object.entries(sourceHeaders).filter(([key]) => !SENSITIVE_HEADER.test(key)),
+  );
+  return {
+    ...model,
+    api_config: { ...model.api_config, headers: publicHeaders },
+    secret_configured: secretConfigured,
+  };
+}
+
+/** 写入时保留已有密钥，并拒绝通过普通模型 CRUD 覆盖敏感请求头。 */
+export function withoutClientSecrets(input: ModelInput, existing?: ModelConfig | null): ModelInput {
+  if (!input.api_config) return input;
+  const incomingHeaders = input.api_config.headers ?? {};
+  const safeHeaders = Object.fromEntries(
+    Object.entries(incomingHeaders).filter(([key]) => !SENSITIVE_HEADER.test(key)),
+  );
+  const existingSecrets = Object.fromEntries(
+    Object.entries(existing?.api_config?.headers ?? {}).filter(([key]) => SENSITIVE_HEADER.test(key)),
+  );
+  return {
+    ...input,
+    api_config: {
+      ...input.api_config,
+      headers: { ...safeHeaders, ...existingSecrets },
+    },
+  };
+}
+
 /**
  * 获取所有模型配置列表
  * @param ctx 应用上下文
@@ -174,7 +211,7 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
     id: "agnes-2.0-flash",
     name: "Agnes 2.0 Flash",
     type: "chat",
-    description: "快速响应的聊天模型，支持视觉理解和Thinking模式",
+    description: "Sapiens AI 开发的快速高效语言模型，适合智能体工作流、工具调用、编码、多轮对话、推理和图像理解等高频生产场景。Claw-Eval Pass^3 60.9%（通用榜第 9）。",
     isDefault: true,
     is_enabled: true,
     version: "2.0",
@@ -185,7 +222,7 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
       headers: { "Authorization": "Bearer YOUR_API_KEY", "Content-Type": "application/json" },
     },
     capabilities: { visionSupport: true, thinkingMode: true, toolCalling: true, streaming: true },
-    parameters: { maxContext: 512000, maxTokens: 65500, defaultTemperature: 0.7 },
+    parameters: { maxContext: 524288, maxTokens: 65500, defaultTemperature: 0.7 },
     parameter_rules: {},
     pricing: {
       standard: { chat: { input: "$0.03 / 1M tokens", output: "$0.15 / 1M tokens" } },
@@ -193,7 +230,7 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
     },
     performance: { avgResponseTime: 500, successRate: 99.5, concurrency: 100 },
     usageStats: { totalCalls: 0, weeklyCalls: 0, monthlyCalls: 0, lastUsedAt: "" },
-    tags: ["视觉理解", "Thinking模式", "工具调用", "流式响应"],
+    tags: ["视觉理解", "图像理解", "Thinking模式", "工具调用", "流式响应", "智能体工作流", "编码任务"],
   },
   {
     id: "agnes-2.0-pro",
@@ -249,7 +286,7 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
     id: "agnes-image-2.1-flash",
     name: "Agnes Image 2.1 Flash",
     type: "image",
-    description: "高信息密度图片生成模型，支持图生图和关键帧模式",
+    description: "Sapiens AI 升级版图像生成模型，专注高信息密度图像、文生图与图生图工作流，支持构图保留与灵活的尺寸/输出格式控制。",
     isDefault: true,
     is_enabled: true,
     version: "2.1",
@@ -259,9 +296,10 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
       method: "POST",
       headers: { "Authorization": "Bearer YOUR_API_KEY", "Content-Type": "application/json" },
     },
-    capabilities: { img2img: true, keyframeMode: true, highDensity: true },
+    // 关键帧模式只对视频有效；图片模型无此概念，故去除
+    capabilities: { img2img: true, highDensity: true },
     parameters: {
-      supportedSizes: ["1024x768", "768x1024", "1024x1024", "1152x768"],
+      supportedSizes: ["1024x768", "768x1024", "1024x1024", "1152x768", "1280x720", "720x1280"],
       defaultSteps: 25,
       responseFormats: ["url", "b64_json"],
     },
@@ -272,7 +310,7 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
     },
     performance: { avgResponseTime: 15000, successRate: 98, concurrency: 10 },
     usageStats: { totalCalls: 0, weeklyCalls: 0, monthlyCalls: 0, lastUsedAt: "" },
-    tags: ["图生图", "关键帧模式", "高信息密度"],
+    tags: ["文生图", "图生图", "高信息密度", "构图保留", "URL/Base64输出"],
   },
   {
     id: "agnes-image-pro",
@@ -307,7 +345,7 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
     id: "agnes-video-v2.0",
     name: "Agnes Video V2.0",
     type: "video",
-    description: "视频生成模型，支持文生视频、图生视频和关键帧模式",
+    description: "面向生产场景的视频生成模型，支持文生视频、图生视频和关键帧动画。视频生成采用异步任务 API：先创建任务，再通过 video_id 获取结果；num_frames ≤ 441 且遵循 8n+1 规则。",
     isDefault: true,
     is_enabled: true,
     version: "2.0",
@@ -326,7 +364,7 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
       frameRateRange: { min: 1, max: 60, default: 24 },
     },
     parameter_rules: {
-      num_frames: { min: 1, max: 441, rule: "8n+1", description: "帧数必须小于等于441，且遵循8n+1规则" },
+      num_frames: { min: 1, max: 441, rule: "8n+1", description: "num_frames 必须小于或等于 441，并且遵循 8n+1 规则" },
     },
     pricing: {
       standard: { video: "$0.005 / 秒" },
@@ -334,45 +372,87 @@ const DEFAULT_MODELS_SEED: Array<Omit<ModelConfig, "created_at" | "updated_at">>
     },
     performance: { avgResponseTime: 60000, successRate: 95, concurrency: 5 },
     usageStats: { totalCalls: 0, weeklyCalls: 0, monthlyCalls: 0, lastUsedAt: "" },
-    tags: ["图生视频", "关键帧模式", "异步生成", "8n+1帧数约束"],
+    tags: ["文生视频", "图生视频", "关键帧动画", "异步生成", "8n+1帧数约束", "电影级输出"],
   },
   {
-    id: "agnes-video-v2.0-pro",
-    name: "Agnes Video V2.0 Pro",
-    type: "video",
-    description: "专业版视频生成模型，支持更长的视频和更高的质量",
+    id: "cerebras-gemma-4-31b",
+    name: "Cerebras Gemma 4 31B",
+    type: "chat",
+    description: "Cerebras 提供的 Gemma 4 31B 模型，通过 Bitz Net 代理访问。适合剧本分析、对话生成等中文 NLP 任务。",
     isDefault: false,
-    is_enabled: false,
-    version: "2.0",
-    provider: "Agnes AI",
+    is_enabled: true,
+    version: "4.0",
+    provider: "Cerebras",
     api_config: {
-      endpoint: "https://apihub.agnes-ai.com/v1/videos",
+      endpoint: "https://api.cerebras.ai/v1/chat/completions",
       method: "POST",
       headers: { "Authorization": "Bearer YOUR_API_KEY", "Content-Type": "application/json" },
-      statusEndpoint: "https://apihub.agnes-ai.com/agnesapi?video_id={video_id}",
+      proxyURL: "http://127.0.0.1:7897",
     },
-    capabilities: { img2vid: true, keyframeMode: true, asyncGeneration: true, frameConstraint: true },
-    parameters: {
-      supportedRatios: ["16:9", "9:16", "1:1", "4:3", "3:4"],
-      maxDuration: 30,
-      maxFrames: 441,
-      frameRateRange: { min: 1, max: 60, default: 24 },
-    },
-    parameter_rules: {
-      num_frames: { min: 1, max: 441, rule: "8n+1", description: "帧数必须小于等于441，且遵循8n+1规则" },
-    },
+    capabilities: { visionSupport: false, thinkingMode: false, toolCalling: false, streaming: true },
+    parameters: { maxContext: 128000, maxTokens: 8192, defaultTemperature: 0.7 },
+    parameter_rules: {},
     pricing: {
-      standard: { video: "$0.02 / 秒" },
-      current: { video: "$0 / 秒" },
+      standard: { chat: { input: "$0 / 1M tokens", output: "$0 / 1M tokens" } },
+      current: { chat: { input: "$0 / 1M tokens", output: "$0 / 1M tokens" } },
     },
-    performance: { avgResponseTime: 120000, successRate: 92, concurrency: 3 },
+    performance: { avgResponseTime: 2000, successRate: 95, concurrency: 10 },
     usageStats: { totalCalls: 0, weeklyCalls: 0, monthlyCalls: 0, lastUsedAt: "" },
-    tags: ["高质量", "长视频"],
+    tags: ["剧本分析", "中文优化", "代理访问", "Cerebras"],
+  },
+  {
+    id: "sensenova-6.7-flash-lite",
+    name: "商汤 SenseNova 6.7 Flash Lite",
+    type: "chat",
+    description: "商汤科技 SenseNova 6.7 Flash Lite 模型，轻量级高效对话模型，适合日常对话、文本生成等场景。",
+    isDefault: false,
+    is_enabled: true,
+    version: "6.7",
+    provider: "商汤",
+    api_config: {
+      endpoint: "https://token.sensenova.cn/v1/chat/completions",
+      method: "POST",
+      headers: { "Authorization": "Bearer YOUR_API_KEY", "Content-Type": "application/json" },
+    },
+    capabilities: { visionSupport: false, thinkingMode: false, toolCalling: false, streaming: true },
+    parameters: { maxContext: 32000, maxTokens: 4096, defaultTemperature: 0.7 },
+    parameter_rules: {},
+    pricing: {
+      standard: { chat: { input: "$0 / 1M tokens", output: "$0 / 1M tokens" } },
+      current: { chat: { input: "$0 / 1M tokens", output: "$0 / 1M tokens" } },
+    },
+    performance: { avgResponseTime: 1500, successRate: 95, concurrency: 10 },
+    usageStats: { totalCalls: 0, weeklyCalls: 0, monthlyCalls: 0, lastUsedAt: "" },
+    tags: ["商汤", "中文优化", "轻量级", "对话"],
+  },
+  {
+    id: "glm-5.2",
+    name: "智谱 GLM-5.2（商汤免费额度）",
+    type: "chat",
+    description: "智谱 AI 旗舰模型 GLM-5.2，支持 1M 上下文，面向长任务时代的编程推理模型。通过商汤 Token Plan 平台免费调用（公测期）。",
+    isDefault: false,
+    is_enabled: true,
+    version: "5.2",
+    provider: "商汤",
+    api_config: {
+      endpoint: "https://token.sensenova.cn/v1/chat/completions",
+      method: "POST",
+      headers: { "Authorization": "Bearer YOUR_API_KEY", "Content-Type": "application/json" },
+    },
+    capabilities: { visionSupport: false, thinkingMode: true, toolCalling: false, streaming: true },
+    parameters: { maxContext: 1000000, maxTokens: 128000, defaultTemperature: 0.7 },
+    parameter_rules: {},
+    pricing: {
+      standard: { chat: { input: "$1.4 / 1M tokens", output: "$4.4 / 1M tokens" } },
+      current: { chat: { input: "免费（商汤公测期）", output: "免费（商汤公测期）" } },
+    },
+    performance: { avgResponseTime: 3000, successRate: 92, concurrency: 5 },
+    usageStats: { totalCalls: 0, weeklyCalls: 0, monthlyCalls: 0, lastUsedAt: "" },
+    tags: ["智谱", "GLM-5.2", "编程推理", "1M上下文", "商汤免费额度"],
   },
 ];
 
 /**
- * 初始化模型种子数据（如果表为空）
  */
 export async function seedModelConfigs(ctx: AppContext): Promise<void> {
   const existing = await ctx.modelConfigs.findMany({});

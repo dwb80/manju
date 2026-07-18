@@ -7,8 +7,18 @@
 export type ScriptDocumentInput = {
   id?: string;
   project_id?: string;
+  // ===== 方案 A 合并：元数据 =====
+  title?: string;
+  author?: string;
+  status?: string;
+  genre?: string;
+  words?: number;
+  chapters?: number;
+  // ===== 内容 =====
   editor_json?: string;
   version?: number;
+  // ===== 剧本导入：完整 AI 原始数据 =====
+  ai_raw_data?: string;
 };
 
 export type ScriptEpisodeInput = {

@@ -1,3 +1,8 @@
+/**
+ * @file audio-module.ts
+ * @description 音频模块的增删查改服务，提供音频资源的创建、查询、更新、删除等功能
+ */
+
 import type { AppContext } from "../app.js";
 import type { Audio } from "../../types/audio.js";
 import { id, nowIso } from "../../utils.js";
@@ -18,12 +23,24 @@ export type AudioInput = {
   size?: number;
 };
 
+/**
+ * listAudios - 列出项目中的音频（排除已删除）
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 可选的项目 ID 过滤条件
+ * @returns {Promise<Audio[]>} 音频列表
+ */
 export async function listAudios(ctx: AppContext, projectId?: string): Promise<Audio[]> {
   const filter: Partial<Audio> = projectId ? { project_id: projectId } : {};
   const items = await ctx.audios.findMany(filter, { sort: "desc" });
   return items.filter((item) => !item.deleted_at);
 }
 
+/**
+ * createAudio - 创建新音频记录
+ * @param {AppContext} ctx - 应用上下文
+ * @param {AudioInput} input - 音频输入数据
+ * @returns {Promise<Audio>} 创建的音频对象
+ */
 export async function createAudio(ctx: AppContext, input: AudioInput): Promise<Audio> {
   const audio: Audio = {
     id: id("audio"),
@@ -61,6 +78,12 @@ export async function updateAudio(ctx: AppContext, audioId: string, input: Audio
   return { ...existing, ...patch } as Audio;
 }
 
+/**
+ * deleteAudio - 删除指定音频
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} audioId - 音频 ID
+ * @returns {Promise<void>}
+ */
 export async function deleteAudio(ctx: AppContext, audioId: string): Promise<void> {
   await ctx.audios.delete(audioId);
 }

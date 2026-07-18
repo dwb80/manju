@@ -2,17 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: 0 0% 5%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 9%;
-  --card-foreground: 0 0% 98%;
-  --muted: 220 3% 13%;
-  --muted-foreground: 0 0% 64%;
-  --border: 220 5% 22%;
-  --primary: 163 82% 35%;
-  --primary-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
+@layer base {
+  :root {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 163 82% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 3% 15%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 220 3% 13%;
+    --muted-foreground: 0 0% 64%;
+
+    --accent: 220 3% 18%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 5% 22%;
+    --input: 220 5% 22%;
+    --ring: 163 82% 35%;
+
+    --radius: 0.5rem;
+  }
 }
 
 * {
@@ -46,3 +67,203 @@ button, input, textarea, select {
   border-radius: 6px;
   transition: background-color 0.3s;
 }
+
+/* ============ 智能助手聊天页 Markdown 样式 ============ */
+.chat-md {
+  color: #e5e7eb;
+  font-size: 14px;
+  line-height: 1.75;
+  word-break: break-word;
+}
+.chat-md > * + * {
+  margin-top: 0.6rem;
+}
+.chat-md h1,
+.chat-md h2,
+.chat-md h3,
+.chat-md h4 {
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1rem;
+}
+.chat-md h1 { font-size: 1.25rem; }
+.chat-md h2 { font-size: 1.125rem; }
+.chat-md h3 { font-size: 1rem; }
+.chat-md h4 { font-size: 0.95rem; color: #d4d4d8; }
+.chat-md p { color: #d4d4d8; }
+.chat-md strong { color: #fff; font-weight: 600; }
+.chat-md em { color: #f3f4f6; font-style: italic; }
+.chat-md del { color: #9ca3af; }
+.chat-md a {
+  color: #34d399;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 150ms;
+}
+.chat-md a:hover { color: #6ee7b7; }
+.chat-md ul,
+.chat-md ol {
+  padding-left: 1.25rem;
+  color: #d4d4d8;
+}
+.chat-md ul { list-style: disc; }
+.chat-md ol { list-style: decimal; }
+.chat-md li + li { margin-top: 0.25rem; }
+.chat-md li::marker { color: #6b7280; }
+.chat-md-task {
+  list-style: none;
+  padding-left: 0;
+}
+.chat-md-task li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+.chat-md-task-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 4px;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+  flex-shrink: 0;
+}
+.chat-md-task li[data-checked="true"] .chat-md-task-box {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+}
+.chat-md-task li[data-checked="true"] span:last-child {
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+.chat-md blockquote {
+  border-left: 3px solid #10b981;
+  padding: 0.25rem 0 0.25rem 0.85rem;
+  color: #d4d4d8;
+  background: rgba(16, 185, 129, 0.06);
+  border-radius: 0 6px 6px 0;
+}
+.chat-md hr {
+  border: none;
+  border-top: 1px solid #2f2f2f;
+  margin: 1rem 0;
+}
+.chat-md-code-inline {
+  background: #2a2a2a;
+  border: 1px solid #3f3f46;
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.875em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #fcd34d;
+}
+.chat-md-codeblock {
+  background: #0f0f0f;
+  border: 1px solid #2f2f2f;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+  margin: 0.6rem 0;
+}
+.chat-md-codeblock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.75rem;
+  background: #1a1a1a;
+  color: #9ca3af;
+  font-size: 11px;
+  border-bottom: 1px solid #2f2f2f;
+}
+.chat-md-codeblock-head button {
+  background: transparent;
+  color: #9ca3af;
+  font-size: 11px;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  transition: background 150ms, color 150ms;
+  cursor: pointer;
+}
+.chat-md-codeblock-head button:hover {
+  background: #2a2a2a;
+  color: #fff;
+}
+.chat-md-codeblock pre {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  overflow-x: auto;
+  color: #e5e7eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1.6;
+}
+.chat-md-codeblock code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+.chat-md img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 0.4rem 0;
+}
+.chat-md-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #2f2f2f;
+  border-radius: 8px;
+  background: #18181b;
+}
+.chat-md-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.chat-md-table-wrap th,
+.chat-md-table-wrap td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #27272a;
+}
+.chat-md-table-wrap th {
+  background: #1f1f23;
+  color: #fff;
+  font-weight: 600;
+}
+.chat-md-table-wrap tr:last-child td { border-bottom: none; }
+.chat-md-table-wrap tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ============ 智能助手聊天页 通用辅助类 ============ */
+@keyframes chatTypingBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
+.chat-typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  margin: 0 2px;
+  animation: chatTypingBounce 1.2s infinite;
+}
+.chat-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes chatFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.chat-fade-in { animation: chatFadeIn 200ms ease-out; }
+
+@keyframes chatPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+.chat-pulse { animation: chatPulse 2s infinite; }

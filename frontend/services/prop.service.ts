@@ -1,5 +1,6 @@
 /**
- * 道具工厂 API
+ * @file prop.service.ts
+ * @description 道具工厂 API，提供道具的 CRUD、软删除、引用统计、批量操作等接口
  */
 
 import { api } from "./api-client";
@@ -8,9 +9,24 @@ import type { AssetUsage, CopyToProjectsResult } from "./character.service";
 
 // ==================== CRUD ====================
 
+/**
+ * listProps - 获取道具列表
+ * @param {string} projectId - 项目 ID（可选）
+ * @returns {Promise<Prop[]> 道具列表
+ */
 export async function listProps(projectId?: string): Promise<Prop[]> {
   const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
   return api<Prop[]>(`/api/props${query}`);
+}
+
+export async function getProp(id: string): Promise<Prop | null> {
+  try {
+    return await api<Prop>(`/api/props/${encodeURIComponent(id)}`);
+  } catch (err) {
+    // 404 等视为不存在
+    if (err instanceof Error && /404/.test(err.message)) return null;
+    throw err;
+  }
 }
 
 export async function createProp(data: {
@@ -23,6 +39,17 @@ export async function createProp(data: {
   size?: string;
   color?: string;
   tags?: string[];
+  // === AI 剧本分析扩展字段 ===
+  importance_level?: string;
+  owner?: string;
+  shape?: string;
+  texture?: string;
+  story_function?: string;
+  visual_features?: string;
+  camera_usage?: string;
+  generation_prompt?: string;
+  first_appearance?: string;
+  confidence?: string;
 }): Promise<Prop> {
   return api<Prop>("/api/props", {
     method: "POST",
@@ -40,6 +67,17 @@ export async function updateProp(id: string, data: Partial<{
   size: string;
   color: string;
   tags: string[];
+  // === AI 剧本分析扩展字段 ===
+  importance_level: string;
+  owner: string;
+  shape: string;
+  texture: string;
+  story_function: string;
+  visual_features: string;
+  camera_usage: string;
+  generation_prompt: string;
+  first_appearance: string;
+  confidence: string;
 }>): Promise<Prop> {
   return api<Prop>(`/api/props/${id}`, {
     method: "PUT",

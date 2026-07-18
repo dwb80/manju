@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file BackupManager.tsx
+ * @description 数据备份和恢复管理组件，支持手动/自动备份的创建、恢复、下载和删除
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import {
   Database,
@@ -37,6 +42,18 @@ interface BackupManagerProps {
   onLoadBackups: () => Promise<void>
 }
 
+/**
+ * BackupManager - 数据备份和恢复管理组件
+ * @param {BackupManagerProps} props - 组件属性
+ * @param {string} props.scriptId - 剧本ID
+ * @param {Backup[]} props.backups - 备份列表
+ * @param {Function} props.onCreateBackup - 创建备份回调
+ * @param {Function} props.onRestoreBackup - 恢复备份回调
+ * @param {Function} props.onDownloadBackup - 下载备份回调
+ * @param {Function} props.onDeleteBackup - 删除备份回调
+ * @param {Function} props.onLoadBackups - 加载备份列表回调
+ * @returns {JSX.Element} 渲染的备份管理界面
+ */
 export function BackupManager({
   scriptId,
   backups,

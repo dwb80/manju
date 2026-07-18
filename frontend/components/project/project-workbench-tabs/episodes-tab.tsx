@@ -2,6 +2,7 @@
 
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import { ManagementTable as ProjectManagementTable } from "@/components/project/project-workbench";
 import type { ProjectEpisode } from "@/lib/app-types";
 
@@ -82,9 +83,12 @@ export function EpisodesTab(props: EpisodesTabProps) {
                     </label>
                     <label className="contents">
                         <span className="pt-3 text-right text-sm font-medium text-[#d8d8d8] max-md:pt-0 max-md:text-left">制作阶段</span>
-                        <select className="h-11 rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" value={props.episodeDraft.status ?? "策划中"} onChange={(event) => props.setEpisodeDraft((draft) => ({ ...draft, status: event.target.value }))}>
-                            {["策划中", "剧本中", "分镜中", "出图中", "视频中", "剪辑中", "审核中", "已完成"].map((status) => <option key={status}>{status}</option>)}
-                        </select>
+                        <ShadcnSelect
+                            options={["策划中", "剧本中", "分镜中", "出图中", "视频中", "剪辑中", "审核中", "已完成"].map((s) => ({ value: s, label: s }))}
+                            value={props.episodeDraft.status ?? "策划中"}
+                            onChange={(value) => props.setEpisodeDraft((draft) => ({ ...draft, status: value }))}
+                            className="h-11 text-sm"
+                        />
                     </label>
                     <label className="contents">
                         <span className="pt-3 text-right text-sm font-medium text-[#d8d8d8] max-md:pt-0 max-md:text-left">截止日期</span>

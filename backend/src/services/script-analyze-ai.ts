@@ -26,6 +26,8 @@ import { randomUUID } from "node:crypto";
 
 /** 大模型输出的标准结构 */
 export interface AIAnalyzeResult {
+  /** 实际调用的大模型 id（如 "agnes-2.0-flash"），前端可用来展示"使用 xxx 解析成功" */
+  model: string;
   title: string;
   format: string;
   characters: AICharacter[];
@@ -612,10 +614,39 @@ ${content.slice(0, 8000)}
  *   1) ctx.ai 必须存在（AppContext 启动时若未配置 AGNES_API_KEY 会被 setup 阶段拒绝）
  *   2) 任何失败（网络/超时/输出无法解析）直接返回 success:false，不提供任何 mock 兜底
  *   3) useLocal=true 一律拒绝（不允许跳过真实 AI）
+ *   4) timeoutMs 不传 → 用 AI_TIMEOUTS.analyzeScript（默认 180s，可被 AGNES_TIMEOUT_ANALYZE_SCRIPT_MS 覆盖）
+ *      传了 → 走传值（必须是正整数；非法值会回退到默认值并 stderr 提示）
+ *   5) model 不传 → 用 DEFAULT_MODEL；传了 → 校验非空字符串后透传给 ctx.ai.chat
+ *   6) 返回的 data.model 一定等于实际请求 AI 时使用的 model id（前端用这个展示"使用 xxx 解析成功"）
  */
 export async function analyzeScriptWithAI(
   ctx: AppContext,
-  body: { content: string; format: string; useLocal?: boolean }
+  body: { content: string; format: string; useLocal?: boolean; timeoutMs?: number; model?: string }
+): Promise<{
+  success: boolean;
+  data?: AIAnalyzeResult;
+  error?: string;
+  rawModelOutput?: string;
+}> {
+  // 外层 try-catch 兜底：捕获 pre-try 代码（requireString / format / timeoutMs / model 解析）的同步抛错，
+  // 以及 ctx.ai.chat / collectStream / extractJson 内部的 async 抛错（被内层 try 捕获后转 success:false）。
+  // 这样可以保证：
+  //   1) 任何阶段的异常都不会逃逸到 router.ts 顶层变成 HTTP 500
+  //   2) 用户拿到的都是 success:false + 可读 error，前端 toast 可以直接显示
+  try {
+    return await analyzeScriptWithAIInner(ctx, body);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "未知错误";
+    return { success: false, error: `AI 调用失败：${message}` };
+  }
+}
+
+/**
+ * analyzeScriptWithAI 的实际实现，单独抽出便于外层 try-catch 统一兜底。
+ */
+async function analyzeScriptWithAIInner(
+  ctx: AppContext,
+  body: { content: string; format: string; useLocal?: boolean; timeoutMs?: number; model?: string }
 ): Promise<{
   success: boolean;
   data?: AIAnalyzeResult;
@@ -624,6 +655,34 @@ export async function analyzeScriptWithAI(
 }> {
   const content = requireString(body.content, "content");
   const format = body.format || "txt";
+
+  // 解析 timeoutMs：正整数才接受；非法回退到 AI_TIMEOUTS.analyzeScript
+  const fallbackTimeout = AI_TIMEOUTS.analyzeScript;
+  let timeoutMs = fallbackTimeout;
+  if (body.timeoutMs != null) {
+    if (
+      typeof body.timeoutMs === "number" &&
+      Number.isFinite(body.timeoutMs) &&
+      body.timeoutMs > 0 &&
+      Number.isInteger(body.timeoutMs)
+    ) {
+      timeoutMs = body.timeoutMs;
+    } else {
+      console.warn(
+        `[analyzeScriptWithAI] timeoutMs=${JSON.stringify(body.timeoutMs)} 不是正整数，回退到默认值 ${fallbackTimeout}ms`,
+      );
+    }
+  }
+
+  // 解析 model：非空字符串才接受；非法/未传回退到 DEFAULT_MODEL
+  let model = DEFAULT_MODEL;
+  if (body.model != null && typeof body.model === "string" && body.model.trim().length > 0) {
+    model = body.model.trim();
+  } else if (body.model != null) {
+    console.warn(
+      `[analyzeScriptWithAI] model=${JSON.stringify(body.model)} 不是非空字符串，回退到默认值 ${DEFAULT_MODEL}`,
+    );
+  }
 
   // useLocal 不再支持：剧本分析必须走真实大模型
   if (body.useLocal) {
@@ -638,6 +697,11 @@ export async function analyzeScriptWithAI(
     // agnes-client 当前实现不读 history 字段，把 system + user 拼到同一个 message 里
     const combined = `${SYSTEM_PROMPT}\n\n---\n\n${buildUserPrompt(content, format)}`;
 
+    // 智谱（glm-4.7-flash 等）默认开启思考模式，会让 8000 字剧本分析跑 180s+。
+    // 对剧本分析这种"结构化提取"任务关掉思考能：1) 大幅提速 2) 减少 token 消耗 3) 提高限流余量。
+    // 智谱通过 body.thinking = { type: "disabled" } 关闭；agnes-client 透传该字段。
+    const isZhipuModel = /^glm-/.test(model.trim().toLowerCase());
+
     // 60s 超时：剧本分析是大流量调用，AbortController 会自动中断 fetch
     const analyzeCtrl = new AbortController();
     const iter = ctx.ai.chat(
@@ -646,16 +710,18 @@ export async function analyzeScriptWithAI(
         // 用 crypto.randomUUID() 避免并发请求串号
         conversationId: `script-analyze-${randomUUID()}`,
         message: combined,
-        model: DEFAULT_MODEL,
+        model,
         temperature: 0.2,
         max_tokens: 4000,
+        // 智谱关掉思考（OpenAI 风格 thinking 字段；agnes-client 透传；ZhipuClient 会识别）
+        ...(isZhipuModel ? { thinking: { type: "disabled" } as any } : {}),
       } as any,
       analyzeCtrl.signal
     );
 
     const fullText = await withTimeout(
       collectStream(iter),
-      AI_TIMEOUTS.analyzeScript,
+      timeoutMs,
       "analyzeScriptWithAI",
       analyzeCtrl
     );
@@ -672,14 +738,31 @@ export async function analyzeScriptWithAI(
 
     // 校验 + 归一化
     const warnings: string[] = [];
-    const characters = (Array.isArray(parsed.characters) ? parsed.characters : []).map((c: any) => normalizeCharacter(c, warnings));
+    const characters = (Array.isArray(parsed.characters) ? parsed.characters : [])
+      .map((c: any) => normalizeCharacter(c, warnings))
+      .filter((c: AICharacter | null): c is AICharacter => c !== null);
     const scenes = (Array.isArray(parsed.scenes) ? parsed.scenes : []).map((s: any) => normalizeScene(s, warnings));
     const props = (Array.isArray(parsed.props) ? parsed.props : []).map((p: any) => normalizeProp(p, warnings));
     const episodes = (Array.isArray(parsed.episodes) ? parsed.episodes : []).map((e: any) => normalizeEpisode(e, warnings));
 
+    // 空结果保护：AI 成功响应但未提取到任何资产（模型拒答 / 触发内容安全 / 模型本身问题）
+    // 这种情况下用户看到的是空预览，体感是"什么都没解析出来"。
+    // 直接返回 success:false + 具体原因，让前端给出可操作的错误提示。
+    const totalExtracted =
+      characters.length + scenes.length + props.length + episodes.length;
+    if (totalExtracted === 0) {
+      return {
+        success: false,
+        error:
+          "AI 未从剧本中提取到任何角色/场景/道具/剧集。可能原因：剧本内容过短、格式不规范，或大模型本次拒答。请稍后重试或补充剧本内容。",
+        rawModelOutput: fullText.slice(0, 1000),
+      };
+    }
+
     return {
       success: true,
       data: {
+        model,
         title: typeof parsed.title === "string" ? parsed.title : "",
         format,
         characters,
@@ -710,6 +793,8 @@ export interface AnalyzedAsset {
   description?: string;
   role?: string;
   gender?: string;
+  /** 新增：年龄描述（原始字符串，如 "25" / "少年" / "中年"） */
+  age?: string;
   traits?: string[];
   sceneType?: string;
   lighting?: string;
@@ -722,6 +807,23 @@ export interface AnalyzedAsset {
   generationPrompt?: string;
   /** 新增：推断可信度 */
   confidence?: "confirmed" | "inferred";
+  // === AI 剧本分析扩展字段 ===
+  identity?: string;
+  face?: string;
+  hair?: string;
+  body?: string;
+  temperament?: string;
+  costume_name?: string;
+  costume_description?: string;
+  costume_color?: string;
+  costume_material?: string;
+  costume_style?: string;
+  accessories?: string[];
+  emotion_states?: string;
+  action_assets?: string;
+  relationships?: string;
+  first_appearance?: string;
+  dialogue_count?: number;
 }
 
 /**
@@ -734,15 +836,35 @@ export function aiResultToAssets(result: AIAnalyzeResult | undefined): AnalyzedA
 
   for (const c of result.characters || []) {
     if (!c?.name) continue;
+    // 兜底：AIAnalyzeResult 已经过 normalizeCharacter 过滤，但旧版缓存数据可能含 Markdown 误识别
+    if (!isLikelyCharacterName(c.name)) continue;
     out.push({
       type: "character",
       name: c.name,
       description: c.generation_prompt || `${c.basic?.identity || ""} ${c.appearance?.face || ""}`.trim(),
       role: c.basic?.role_type || "minor",
       gender: c.basic?.gender || "other",
+      age: c.basic?.age || undefined,
       traits: c.personality_keywords || [],
       generationPrompt: c.generation_prompt,
       confidence: c.confidence,
+      // === AI 剧本分析扩展字段 ===
+      identity: c.basic?.identity,
+      face: c.appearance?.face,
+      hair: c.appearance?.hair,
+      body: c.appearance?.body,
+      temperament: c.appearance?.temperament,
+      costume_name: c.costume?.name,
+      costume_description: c.costume?.description,
+      costume_color: c.costume?.color,
+      costume_material: c.costume?.material,
+      costume_style: c.costume?.style,
+      accessories: c.accessories,
+      emotion_states: JSON.stringify(c.emotion_states || []),
+      action_assets: JSON.stringify(c.action_assets || []),
+      relationships: JSON.stringify(c.relationships || []),
+      first_appearance: c.first_appearance,
+      dialogue_count: c.dialogue_count,
     });
   }
   for (const s of result.scenes || []) {
@@ -821,15 +943,29 @@ function extractJson(text: string): any | null {
   return null;
 }
 
-function normalizeCharacter(c: any, warnings: string[]): AICharacter {
-  const name = String(c?.name || "").trim();
-  if (!name) warnings.push("存在空角色名，已丢弃");
+function normalizeCharacter(c: any, warnings: string[]): AICharacter | null {
+  const rawName = String(c?.name || "").trim();
+  if (!rawName) {
+    warnings.push("存在空角色名，已丢弃");
+    return null;
+  }
+  const name = cleanCharacterName(rawName);
+  if (!name) {
+    warnings.push(`角色名清理后为空（原始:"${rawName}"），已丢弃`);
+    return null;
+  }
+  // 防御：AI 经常把 Markdown 标题 / 字段名误识别为角色（如 "## 场景二" / "**类型**" / "清晨6"）
+  // 这些显然不是角色名，必须丢弃以免污染数据库和右侧栏
+  if (!isLikelyCharacterName(name)) {
+    warnings.push(`"${name}" 不像合法角色名（疑似 Markdown 标题/字段），已丢弃`);
+    return null;
+  }
   const basic = c?.basic || {};
   const appearance = c?.appearance || {};
   const costume = c?.costume || {};
   return {
     character_id: String(c?.character_id || "").trim() || `char_${name}`,
-    name: cleanCharacterName(name),
+    name,
     basic: {
       gender: ["male", "female", "other"].includes(basic?.gender) ? basic.gender : "other",
       age: String(basic?.age || "未知"),
@@ -1015,4 +1151,49 @@ function cleanCharacterName(raw: string): string {
     .replace(/[（(][^）)]*[）)]/g, "") // 去除所有中英文括号内容
     .replace(/[（(].*$/, "")
     .trim();
+}
+
+/**
+ * 判断一段文本是否"像"合法角色名。
+ * 大模型有时会把 Markdown 标题（"## 场景二"）或字段名（"**类型**"）误识别为角色，
+ * 必须把它们从角色面板里剔除，避免污染 UI 和数据。
+ *
+ * 规则：
+ * - 长度 2-20
+ * - 必须包含至少一个中文字符（避免纯英文/纯数字/纯标点）
+ * - 不能包含 Markdown 标记：# * ~ ` _ [ ] ( ) 等
+ * - 不能以数字结尾（"清晨6" 这类时间被误识别）
+ * - 起点不能是标点
+ * - 不能是常见剧本结构关键词（"场景"、"角色"、"主要角色介绍"等）
+ */
+const CHARACTER_NAME_BLOCKLIST: ReadonlySet<string> = new Set([
+  "场景", "角色", "道具", "简介", "正文", "旁白", "OS", "VO",
+  "剧本大纲", "AI生成剧本大纲", "故事梗概", "主要角色介绍",
+  "创意描述", "基本信息", "角色设定", "剧情结构", "故事结构",
+  "开场状态", "矛盾建立", "冲突升级", "高潮节点", "结尾状态",
+  "类型", "风格", "时代背景", "背景", "核心冲突", "目标字数",
+  "故事主题", "视觉主题", "对白风格", "时长预估", "集数信息",
+  "剧集名称", "题材类型", "主线事件", "分集大纲", "声音",
+  "场景一", "场景二", "场景三", "场景四", "场景五", "场景六", "场景七", "场景八",
+  "景一", "景二", "景三", "景四", "景五", "景六", "景七", "景八",
+  "第一场", "第二场", "第三场", "第四场", "第五场",
+  "第一章", "第二章", "第三章", "第四章", "第五章",
+  "第一幕", "第二幕", "第三幕", "第四幕", "第五幕",
+]);
+
+function isLikelyCharacterName(name: string): boolean {
+  if (typeof name !== "string") return false;
+  const trimmed = name.trim();
+  if (trimmed.length < 2 || trimmed.length > 20) return false;
+  // 含 Markdown 标记 → 不合法
+  if (/[#*~`_\[\]【】()（）]/.test(trimmed)) return false;
+  // 必须含中文字符
+  if (!/[\u4e00-\u9fff]/.test(trimmed)) return false;
+  // 黑名单关键词
+  if (CHARACTER_NAME_BLOCKLIST.has(trimmed)) return false;
+  // 以数字结尾（如"清晨6"）→ 不合法
+  if (/\d$/.test(trimmed)) return false;
+  // 起点是标点 → 不合法
+  if (/^[·\-、，,。:：!?]/.test(trimmed)) return false;
+  return true;
 }

@@ -1,5 +1,6 @@
 /**
- * 独立模块 API 服务（barrel 入口）
+ * @file module.service.ts
+ * @description 独立模块 API 服务统一入口（barrel 模式），按业务域聚合导出各模块服务
  *
  * 设计原则：
  * - 此文件保持历史 import 路径兼容：调用方继续 `import { listCharacters } from "@/services/module.service"` 不会报错。
@@ -34,6 +35,7 @@ export {
 // ==================== 场景 ====================
 export {
   listScenes,
+  getScene,
   createScene,
   updateScene,
   deleteScene,
@@ -50,6 +52,7 @@ export {
 // ==================== 道具 ====================
 export {
   listProps,
+  getProp,
   createProp,
   updateProp,
   deleteProp,
@@ -92,17 +95,6 @@ export {
   getVersion,
   restoreVersion,
 } from "./version.service";
-
-// ==================== 剧本 ====================
-export {
-  listScripts,
-  createScript,
-  updateScript,
-  deleteScript,
-  restoreScript,
-  purgeScript,
-  listDeletedScripts,
-} from "./script.service";
 
 // ==================== 剧本富文本结构（剧集/场景/对白） ====================
 export {

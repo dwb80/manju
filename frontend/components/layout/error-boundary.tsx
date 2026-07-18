@@ -1,3 +1,8 @@
+/**
+ * @file error-boundary.tsx
+ * @description 全局错误边界组件，捕获React组件渲染错误并显示友好的错误提示页面
+ */
+
 "use client";
 
 import React from "react";

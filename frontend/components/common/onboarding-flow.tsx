@@ -32,6 +32,11 @@ interface OnboardingFlowProps {
   initialStep?: number;
 }
 
+/**
+ * OnboardingFlow - 新手引导流程组件
+ * @param {OnboardingFlowProps} props - 组件属性
+ * @returns {JSX.Element | null} 渲染的新手引导元素
+ */
 export function OnboardingFlow({ onComplete, onSkip, initialStep = 0 }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [isVisible, setIsVisible] = useState(true);

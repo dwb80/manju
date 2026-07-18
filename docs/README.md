@@ -1,6 +1,6 @@
 # 文档索引
 
-> **更新时间**: 2026-07-13  
+> **更新时间**: 2026-07-18
 > **说明**: 本文档说明 `docs` 目录下每个文档的用途和推荐阅读顺序。
 
 ---
@@ -12,9 +12,11 @@
 按以下顺序阅读，快速了解项目全貌：
 
 1. **[product-design-spec.md](product-design-spec.md)** —— 产品顶层设计（愿景、角色、流程、数据模型、AI体系、信息架构、NFR）
-2. **[requirements-and-acceptance.md](requirements-and-acceptance.md)** —— 功能需求、验收标准、API规范、数据字典
-3. **[architecture-and-development.md](architecture-and-development.md)** —— 技术架构、项目结构、存储方案、开发指南
-4. **[module-relationships.md](module-relationships.md)** —— 模块间关系（剧本↔分镜↔资产↔模型）
+2. **[functional-specification.md](functional-specification.md)** —— 当前版本可验证的功能、状态、边界、异常与验收基线
+3. **[feature-status.md](feature-status.md)** —— 当前真实能力、产品边界和对外承诺口径
+4. **[requirements-and-acceptance.md](requirements-and-acceptance.md)** —— 功能需求、验收标准、API规范、数据字典
+5. **[architecture-and-development.md](architecture-and-development.md)** —— 技术架构、项目结构、存储方案、开发指南
+6. **[module-relationships.md](module-relationships.md)** —— 模块间关系（剧本↔分镜↔资产↔模型）
 
 ### 按角色阅读
 
@@ -46,6 +48,19 @@
 | **[requirements-and-acceptance.md](requirements-and-acceptance.md)** | 需求规格与验收标准。包含功能需求（按业务阶段）、验收标准、前端验收标准、API接口规范摘要、数据字典摘要。 | 合并 5 个文档 |
 | **[architecture-and-development.md](architecture-and-development.md)** | 架构设计与开发指南。包含MVP架构、技术栈、项目结构、存储方案、开发排错指南。 | 合并 4 个文档 |
 | **[module-relationships.md](module-relationships.md)** | 模块关系说明。包含剧本与分镜、剧本与资产、剧本与模型中心的关系，以及生产-筛选-入库-使用流程。 | 合并 3 个文档 |
+
+### 诊断与评审文档
+
+| 文档 | 说明 |
+|------|------|
+| **[platform-diagnosis-and-competitive-prd.md](platform-diagnosis-and-competitive-prd.md)** | 2026-07-18 平台功能盘点、文档差异、合理性分析、整改建议与竞争性产品 PRD。 |
+| **[code-review-report-2026-07-18.md](code-review-report-2026-07-18.md)** | 2026-07-18 代码评审、风险分级、工程整改与 90 天计划。 |
+| **[feature-status.md](feature-status.md)** | 2026-07-18 当前能力分级、明确边界、对外表达红线和版本准入。 |
+| **[functional-specification.md](functional-specification.md)** | 2026-07-18 功能验证唯一基线，定义模块行为、异常、边界和验收条件。 |
+| **[requirements-traceability-matrix.md](requirements-traceability-matrix.md)** | 72 个功能编号到页面、API、数据和测试证据的追踪矩阵。 |
+| **[defect-register.md](defect-register.md)** | 功能验证中发现的缺陷、级别、证据、影响和闭环状态。 |
+| **[static-audit-report.md](static-audit-report.md)** | 静态质量、供应链、敏感信息和安全边界审计结论。 |
+| **[verification-and-remediation-report-2026-07-18.md](verification-and-remediation-report-2026-07-18.md)** | 七阶段验证结果、整改证据、残余风险与发布建议。 |
 
 ### 独立保留文档
 

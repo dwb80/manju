@@ -1,11 +1,24 @@
+/**
+ * @file media-tools.ts
+ * @description 媒体处理工具集，提供图片裁切、格式化等本地处理能力
+ */
+
 import type { UploadedFile } from "@/lib/app-types";
 
-/** 判断提示词是否更像“精准裁切/截取”，这类任务不应该交给生图模型重绘。 */
+/**
+ * shouldUseLocalCrop - 判断提示词是否更像"精准裁切/截取"
+ * @param {string} prompt - 用户输入的提示词
+ * @returns {boolean} 如果是裁切类任务返回 true，不应交给生图模型重绘
+ */
 export function shouldUseLocalCrop(prompt: string): boolean {
   return /精准截取|严格截取|像素级一致|不做任何创作|不做创作|不做修改|禁止自创|精准取景|裁切|裁剪|截取近景/.test(prompt);
 }
 
-/** 把图片 URL 读取成浏览器可绘制的 HTMLImageElement。 */
+/**
+ * loadImageElement - 把图片 URL 读取成浏览器可绘制的 HTMLImageElement
+ * @param {string} url - 图片 URL
+ * @returns {Promise<HTMLImageElement>} 加载完成的图片元素
+ */
 async function loadImageElement(url: string): Promise<HTMLImageElement> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`图片读取失败 ${response.status}`);
@@ -21,7 +34,12 @@ async function loadImageElement(url: string): Promise<HTMLImageElement> {
   }
 }
 
-/** 从参考图本地裁切 9:16 竖版近景，避免图片模型重新创作人物细节。 */
+/**
+ * cropReferenceImageToPortrait - 从参考图本地裁切 9:16 竖版近景
+ * @param {Pick<UploadedFile, "name" | "url">} file - 上传的文件对象
+ * @param {string} prompt - 用户输入的提示词
+ * @returns {Promise<File>} 裁切后的图片文件
+ */
 export async function cropReferenceImageToPortrait(file: Pick<UploadedFile, "name" | "url">, prompt: string): Promise<File> {
   const image = await loadImageElement(file.url);
   const sourceWidth = image.naturalWidth;

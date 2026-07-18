@@ -16,6 +16,7 @@
 import { Scissors, Clock } from "lucide-react";
 import type { ProjectClip } from "@/lib/app-types";
 import { PROJECT_CLIP_STATUS_COLORS, PROJECT_CLIP_STATUS_LABELS } from "@/lib/module-dictionaries";
+import { Tip } from "@/components/ui/tip";
 
 interface BlockMeta {
   id: string;
@@ -133,18 +134,31 @@ export function ClipTimeline({ clips }: { clips: ProjectClip[] }) {
                   PROJECT_CLIP_STATUS_COLORS[b.status as keyof typeof PROJECT_CLIP_STATUS_COLORS] ??
                   "bg-gray-500/20 text-gray-300";
                 return (
-                  <div
+                  <Tip
                     key={b.id}
-                    className={`absolute top-1 bottom-1 flex items-center overflow-hidden rounded border border-white/10 ${color} hover:z-10 hover:ring-1 hover:ring-emerald-400`}
-                    style={{ left: `${left}%`, width: `${width}%` }}
-                    title={`${b.title}\n${formatTC(b.start)} → ${formatTC(b.end)}\n${b.notes ?? ""}`}
+                    label={
+                      <div className="space-y-0.5">
+                        <div className="font-medium">{b.title}</div>
+                        <div className="text-muted-foreground text-[10px]">
+                          {formatTC(b.start)} → {formatTC(b.end)}
+                        </div>
+                        {b.notes && <div className="text-muted-foreground">{b.notes}</div>}
+                      </div>
+                    }
+                    side="top"
+                    className="max-w-xs"
                   >
-                    <Scissors className="ml-1 h-3 w-3 shrink-0 opacity-70" />
-                    <span className="truncate px-1 text-[10px]">
-                      {b.shot ? `${b.shot} · ` : ""}
-                      {b.title}
-                    </span>
-                  </div>
+                    <div
+                      className={`absolute top-1 bottom-1 flex items-center overflow-hidden rounded border border-white/10 ${color} hover:z-10 hover:ring-1 hover:ring-emerald-400`}
+                      style={{ left: `${left}%`, width: `${width}%` }}
+                    >
+                      <Scissors className="ml-1 h-3 w-3 shrink-0 opacity-70" />
+                      <span className="truncate px-1 text-[10px]">
+                        {b.shot ? `${b.shot} · ` : ""}
+                        {b.title}
+                      </span>
+                    </div>
+                  </Tip>
                 );
               })}
             </div>
@@ -164,14 +178,12 @@ export function ClipTimeline({ clips }: { clips: ProjectClip[] }) {
             </div>
             <div className="flex flex-wrap gap-2">
               {unscheduled.map((b) => (
-                <div
-                  key={b.id}
-                  className="rounded border border-white/10 bg-[#252525] px-2 py-1 text-xs text-white/70"
-                  title={b.notes}
-                >
-                  {b.shot ? `${b.shot} · ` : ""}
-                  {b.title}
-                </div>
+                <Tip key={b.id} label={b.notes} side="top">
+                  <div className="rounded border border-white/10 bg-[#252525] px-2 py-1 text-xs text-white/70">
+                    {b.shot ? `${b.shot} · ` : ""}
+                    {b.title}
+                  </div>
+                </Tip>
               ))}
             </div>
           </div>

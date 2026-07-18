@@ -1,6 +1,7 @@
 import type { AppContext } from "./app.js";
 import type { ChatChunk, ChatParams, ChatToolCall, Conversation, Message } from "../types.js";
-import { DEFAULT_MODEL, estimateTokens, id, nowIso } from "../utils.js";
+import { DEFAULT_MODEL, estimateTokens, id, nowIso, safeAICall } from "../utils.js";
+import { rootLogger } from "../logger.js";
 
 /**
  * 聊天领域服务。
@@ -24,10 +25,12 @@ export async function createConversation(ctx: AppContext, input: { title?: strin
     id: id("c"),
     title: input.title?.trim() || "新的创作会话",
     model: input.model || DEFAULT_MODEL,
+    mode: "chat",
     is_pinned: false,
     created_at: now,
     updated_at: now,
     project_id: projectId,
+    unread_count: 0,
   };
   await ctx.conversations.insert(conversation);
   return conversation;
@@ -125,37 +128,49 @@ export async function streamChatAssistant(
   signal: AbortSignal,
   onChunk: (chunk: ChatChunk) => void
 ): Promise<{ content: string; reasoning?: string; toolCalls?: ChatToolCall[]; tokens: number }> {
-  let content = "";
-  let reasoning = "";
-  const toolCallBuffer = new Map<string, ChatToolCall>();
+  return safeAICall("streamChatAssistant", async () => {
+    let content = "";
+    let reasoning = "";
+    const toolCallBuffer = new Map<string, ChatToolCall>();
 
-  for await (const chunk of ctx.ai.chat(params, signal)) {
-    if (signal.aborted) break;
-    onChunk(chunk);
-    if (chunk.content) content += chunk.content;
-    if (chunk.reasoning) reasoning += chunk.reasoning;
-    if (chunk.tool_calls) mergeToolCalls(toolCallBuffer, chunk.tool_calls);
-    if (chunk.done) break;
-  }
+    // for-await 循环本身可能抛错（网络中断、JSON 解析失败、AbortError 等），
+    // 外层 safeAICall 会统一捕获并抛出 AICallError，避免逃逸到 router.ts 顶层变 500。
+    for await (const chunk of ctx.ai.chat(params, signal)) {
+      if (signal.aborted) break;
+      onChunk(chunk);
+      if (chunk.content) content += chunk.content;
+      if (chunk.reasoning) reasoning += chunk.reasoning;
+      if (chunk.tool_calls) mergeToolCalls(toolCallBuffer, chunk.tool_calls);
+      if (chunk.done) break;
+    }
 
-  const toolCalls = toolCallBuffer.size > 0 ? Array.from(toolCallBuffer.values()) : undefined;
-  const metaTokens = content + (reasoning ? `\n${reasoning}` : "") + (toolCalls ? toolCalls.map((tc) => tc.function.arguments).join("") : "");
-  const tokens = estimateTokens(metaTokens);
+    const toolCalls = toolCallBuffer.size > 0 ? Array.from(toolCallBuffer.values()) : undefined;
+    const metaTokens = content + (reasoning ? `\n${reasoning}` : "") + (toolCalls ? toolCalls.map((tc) => tc.function.arguments).join("") : "");
+    const tokens = estimateTokens(metaTokens);
 
-  const meta: Record<string, unknown> = { model: params.model ?? DEFAULT_MODEL, tokens };
-  if (reasoning) meta.reasoning = reasoning;
-  if (toolCalls) meta.tool_calls = toolCalls;
+    const meta: Record<string, unknown> = { model: params.model ?? DEFAULT_MODEL, tokens };
+    if (reasoning) meta.reasoning = reasoning;
+    if (toolCalls) meta.tool_calls = toolCalls;
 
-  if (content || reasoning || toolCalls) {
-    await addMessage(ctx, {
-      conversation_id: params.conversationId,
-      role: "assistant",
-      content,
-      meta,
-    });
-  }
+    if (content || reasoning || toolCalls) {
+      try {
+        await addMessage(ctx, {
+          conversation_id: params.conversationId,
+          role: "assistant",
+          content,
+          meta,
+        });
+      } catch (err) {
+        // 持久化失败不应阻塞用户拿到 AI 回复：仅记日志
+        rootLogger.warn(
+          { event: "chat.persist_failed", conversationId: params.conversationId, err },
+          "聊天流结束后持久化助手消息失败",
+        );
+      }
+    }
 
-  return { content, reasoning: reasoning || undefined, toolCalls, tokens };
+    return { content, reasoning: reasoning || undefined, toolCalls, tokens };
+  });
 }
 
 /** 从用户提示词中截取适合作为历史标题的前 36 个字符。 */

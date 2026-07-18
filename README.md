@@ -1,85 +1,81 @@
-# Agnes AI Studio
+# Manju AI 漫剧生产工作台
 
-Agnes AI Studio 是一个本地运行的 AI 创作工具，支持聊天、图片生成、视频生成、历史会话、收藏、项目归属和本地媒体保存。
+Manju（历史名称 Agnes AI Studio）是一套本地优先的 AI 漫剧生产工作台，覆盖项目、剧本、分镜、角色/场景/道具资产、图片、视频、音频、剪辑、审核、发布准备、数据分析、模型配置和任务监控。
 
-这个项目是前后端分离结构：
+当前产品边界是“单机或单团队试点版”：核心生产链路可运行，但尚未提供登录、组织、多租户和强制 RBAC；发布模块负责成片、计划、平台物料和发布包，不代表已接入第三方平台自动投放。准确能力状态见 [功能状态基线](docs/feature-status.md)，目标产品设计见 [竞争性产品 PRD](docs/platform-diagnosis-and-competitive-prd.md)。
 
-- `backend/`：Node.js 后端，负责 API、Agnes 接口调用、SQLite 数据存储、本地图片/视频缓存。
-- `frontend/`：Next.js + React + Tailwind 前端，负责聊天页面、图片页、视频页和历史会话列表。
-- `docs/`：给开发者和新手看的说明文档。
-- `start-all.bat`：一键启动前端和后端。
+## 核心能力
 
-## 快速运行
+- 项目工作台：项目、剧集、任务、里程碑、问题、成员信息和项目目录。
+- 剧本生产：导入、结构化编辑、场景/对白拆解、版本、AI 分析、生成与优化。
+- 资产与分镜：角色、场景、道具、音频、分镜、图片历史、跨项目复制和使用关系。
+- AI 生产：聊天、图片、视频、任务队列、取消/重试、模型配置与本地媒体保存。
+- 质量与交付：审核队列、通过/驳回、成片管理、发布计划、发布包和数据看板。
+- 本地基础设施：Node.js HTTP 服务、SQLite、结构化日志、请求追踪和可注入 AI Provider。
 
-先分别安装依赖：
+## 技术结构
 
-```bat
+- `backend/`：Node.js 24 + TypeScript，提供 HTTP API、领域服务、AI Provider 和 SQLite 存储。
+- `frontend/`：Next.js 15 + React 19 + Tailwind CSS。
+- `scripts/`：启动、E2E、编码和密钥检查脚本。
+- `docs/`：产品、需求、架构、API、诊断与代码评审文档。
+
+## 环境要求
+
+- Node.js `24.3.x`（项目通过 `.nvmrc` 和 `engines` 锁定）。
+- npm；Windows 可使用 `start-all.bat`。
+- 真实 AI 生成需要在 `backend/.env` 配置 Provider 密钥。测试使用显式 FakeAIClient，不需要网络或真实密钥。
+
+## 安装与启动
+
+```powershell
 cd backend
 npm install
+Copy-Item .env.example .env
 
 cd ..\frontend
 npm install
+
+cd ..
+.\start-all.bat
 ```
 
-配置 API Key：
+默认地址：
 
-```bat
-backend\.env
-```
+- 前端：`http://127.0.0.1:3001`
+- 后端：`http://127.0.0.1:3000`
+- 健康检查：`http://127.0.0.1:3000/api/health`
 
-示例：
+后端默认只监听本机。若确需局域网访问，应显式配置 `HOST`、`CORS_ALLOWED_ORIGINS`，并先补充身份认证和访问控制。
 
-```env
-AGNES_API_KEY=你的_key
-AGNES_API_BASE_URL=https://apihub.agnes-ai.com
-```
+## 配置
 
-启动：
+参考 `backend/.env.example`。至少选择并配置一个可用 AI Provider；不要把真实密钥写入源码、文档或提交到 Git。模型接口只返回 `secret_configured`，不会把敏感请求头回传浏览器。
 
-```bat
-start-all.bat
-```
+## 验证命令
 
-访问：
-
-- 前端：http://localhost:3001
-- 后端：http://localhost:3000
-
-## 新手先看这些
-
-- [项目结构](docs/project-guide.md)
-- [架构说明](docs/architecture.md)
-- [数据和文件保存位置](docs/storage.md)
-- [接口说明](docs/api.md)
-- [开发和排错](docs/development.md)
-
-## 常用命令
-
-后端测试：
-
-```bat
+```powershell
 cd backend
 npm test
-```
 
-前端构建：
-
-```bat
-cd frontend
-npm run build
-```
-
-完整验证：
-
-```bat
-cd backend
+# 编码、密钥、后端测试、前端生产构建和关键 E2E
 npm run test:all
 ```
 
-## 常见问题
+前端的 `npm run test:e2e` 执行稳定的关键链路冒烟测试；历史全量页面用例保留为 `npm run test:e2e:legacy`，用于逐步清理旧断言。
 
-如果页面提示 `Failed to fetch`，通常是后端没有启动，先看 `http://localhost:3000/api/conversations` 是否能访问。
+## 推荐文档
 
-如果生成图片或视频失败，先检查 `backend/.env` 里的 `AGNES_API_KEY` 和 Agnes 接口路径。
+- [文档索引](docs/README.md)
+- [功能状态基线](docs/feature-status.md)
+- [竞争性产品 PRD 与差异整改](docs/platform-diagnosis-and-competitive-prd.md)
+- [架构与开发指南](docs/architecture-and-development.md)
+- [实际 API 说明](docs/api.md)
+- [代码评审与工程整改](docs/code-review-report-2026-07-18.md)
 
-如果页面更新异常，停止前端后删除 `frontend/.next` 和 `frontend/.next-build`，再重新启动。
+## 已知边界
+
+- 当前没有真实登录、组织、多租户和强制 RBAC，不应直接暴露到公网。
+- 第三方平台账号授权、自动发布、回执和投后数据回流尚未接入。
+- 个别 Provider 不支持 TTS；界面和接口必须按实际 Provider 能力显示。
+- SQLite 适合本地/小团队试点；多人并发和高可用部署需要迁移到服务端数据库与对象存储。

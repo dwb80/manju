@@ -1021,7 +1021,7 @@ async function main(): Promise<void> {
   console.log("=".repeat(60));
 
   // 创建应用上下文
-  const ctx = createAppContext(process.cwd());
+  const ctx = await createAppContext(process.cwd());
 
   try {
     // 检查是否需要清除现有数据

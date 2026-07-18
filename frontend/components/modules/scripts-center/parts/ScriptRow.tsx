@@ -5,16 +5,20 @@
  *
  * 单行渲染：标题 + 作者 + 状态 + 字数 + 章节 + 更新时间 + 操作列。
  * 行整体可点击进入编辑器（操作列需 stopPropagation 避免与按钮冲突）。
+ *
+ * 配合 frontend/components/ui/table.tsx 使用，
+ * 因此使用 TableRow/TableCell 等 shadcn 风格组件。
  */
 
-import { FileText, Sparkles, Tag as TagIcon, CheckCircle, Trash2, Pencil } from "lucide-react";
+import { FileText, Sparkles, Tag as TagIcon, CheckCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { TableCell, TableRow } from "@/components/ui/table";
 import type { Script } from "@/lib/module-types";
 
 export function ScriptRow({
   script,
   onOpenEditor,
-  onEdit,
   onDelete,
   onTagManager,
   onAnalysis,
@@ -22,7 +26,6 @@ export function ScriptRow({
 }: {
   script: Script;
   onOpenEditor: () => void;
-  onEdit: () => void;
   onDelete: () => void;
   onTagManager: () => void;
   onAnalysis: () => void;
@@ -36,66 +39,60 @@ export function ScriptRow({
     archived: "已归档",
   };
 
-  const statusColors: Record<string, string> = {
-    draft: "bg-gray-500/20 text-gray-400",
-    active: "bg-blue-500/20 text-blue-400",
-    review: "bg-yellow-500/20 text-yellow-400",
-    completed: "bg-emerald-500/20 text-emerald-400",
-    archived: "bg-[#252525] text-[#888]",
+  const statusVariant: Record<string, "muted" | "info" | "warning" | "success" | "outline"> = {
+    draft: "muted",
+    active: "info",
+    review: "warning",
+    completed: "success",
+    archived: "outline",
   };
 
   return (
-    <tr
-      className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
+    <TableRow
+      className="cursor-pointer"
       onClick={onOpenEditor}
       title="点击进入编辑器"
     >
-      <td className="px-4 py-3">
+      <TableCell>
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded bg-white/5">
             <FileText className="h-4 w-4 text-emerald-400" />
           </div>
           <div>
-            <div className="font-medium text-white">{script.title}</div>
+            <div className="font-medium text-foreground">{script.title}</div>
             {script.description && (
-              <div className="text-xs text-[#666] line-clamp-1">{script.description}</div>
+              <div className="text-xs text-muted-foreground line-clamp-1">{script.description}</div>
             )}
             {script.tags && script.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {script.tags.slice(0, 3).map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400"
-                  >
+                  <Badge key={idx} variant="success" className="text-[10px] py-0">
                     {tag}
-                  </span>
+                  </Badge>
                 ))}
                 {script.tags.length > 3 && (
-                  <span className="text-[10px] text-[#666]">+{script.tags.length - 3}</span>
+                  <span className="text-[10px] text-muted-foreground">+{script.tags.length - 3}</span>
                 )}
               </div>
             )}
           </div>
         </div>
-      </td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{script.author}</td>
-      <td className="px-4 py-3">
-        <span className={`px-2 py-0.5 rounded text-xs ${statusColors[script.status]}`}>
-          {statusLabels[script.status]}
-        </span>
-      </td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden sm:table-cell">
+      </TableCell>
+      <TableCell className="text-muted-foreground hidden md:table-cell">{script.author}</TableCell>
+      <TableCell>
+        <Badge variant={statusVariant[script.status] ?? "muted"}>
+          {statusLabels[script.status] ?? script.status}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-muted-foreground hidden sm:table-cell">
         {script.words?.toLocaleString() ?? 0}
-      </td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden lg:table-cell">{script.chapters ?? 0}</td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">
+      </TableCell>
+      <TableCell className="text-muted-foreground hidden lg:table-cell">{script.chapters ?? 0}</TableCell>
+      <TableCell className="text-muted-foreground hidden md:table-cell">
         {new Date(script.updated_at).toLocaleDateString()}
-      </td>
-      <td
-        className="px-4 py-3 text-right"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2 justify-end">
+      </TableCell>
+      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1 justify-end">
           {/* 主操作：进入编辑器继续编辑（替代原先的铅笔图标） */}
           <Button
             size="sm"
@@ -106,23 +103,20 @@ export function ScriptRow({
           >
             继续编辑 →
           </Button>
-          <Button variant="ghost" size="sm" onClick={onEdit} title="编辑标题和基础信息">
-            <Pencil className="h-4 w-4 text-emerald-400" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onAnalysis} title="剧本分析（提取角色/场景/道具）">
+          <Button variant="ghost" size="icon" onClick={onAnalysis} title="剧本分析（提取角色/场景/道具）" aria-label="剧本分析">
             <Sparkles className="h-4 w-4 text-blue-400" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onTagManager} title="标签管理">
+          <Button variant="ghost" size="icon" onClick={onTagManager} title="标签管理" aria-label="标签管理">
             <TagIcon className="h-4 w-4 text-purple-400" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onApproval} title="审批流程">
+          <Button variant="ghost" size="icon" onClick={onApproval} title="审批流程" aria-label="审批流程">
             <CheckCircle className="h-4 w-4 text-yellow-400" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete} title="删除">
+          <Button variant="ghost" size="icon" onClick={onDelete} title="删除" aria-label="删除">
             <Trash2 className="h-4 w-4 text-red-400" />
           </Button>
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }

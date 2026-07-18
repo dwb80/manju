@@ -1,5 +1,20 @@
-import { X, Check } from "lucide-react";
+/**
+ * @file conversation-rename-dialog.tsx
+ * @description 对话重命名对话框组件，用于修改对话名称
+ */
+
+"use client";
+
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Conversation } from "@/lib/app-types";
 
 interface ConversationRenameDialogProps {
@@ -9,6 +24,11 @@ interface ConversationRenameDialogProps {
     onTitleChange: (title: string) => void;
 }
 
+/**
+ * 会话重命名弹窗。
+ *
+ * 基于 shadcn Dialog 封装，保留旧 API 接口，调用方零迁移成本。
+ */
 export function ConversationRenameDialog({
     conversationRenameDraft,
     onSubmit,
@@ -18,33 +38,51 @@ export function ConversationRenameDialog({
     if (!conversationRenameDraft) return null;
 
     return (
-        <div className="fixed inset-0 z-[92] grid place-items-center bg-black/60 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="重命名会话">
-            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#202020] shadow-2xl">
-                <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                    <div className="text-base font-semibold text-white">重命名会话</div>
-                    <button className="grid h-8 w-8 place-items-center rounded-lg text-[#d8d8d8] hover:bg-white/10 hover:text-white" onClick={onClose} aria-label="关闭重命名会话">
-                        <X className="h-4 w-4" />
-                    </button>
-                </div>
-                <div className="p-5">
-                    <label className="grid grid-cols-[80px_1fr] items-center gap-3 max-sm:grid-cols-1 max-sm:gap-1">
-                        <span className="text-right text-xs font-medium text-[#d8d8d8] max-sm:text-left">标题</span>
-                        <input
-                            className="h-10 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none focus:border-emerald-500"
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="border-border">
+                <DialogHeader>
+                    <DialogTitle>重命名会话</DialogTitle>
+                </DialogHeader>
+
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        void onSubmit();
+                    }}
+                >
+                    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[80px_1fr] sm:items-center sm:gap-3">
+                        <label
+                            htmlFor="conversation-rename-title"
+                            className="text-xs font-medium text-muted-foreground sm:text-right"
+                        >
+                            标题
+                        </label>
+                        <Input
+                            id="conversation-rename-title"
                             value={conversationRenameDraft.title}
                             placeholder="输入会话标题"
                             onChange={(event) => onTitleChange(event.target.value)}
                             onKeyDown={(event) => {
-                                if (event.key === "Enter") void onSubmit();
+                                if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    void onSubmit();
+                                }
                             }}
+                            autoFocus
                         />
-                    </label>
-                </div>
-                <div className="flex justify-end gap-2 border-t border-white/10 px-5 py-4">
-                    <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-                    <Button size="sm" onClick={() => void onSubmit()}><Check className="h-4 w-4" />保存</Button>
-                </div>
-            </div>
-        </div>
+                    </div>
+
+                    <DialogFooter className="mt-4">
+                        <Button size="sm" variant="secondary" type="button" onClick={onClose}>
+                            取消
+                        </Button>
+                        <Button size="sm" type="submit">
+                            <Check className="mr-1 h-3.5 w-3.5" />
+                            保存
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }

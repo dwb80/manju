@@ -124,6 +124,7 @@ export interface ProjectScript {
   notes: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 export interface ProjectReview {
@@ -188,7 +189,7 @@ export interface ProjectStoryboard {
   updated_at: string;
 }
 
-export type ProjectAssetKind = "image" | "video" | "character" | "scene" | "style" | "prompt" | "project" | "storyboard";
+export type ProjectAssetKind = "image" | "video" | "character" | "prop" | "scene" | "style" | "prompt" | "project" | "storyboard";
 
 /** 分镜表单草稿类型，characters 为字符串（逗号分隔），用于输入 */
 export type StoryboardDraft = {
@@ -524,6 +525,7 @@ export interface ResourceMonitorData {
   cpuUsage: number;
   queueLength: number;
   workerCount: number;
+  telemetryAvailable?: boolean;
 }
 
 export interface CostBreakdown {

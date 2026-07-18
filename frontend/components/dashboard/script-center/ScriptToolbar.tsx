@@ -2,6 +2,7 @@
 
 import { Editor } from '@tiptap/react'
 import { Button } from '@/components/ui/button'
+import { Tip } from '@/components/ui/tip'
 
 interface ScriptToolbarProps {
   editor: Editor | null
@@ -18,19 +19,27 @@ interface ToolbarButtonProps {
 
 function ToolbarButton({ onClick, disabled, active, label, tooltip }: ToolbarButtonProps) {
   return (
-    <Button
-      variant={active ? 'default' : 'ghost'}
-      size="sm"
-      onClick={onClick}
-      disabled={disabled}
-      className="h-7 w-7 p-0 text-xs font-medium"
-      title={tooltip}
-    >
-      {label}
-    </Button>
+    <Tip label={tooltip ?? label} side="bottom">
+      <Button
+        variant={active ? 'default' : 'ghost'}
+        size="sm"
+        onClick={onClick}
+        disabled={disabled}
+        className="h-7 w-7 p-0 text-xs font-medium"
+      >
+        {label}
+      </Button>
+    </Tip>
   )
 }
 
+/**
+ * ScriptToolbar - 剧本编辑器工具栏组件
+ * @param {ScriptToolbarProps} props - 组件属性
+ * @param {Editor | null} props.editor - TipTap 编辑器实例
+ * @param {Function} props.onAnalyze - AI分析回调
+ * @returns {JSX.Element | null} 渲染的工具栏界面
+ */
 export function ScriptToolbar({ editor, onAnalyze }: ScriptToolbarProps) {
   // 编辑器为 null 或被销毁时返回 null，避免访问 editor.can() 崩溃
   if (!editor || editor.isDestroyed) {

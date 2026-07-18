@@ -1,3 +1,8 @@
+/**
+ * @file project-data-tab.tsx
+ * @description 项目数据Tab组件，显示项目的数据统计和分析
+ */
+
 "use client";
 
 import { useMemo } from "react";

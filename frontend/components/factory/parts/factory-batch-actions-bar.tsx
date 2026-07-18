@@ -15,6 +15,18 @@ import { Button } from "@/components/ui/button";
 import type { FilterOption } from "../types";
 import { BatchChangeTypeMenu } from "./batch-change-type-menu";
 
+/**
+ * FactoryBatchActionsBar - 工厂页批量操作条组件
+ * @description 选中项大于0时显示的批量操作条，包含已选计数、全选、取消选择、批量改类型、批量删除等功能
+ * @param {number} count - 已选数量
+ * @param {string} selectAllLabel - 全选按钮文字
+ * @param {() => void} onSelectAll - 全选回调
+ * @param {() => void} onClear - 取消选择回调
+ * @param {() => void} onDelete - 批量删除回调
+ * @param {Object} [batchTypeConfig] - 批量改类型配置
+ * @param {(value: string) => void} [onChangeType] - 改类型回调
+ * @returns {JSX.Element} 渲染的批量操作条
+ */
 export function FactoryBatchActionsBar({
   count,
   selectAllLabel,

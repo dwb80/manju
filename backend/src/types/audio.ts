@@ -1,4 +1,14 @@
-/** 音频类型 */
+/**
+ * @file audio.ts
+ * @description 音频资产相关类型定义，包括音频实体、音频类型等
+ */
+
+/**
+ * 音频类型
+ * @property voiceover - 配音
+ * @property bgm - 背景音乐
+ * @property sfx - 音效
+ */
 export type AudioType = 'voiceover' | 'bgm' | 'sfx';
 
 /** 音频实体（独立模块）。 */

@@ -1,3 +1,8 @@
+/**
+ * @file avatar.tsx
+ * @description 通用头像组件，有图显示图，无图回退首字+颜色
+ */
+
 "use client";
 
 export interface AvatarProps {
@@ -12,9 +17,9 @@ export interface AvatarProps {
 }
 
 /**
- * 通用头像组件：有图显示图，无图回退首字 + 颜色。
- *
- * 颜色基于 name 哈希，确保同一角色同一颜色，便于识别。
+ * Avatar - 通用头像组件
+ * @param {AvatarProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的头像元素
  */
 export function Avatar({ src, name, size = 40, className = "" }: AvatarProps) {
   const firstChar = name?.trim()?.charAt(0)?.toUpperCase() || "?";

@@ -1,3 +1,8 @@
+/**
+ * @file asset-version.ts
+ * @description 资产版本管理服务，提供版本记录、版本列表查询及版本回滚等功能
+ */
+
 import type { AppContext } from "../app.js";
 import type { AssetEntityType, AssetVersion, AssetVersionChangeType } from "../../types.js";
 import { id, nowIso } from "../../utils.js";
@@ -25,7 +30,10 @@ async function getLatestVersionNumber(
 }
 
 /**
- * 记录一次资产版本快照。
+ * recordVersion - 记录资产版本快照
+ * @param {AppContext} ctx - 应用上下文
+ * @param {object} params - 版本参数（entityType、entityId、entity、changeType、changeNote 等）
+ * @returns {Promise<AssetVersion | null>} 版本记录对象或 null
  */
 export async function recordVersion(
   ctx: AppContext,
@@ -60,12 +68,18 @@ export async function recordVersion(
     await ctx.assetVersions.insert(version);
     return version;
   } catch (err) {
-    rootLogger.warn({ event: "asset.version.failed", entityType, entityId, err }, "recordVersion failed");
+    rootLogger.warn({ event: "asset.version.failed", entityType, entityId, err }, "记录资产版本快照失败");
     return null;
   }
 }
 
-/** 列出某资产的全部历史版本，按 version 倒序。 */
+/**
+ * listVersions - 列出资产的全部历史版本
+ * @param {AppContext} ctx - 应用上下文
+ * @param {AssetEntityType} entityType - 实体类型（character、scene、prop）
+ * @param {string} entityId - 实体 ID
+ * @returns {Promise<AssetVersion[]>} 版本列表，按版本号倒序
+ */
 export async function listVersions(
   ctx: AppContext,
   entityType: AssetEntityType,
@@ -77,7 +91,12 @@ export async function listVersions(
   );
 }
 
-/** 根据版本 ID 获取单条版本记录。 */
+/**
+ * getVersion - 根据版本 ID 获取单条版本记录
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} versionId - 版本 ID
+ * @returns {Promise<AssetVersion | null>} 版本记录对象或 null
+ */
 export async function getVersion(ctx: AppContext, versionId: string): Promise<AssetVersion | null> {
   return ctx.assetVersions.findById(versionId);
 }
@@ -107,7 +126,10 @@ async function writeBackVersion(
 }
 
 /**
- * 回滚某条版本到对应实体，并新增一条 restore 类型的版本记录。
+ * restoreVersion - 回滚到指定版本并新增一条 restore 类型的版本记录
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} versionId - 目标版本 ID
+ * @returns {Promise<AssetVersion>} 回滚后的版本记录
  */
 export async function restoreVersion(ctx: AppContext, versionId: string): Promise<AssetVersion> {
   const version = await ctx.assetVersions.findById(versionId);

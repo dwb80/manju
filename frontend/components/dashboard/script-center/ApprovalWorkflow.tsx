@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file ApprovalWorkflow.tsx
+ * @description 审批流程组件，展示剧本审批的多步骤流程状态，支持通过/拒绝操作
+ */
+
 import { useState, useEffect } from 'react'
 import {
   GitBranch,
@@ -30,6 +35,13 @@ interface ApprovalWorkflowProps {
   onWorkflowUpdate?: () => void
 }
 
+/**
+ * ApprovalWorkflow - 审批流程组件
+ * @param {ApprovalWorkflowProps} props - 组件属性
+ * @param {string} props.scriptId - 剧本ID
+ * @param {Function} [props.onWorkflowUpdate] - 流程更新回调
+ * @returns {JSX.Element} 渲染的审批流程界面
+ */
 export function ApprovalWorkflow({ scriptId, onWorkflowUpdate }: ApprovalWorkflowProps) {
   const [workflow, setWorkflow] = useState<{
     steps: WorkflowStep[]
@@ -153,9 +165,8 @@ export function ApprovalWorkflow({ scriptId, onWorkflowUpdate }: ApprovalWorkflo
 
                 {/* 步骤卡片 */}
                 <div
-                  className={`border rounded-lg p-3 ${getStepStatusColor(step.status)} ${
-                    isCurrentStep ? 'ring-2 ring-blue-500/50' : ''
-                  }`}
+                  className={`border rounded-lg p-3 ${getStepStatusColor(step.status)} ${isCurrentStep ? 'ring-2 ring-blue-500/50' : ''
+                    }`}
                 >
                   <div className="flex items-start gap-3">
                     {/* 状态图标 */}

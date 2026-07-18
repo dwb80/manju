@@ -87,6 +87,7 @@ function formToApiData(form: ModelFormData) {
     endpoint: form.apiEndpoint,
     method: form.apiMethod,
     ...(form.apiStatusEndpoint ? { statusEndpoint: form.apiStatusEndpoint } : {}),
+    ...(form.proxyURL ? { proxyURL: form.proxyURL } : {}),
   };
 
   // 构建性能指标

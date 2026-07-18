@@ -1,3 +1,7 @@
+/**
+ * @file cost-center.tsx
+ * @description AI成本中心组件，展示AI服务的成本明细和消耗统计
+ */
 "use client";
 
 import { memo } from "react";
@@ -60,7 +64,13 @@ const CostItemRow = memo(function CostItemRow({ type, cost }: { type: "gpt" | "c
   );
 });
 
-/** AI成本中心组件 */
+/**
+ * CostCenter - AI成本中心组件
+ * @param {CostCenterProps} props - 组件属性
+ * @param {CostBreakdown} props.data - 成本明细数据
+ * @param {number} props.changePercent - 环比变化百分比
+ * @returns {JSX.Element} 渲染的成本中心界面
+ */
 export const CostCenter = memo(function CostCenter({
   data,
   changePercent,

@@ -1,3 +1,8 @@
+/**
+ * @file ai-generate-dialog.tsx
+ * @description 通用AI生成图片对话框组件，适用于角色工厂/场景工厂/道具工厂共用
+ */
+
 "use client";
 
 /**
@@ -92,7 +97,9 @@ const COUNT_OPTIONS = [
 ];
 
 /**
- * 通用 AI 生成图片对话框。
+ * AIGenerateImageDialog - 通用AI生成图片对话框组件
+ * @param {AIGenerateImageDialogProps} props - 组件属性
+ * @returns {JSX.Element | null} 渲染的对话框元素
  */
 export function AIGenerateImageDialog({
   isOpen,
@@ -152,7 +159,7 @@ export function AIGenerateImageDialog({
 
   if (!isOpen) return null;
 
-  /** 调用 /api/images/generate，失败时降级为占位图。 */
+  /** 调用 /api/images/generate；失败时保留明确失败态，禁止伪造可入库资产。 */
   const handleGenerate = async () => {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) {
@@ -187,20 +194,11 @@ export function AIGenerateImageDialog({
       }
     } catch (err) {
       console.error("AI 生成图片失败:", err);
-      // 降级：使用占位图，确保不会崩溃
-      const n = Math.max(1, Math.min(4, Number(count) || 4));
-      const fallback = Array.from({ length: n }, (_, idx) => {
-        const label = encodeURIComponent(`${prompt || "image"} #${idx + 1}`);
-        return `https://placehold.co/512x512/0d0d0d/10a37f/png?text=${label}`;
-      });
-      setCandidates(fallback);
-      setSelectedIndex(0);
-      if (!name.trim()) {
-        setName((prompt.trim().slice(0, 8) || "新资产"));
-      }
-      const msg = (err as Error).message || "AI 生成失败，已使用占位图";
+      setCandidates([]);
+      setSelectedIndex(null);
+      const msg = (err as Error).message || "AI 生成失败";
       setError(msg);
-      toast.error("AI 生成失败", "已使用占位图，你可以重新尝试或直接确认");
+      toast.error("AI 生成失败", "未创建任何资产，请检查模型配置后重试");
     } finally {
       setIsGenerating(false);
     }
@@ -345,11 +343,10 @@ export function AIGenerateImageDialog({
                       key={`${url}-${idx}`}
                       type="button"
                       onClick={() => setSelectedIndex(idx)}
-                      className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all ${
-                        selected
+                      className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all ${selected
                           ? "border-emerald-400 ring-2 ring-emerald-400/40 scale-[1.02]"
                           : "border-white/10 hover:border-white/30"
-                      }`}
+                        }`}
                       aria-label={`候选图 ${idx + 1}`}
                     >
                       <img

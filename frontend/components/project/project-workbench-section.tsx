@@ -1,3 +1,8 @@
+/**
+ * @file project-workbench-section.tsx
+ * @description 项目工作台区块组件，整合侧边栏、头部、工具栏和标签页
+ */
+
 "use client";
 
 import type {

@@ -20,6 +20,11 @@ interface ProjectToolbarProps {
     onPageChange: (page: number) => void;
 }
 
+/**
+ * ProjectToolbar - 项目工具栏组件
+ * @param {ProjectToolbarProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的工具栏元素
+ */
 export function ProjectToolbar({
     projectWorkbenchTab,
     workbenchSearch,

@@ -15,6 +15,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Folder, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { listProjects } from "@/services/project.service";
 import type { Project } from "@/lib/app-types";
 
@@ -32,7 +40,9 @@ export interface CopyToProjectDialogProps {
 }
 
 /**
- * 跨项目复制资产弹窗。
+ * CopyToProjectDialog - 跨项目复制资产弹窗组件
+ * @param {CopyToProjectDialogProps} props - 组件属性
+ * @returns {JSX.Element | null} 渲染的弹窗元素
  */
 export function CopyToProjectDialog({
   isOpen,
@@ -117,60 +127,45 @@ export function CopyToProjectDialog({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[95] grid place-items-center bg-black/60 px-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`复制${entityLabel}到其他项目`}
-    >
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#202020] p-5 shadow-2xl">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="border-border">
         {/* 标题栏 */}
-        <div className="flex items-start justify-between gap-3 mb-4">
+        <DialogHeader>
           <div className="flex items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-300">
               <Copy className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-base font-semibold text-white">
-                复制{entityLabel}到其他项目
-              </div>
-              <div className="mt-1 text-xs text-[#888]">
+              <DialogTitle>复制{entityLabel}到其他项目</DialogTitle>
+              <DialogDescription>
                 {sourceItem ? `源资产：「${sourceItem.name}」` : ""}
-              </div>
+              </DialogDescription>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
-            aria-label="关闭"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
         {/* 描述 */}
-        <p className="text-sm text-[#cfcfcf] leading-6 mb-3">
+        <p className="text-sm text-muted-foreground leading-6">
           选择要复制到的目标项目。同名{entityLabel}将按去重规则处理：目标项目已存在同名资产时跳过复制。
         </p>
 
         {/* 列表 */}
-        <div className="rounded-lg border border-white/10 bg-[#1a1a1a]">
+        <div className="rounded-lg border border-border bg-card">
           {isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-[#888]">
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               加载项目列表...
             </div>
           ) : error ? (
-            <div className="px-3 py-4 text-sm text-red-400">{error}</div>
+            <div className="px-3 py-4 text-sm text-destructive">{error}</div>
           ) : projects.length === 0 ? (
-            <div className="px-3 py-6 text-center text-sm text-[#888]">
+            <div className="px-3 py-6 text-center text-sm text-muted-foreground">
               暂无可选项目
             </div>
           ) : (
             <>
               {/* 全选行 */}
-              <label className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-[#888] cursor-pointer hover:text-white">
+              <label className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -178,7 +173,7 @@ export function CopyToProjectDialog({
                   className="h-4 w-4 rounded border-white/30 bg-transparent accent-emerald-500"
                 />
                 <span>全选</span>
-                <span className="ml-auto text-[10px] text-[#666]">
+                <span className="ml-auto text-[10px] text-muted-foreground">
                   已选 {selected.size} / {projects.length}
                 </span>
               </label>
@@ -186,7 +181,7 @@ export function CopyToProjectDialog({
                 {projects.map((p) => (
                   <label
                     key={p.id}
-                    className="flex items-center gap-3 px-3 py-2 text-sm text-white hover:bg-white/5 cursor-pointer"
+                    className="flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-white/5 cursor-pointer"
                   >
                     <input
                       type="checkbox"
@@ -194,10 +189,10 @@ export function CopyToProjectDialog({
                       onChange={() => toggleProject(p.id)}
                       className="h-4 w-4 rounded border-white/30 bg-transparent accent-emerald-500"
                     />
-                    <Folder className="h-4 w-4 shrink-0 text-[#888]" />
+                    <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <span className="truncate flex-1">{p.name}</span>
                     {p.status && (
-                      <span className="text-[10px] text-[#666] shrink-0">
+                      <span className="text-[10px] text-muted-foreground shrink-0">
                         {p.status}
                       </span>
                     )}
@@ -209,7 +204,7 @@ export function CopyToProjectDialog({
         </div>
 
         {/* 操作按钮 */}
-        <div className="mt-5 flex justify-end gap-2">
+        <DialogFooter className="gap-2">
           <Button size="sm" variant="secondary" onClick={onClose} disabled={isSubmitting}>
             取消
           </Button>
@@ -226,8 +221,8 @@ export function CopyToProjectDialog({
               </>
             )}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

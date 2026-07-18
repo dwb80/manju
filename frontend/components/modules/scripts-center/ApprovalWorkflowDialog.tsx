@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { updateScript } from "@/services/module.service";
+import { scriptCenterService } from "@/services/script-center.service";
 import { clearApiCache } from "@/lib/api-client";
 import { useProjectStore } from "@/lib/stores/project-store";
 import type { Script } from "@/lib/module-types";
@@ -62,7 +62,7 @@ function SimpleApprovalWorkflow({
     setIsSaving(true);
     try {
       if (!selectedProjectId) { alert("未选择项目"); return; }
-      await updateScript(selectedProjectId, script.id, { status: newStatus } as any);
+      await scriptCenterService.updateDocument(script.id, { status: newStatus } as any);
       const oldStatus = currentStatus;
       setCurrentStatus(newStatus as Script["status"]);
       setHistory([

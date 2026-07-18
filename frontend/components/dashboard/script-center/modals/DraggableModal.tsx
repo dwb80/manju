@@ -37,10 +37,15 @@ export interface DraggableModalProps {
   maxHeight?: number
   /** 拖拽初始 Y 坐标 */
   initialY?: number
-  /** 弹窗内容 */
+  /** 弹窗内容（可滚动） */
   children: React.ReactNode
   /** 标题栏右侧的额外操作（可选） */
   headerExtra?: React.ReactNode
+  /**
+   * 固定底部操作区（可选，不随内容滚动）
+   * - 用于"保存/取消"等关键操作，避免被长内容挤出可视区
+   */
+  footer?: React.ReactNode
   /** 自定义 z-index（弹窗之间嵌套时使用） */
   zIndex?: number
 }
@@ -56,6 +61,7 @@ export function DraggableModal({
   initialY = 80,
   children,
   headerExtra,
+  footer,
   zIndex = 50,
 }: DraggableModalProps) {
   // 复用既有拖拽 hook（沿用项目内的拖拽实现，不重复造轮子）
@@ -108,6 +114,13 @@ export function DraggableModal({
 
         {/* 内容区（可滚动） */}
         <div className="flex-1 overflow-y-auto">{children}</div>
+
+        {/* 底部固定操作区（不随内容滚动，确保关键按钮始终可达） */}
+        {footer && (
+          <div className="flex-shrink-0 border-t border-white/10 bg-[#1a1a1a]">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   )

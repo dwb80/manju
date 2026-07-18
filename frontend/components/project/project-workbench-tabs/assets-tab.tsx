@@ -10,6 +10,7 @@
 
 import { Check, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import { ManagementTable as ProjectManagementTable, WorkbenchPager as ProjectWorkbenchPager } from "@/components/project/project-workbench";
 import type { ProjectAssetKind } from "@/lib/app-types";
 import type { ProjectWorkbenchTabsProps } from "./types";
@@ -85,14 +86,13 @@ export function AssetsTab(props: Pick<
           </div>
           <div className="flex flex-wrap gap-2">
             {editingAssetId && <Button size="sm" variant="secondary" onClick={() => resetProjectAssetForm(assetComposerKind)}>取消编辑</Button>}
-            <select
-              className="h-8 rounded-lg border border-white/10 bg-[#2f2f2f] px-2 text-xs text-white outline-none"
+            <ShadcnSelect
+              options={projectAssetKinds.map((item) => ({ value: item.key, label: item.label }))}
               value={assetComposerKind}
               disabled={Boolean(editingAssetId)}
-              onChange={(event) => setAssetComposerKind(event.target.value as ProjectAssetKind)}
-            >
-              {projectAssetKinds.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-            </select>
+              onChange={(value) => setAssetComposerKind(value as ProjectAssetKind)}
+              className="h-8 text-xs min-w-[120px]"
+            />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 max-md:grid-cols-1">

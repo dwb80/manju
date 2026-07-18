@@ -1,3 +1,8 @@
+/**
+ * @file soft-delete-ops.ts
+ * @description 软删除、恢复、永久删除及跨项目复制操作的封装，统一代理 module-domain-shared 通用函数
+ */
+
 import type { AppContext } from "../app.js";
 import { softDelete, restoreDeleted, listDeletedInRepo, permanentDelete, copyToProject } from "../module-domain-shared.js";
 

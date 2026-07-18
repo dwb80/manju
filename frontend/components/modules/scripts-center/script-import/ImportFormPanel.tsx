@@ -4,7 +4,7 @@
  * 导入剧本：格式选择 + 文件上传 + 文本输入
  */
 
-import { FileText, FileType, FileCode, FileJson, Upload, Loader2, Eye } from "lucide-react";
+import { FileText, FileType, FileCode, FileJson, Upload, Loader2, Eye, Cpu, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getImportPlaceholder } from "../utils";
 import type { ImportFormat } from "../types";
@@ -19,6 +19,16 @@ export const IMPORT_FORMATS: Array<{ value: ImportFormat; label: string; icon: t
   { value: "fdx", label: "Final Draft (FDX)", icon: FileCode, accept: ".fdx" },
 ];
 
+/** 导入对话框内可选的聊天模型行（与 useScriptImport 暴露的 ImportChatModel 对齐） */
+export interface ImportChatModelOption {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  is_enabled: boolean;
+  provider?: string;
+}
+
 export interface ImportFormPanelProps {
   importFormat: ImportFormat;
   setImportFormat: (format: ImportFormat) => void;
@@ -31,6 +41,12 @@ export interface ImportFormPanelProps {
   onClose: () => void;
   isAnalyzingScript: boolean;
   analysisStatus: string;
+  /** 模型下拉：可用的聊天模型 + 当前选中 + 加载状态 */
+  chatModels: ImportChatModelOption[];
+  selectedModelId: string;
+  setSelectedModelId: (id: string) => void;
+  isLoadingModels: boolean;
+  onReloadModels: () => void;
 }
 
 export function ImportFormPanel({
@@ -45,8 +61,22 @@ export function ImportFormPanel({
   onClose,
   isAnalyzingScript,
   analysisStatus,
+  chatModels,
+  selectedModelId,
+  setSelectedModelId,
+  isLoadingModels,
+  onReloadModels,
 }: ImportFormPanelProps) {
   const currentAccept = IMPORT_FORMATS.find((f) => f.value === importFormat)?.accept;
+  // 没拉到任何启用中的聊天模型：禁用解析按钮 + 引导用户去模型中心
+  const noModelAvailable = !isLoadingModels && chatModels.length === 0;
+  // 选中项的展示名：用于"解析预览"按钮上的 tooltip
+  const selectedModel = chatModels.find((m) => m.id === selectedModelId);
+  const parseButtonTitle = noModelAvailable
+    ? "请先到「模型中心」配置并启用至少一个聊天模型"
+    : selectedModel
+    ? `使用 ${selectedModel.name}${selectedModel.isDefault ? "（默认）" : ""} 解析剧本`
+    : "快捷键：Ctrl/⌘ + Enter";
 
   return (
     <div className="space-y-4">
@@ -115,12 +145,31 @@ export function ImportFormPanel({
         />
       </div>
 
-      {/* 字数统计 */}
-      {importText && (
-        <div className="text-xs text-[#888]">
-          当前内容字数: <span className="text-emerald-400">{importText.replace(/\s/g, "").length.toLocaleString()}</span> 字
-        </div>
-      )}
+      {/* 字数统计 + 超限预警 */}
+      {importText && (() => {
+        const charCount = importText.replace(/\s/g, "").length;
+        // 阈值：10000 字变橙，50000 字变红 + 强制提示
+        const colorClass =
+          charCount > 50_000
+            ? "text-red-400"
+            : charCount > 10_000
+            ? "text-amber-400"
+            : "text-emerald-400";
+        return (
+          <div className="text-xs text-[#888]">
+            当前内容字数:{" "}
+            <span className={colorClass}>{charCount.toLocaleString()}</span> 字
+            {charCount > 50_000 && (
+              <span className="ml-2 text-red-400">
+                ⚠ 内容过长，可能导致 AI 解析超时或本地正则失败
+              </span>
+            )}
+            {charCount > 10_000 && charCount <= 50_000 && (
+              <span className="ml-2 text-amber-400">· 偏长</span>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="flex justify-end gap-2 items-center">
         {analysisStatus && (
@@ -129,13 +178,67 @@ export function ImportFormPanel({
             {analysisStatus}
           </span>
         )}
+        <span className="text-[10px] text-[#666] mr-auto">
+          提示：<kbd className="px-1 py-0.5 rounded bg-white/5 border border-white/10">Esc</kbd> 关闭 ·
+          <kbd className="px-1 py-0.5 rounded bg-white/5 border border-white/10 ml-1">Ctrl/⌘ + Enter</kbd> 解析
+        </span>
+
+        {/* 模型下拉：放在「取消」按钮左边；只显示 chat 模型（剧本分析只允许聊天模型） */}
+        <div className="flex items-center gap-1.5">
+          <Cpu className="h-3.5 w-3.5 text-[#888]" />
+          <select
+            aria-label="选择剧本分析模型"
+            value={selectedModelId}
+            onChange={(e) => setSelectedModelId(e.target.value)}
+            disabled={isLoadingModels || chatModels.length === 0 || isAnalyzingScript}
+            className="h-7 max-w-[180px] rounded-md border border-white/10 bg-[#1a1a1a] px-2 text-xs text-white focus:border-emerald-500/50 focus:outline-none disabled:opacity-50"
+            title={
+              chatModels.length === 0
+                ? "暂无可用聊天模型，请到「模型中心」配置"
+                : "选择用于剧本分析的聊天模型"
+            }
+          >
+            {isLoadingModels ? (
+              <option value="">加载模型中…</option>
+            ) : chatModels.length === 0 ? (
+              <option value="">无可用聊天模型</option>
+            ) : (
+              chatModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                  {m.isDefault ? "（默认）" : ""}
+                  {m.provider ? ` · ${m.provider}` : ""}
+                </option>
+              ))
+            )}
+          </select>
+          <button
+            type="button"
+            onClick={onReloadModels}
+            disabled={isLoadingModels || isAnalyzingScript}
+            className="rounded p-1 text-[#666] hover:bg-white/5 hover:text-white disabled:opacity-50"
+            title="刷新模型列表"
+            aria-label="刷新模型列表"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoadingModels ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+
+        {noModelAvailable && (
+          <span className="hidden md:flex items-center gap-1 text-[10px] text-amber-400">
+            <AlertTriangle className="h-3 w-3" />
+            请到「模型中心」配置
+          </span>
+        )}
+
         <Button variant="ghost" size="sm" onClick={onClose}>
           取消
         </Button>
         <Button
           size="sm"
           onClick={onParse}
-          disabled={!importText.trim() || isAnalyzingScript}
+          disabled={!importText.trim() || isAnalyzingScript || noModelAvailable}
+          title={parseButtonTitle}
         >
           {isAnalyzingScript ? (
             <>

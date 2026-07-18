@@ -1,3 +1,8 @@
+/**
+ * @file module-toolbar.tsx
+ * @description 模块工具栏组件集合，提供统一的工具栏布局、搜索输入和筛选功能
+ */
+
 "use client";
 
 import { ReactNode } from "react";
@@ -19,6 +24,11 @@ interface ModuleToolbarProps {
   right?: ReactNode;
 }
 
+/**
+ * ModuleToolbar - 模块工具栏组件
+ * @param {ModuleToolbarProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的工具栏元素
+ */
 export function ModuleToolbar({ left, right }: ModuleToolbarProps) {
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
@@ -43,6 +53,11 @@ interface SearchInputProps {
   className?: string;
 }
 
+/**
+ * SearchInput - 搜索输入框组件
+ * @param {SearchInputProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的搜索输入框元素
+ */
 export function SearchInput({
   value,
   onChange,
@@ -76,6 +91,11 @@ interface FilterSelectProps {
   className?: string;
 }
 
+/**
+ * FilterSelect - 筛选选择器组件
+ * @param {FilterSelectProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的筛选选择器元素
+ */
 export function FilterSelect({
   value,
   onChange,
@@ -131,11 +151,10 @@ export function TagFilter({
         <button
           key={tag}
           onClick={() => toggleTag(tag)}
-          className={`px-3 py-1 rounded-full text-xs transition-colors ${
-            selectedTags.includes(tag)
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-              : 'bg-[#252525] text-[#888] border border-white/10 hover:border-white/20'
-          }`}
+          className={`px-3 py-1 rounded-full text-xs transition-colors ${selectedTags.includes(tag)
+            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+            : 'bg-[#252525] text-[#888] border border-white/10 hover:border-white/20'
+            }`}
         >
           {tag}
         </button>

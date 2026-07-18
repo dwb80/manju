@@ -11,6 +11,19 @@ import { CheckSquare, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getEntityLabel, type FactoryEntity } from "../types";
 
+/**
+ * RecycleBinRow - 回收站条目行组件
+ * @description 回收站中每个条目的极简行，展示选择框、缩略图、名称、删除时间及恢复/永久删除按钮
+ * @template TEntity - 工厂实体类型，需继承 FactoryEntity
+ * @param {TEntity} item - 实体数据
+ * @param {string} entityLabel - 实体中文名称（如"角色"）
+ * @param {string} [metaLabel="删除时间"] - 元信息标签
+ * @param {boolean} selected - 是否选中
+ * @param {() => void} onToggleSelect - 切换选中状态回调
+ * @param {() => void} onRestore - 恢复回调
+ * @param {() => void} onPermanentDelete - 永久删除回调
+ * @returns {JSX.Element} 渲染的回收站条目行
+ */
 export function RecycleBinRow<TEntity extends FactoryEntity>({
   item,
   entityLabel,

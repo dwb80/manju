@@ -49,6 +49,11 @@ const emptyStateConfigs = {
   },
 };
 
+/**
+ * EmptyState - 空状态组件
+ * @param {EmptyStateProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的空状态元素
+ */
 export function EmptyState({
   type = 'default',
   title,
@@ -122,6 +127,11 @@ interface ErrorStateProps {
   className?: string;
 }
 
+/**
+ * ErrorState - 错误状态组件
+ * @param {ErrorStateProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的错误状态元素
+ */
 export function ErrorState({
   message = "加载失败，请重试",
   onRetry,
@@ -165,7 +175,9 @@ export function EmptyStoryboards({ onCreateStoryboard }: { onCreateStoryboard?: 
 }
 
 /**
- * 空剪辑状态组件
+ * EmptyClips - 空剪辑状态组件
+ * @param {{ onSyncClips?: () => void }} props - 组件属性
+ * @returns {JSX.Element} 渲染的空剪辑状态元素
  */
 export function EmptyClips({ onSyncClips }: { onSyncClips?: () => void }) {
   return (

@@ -1,3 +1,8 @@
+/**
+ * @file data-center.tsx
+ * @description 数据中心组件，显示AI成本统计和生产效率分析
+ */
+
 "use client";
 
 import { useState } from "react";

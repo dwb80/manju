@@ -1,8 +1,14 @@
+/**
+ * @file domain.ts
+ * @description 领域服务模块 - 提供项目、会话、消息、图片和视频等核心业务逻辑的统一入口
+ */
+
 import type { AppContext } from "./app.js";
 import type { Conversation, Favorite, FavoriteType, ImageParams, ImageTask, Message, Project, Settings, VideoParams, VideoTask } from "../types.js";
 import { cacheMediaUrl, cacheMediaUrls, resolveMediaInput, resolveMediaInputs } from "./media.js";
-import { DEFAULT_MODEL, clampNumber, estimateTokens, id, nowIso, requireString } from "../utils.js";
+import { AI_TIMEOUTS, DEFAULT_MODEL, clampNumber, estimateTokens, id, nowIso, requireString, safeAICall, withTimeout } from "../utils.js";
 import { rootLogger } from "../logger.js";
+import { incrementUnreadCount } from "../http/assistant-router.js";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -140,10 +146,12 @@ export async function createConversation(ctx: AppContext, input: { title?: strin
     id: id("c"),
     title: input.title?.trim() || "新的创作会话",
     model: input.model || DEFAULT_MODEL,
+    mode: "chat",
     is_pinned: false,
     created_at: now,
     updated_at: now,
     project_id: projectId,
+    unread_count: 0,
   };
   await ctx.conversations.insert(conversation);
   return conversation;
@@ -276,7 +284,7 @@ function scheduleImageTaskCache(ctx: AppContext, task: ImageTask): void {
       }
       return undefined;
     })
-    .catch((error: unknown) => rootLogger.error({ event: "image.background.failed", err: error }, "image task background error"));
+    .catch((error: unknown) => rootLogger.error({ event: "image.background.failed", err: error }, "图片任务后台缓存异常"));
 }
 
 /** 后台缓存视频任务中的远程视频，并把任务 URL 更新为本地地址。 */
@@ -291,7 +299,7 @@ function scheduleVideoTaskCache(ctx: AppContext, task: VideoTask): void {
       }
       return undefined;
     })
-    .catch((error: unknown) => rootLogger.error({ event: "image.background.failed", err: error }, "image task background error"));
+    .catch((error: unknown) => rootLogger.error({ event: "video.background.failed", err: error }, "视频任务后台缓存异常"));
 }
 
 /** 删除会话及其关联消息、图片任务、视频任务和相关收藏记录。 */
@@ -327,50 +335,22 @@ export async function addMessage(ctx: AppContext, input: Pick<Message, "conversa
   };
   await ctx.messages.insert(message);
   await maybeTitleConversation(ctx, input.conversation_id, input.role === "user" ? input.content : "");
+  // assistant 消息自增未读计数（user 消息不算）
+  if (input.role === "assistant") {
+    await incrementUnreadCount(ctx, input.conversation_id);
+  }
   await ctx.conversations.update(input.conversation_id, { updated_at: nowIso() } as Partial<Conversation>);
   return message;
 }
 
-/** 调用图片生成流程，保存图片任务并触发本地缓存。 */
-export async function generateImage(ctx: AppContext, body: Record<string, unknown>): Promise<ImageTask> {
-  const prompt = requireString(body.prompt, "prompt");
-  const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
-  const inputImages = Array.isArray(body.images)
-    ? body.images.filter((image): image is string => typeof image === "string" && image.length > 0)
-    : [];
-  if (typeof body.image === "string" && body.image.length > 0) inputImages.push(body.image);
-  const aiImages = await resolveMediaInputs(ctx, inputImages);
-  const params: ImageParams = {
-    prompt,
-    negative_prompt: typeof body.negative_prompt === "string" ? body.negative_prompt : "",
-    image: inputImages[0],
-    images: inputImages,
-    size: (body.size as ImageParams["size"]) ?? "1024x768",
-    ratio: (body.ratio as ImageParams["ratio"]) ?? "1:1",
-    n: clampNumber(body.n, 1, 1, 4),
-    seed: clampNumber(body.seed, -1, -1, Number.MAX_SAFE_INTEGER),
-    steps: clampNumber(body.steps, 25, 1, 50),
-    cfg: clampNumber(body.cfg, 7, 1, 20),
-  };
-  // 本地上传图保存 URL，调用 Agnes 前再转成 data URL。
-  const result = await ctx.ai.generateImage({ ...params, image: aiImages[0], images: aiImages });
-  const taskId = id("img");
-  const task: ImageTask = {
-    id: taskId,
-    conversation_id: conversationId,
-    prompt,
-    negative: params.negative_prompt ?? "",
-    params: compactImageParams(params),
-    image_urls: result.imageUrls,
-    status: "success",
-    error: "",
-    created_at: nowIso(),
-  };
-  await ctx.images.insert(task);
-  scheduleImageTaskCache(ctx, task);
-  if (conversationId) await maybeTitleConversation(ctx, conversationId, prompt);
-  return task;
-}
+/**
+ * 调用图片生成流程，保存图片任务并触发本地缓存。
+ *
+ * 注意：这里直接 re-export `domain/image.js` 的拆分版本。
+ * 拆分版本包含 4 中心横切的预算硬上限拦截（详见 docs/spec.md 3.3）。
+ * 早期本文件里有一份未拆分的副本，已废弃，避免双重实现造成拦截逻辑失效。
+ */
+export { generateImage } from "./domain/image.js";
 
 /** 保存前端本地裁切后的图片任务，不再调用 Agnes 生图模型。 */
 export async function createLocalImageTask(ctx: AppContext, body: Record<string, unknown>): Promise<ImageTask> {
@@ -401,59 +381,87 @@ export async function createLocalImageTask(ctx: AppContext, body: Record<string,
   return task;
 }
 
-/** 调用视频生成流程，保存异步视频任务记录。 */
-export async function generateVideo(ctx: AppContext, body: Record<string, unknown>): Promise<VideoTask> {
-  const prompt = requireString(body.prompt, "prompt");
-  const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
-  const inputImage = typeof body.image === "string" ? body.image : undefined;
-  const params: VideoParams = {
-    prompt,
-    image: inputImage,
-    ratio: (body.ratio as VideoParams["ratio"]) ?? "16:9",
-    duration: Number(body.duration) === 10 ? 10 : 5,
-    model: typeof body.model === "string" ? body.model : "agnes-video-v2.0",
-  };
-  // 视频任务通常是异步的：先保存 processing 记录，详情查询时再轮询 Agnes。
-  const result = await ctx.ai.generateVideo({ ...params, image: await resolveMediaInput(ctx, inputImage) });
-  const task: VideoTask = {
-    id: result.taskId,
-    task_id: result.taskId,
-    video_id: result.taskId,
-    conversation_id: conversationId,
-    prompt,
-    image_url: params.image ?? "",
-    params: compactVideoParams(params),
-    video_url: "",
-    status: "processing",
-    progress: 0,
-    seconds: "0",
-    size: "",
-    error: "",
-    created_at: nowIso(),
-  };
-  await ctx.videos.insert(task);
-  if (conversationId) await maybeTitleConversation(ctx, conversationId, prompt);
-  return task;
-}
+/**
+ * 调用视频生成流程，保存异步视频任务记录。
+ *
+ * 注意：这里直接 re-export `domain/video.js` 的拆分版本。
+ * 拆分版本包含 4 中心横切的预算硬上限拦截（详见 docs/spec.md 3.3）。
+ * 早期本文件里有一份未拆分的副本，已废弃，避免双重实现造成拦截逻辑失效。
+ */
+export { generateVideo } from "./domain/video.js";
 
 /** 查询视频任务，必要时向 Agnes 轮询最新状态并更新本地记录。 */
 export async function queryVideo(ctx: AppContext, idValue: string): Promise<VideoTask> {
-  const task = await ctx.videos.findById(idValue);
-  if (!task) throw new Error("video not found");
-  if (task.status === "processing" || task.status === "pending") {
-    const status = await ctx.ai.queryTask(idValue);
-    const patch: Partial<VideoTask> = {
-      status: status.status,
-      video_url: status.videoUrl ?? task.video_url,
-      error: status.error ?? "",
-    };
-    await ctx.videos.update(idValue, patch);
-    const next = { ...task, ...patch };
-    scheduleVideoTaskCache(ctx, next);
-    return next;
-  }
-  scheduleVideoTaskCache(ctx, task);
-  return task;
+  return safeAICall("queryVideo", async () => {
+    const task = await ctx.videos.findById(idValue);
+    if (!task) throw new Error("video not found");
+    if (task.status === "processing" || task.status === "pending") {
+      // 20s 超时 + safeAICall 双重保护
+      const queryCtrl = new AbortController();
+      const status = await withTimeout(
+        ctx.ai.queryTask(idValue, queryCtrl.signal),
+        AI_TIMEOUTS.queryTask,
+        "queryTask",
+        queryCtrl,
+      );
+      // status.status 已被 agnes-client normalizeStatus 规整为 TaskStatus 联合类型；
+      // 但调用方拿到的 raw string 可能含 "completed"/"succeeded"/"cancelled" 等同义词。
+      // 这里以 string 视角判断终态，避免 TS 把联合类型缩窄后漏掉。
+      const rawStatus = String(status.status || "").toLowerCase();
+      const isSuccess = rawStatus === "success" || rawStatus === "completed" || rawStatus === "succeeded";
+      const isFailed = rawStatus === "failed" || rawStatus === "error" || rawStatus === "cancelled";
+      const patch: Partial<VideoTask> = {
+        status: status.status,
+        video_url: status.videoUrl ?? task.video_url,
+        error: status.error ?? "",
+      };
+      await ctx.videos.update(idValue, patch);
+      const next = { ...task, ...patch };
+      scheduleVideoTaskCache(ctx, next);
+      // 同步把状态写回 assistant 消息。
+      // 关键：只要这次轮询拿到了 videoUrl（哪怕 status 还是 processing），就先把 videoUrl 写进消息 meta，
+      // 这样 UI 可以立刻从"正在生成"切换到"已生成视频"的成功态，避免出现"视频已显示但仍标正在生成"的割裂状态。
+      if (task.conversation_id) {
+        const messages = await ctx.messages.findMany({ conversation_id: task.conversation_id } as Partial<Message>);
+        const target = messages.find(
+          (m) => m.role === "assistant" && (m.meta as Record<string, unknown>)?.taskId === idValue,
+        );
+        if (target) {
+          const meta = { ...(target.meta as Record<string, unknown>) };
+          // 关键：不要把消息 meta.status 从 "processing" 降级为 "pending"！
+          // 上游 Agnes 偶尔会在任务真正开始前返回 "pending"，但任务已经在排队/处理中。
+          // 这里统一把非终态都映射成 "processing"，让前端轮询逻辑（基于 status === "processing"）
+          // 不会因为后端短暂写回 "pending" 而中断。终态再切到 "completed" / "failed"。
+          if (isSuccess) {
+            meta.status = "completed";
+          } else if (isFailed) {
+            meta.status = "failed";
+          } else {
+            meta.status = "processing";
+          }
+          if (status.videoUrl) meta.videoUrl = status.videoUrl;
+          if (status.error) meta.error = status.error;
+          // status 对象可能含 progress 字段（不同上游实现），用 any 兜底
+          const rawProgress = (status as { progress?: unknown }).progress;
+          if (typeof rawProgress === "number") {
+            meta.progress = rawProgress;
+          }
+          // 终态：同时更新 content，让 UI 文案和状态保持一致
+          const updates: Partial<Message> = { meta };
+          if (isSuccess) {
+            updates.content = status.videoUrl ? "已生成视频" : "视频生成失败：未返回视频地址";
+            meta.progress = 100;
+          } else if (isFailed) {
+            updates.content = `视频生成失败：${status.error || "未知错误"}`;
+          }
+          await ctx.messages.update(target.id, updates as Partial<Message>);
+        }
+      }
+      return next;
+    }
+    scheduleVideoTaskCache(ctx, task);
+    return task;
+  });
 }
 
 /** 新增收藏记录，用于收藏图片或视频任务。 */
@@ -473,5 +481,13 @@ export async function addFavorite(ctx: AppContext, body: Record<string, unknown>
 /** 合并并保存用户设置。 */
 export async function updateSettings(ctx: AppContext, body: Partial<Settings>): Promise<Settings> {
   const current = await ctx.settings.get();
-  return ctx.settings.set({ ...current, ...body });
+  const input = body as Partial<Settings> & { clearApiKey?: boolean };
+  const { apiKey, clearApiKey, ...safePatch } = input;
+  const next: Settings = { ...current, ...safePatch };
+  if (clearApiKey) {
+    delete next.apiKey;
+  } else if (typeof apiKey === "string" && apiKey.trim()) {
+    next.apiKey = apiKey.trim();
+  }
+  return ctx.settings.set(next);
 }

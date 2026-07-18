@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Select } from "@/components/ui/select";
+import { ShadcnSelect } from "@/components/ui/select";
 import type { Project } from "@/lib/app-types";
 import { api } from "@/lib/api-client";
 import { createLogger } from "@/lib/logger";
@@ -9,6 +9,10 @@ import { useProjectStore } from "@/lib/stores/project-store";
 
 const log = createLogger("global-top-bar");
 
+/**
+ * GlobalTopBar - 全局顶部导航栏
+ * @returns {JSX.Element} 渲染的顶部导航栏元素
+ */
 export function GlobalTopBar() {
   const { selectedProjectId, setSelectedProjectId } = useProjectStore();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -71,9 +75,9 @@ export function GlobalTopBar() {
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-[#202020] px-6">
       <div className="flex min-w-0 items-center gap-4">
         <h2 className="shrink-0 text-lg font-semibold text-white">当前项目</h2>
-        <Select
-          value={selectedProjectId}
-          onChange={(e) => setSelectedProjectId(e.target.value)}
+        <ShadcnSelect
+          value={selectedProjectId ?? ""}
+          onChange={(value) => setSelectedProjectId(value)}
           options={projectOptions}
           placeholder={projectsLoading ? "加载项目中" : "选择项目"}
           disabled={projectsLoading || projectOptions.length === 0}

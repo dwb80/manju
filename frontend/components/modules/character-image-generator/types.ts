@@ -49,6 +49,9 @@ export interface CharacterImageGeneratorProps {
     age?: number | null;
     description?: string | null;
     traits?: string[] | null;
+    /** 4 中心横切：参考图锁定（详见 docs/spec.md 3.4）。
+     *  设置后，生成器会自动把该图作为 img2img 的参考图传入，无需用户手动上传。 */
+    reference_image_id?: string | null;
   };
   scriptInfo?: {
     name: string;
@@ -97,21 +100,6 @@ export const MAX_REFERENCE_IMAGE_MB = MAX_REFERENCE_IMAGE_SIZE / 1024 / 1024;
 
 export const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 export const ALLOWED_IMAGE_EXTS = /\.(jpe?g|png|webp)$/i;
-
-export const FALLBACK_PLACEHOLDER =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">` +
-    `<rect width="100%" height="100%" fill="#1f1f1f"/>` +
-    `<g fill="none" stroke="#555" stroke-width="2">` +
-    `<rect x="382" y="284" width="260" height="200" rx="8"/>` +
-    `<circle cx="450" cy="350" r="14"/>` +
-    `<path d="M382 420l80-70 70 60 60-50 50 40"/>` +
-    `</g>` +
-    `<text x="512" y="540" font-family="sans-serif" font-size="22" fill="#888" text-anchor="middle">` +
-    `AI 生成失败 · 占位图` +
-    `</text></svg>`
-  );
 
 export function ratioToAspectRatio(ratio: ImageRatio): string {
   const map: Record<ImageRatio, string> = {

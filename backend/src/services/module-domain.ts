@@ -8,8 +8,8 @@
 export { recordVersion, listVersions, getVersion, restoreVersion } from "./module-domain/asset-version.js";
 
 // ==================== 剧本模块 ====================
-export { listScripts, listDeletedScripts, createScript, updateScript, deleteScript, restoreScript, purgeScript } from "./module-domain/script-module.js";
-export type { ScriptInput } from "./module-domain/script-module.js";
+// 已废弃：所有剧本操作统一走 script-center-impl.js（script_documents 表）
+// export { ... } from "./module-domain/script-module.js";
 
 // ==================== 角色模块 ====================
 export { listCharacters, getCharacter, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters } from "./module-domain/character-module.js";

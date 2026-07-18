@@ -14,6 +14,15 @@ import { Plus, Download, Pencil, Trash2 } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
 import { ModuleToolbar, SearchInput, FilterSelect, EmptyState, Pagination } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { FormDialog, type FormFieldConfig } from "@/components/ui/form-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { useProjectStore } from "@/lib/stores/project-store";
@@ -171,19 +180,19 @@ export function AssetsCenterPage() {
       <PageCard title="资产列表">
         {filteredAssets.length > 0 ? (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">资产名称</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">类型</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">文件大小</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden sm:table-cell">格式</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">更新时间</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-[#888]">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="rounded-md border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>资产名称</TableHead>
+                    <TableHead>类型</TableHead>
+                    <TableHead className="hidden md:table-cell">文件大小</TableHead>
+                    <TableHead className="hidden sm:table-cell">格式</TableHead>
+                    <TableHead className="hidden md:table-cell">更新时间</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {paginatedAssets.map((asset) => (
                     <AssetRow
                       key={asset.id}
@@ -192,8 +201,8 @@ export function AssetsCenterPage() {
                       onDelete={() => setDeleteConfirm({ id: asset.id, name: asset.name })}
                     />
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
 
             {totalPages > 1 && (
@@ -260,11 +269,11 @@ function AssetRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const typeColors: Record<string, string> = {
-    image: "bg-emerald-500/20 text-emerald-400",
-    video: "bg-blue-500/20 text-blue-400",
-    audio: "bg-purple-500/20 text-purple-400",
-    document: "bg-orange-500/20 text-orange-400",
+  const typeVariant: Record<string, "success" | "info" | "default" | "warning"> = {
+    image: "success",
+    video: "info",
+    audio: "default",
+    document: "warning",
   };
 
   const formatSize = (bytes: number) => {
@@ -274,42 +283,42 @@ function AssetRow({
   };
 
   return (
-    <tr className="border-b border-white/5 hover:bg-white/5 transition-colors">
-      <td className="px-4 py-3">
+    <TableRow>
+      <TableCell>
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded bg-white/5">
             <Download className="h-4 w-4 text-emerald-400" />
           </div>
           <div>
-            <div className="font-medium text-white">{asset.name}</div>
+            <div className="font-medium text-foreground">{asset.name}</div>
             {asset.file_url && (
-              <div className="text-xs text-[#666] line-clamp-1">{asset.file_url}</div>
+              <div className="text-xs text-muted-foreground line-clamp-1">{asset.file_url}</div>
             )}
           </div>
         </div>
-      </td>
-      <td className="px-4 py-3">
-        <span className={`px-2 py-0.5 rounded text-xs ${typeColors[asset.type] ?? "bg-gray-500/20 text-gray-400"}`}>
+      </TableCell>
+      <TableCell>
+        <Badge variant={typeVariant[asset.type] ?? "muted"}>
           {typeLabels[asset.type] ?? asset.type}
-        </span>
-      </td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{formatSize(asset.size)}</td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden sm:table-cell">
+        </Badge>
+      </TableCell>
+      <TableCell className="text-muted-foreground hidden md:table-cell">{formatSize(asset.size)}</TableCell>
+      <TableCell className="text-muted-foreground hidden sm:table-cell">
         {asset.format || "-"}
-      </td>
-      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">
+      </TableCell>
+      <TableCell className="text-muted-foreground hidden md:table-cell">
         {new Date(asset.updated_at).toLocaleDateString()}
-      </td>
-      <td className="px-4 py-3 text-right">
-        <div className="flex items-center gap-2 justify-end">
-          <Button variant="ghost" size="sm" onClick={onEdit} title="编辑">
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center gap-1 justify-end">
+          <Button variant="ghost" size="icon" onClick={onEdit} title="编辑" aria-label="编辑">
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete} title="删除">
+          <Button variant="ghost" size="icon" onClick={onDelete} title="删除" aria-label="删除">
             <Trash2 className="h-4 w-4 text-red-400" />
           </Button>
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }

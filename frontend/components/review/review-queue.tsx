@@ -1,3 +1,8 @@
+/**
+ * @file review-queue.tsx
+ * @description 审核队列组件，显示待审核内容列表和审核操作
+ */
+
 "use client";
 
 import { useState, useMemo } from "react";

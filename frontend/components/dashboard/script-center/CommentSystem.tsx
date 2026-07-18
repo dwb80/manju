@@ -76,6 +76,15 @@ function groupApiCommentsToTree(list: ApiComment[]): Comment[] {
   return roots
 }
 
+/**
+ * CommentSystem - 评论系统组件
+ * @param {CommentSystemProps} props - 组件属性
+ * @param {string} props.scriptId - 剧本ID
+ * @param {string} props.selectedText - 当前选中的文本
+ * @param {Object} props.selectionPosition - 选区位置
+ * @param {Function} props.onCommentAdded - 评论添加回调
+ * @returns {JSX.Element} 渲染的评论系统界面
+ */
 export function CommentSystem({
   scriptId,
   selectedText,

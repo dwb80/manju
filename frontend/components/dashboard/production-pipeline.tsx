@@ -174,7 +174,12 @@ function transformStages(dataStages: PipelineStageData[]): PipelineStage[] {
   }));
 }
 
-/** AI生产流水线组件（核心组件） */
+/**
+ * ProductionPipeline - AI生产流水线组件
+ * @param {ProductionPipelineProps} props - 组件属性
+ * @param {ProductionPipelineData} props.pipeline - 流水线阶段数据
+ * @returns {JSX.Element} 渲染的生产流水线界面
+ */
 export const ProductionPipeline = memo(function ProductionPipeline({ pipeline }: ProductionPipelineProps) {
   const stages = transformStages(pipeline.stages);
 

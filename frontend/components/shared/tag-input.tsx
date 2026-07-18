@@ -1,3 +1,8 @@
+/**
+ * @file tag-input.tsx
+ * @description 通用标签输入组件，支持回车/逗号添加、点击删除、预设标签
+ */
+
 "use client";
 
 import { useState, KeyboardEvent } from "react";
@@ -14,17 +19,9 @@ export interface TagInputProps {
 }
 
 /**
- * 通用标签输入组件：支持回车/逗号添加、点击删除、预设标签。
- *
- * 用法：
- * ```tsx
- * <TagInput
- *   value={character.tags}
- *   onChange={(tags) => setField('tags', tags)}
- *   placeholder="输入后回车..."
- *   suggestions={['主角', '反派', '古风']}
- * />
- * ```
+ * TagInput - 通用标签输入组件
+ * @param {TagInputProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的标签输入元素
  */
 export function TagInput({
   value = [],

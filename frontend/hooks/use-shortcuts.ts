@@ -1,3 +1,8 @@
+/**
+ * @file use-shortcuts.ts
+ * @description 全局快捷键监听 Hook，提供统一的快捷键管理能力
+ */
+
 "use client";
 
 import { useEffect, useCallback } from "react";
@@ -14,7 +19,7 @@ type ShortcutConfig = {
 };
 
 /**
- * 全局快捷键监听 Hook：提供统一的快捷键管理。
+ * useShortcuts - 全局快捷键监听 Hook
  *
  * 支持的快捷键：
  * - Ctrl+K: 快速搜索（聚焦搜索框）

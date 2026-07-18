@@ -18,7 +18,7 @@
  *     - constants Tab 与工厂入口配置
  */
 
-import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { ScriptEditor, ScriptToolbar, ScriptSidebar, OutlineView } from '@/components/dashboard/script-center'
 import type { SidebarJumpTarget } from '@/components/dashboard/script-center/ScriptSidebar'
@@ -31,12 +31,27 @@ import { useScriptSave } from '@/components/dashboard/script-center/hooks/useScr
 import { useScriptStore } from '@/lib/stores/script-store'
 import type { ScriptVersion } from '@/lib/stores/script-store'
 import { scriptCenterService } from '@/services/script-center.service'
+import {
+  listCharacterImages,
+  listSceneImages,
+  listPropImages,
+  pickPrimaryImage,
+} from '@/services/asset-image.service'
+import {
+  createCharacter as createCharacterFactory,
+  createScene as createSceneFactory,
+  createProp as createPropFactory,
+} from '@/services/module.service'
+import { getFactoryBus } from '@/lib/factory-bus'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { toast } from '@/components/common/toast'
 import { notify } from '@/lib/notify'
 import { createLogger } from '@/lib/logger'
 import { useScriptAnalyze } from '@/components/dashboard/script-center/hooks/useScriptAnalyze'
+import type { CharacterDetailMerged } from '@/components/dashboard/script-center/modals/CharacterDetailModal'
+import type { SceneDetailMerged } from '@/components/dashboard/script-center/modals/SceneDetailModal'
+import type { PropDetailMerged } from '@/components/dashboard/script-center/modals/PropDetailModal'
 
 // 页面级 logger
 const log = createLogger('script-edit-page')
@@ -85,6 +100,155 @@ function convertNavTreeToOutline(nodes: NavTreeNode[]): OutlineNode[] {
       order: index,
     }
   })
+}
+
+// ============================================================
+// 剧本中心 analyzed-assets → 右侧面板数据形状的转换器
+// ============================================================
+//
+// 背景：右侧面板（ScriptEditRightPanel → CharacterPanel/ScenePanel/PropPanel）的
+// 字段形状是基于"工厂表（characters/scenes/props）"的，工厂实体有 `usage_count`、
+// `version`、`tags`、`color` 等业务字段。剧本中心（analyzed-assets）没有这些字段，
+// 也没有缩略图，所以这里做一个最小可用映射，缺字段全部兜空，**避免面板崩溃**。
+//
+// 重要：以下颜色取自 importance_level（protagonist/...）和 gender（male/female），
+// 仅用作占位色块，不是真实视觉。
+
+const IMPORTANCE_COLOR: Record<string, string> = {
+  protagonist: '#ef4444', // red
+  antagonist: '#a855f7',  // purple
+  supporting: '#3b82f6',  // blue
+  minor: '#9ca3af',       // gray
+}
+
+const CHARACTER_NAME_BLOCKLIST: ReadonlySet<string> = new Set([
+  "场景", "角色", "道具", "简介", "正文", "旁白", "OS", "VO",
+  "剧本大纲", "AI生成剧本大纲", "故事梗概", "主要角色介绍",
+  "创意描述", "基本信息", "角色设定", "剧情结构", "故事结构",
+  "开场状态", "矛盾建立", "冲突升级", "高潮节点", "结尾状态",
+  "类型", "风格", "时代背景", "背景", "核心冲突", "目标字数",
+  "故事主题", "视觉主题", "对白风格", "时长预估", "集数信息",
+  "剧集名称", "题材类型", "主线事件", "分集大纲", "声音",
+  "场景一", "场景二", "场景三", "场景四", "场景五", "场景六", "场景七", "场景八",
+  "景一", "景二", "景三", "景四", "景五", "景六", "景七", "景八",
+  "第一场", "第二场", "第三场", "第四场", "第五场",
+  "第一章", "第二章", "第三章", "第四章", "第五章",
+  "第一幕", "第二幕", "第三幕", "第四幕", "第五幕",
+])
+
+/**
+ * 兜底：前端读取 analyzed-characters 时，过滤掉明显不是角色名的脏数据。
+ * 后端 normalizeCharacter 已经在写入前做了校验，但旧版数据/缓存仍可能含
+ * "## 场景二" / "**类型**" / "清晨6" 等被误识别为角色的字段。
+ */
+function filterAnalyzedCharacters(list: any[]): any[] {
+  return (list || []).filter((c) => {
+    const name = String(c?.name || "").trim()
+    if (!name) return false
+    if (name.length < 2 || name.length > 20) return false
+    if (/[#*~`_\[\]【】()（）]/.test(name)) return false
+    if (!/[\u4e00-\u9fff]/.test(name)) return false
+    if (CHARACTER_NAME_BLOCKLIST.has(name)) return false
+    if (/\d$/.test(name)) return false
+    if (/^[·\-、，,。:：!?]/.test(name)) return false
+    return true
+  })
+}
+
+function analyzedCharToRightPanelShape(c: any, imageMap?: Map<string, string>) {
+  // 主图优先级：imageMap（工厂 character_images 主图） > 自身 image
+  const factoryId = c.factory_character_id
+  const primaryImage = (factoryId && imageMap?.get(factoryId)) || c.image || ''
+  return {
+    id: c.id,
+    assetId: c.factory_character_id, // 关联到工厂时才有；无则 undefined
+    name: c.name || '未命名角色',
+    description: c.description || '',
+    role: c.role || c.importance_level || '',
+    gender: c.gender || '',
+    age: typeof c.age === 'string' ? parseInt(c.age, 10) || 0 : c.age,
+    appearance: c.appearance || '',
+    personality: c.personality || '',
+    traits: Array.isArray(c.traits) ? c.traits : [],
+    tags: Array.isArray(c.tags) ? c.tags : [],
+    color: IMPORTANCE_COLOR[c.role || c.importance_level] || IMPORTANCE_COLOR.minor,
+    thumbnail: primaryImage,
+    image: primaryImage,
+    identity: c.identity,
+    dialogue_count: c.dialogue_count,
+    usage_count: 0, // 剧本中心不统计使用次数
+    version: 1,
+    // 保留源数据，方便调试 + 后续"详情弹框"展示
+    _source: 'script-center',
+  }
+}
+
+function analyzedSceneToRightPanelShape(s: any, imageMap?: Map<string, string>) {
+  const factoryId = s.factory_scene_id
+  const primaryImage = (factoryId && imageMap?.get(factoryId)) || s.image || ''
+  // 优先用 factory-aligned 字段名 type，回退到旧字段 scene_type（兼容历史数据）
+  const sceneType = s.type ?? s.scene_type ?? 'outdoor'
+  return {
+    id: s.id,
+    assetId: s.factory_scene_id,
+    name: s.name || s.location || '未命名场景',
+    description: s.description || '',
+    location: s.location || s.name || '',
+    time: s.time_of_day || '',
+    thumbnail: primaryImage,
+    image: primaryImage,
+    type: sceneType,
+    scene_type: sceneType, // 兼容旧字段读取
+    category: s.category || '',
+    indoor_outdoor: s.indoor_outdoor || '',
+    lighting: s.lighting || '',
+    time_of_day: s.time_of_day || '',
+    weather: s.weather || '',
+    architecture: s.architecture || '',
+    terrain: s.terrain || '',
+    plants: s.plants || '',
+    objects: s.objects || '',
+    period: s.period || '',
+    tone: s.tone || '',
+    visual_style: s.visual_style || '',
+    atmosphere_emotion: s.atmosphere_emotion || '',
+    suitable_shots: s.suitable_shots,
+    reusable_elements: s.reusable_elements,
+    tags: Array.isArray(s.tags) ? s.tags : [],
+    usage_count: 0,
+    version: 1,
+    _source: 'script-center',
+  }
+}
+
+function analyzedPropToRightPanelShape(p: any, imageMap?: Map<string, string>) {
+  const factoryId = p.factory_prop_id
+  const primaryImage = (factoryId && imageMap?.get(factoryId)) || p.image || ''
+  return {
+    id: p.id,
+    assetId: p.factory_prop_id,
+    name: p.name || '未命名道具',
+    description: p.description || '',
+    category: p.category || '',
+    color: p.color || '',
+    material: p.material || '',
+    size: p.size || '',
+    appearance: p.appearance || '',
+    importance_level: p.importance_level || '',
+    owner: p.owner || '',
+    shape: p.shape || '',
+    texture: p.texture || '',
+    visual_features: p.visual_features || '',
+    camera_usage: p.camera_usage || '',
+    story_function: p.story_function || '',
+    first_appearance: p.first_appearance || '',
+    thumbnail: primaryImage,
+    image: primaryImage,
+    tags: Array.isArray(p.tags) ? p.tags : [],
+    usage_count: 0,
+    version: 1,
+    _source: 'script-center',
+  }
 }
 
 // ============================================================
@@ -143,18 +307,139 @@ export default function ScriptEditPage() {
   const [viewingVersion, setViewingVersion] = useState<ScriptVersion | null>(null)
   const [showAnalyzeConfirm, setShowAnalyzeConfirm] = useState(false)
   const [analyzePreview, setAnalyzePreview] = useState<any>(null)
+  // 方案 A：元数据 inline-edit 脏值标记（与 editor 脏值同源以保持一致）
+  const [isDirty, setIsDirty] = useState(false)
 
   // AI 分析前的原文快照：用于分析后重建 Tiptap 结构（让剧集/场景与正文锚定）
   const [pendingAnalyzeText, setPendingAnalyzeText] = useState<string>('')
   const [pendingAnalyzeJson, setPendingAnalyzeJson] = useState<any>(null)
+
+  // ---- 剧本中心 analyzed-assets（右侧面板的数据源） ----
+  // 不从工厂加载：剧本中心 = 剧本编辑器右侧面板的"唯一数据源"
+  // - import 时：useScriptImport.handleConfirmImport 会写一份到 analyzed-assets
+  // - editor 中 AI analyze apply 时：useScriptAnalyze.apply 也会写一份
+  // - 工厂那条路只在用户主动"流转到工厂"时由右面板触发 PATCH（updateAnalyzedCharacter）
+  const [analyzedCharacters, setAnalyzedCharacters] = useState<any[]>([])
+  const [analyzedScenes, setAnalyzedScenes] = useState<any[]>([])
+  const [analyzedProps, setAnalyzedProps] = useState<any[]>([])
+  // 用于在导入/AI apply 写库后主动重拉一次（re-fetch 触发器）
+  const [analyzedRefreshTick, setAnalyzedRefreshTick] = useState(0)
+
+  useEffect(() => {
+    if (!scriptId) return
+    let cancelled = false
+    scriptCenterService
+      .getAnalyzedAssets(scriptId)
+      .then((res) => {
+        if (cancelled) return
+        // 兜底过滤：旧版数据/旧版缓存里可能仍有明显不是角色名的脏数据（如 "## 场景二"）
+        setAnalyzedCharacters(filterAnalyzedCharacters(res.characters || []))
+        setAnalyzedScenes(res.scenes || [])
+        setAnalyzedProps(res.props || [])
+      })
+      .catch((err) => {
+        // 404 等情况说明这个剧本还没有 analyzed-assets（可能是新建空白剧本），忽略即可
+        log.debug('getAnalyzedAssets skipped:', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [scriptId, analyzedRefreshTick])
+
+  // === 工厂资产图片映射（按 factory id 索引主图 URL） ===
+  // - 右面板"来自剧本中心"的卡片需要显示图
+  // - 剧本中心表本身没有 image 字段（按需求），所以从这里读
+  // - 每次 analyzedRefreshTick 变化（导入/AI apply 写库后）或 analyzedCharacters 变化时刷新
+  const [charImageMap, setCharImageMap] = useState<Map<string, string>>(new Map())
+  const [sceneImageMap, setSceneImageMap] = useState<Map<string, string>>(new Map())
+  const [propImageMap, setPropImageMap] = useState<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    let cancelled = false
+    const factoryIds = {
+      char: Array.from(
+        new Set(analyzedCharacters.map((c: any) => c.factory_character_id).filter(Boolean) as string[]),
+      ),
+      scene: Array.from(
+        new Set(analyzedScenes.map((s: any) => s.factory_scene_id).filter(Boolean) as string[]),
+      ),
+      prop: Array.from(
+        new Set(analyzedProps.map((p: any) => p.factory_prop_id).filter(Boolean) as string[]),
+      ),
+    }
+    Promise.all([
+      Promise.all(factoryIds.char.map((id) => listCharacterImages(id).catch(() => []))),
+      Promise.all(factoryIds.scene.map((id) => listSceneImages(id).catch(() => []))),
+      Promise.all(factoryIds.prop.map((id) => listPropImages(id).catch(() => []))),
+    ]).then(([charLists, sceneLists, propLists]) => {
+      if (cancelled) return
+      const cMap = new Map<string, string>()
+      factoryIds.char.forEach((id, idx) => {
+        const primary = pickPrimaryImage(charLists[idx])
+        if (primary?.url) cMap.set(id, primary.url)
+      })
+      const sMap = new Map<string, string>()
+      factoryIds.scene.forEach((id, idx) => {
+        const primary = pickPrimaryImage(sceneLists[idx])
+        if (primary?.url) sMap.set(id, primary.url)
+      })
+      const pMap = new Map<string, string>()
+      factoryIds.prop.forEach((id, idx) => {
+        const primary = pickPrimaryImage(propLists[idx])
+        if (primary?.url) pMap.set(id, primary.url)
+      })
+      setCharImageMap(cMap)
+      setSceneImageMap(sMap)
+      setPropImageMap(pMap)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [analyzedCharacters, analyzedScenes, analyzedProps, analyzedRefreshTick])
+
+  // === 监听 factoryBus 事件（角色/场景/道具图片在工厂新标签页被改后，跨标签页自动刷新） ===
+  // - 任意 character:*/scene:*/prop:* 事件触发时：递增 analyzedRefreshTick
+  //   → 上面的 useEffect 会重拉 imageMaps，右面板头像会同步更新
+  useEffect(() => {
+    const bus = getFactoryBus()
+    const events = [
+      'character:image-added',
+      'character:image-deleted',
+      'character:image-primary-changed',
+      'character:updated',
+      'character:deleted',
+      'scene:image-added',
+      'scene:image-deleted',
+      'scene:image-primary-changed',
+      'scene:updated',
+      'scene:deleted',
+      'prop:image-added',
+      'prop:image-deleted',
+      'prop:image-primary-changed',
+      'prop:updated',
+      'prop:deleted',
+      'factory:asset-list-changed',
+    ] as const
+    const unsubs = events.map((e) => bus.on(e as any, () => setAnalyzedRefreshTick((t) => t + 1)))
+    return () => unsubs.forEach((u) => u())
+  }, [])
 
   // 评论选区
   const [selectedText, setSelectedText] = useState('')
   const [selectionPosition, setSelectionPosition] = useState<{ from: number; to: number } | undefined>(undefined)
 
   // ---- 副作用 ----
+  // 修复字段错位/重复加载：使用 ref 记录已加载的 scriptId，
+  // 避免 React StrictMode 双调用 + 父组件重渲染导致的 loadDocument 重复触发。
+  // 重复触发会让 store 的 isLoading 反复重置为 true，set 完后页面又因别处状态变化被冲掉。
+  const loadedScriptIdRef = useRef<string | null>(null)
   useEffect(() => {
     if (!scriptId) return
+    if (loadedScriptIdRef.current === scriptId) {
+      log.debug('skip duplicate loadDocument for same scriptId', { scriptId })
+      return
+    }
+    loadedScriptIdRef.current = scriptId
     log.info('load document', { scriptId })
     // 重置 store，避免上一次会话的缓存影响本次加载
     useScriptStore.getState().reset()
@@ -200,12 +485,26 @@ export default function ScriptEditPage() {
           id: currentDocument.id,
           project_id: currentDocument.project_id,
           version: currentDocument.version,
+          // 方案 A 修复：传入 title/author/status，
+          // 让 hook 能把元数据同步写回 script_documents 和 scripts 两张表
+          title: currentDocument.title,
+          author: currentDocument.author,
+          status: currentDocument.status,
         }
       : null,
     editor,
     characters: characters as any,
+    sceneAssets: sceneAssets as any,
     propAssets: propAssets as any,
     updateScriptCharacter,
+    updateScriptScene: (id, patch) => {
+      // 回写剧本侧 + 工厂侧两份数据，让"已同步"状态在右面板和 store 都可见
+      setAnalyzedScenes((prev) => prev.map((s) => (s.id === id ? { ...s, assetId: patch.assetId } : s)))
+      // store.sceneAssets 的元素也回写（用 appendFactoryAsset 的 patch 语义）
+      const fresh = useScriptStore.getState().sceneAssets
+      const next = fresh.map((s) => (s.id === id ? { ...s, assetId: patch.assetId } : s))
+      useScriptStore.setState({ sceneAssets: next } as any)
+    },
     updateScriptProp,
     appendFactoryAsset,
   })
@@ -332,8 +631,380 @@ export default function ScriptEditPage() {
       // 清空"原文快照"：下次分析时再重新捕获，避免陈旧内容污染后续重建
       setPendingAnalyzeText('')
       setPendingAnalyzeJson(null)
+      // 重新拉一次剧本中心 analyzed-assets，让右侧面板立即显示新数据
+      // （useScriptAnalyze.apply 已写入 analyzed-assets，这里只是触发 fetch）
+      setAnalyzedRefreshTick((t) => t + 1)
     }
   }, [applyAnalyze])
+
+  // ---- 角色详情弹框：父组件注入的回调 ----
+  // 1) 查找 analyzePreview 中同 id / 同 name 的 AI 解析数据（用于补全 appearance/personality）
+  // 2) 返回保存回调：把"合并后的最新字段"调 PUT /api/characters/:id（upsert），
+  //    写库成功后用 updateCharacter 同步刷新 store，让"已同步到工厂"的状态可见。
+  const handleViewCharacterDetail = useCallback(
+    async (char: any) => {
+      const projId = currentDocument?.project_id || ''
+      // 在 analyzePreview 中查找同 id / 同 name 的 AI 解析数据
+      let aiChar: any = null
+      if (analyzePreview?.characters) {
+        aiChar =
+          analyzePreview.characters.find((c: any) => c?.id === char.id) ||
+          analyzePreview.characters.find(
+            (c: any) => c?.name && char.name && c.name === char.name,
+          ) ||
+          null
+      }
+      return {
+        projectId: projId,
+        scriptId,
+        analyzePreviewCharacter: aiChar,
+        onSaveAsAsset: async (merged: CharacterDetailMerged) => {
+          // === 编辑流程：直接写剧本中心（不写工厂） ===
+          // - char.id 是 script_analyzed_characters 表的主键
+          // - 用户在弹框里编辑的字段全部回写到剧本中心对应行
+          // - 工厂侧数据不被动；如需同步到工厂，点击「同步到角色工厂」按钮
+          if (!char.id) {
+            throw new Error('该角色没有剧本中心 ID')
+          }
+          log.info('PATCH /api/analyzed-characters/:id', { id: char.id, name: merged.name })
+          await scriptCenterService.updateAnalyzedCharacter(char.id, {
+            name: merged.name,
+            description: merged.description,
+            role: merged.role,
+            gender: merged.gender,
+            age: merged.age != null ? String(merged.age) : undefined,
+            appearance: merged.appearance,
+            personality: merged.personality,
+            traits: merged.traits,
+            tags: merged.tags,
+          })
+          // 同步刷新本地 state（让右面板立即看到改动）
+          setAnalyzedCharacters((prev) =>
+            prev.map((c) =>
+              c.id === char.id
+                ? {
+                    ...c,
+                    name: merged.name,
+                    description: merged.description,
+                    role: merged.role,
+                    gender: merged.gender,
+                    age: merged.age,
+                    appearance: merged.appearance,
+                    personality: merged.personality,
+                    traits: merged.traits,
+                    tags: merged.tags,
+                  }
+                : c,
+            ),
+          )
+          // 同步刷新 store（用于"打开工厂"链接等）
+          updateScriptCharacter(char.id, {
+            name: merged.name,
+            description: merged.description,
+            role: merged.role,
+            gender: merged.gender,
+            age: merged.age,
+            appearance: merged.appearance,
+            personality: merged.personality,
+            traits: merged.traits,
+            tags: merged.tags,
+          })
+          toast.success(`已保存「${merged.name}」（剧本中心）`)
+        },
+        // === 同步到角色工厂：写入 characters 表（独立于剧本中心） ===
+        onSyncToFactory: async (merged: CharacterDetailMerged) => {
+          const name = (merged.name || '').trim()
+          if (!name) throw new Error('角色名称为空，无法同步')
+          if (!projId) {
+            // 无 projectId 仍允许创建（项目 ID 为空），但提示用户
+            log.warn('sync character to factory without projectId', { name })
+          }
+          const payload = {
+            name,
+            project_id: projId || undefined,
+            role: merged.role,
+            gender: merged.gender,
+            age: merged.age,
+            description: merged.description,
+            traits: merged.traits,
+            tags: merged.tags,
+            image: merged.image,
+          }
+          log.info('POST /api/characters (sync character to factory)', { name, projectId: projId, payload })
+          let created: any
+          try {
+            // 前端 character.service 未暴露 project_id，但后端 createCharacter 接受；这里用 as any 透传
+            created = await createCharacterFactory(payload as any)
+          } catch (err) {
+            const e = err as Error
+            // eslint-disable-next-line no-console
+            console.error('[page.tsx] sync character POST failed', { name, projId, payload, err })
+            throw e
+          }
+          log.info('POST /api/characters ok', { name, id: created?.id })
+          // 同步到 store（让"打开工厂"链接的本地缓存立即可见）
+          appendFactoryAsset('character', created)
+          // 通知其他打开角色工厂的标签页刷新
+          try {
+            getFactoryBus().emit('factory:asset-list-changed', {
+              kind: 'character',
+              projectId: projId || undefined,
+            })
+          } catch (busErr) {
+            log.warn('factoryBus emit failed', { error: (busErr as Error).message })
+          }
+          toast.success(`已同步到角色工厂：「${created.name}」`)
+        },
+      }
+    },
+    [currentDocument?.project_id, scriptId, analyzePreview, updateScriptCharacter, appendFactoryAsset],
+  )
+
+  // === 场景详情：编辑后直接写剧本中心 ===
+  const handleViewSceneDetail = useCallback(
+    async (scene: any) => {
+      const projId = currentDocument?.project_id || ''
+      let aiScene: any = null
+      if (analyzePreview?.scenes) {
+        aiScene =
+          analyzePreview.scenes.find((s: any) => s?.id === scene.id) ||
+          analyzePreview.scenes.find(
+            (s: any) => s?.name && scene.name && s.name === scene.name,
+          ) ||
+          null
+      }
+      return {
+        projectId: projId,
+        scriptId,
+        analyzePreviewScene: aiScene,
+        onSaveAsAsset: async (merged: SceneDetailMerged) => {
+          if (!scene.id) {
+            throw new Error('该场景没有剧本中心 ID')
+          }
+          log.info('PATCH /api/analyzed-scenes/:id', { id: scene.id, name: merged.name })
+          await scriptCenterService.updateAnalyzedScene(scene.id, {
+            name: merged.name,
+            description: merged.description,
+            type: merged.type,
+            category: merged.category,
+            location: merged.location,
+            lighting: merged.lighting,
+            time_of_day: merged.time_of_day,
+            weather: merged.weather,
+            architecture: merged.architecture,
+            terrain: merged.terrain,
+            plants: merged.plants,
+            objects: merged.objects,
+            period: merged.period,
+            tone: merged.tone,
+            visual_style: merged.visual_style,
+            atmosphere_emotion: merged.atmosphere_emotion,
+            tags: merged.tags,
+          })
+          setAnalyzedScenes((prev) =>
+            prev.map((s) =>
+              s.id === scene.id
+                ? {
+                    ...s,
+                    name: merged.name,
+                    description: merged.description,
+                    type: merged.type,
+                    scene_type: merged.type, // 兼容旧字段
+                    category: merged.category,
+                    location: merged.location,
+                    lighting: merged.lighting,
+                    time_of_day: merged.time_of_day,
+                    weather: merged.weather,
+                    architecture: merged.architecture,
+                    terrain: merged.terrain,
+                    plants: merged.plants,
+                    objects: merged.objects,
+                    period: merged.period,
+                    tone: merged.tone,
+                    visual_style: merged.visual_style,
+                    atmosphere_emotion: merged.atmosphere_emotion,
+                    tags: merged.tags,
+                  }
+                : s,
+            ),
+          )
+          toast.success(`已保存「${merged.name}」（剧本中心）`)
+        },
+        // === 同步到场景工厂：写入 scenes 表（独立于剧本中心） ===
+        onSyncToFactory: async (merged: SceneDetailMerged) => {
+          const name = (merged.name || '').trim()
+          if (!name) throw new Error('场景名称为空，无法同步')
+          if (!projId) {
+            log.warn('sync scene to factory without projectId', { name })
+          }
+          const payload = {
+            name,
+            // scene.service 暂未直接接 projectId / description，先用最小可用字段
+            type: merged.type,
+            description: merged.description,
+            tags: merged.tags,
+            lighting: merged.lighting,
+            time_of_day: merged.time_of_day,
+            weather: merged.weather,
+            image: merged.image,
+            // === AI 剧本分析扩展字段 ===
+            category: merged.category,
+            indoor_outdoor: merged.indoor_outdoor,
+            location: merged.location,
+            architecture: merged.architecture,
+            terrain: merged.terrain,
+            plants: merged.plants,
+            objects: merged.objects,
+            period: merged.period,
+            tone: merged.tone,
+            visual_style: merged.visual_style,
+            atmosphere_emotion: merged.atmosphere_emotion,
+          }
+          log.info('POST /api/scenes (sync scene to factory)', { name, projectId: projId, payload })
+          let created: any
+          try {
+            created = await createSceneFactory(payload as any)
+          } catch (err) {
+            const e = err as Error
+            // eslint-disable-next-line no-console
+            console.error('[page.tsx] sync scene POST failed', { name, projId, payload, err })
+            throw e
+          }
+          log.info('POST /api/scenes ok', { name, id: created?.id })
+          appendFactoryAsset('scene', { ...created, project_id: projId || undefined })
+          try {
+            getFactoryBus().emit('factory:asset-list-changed', {
+              kind: 'scene',
+              projectId: projId || undefined,
+            })
+          } catch (busErr) {
+            log.warn('factoryBus emit failed', { error: (busErr as Error).message })
+          }
+          toast.success(`已同步到场景工厂：「${created.name}」`)
+        },
+      }
+    },
+    [currentDocument?.project_id, scriptId, analyzePreview, appendFactoryAsset],
+  )
+
+  // === 道具详情：编辑后直接写剧本中心 ===
+  const handleViewPropDetail = useCallback(
+    async (prop: any) => {
+      const projId = currentDocument?.project_id || ''
+      let aiProp: any = null
+      if (analyzePreview?.props) {
+        aiProp =
+          analyzePreview.props.find((p: any) => p?.id === prop.id) ||
+          analyzePreview.props.find(
+            (p: any) => p?.name && prop.name && p.name === prop.name,
+          ) ||
+          null
+      }
+      return {
+        projectId: projId,
+        scriptId,
+        analyzePreviewProp: aiProp,
+        onSaveAsAsset: async (merged: PropDetailMerged) => {
+          if (!prop.id) {
+            throw new Error('该道具没有剧本中心 ID')
+          }
+          log.info('PATCH /api/analyzed-props/:id', { id: prop.id, name: merged.name })
+          await scriptCenterService.updateAnalyzedProp(prop.id, {
+            name: merged.name,
+            description: merged.description,
+            category: merged.category,
+            importance_level: merged.importance_level,
+            owner: merged.owner,
+            appearance: merged.appearance,
+            material: merged.material,
+            size: merged.size,
+            color: merged.color,
+            shape: merged.shape,
+            texture: merged.texture,
+            visual_features: merged.visual_features,
+            camera_usage: merged.camera_usage,
+            story_function: merged.story_function,
+            tags: merged.tags,
+          })
+          setAnalyzedProps((prev) =>
+            prev.map((p) =>
+              p.id === prop.id
+                ? {
+                    ...p,
+                    name: merged.name,
+                    description: merged.description,
+                    category: merged.category,
+                    importance_level: merged.importance_level,
+                    owner: merged.owner,
+                    appearance: merged.appearance,
+                    material: merged.material,
+                    size: merged.size,
+                    color: merged.color,
+                    shape: merged.shape,
+                    texture: merged.texture,
+                    visual_features: merged.visual_features,
+                    camera_usage: merged.camera_usage,
+                    story_function: merged.story_function,
+                    tags: merged.tags,
+                  }
+                : p,
+            ),
+          )
+          toast.success(`已保存「${merged.name}」（剧本中心）`)
+        },
+        // === 同步到道具工厂：写入 props 表（独立于剧本中心） ===
+        onSyncToFactory: async (merged: PropDetailMerged) => {
+          const name = (merged.name || '').trim()
+          if (!name) throw new Error('道具名称为空，无法同步')
+          if (!projId) {
+            log.warn('sync prop to factory without projectId', { name })
+          }
+          const payload = {
+            name,
+            category: merged.category,
+            description: merged.description,
+            appearance: merged.appearance,
+            material: merged.material,
+            size: merged.size,
+            color: merged.color,
+            tags: merged.tags,
+            image: merged.image,
+            // === AI 剧本分析扩展字段 ===
+            importance_level: merged.importance_level,
+            owner: merged.owner,
+            shape: merged.shape,
+            texture: merged.texture,
+            story_function: merged.story_function,
+            visual_features: merged.visual_features,
+            camera_usage: merged.camera_usage,
+            first_appearance: merged.first_appearance,
+          }
+          log.info('POST /api/props (sync prop to factory)', { name, projectId: projId, payload })
+          let created: any
+          try {
+            created = await createPropFactory(payload as any)
+          } catch (err) {
+            const e = err as Error
+            // eslint-disable-next-line no-console
+            console.error('[page.tsx] sync prop POST failed', { name, projId, payload, err })
+            throw e
+          }
+          log.info('POST /api/props ok', { name, id: created?.id })
+          appendFactoryAsset('prop', { ...created, project_id: projId || undefined })
+          try {
+            getFactoryBus().emit('factory:asset-list-changed', {
+              kind: 'prop',
+              projectId: projId || undefined,
+            })
+          } catch (busErr) {
+            log.warn('factoryBus emit failed', { error: (busErr as Error).message })
+          }
+          toast.success(`已同步到道具工厂：「${created.name}」`)
+        },
+      }
+    },
+    [currentDocument?.project_id, scriptId, analyzePreview, appendFactoryAsset],
+  )
 
   // ---- 大纲模式：节点点击 / 排序 / 添加 / 删除 / 重命名 ----
   const handleNodeClick = (node: OutlineNode) => {
@@ -485,9 +1156,62 @@ export default function ScriptEditPage() {
     <div className="script-edit-page h-full min-h-0 bg-[#0a0a0a] flex flex-col overflow-hidden">
       {/* === 顶部工具栏 === */}
       <div className="border-b border-white/10 bg-[#1a1a1a] px-4 py-2 flex items-center gap-2">
-        <div className="flex-1">
-          <h1 className="text-lg font-medium text-white">{currentDocument.title || '未命名剧本'}</h1>
-          <div className="text-xs text-[#888]">{isSaving ? '保存中...' : '已保存'}</div>
+        <div className="flex-1 min-w-0">
+          <input
+            type="text"
+            value={currentDocument.title || ''}
+            onChange={(e) => {
+              const next = e.target.value;
+              // 方案 A：title 改动通过 saveDocument 写回 script_documents。
+              // 局部乐观更新 + 自动保存
+              useScriptStore.setState((s) => ({
+                currentDocument: s.currentDocument ? { ...s.currentDocument, title: next } : null,
+              }));
+              setIsDirty(true);
+            }}
+            onBlur={() => {
+              if (isDirty) handleSave();
+            }}
+            placeholder="未命名剧本"
+            className="text-lg font-medium text-white bg-transparent border-b border-transparent hover:border-white/20 focus:border-emerald-500/50 focus:outline-none w-full px-0 py-0"
+            aria-label="剧本标题"
+          />
+          <div className="text-xs text-[#888] mt-0.5">{isSaving ? '保存中...' : isDirty ? '有未保存修改' : '已保存'}</div>
+        </div>
+        {/* 方案 A：作者 / 状态 inline-edit 下拉，写入时与 saveDocument 一并保存 */}
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={currentDocument.author || ''}
+            onChange={(e) => {
+              useScriptStore.setState((s) => ({
+                currentDocument: s.currentDocument ? { ...s.currentDocument, author: e.target.value } : null,
+              }));
+              setIsDirty(true);
+            }}
+            onBlur={() => isDirty && handleSave()}
+            placeholder="作者"
+            className="text-xs text-white bg-transparent border border-white/10 rounded px-2 py-1 w-28 focus:border-emerald-500/50 focus:outline-none"
+            aria-label="作者"
+          />
+          <select
+            value={currentDocument.status || 'draft'}
+            onChange={(e) => {
+              useScriptStore.setState((s) => ({
+                currentDocument: s.currentDocument ? { ...s.currentDocument, status: e.target.value as any } : null,
+              }));
+              setIsDirty(true);
+              handleSave();
+            }}
+            className="text-xs text-white bg-[#1a1a1a] border border-white/10 rounded px-2 py-1 focus:border-emerald-500/50 focus:outline-none"
+            aria-label="状态"
+          >
+            <option value="draft">草稿</option>
+            <option value="active">进行中</option>
+            <option value="review">审核中</option>
+            <option value="completed">已完成</option>
+            <option value="archived">已归档</option>
+          </select>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" onClick={handleSave} disabled={isSaving}>
@@ -576,26 +1300,54 @@ export default function ScriptEditPage() {
           )}
         </div>
 
-        {/* 右侧：剧本编辑面板（不含场景 Tab，工厂入口已收敛到组件内） */}
+        {/* 右侧：剧本编辑面板（5 Tab：角色/场景/道具/AI/评论，工厂入口已收敛到组件内） */}
         <ScriptEditRightPanel
-          characters={characters as any}
+          characters={analyzedCharacters.map((c) => analyzedCharToRightPanelShape(c, charImageMap)) as any}
+          projectId={currentDocument?.project_id}
           onAddCharacter={() => notify.info('请通过顶部"角色工厂"快捷入口管理角色资产')}
           onSelectCharacter={(char) => {
             if (editor && char.name) editor.commands.setCharacter?.({ name: char.name, color: char.color })
           }}
-          onEditCharacter={(char) => {
-            if (char.assetId) notify.info(`请在角色工厂中编辑角色 ${char.name}`)
+          onDeleteCharacter={(id) => {
+            // 持久化删除：DELETE /api/analyzed-characters/:id，工厂资源不受影响
+            setAnalyzedCharacters((prev) => prev.filter((c) => c.id !== id))
+            scriptCenterService.deleteAnalyzedCharacter(id).catch((err) => {
+              console.error('[右面板] 删除分析角色失败', err)
+              notify.error('删除失败：' + (err?.message || '未知错误'))
+            })
+            notify.info('已从右侧面板移除角色（剧本中心）')
           }}
-          onDeleteCharacter={(id) => removeCharacter(id)}
-          propAssets={propAssets as any}
+          onViewCharacterDetail={handleViewCharacterDetail}
+          propAssets={analyzedProps.map((p) => analyzedPropToRightPanelShape(p, propImageMap)) as any}
           onAddProp={() => notify.info('请通过顶部"道具工厂"快捷入口管理道具资产')}
           onSelectProp={(p) => {
             if (editor && p.name) editor.commands.insertContent?.(p.name)
           }}
-          onEditProp={(p) => {
-            if (p.assetId) notify.info(`请在道具工厂中编辑道具 ${p.name}`)
+          onDeleteProp={(id) => {
+            // 持久化删除：DELETE /api/analyzed-props/:id，工厂资源不受影响
+            setAnalyzedProps((prev) => prev.filter((p) => p.id !== id))
+            scriptCenterService.deleteAnalyzedProp(id).catch((err) => {
+              console.error('[右面板] 删除分析道具失败', err)
+              notify.error('删除失败：' + (err?.message || '未知错误'))
+            })
+            notify.info('已从右侧面板移除道具（剧本中心）')
           }}
-          onDeleteProp={(id) => removeProp(id)}
+          onViewPropDetail={handleViewPropDetail}
+          sceneAssets={analyzedScenes.map((s) => analyzedSceneToRightPanelShape(s, sceneImageMap)) as any}
+          onAddScene={() => notify.info('请通过顶部"场景工厂"快捷入口管理场景资产')}
+          onSelectScene={(scene) => {
+            if (editor && scene.name) editor.commands.insertContent?.(scene.name)
+          }}
+          onDeleteScene={(id) => {
+            // 持久化删除：DELETE /api/analyzed-scenes/:id，工厂资源不受影响
+            setAnalyzedScenes((prev) => prev.filter((s) => s.id !== id))
+            scriptCenterService.deleteAnalyzedScene(id).catch((err) => {
+              console.error('[右面板] 删除分析场景失败', err)
+              notify.error('删除失败：' + (err?.message || '未知错误'))
+            })
+            notify.info('已从右侧面板移除场景（剧本中心）')
+          }}
+          onViewSceneDetail={handleViewSceneDetail}
           editor={editor}
           hasSelection={!!(selectedText && selectionPosition)}
           onGenerateScript={async (params) => {

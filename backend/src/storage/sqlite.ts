@@ -1,8 +1,19 @@
+/**
+ * @file sqlite.ts
+ * @description SQLite 数据库连接管理与通用仓储实现。
+ *              提供数据库连接池、慢查询统计、字段编解码，
+ *              以及 SqliteRepository / SqliteSettingsRepository 两个核心仓储类。
+ */
+
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { jsonClone } from "../utils.js";
+import { rootLogger } from "../logger.js";
 import type { FieldSpec, FieldType, KeyValueRepository, QueryOptions, Repository } from "./repository.js";
+
+/** 慢查询阈值：超过此毫秒数会打 debug 日志。仅在 LOG_LEVEL=debug 时启用计时（零开销）。 */
+const SLOW_QUERY_THRESHOLD_MS = 200;
 
 type DatabaseSync = {
   exec(sql: string): void;
@@ -18,6 +29,51 @@ const require = createRequire(import.meta.url);
 const sqlite = require("node:sqlite") as { DatabaseSync: new (filename: string) => DatabaseSync };
 const databasePool = new Map<string, DatabaseSync>();
 
+/**
+ * 把原始 prepare 包装成"会统计耗时并在 debug 级别输出慢查询"的 statement。
+ * 当 LOG_LEVEL!=debug 时，timingEnabled 为 false，不取 Date.now()，零开销。
+ */
+function wrapStatement(
+  statement: ReturnType<DatabaseSync["prepare"]>,
+  sql: string,
+  table: string,
+  operation: "run" | "get" | "all" | "exec",
+  timingEnabled: boolean,
+): ReturnType<DatabaseSync["prepare"]> {
+  if (!timingEnabled) return statement;
+
+  // 用一个"分桶 SQL"作为日志键，避免在每条参数化 SQL 上都打完整模板（噪声太大）
+  const sqlOneLine = sql.replace(/\s+/g, " ").trim().slice(0, 240);
+  const wrap = <T extends unknown[]>(fn: (...args: T) => unknown) =>
+    (...args: T) => {
+      const start = Date.now();
+      try {
+        return fn(...args);
+      } finally {
+        const durationMs = Date.now() - start;
+        if (durationMs >= SLOW_QUERY_THRESHOLD_MS) {
+          rootLogger.debug(
+            {
+              event: "db.slow_query",
+              table,
+              operation,
+              durationMs,
+              sqlPreview: sqlOneLine,
+              paramCount: args.length,
+            },
+            `慢查询：${table}.${operation} 耗时 ${durationMs}ms（阈值 ${SLOW_QUERY_THRESHOLD_MS}ms）`,
+          );
+        }
+      }
+    };
+
+  return {
+    run: wrap(statement.run.bind(statement)) as typeof statement.run,
+    get: wrap(statement.get.bind(statement)) as typeof statement.get,
+    all: wrap(statement.all.bind(statement)) as typeof statement.all,
+  } as ReturnType<DatabaseSync["prepare"]>;
+}
+
 /** 打开并复用同一个 SQLite 数据库连接，避免每次请求都重新建连接。 */
 function openDatabase(file: string): DatabaseSync {
   const absolute = path.resolve(file);
@@ -27,6 +83,14 @@ function openDatabase(file: string): DatabaseSync {
   const database = new sqlite.DatabaseSync(absolute);
   database.exec("PRAGMA journal_mode = WAL");
   database.exec("PRAGMA synchronous = NORMAL");
+  // 包装 prepare，让上层业务 SQL 自动获得慢查询统计。
+  // 复用一个 timingEnabled 标志，避免每次调用都查 isLevelEnabled（热路径开销）。
+  const timingEnabled = rootLogger.isLevelEnabled("debug");
+  const originalPrepare = database.prepare.bind(database);
+  (database as unknown as { prepare: DatabaseSync["prepare"] }).prepare = ((sql: string) => {
+    return wrapStatement(originalPrepare(sql), sql, "(unknown)", "all", timingEnabled);
+  });
+
   databasePool.set(absolute, database);
   return database;
 }
@@ -38,6 +102,15 @@ export function closeDatabase(file: string): void {
   if (!database) return;
   database.close();
   databasePool.delete(absolute);
+}
+
+/**
+ * getRawDatabase - 获取共享的 SQLite 连接，用于执行 CREATE VIEW / 复杂 SQL。
+ * 注意：仅供一次性初始化（启动时建视图）和极少数聚合查询使用；
+ *       业务读写必须走 Repository（编码/慢查询统计/WAL 写入都由它负责）。
+ */
+export function getRawDatabase(file: string): DatabaseSync {
+  return openDatabase(file);
 }
 
 /** SQLite 标识符只允许代码内声明的表名和字段名进入，这里做一次双引号转义。 */
@@ -128,6 +201,66 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
     }
   }
 
+  /**
+   * 方案 A 迁移辅助：把 `scripts` 表（Path A）的元数据（title/author/status/genre/words/chapters）
+   * 按 `(project_id, title)` 模糊匹配回填到 `script_documents` 表（Path B）。
+   * 仅当目标列为空/NULL 时覆盖，避免覆盖后续用户编辑。
+   * 必须在 `ensureColumns` 完成之后调用。
+   */
+  backfillFromScriptsTable(): void {
+    // 仅对 script_documents 表生效
+    if (this.table !== "script_documents") return;
+    const database = this.database;
+    const candidates = database
+      .prepare(
+        `SELECT s.id AS script_id, s.project_id, s.title, s.author, s.status, s.words, s.chapters
+         FROM scripts s
+         WHERE s.title IS NOT NULL AND s.title <> ''`,
+      )
+      .all() as Array<{
+        script_id: string;
+        project_id: string;
+        title: string;
+        author: string | null;
+        status: string | null;
+        words: number | null;
+        chapters: number | null;
+      }>;
+    if (candidates.length === 0) return;
+
+    const updateSql = `UPDATE script_documents
+       SET title = COALESCE(NULLIF(title, ''), ?),
+           author = COALESCE(NULLIF(author, ''), ?),
+           status = CASE WHEN status IS NULL OR status = '' THEN ? ELSE status END,
+           words = CASE WHEN words IS NULL OR words = 0 THEN ? ELSE words END,
+           chapters = CASE WHEN chapters IS NULL OR chapters = 0 THEN ? ELSE chapters END
+       WHERE project_id = ? AND (title = '' OR title IS NULL)`;
+    const stmt = database.prepare(updateSql);
+    database.exec("BEGIN");
+    try {
+      let updated = 0;
+      for (const s of candidates) {
+        const info = stmt.run(
+          s.title,
+          s.author ?? "当前用户",
+          s.status ?? "draft",
+          s.words ?? 0,
+          s.chapters ?? 0,
+          s.project_id,
+        );
+        updated += Number((info as { changes?: number }).changes ?? 0);
+      }
+      database.exec("COMMIT");
+      if (updated > 0) {
+        // eslint-disable-next-line no-console
+        console.log(`[migrate] 已从 Path A 的 scripts 表回填 ${updated} 条 script_documents`);
+      }
+    } catch (err) {
+      database.exec("ROLLBACK");
+      throw err;
+    }
+  }
+
   /** 插入单条记录。 */
   async insert(record: T): Promise<void> {
     this.assertConfigured("insert");
@@ -189,7 +322,15 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
   /** 根据 ID 合并更新字段。 */
   async update(id: string, patch: Partial<T>): Promise<void> {
     this.assertConfigured("update");
-    const entries = Object.entries(patch).filter(([, value]) => value !== undefined);
+    const fieldKeys = new Set<string>(this.fields.map((field) => field.key as string));
+    // 防御性修复：过滤掉 schema 中不存在的字段，避免调用方误传（如旧版 typeScript
+    // 字段、迁移期遗留字段）触发 SQLite "no such column: <name>" 错误。
+    const entries: [string, unknown][] = [];
+    for (const [key, value] of Object.entries(patch as Record<string, unknown>)) {
+      if (value === undefined) continue;
+      if (!fieldKeys.has(key)) continue;
+      entries.push([key, value]);
+    }
     if (entries.length === 0) return;
     const sets = entries.map(([key]) => `${quoteIdentifier(key)} = ?`).join(", ");
     const values = entries.map(([key, value]) => encodeFilterValue(this.fields, key, value));
@@ -207,6 +348,32 @@ export class SqliteRepository<T extends { id: string; created_at: string }> impl
     if (!this.isConfigured) return 0;
     const records = await this.findMany(filter);
     return records.length;
+  }
+
+  /**
+   * 按 JSON 字段中的某个 key 等值匹配（如 `meta.taskId`）。
+   * 仅支持顶层的 JSON 字段（必须是 fields 里 type==="json" 的列），
+   * 内部用 SQLite 的 json_extract 函数；走 prepared statement，无 SQL 注入风险。
+   * 主要用于历史 video task 没有 message_id 时，回退查找"视频生成中…"占位消息。
+   */
+  async findOneByJsonPath<K extends keyof T & string>(
+    jsonField: K,
+    jsonKey: string,
+    value: string,
+  ): Promise<T | null> {
+    if (!this.isConfigured) return null;
+    const field = this.fields.find((item) => item.key === jsonField);
+    if (!field || field.type !== "json") {
+      throw new Error(`[${this.table}] findOneByJsonPath requires a json field, got ${String(field?.type)}`);
+    }
+    const row = this.database
+      .prepare(
+        `SELECT * FROM ${quoteIdentifier(this.table)}
+         WHERE json_extract(${quoteIdentifier(jsonField)}, ?) = ?
+         LIMIT 1`,
+      )
+      .get(`$.${jsonKey}`, value);
+    return row ? this.decodeRecord(row as Record<string, unknown>) : null;
   }
 
   /** 按字段定义把 SQLite 行转换成业务对象。 */

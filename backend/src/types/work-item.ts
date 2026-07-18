@@ -1,4 +1,9 @@
 /**
+ * @file work-item.ts
+ * @description 统一工作项类型定义，将任务、问题、审核、里程碑合并为单一工作项实体
+ */
+
+/**
  * 统一工作项（评审优化 P2 / 状态机收敛）
  *
  * 把 4 类业务实体（任务 / 问题 / 审核 / 里程碑）合并到 1 张表 + 1 个状态机：
@@ -33,16 +38,43 @@
  * - 进度字段由后端从关联资产派生（不存储在 work_item 本体）
  */
 
-/** 工作项的 4 种 kind。 */
+/**
+ * 工作项的 4 种类型
+ * @property task - 任务
+ * @property issue - 问题
+ * @property review - 审核
+ * @property milestone - 里程碑
+ */
 export type WorkItemKind = "task" | "issue" | "review" | "milestone";
 
-/** 统一状态机（4 态）。 */
+/**
+ * 统一状态机（4 态）
+ * @property pending - 等待中
+ * @property doing - 进行中
+ * @property done - 已完成
+ * @property dismissed - 已忽略
+ */
 export type WorkItemStatus = "pending" | "doing" | "done" | "dismissed";
 
-/** 严重度（仅 issue kind 使用）。 */
+/**
+ * 严重度（仅 issue kind 使用）
+ * @property low - 低
+ * @property medium - 中
+ * @property high - 高
+ * @property critical - 严重
+ */
 export type WorkItemSeverity = "low" | "medium" | "high" | "critical";
 
-/** 关联资产类型（仅 issue/review kind 使用）。 */
+/**
+ * 关联资产类型（仅 issue/review kind 使用）
+ * @property storyboard - 分镜
+ * @property image - 图片
+ * @property video - 视频
+ * @property asset - 资产
+ * @property clip - 剪辑片段
+ * @property script - 剧本
+ * @property episode - 剧集
+ */
 export type WorkItemTargetType = "storyboard" | "image" | "video" | "asset" | "clip" | "script" | "episode";
 
 /** 统一工作项实体。 */

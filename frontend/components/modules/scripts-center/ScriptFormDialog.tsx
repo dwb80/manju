@@ -7,7 +7,10 @@
 import { FormDialog, type FormFieldConfig } from "@/components/ui/form-dialog";
 import type { Script } from "@/lib/module-types";
 
-/** 剧本表单字段配置 - 补全数据项 */
+/** 剧本表单字段配置 - 方案 A：合并 Path A/B 元数据
+ *  - words/chapters 字段移除（后端从 editor_json / script_episodes 自动计算）
+ *  - 其他字段保留作为"创建剧本时"的元数据录入
+ */
 const scriptFields: FormFieldConfig[] = [
   { name: "title", label: "剧本标题", type: "text", required: true, placeholder: "请输入剧本标题" },
   { name: "author", label: "作者", type: "text", required: true, placeholder: "请输入作者名" },
@@ -36,8 +39,8 @@ const scriptFields: FormFieldConfig[] = [
     { value: "comedy", label: "喜剧" },
     { value: "romance", label: "言情剧" },
   ]},
-  { name: "words", label: "字数", type: "number", placeholder: "0", min: 0 },
-  { name: "chapters", label: "章节数", type: "number", placeholder: "0", min: 0 },
+  // 方案 A：words / chapters 由后端从 editor_json / script_episodes 自动计算，
+  // 不在创建表单中要求用户填写。编辑时可在"继续编辑"页面顶部看到实时统计。
 ];
 
 export function ScriptFormDialog({
@@ -74,8 +77,8 @@ export function ScriptFormDialog({
               author: editingScript.author,
               status: editingScript.status,
               description: editingScript.description ?? "",
-              words: editingScript.words ?? 0,
-              chapters: editingScript.chapters ?? 0,
+              // 方案 A 修复：移除 words / chapters 字段的冗余赋值
+              // 这些字段由后端从 editor_json / script_episodes 自动计算，不再写入表单
             } as Record<string, string | number>)
           : {}
       }

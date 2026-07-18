@@ -8,6 +8,7 @@
 
 import { Check, Download, ExternalLink, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import { EmptyClips } from "@/components/shared";
 import type { ProjectClipStatus } from "@/lib/app-types";
 import type { ProjectWorkbenchTabsProps } from "./types";
@@ -50,9 +51,12 @@ export function ClipsTab(props: Pick<
           <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" type="number" min={1} value={clipDraft.episode ?? 1} placeholder="集数" onChange={(event) => setClipDraft((draft) => ({ ...draft, episode: Number(event.target.value) }))} />
           <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={clipDraft.scene ?? ""} placeholder="场次" onChange={(event) => setClipDraft((draft) => ({ ...draft, scene: event.target.value }))} />
           <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={clipDraft.shot ?? ""} placeholder="镜号" onChange={(event) => setClipDraft((draft) => ({ ...draft, shot: event.target.value }))} />
-          <select className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={clipDraft.status ?? "todo"} onChange={(event) => setClipDraft((draft) => ({ ...draft, status: event.target.value as ProjectClipStatus }))}>
-            {clipStatuses.map((status) => <option key={status.key} value={status.key}>{status.label}</option>)}
-          </select>
+          <ShadcnSelect
+            options={clipStatuses.map((s) => ({ value: s.key, label: s.label }))}
+            value={clipDraft.status ?? "todo"}
+            onChange={(value) => setClipDraft((draft) => ({ ...draft, status: value as ProjectClipStatus }))}
+            className="h-9 text-xs"
+          />
           <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={clipDraft.title ?? ""} placeholder="片段名" onChange={(event) => setClipDraft((draft) => ({ ...draft, title: event.target.value }))} />
           <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" type="number" min={1} value={clipDraft.duration ?? 5} placeholder="时长" onChange={(event) => setClipDraft((draft) => ({ ...draft, duration: Number(event.target.value) }))} />
         </div>

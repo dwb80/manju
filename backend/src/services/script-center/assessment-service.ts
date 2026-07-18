@@ -15,6 +15,12 @@ export async function getLatestAssessment(ctx: AppContext, scriptId: string): Pr
   return assessments[0] ?? null;
 }
 
+/**
+ * createAssessment - 创建剧本质量评估记录
+ * @param {AppContext} ctx - 应用上下文
+ * @param {ScriptQualityAssessmentInput} input - 评估输入数据
+ * @returns {Promise<ScriptQualityAssessment>} 返回创建的评估记录
+ */
 export async function createAssessment(
   ctx: AppContext,
   input: ScriptQualityAssessmentInput

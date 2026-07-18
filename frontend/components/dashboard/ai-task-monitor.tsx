@@ -1,3 +1,7 @@
+/**
+ * @file ai-task-monitor.tsx
+ * @description AI任务监控组件，实时监控运行中的AI任务进度和状态
+ */
 "use client";
 
 import { memo } from "react";
@@ -115,10 +119,10 @@ const TaskCard = memo(function TaskCard({
         <div className="h-2 overflow-hidden rounded-full bg-white/10">
           <div
             className={`h-full rounded-full transition-all duration-300 ${task.status === "waiting"
-                ? "bg-[#666]"
-                : task.status === "paused"
-                  ? "bg-amber-500"
-                  : "bg-gradient-to-r from-blue-500 to-purple-500"
+              ? "bg-[#666]"
+              : task.status === "paused"
+                ? "bg-amber-500"
+                : "bg-gradient-to-r from-blue-500 to-purple-500"
               }`}
             style={{ width: `${task.progress}%` }}
           />

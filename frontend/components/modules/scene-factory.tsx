@@ -61,11 +61,24 @@ const sceneAITypeField: AITypeFieldConfig = {
   ],
 };
 
-/** AI 生成对话框：额外字段（光线 / 时间段 / 天气） */
+/** AI 生成对话框：额外字段（与新建场景表单 sceneFields 对齐） */
 const sceneAIExtraFields = [
   { name: "lighting", label: "光线（可留空）", placeholder: "如：自然光、暖色调" },
   { name: "time_of_day", label: "时间段（可留空）", placeholder: "如：白天、夜晚、黄昏" },
   { name: "weather", label: "天气（可留空）", placeholder: "如：晴、阴、雨" },
+  { name: "category", label: "场景分类（可留空）", placeholder: "如：古代街道、宫殿内室、战场" },
+  { name: "indoor_outdoor", label: "室内/室外（可留空）", placeholder: "indoor / outdoor / mixed" },
+  { name: "location", label: "具体地点（可留空）", placeholder: "如：长安城东市、紫禁城太和殿" },
+  { name: "architecture", label: "建筑风格（可留空）", placeholder: "如：中式宫殿、哥特式教堂" },
+  { name: "terrain", label: "地形特征（可留空）", placeholder: "如：山地、平原、湖泊" },
+  { name: "plants", label: "植物描述（可留空）", placeholder: "如：竹林、樱花树、枯藤" },
+  { name: "objects", label: "场景物体（可留空）", placeholder: "如：石灯笼、古琴、茶盏" },
+  { name: "period", label: "时代/时期（可留空）", placeholder: "如：唐代、民国时期、未来" },
+  { name: "tone", label: "氛围基调（可留空）", placeholder: "如：肃穆、温馨、紧张" },
+  { name: "visual_style", label: "视觉风格（可留空）", placeholder: "如：水墨风、写实、赛博朋克" },
+  { name: "atmosphere_emotion", label: "氛围情绪（可留空）", placeholder: "如：孤独、希望、压抑" },
+  { name: "suitable_shots", label: "适合镜头（可留空，逗号分隔）", placeholder: "如：全景, 中景, 特写" },
+  { name: "reusable_elements", label: "可复用元素（可留空，逗号分隔）", placeholder: "如：背景建筑, 天空盒" },
 ];
 
 /** 场景表单字段配置 */
@@ -87,6 +100,23 @@ const sceneFields: FormFieldConfig[] = [
   { name: "lighting", label: "光线", type: "text", placeholder: "如：自然光、暖色调" },
   { name: "time_of_day", label: "时间段", type: "text", placeholder: "如：白天、夜晚、黄昏" },
   { name: "weather", label: "天气", type: "text", placeholder: "如：晴、阴、雨" },
+  // === AI 剧本分析扩展字段 ===
+  { name: "category", label: "场景分类", type: "text", placeholder: "如：古代街道、宫殿内室、战场" },
+  { name: "indoor_outdoor", label: "室内/室外", type: "text", placeholder: "indoor / outdoor / mixed" },
+  { name: "location", label: "具体地点", type: "text", placeholder: "如：长安城东市、紫禁城太和殿" },
+  { name: "architecture", label: "建筑风格", type: "text", placeholder: "如：中式宫殿、哥特式教堂" },
+  { name: "terrain", label: "地形特征", type: "text", placeholder: "如：山地、平原、湖泊" },
+  { name: "plants", label: "植物描述", type: "text", placeholder: "如：竹林、樱花树、枯藤" },
+  { name: "objects", label: "场景物体", type: "text", placeholder: "如：石灯笼、古琴、茶盏" },
+  { name: "period", label: "时代/时期", type: "text", placeholder: "如：唐代、民国时期、未来" },
+  { name: "tone", label: "氛围基调", type: "text", placeholder: "如：肃穆、温馨、紧张" },
+  { name: "visual_style", label: "视觉风格", type: "text", placeholder: "如：水墨风、写实、赛博朋克" },
+  { name: "atmosphere_emotion", label: "氛围情绪", type: "text", placeholder: "如：孤独、希望、压抑" },
+  { name: "suitable_shots", label: "适合镜头", type: "text", placeholder: "如：全景, 中景, 特写" },
+  { name: "reusable_elements", label: "可复用元素", type: "text", placeholder: "如：背景建筑, 天空盒" },
+  { name: "generation_prompt", label: "生成提示词", type: "textarea", placeholder: "AI 生图标准化提示词", rows: 2 },
+  { name: "first_appearance", label: "首次出现", type: "text", placeholder: "如：EP01-Scene01" },
+  { name: "confidence", label: "可信度", type: "text", placeholder: "confirmed / inferred" },
 ];
 
 /** 场景类型颜色映射 */
@@ -120,6 +150,7 @@ function SceneCard({
         image: scene.image,
         tags: scene.tags,
         type: "scene",
+        asset_id: scene.id,
         project_id: selectedProjectId,
       });
       clearApiCache();
@@ -144,13 +175,21 @@ function SceneCard({
     }
   };
 
+  // 打开场景编辑页（新标签页）—— 全屏生图界面
+  const handleEdit = () => {
+    window.open(
+      `/scenes/${encodeURIComponent(scene.id)}/edit`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
+
   return (
     <div
-      className={`group relative flex flex-col rounded-lg border bg-[#252525] overflow-hidden transition-colors ${
-        actions.selected
+      className={`group relative flex flex-col rounded-lg border bg-[#252525] overflow-hidden transition-colors ${actions.selected
           ? "border-emerald-500 ring-1 ring-emerald-500/40"
           : "border-white/10 hover:border-white/20"
-      }`}
+        }`}
     >
       <button
         type="button"
@@ -158,11 +197,10 @@ function SceneCard({
           e.stopPropagation();
           actions.onToggleSelect();
         }}
-        className={`absolute left-2 top-2 z-10 grid h-5 w-5 place-items-center rounded border transition-opacity ${
-          actions.selected
+        className={`absolute left-2 top-2 z-10 grid h-5 w-5 place-items-center rounded border transition-opacity ${actions.selected
             ? "border-emerald-500 bg-emerald-500 opacity-100"
             : "border-white/40 bg-black/40 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
-        }`}
+          }`}
         aria-label={actions.selected ? "取消选择" : "选择"}
       >
         {actions.selected && (
@@ -218,7 +256,7 @@ function SceneCard({
             {scene.lighting && <span>光线: {scene.lighting}</span>}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={actions.onEdit}>
+            <Button variant="ghost" size="sm" onClick={handleEdit} title="在新标签页打开场景编辑页（配生图）">
               <Pencil className="h-4 w-4" />
             </Button>
             <Button
@@ -286,6 +324,23 @@ const config: FactoryCRUDPageProps<Scene> = {
     lighting: s.lighting || "",
     time_of_day: s.time_of_day || "",
     weather: s.weather || "",
+    // === AI 剧本分析扩展字段 ===
+    category: s.category || "",
+    indoor_outdoor: s.indoor_outdoor || "",
+    location: s.location || "",
+    architecture: s.architecture || "",
+    terrain: s.terrain || "",
+    plants: s.plants || "",
+    objects: s.objects || "",
+    period: s.period || "",
+    tone: s.tone || "",
+    visual_style: s.visual_style || "",
+    atmosphere_emotion: s.atmosphere_emotion || "",
+    suitable_shots: s.suitable_shots || "",
+    reusable_elements: s.reusable_elements || "",
+    generation_prompt: s.generation_prompt || "",
+    first_appearance: s.first_appearance || "",
+    confidence: s.confidence || "",
   }),
   transformFormValues: (values, projectId) => ({ ...values, project_id: projectId }),
 
@@ -317,6 +372,8 @@ const config: FactoryCRUDPageProps<Scene> = {
     { label: "室外场景", value: list.filter((s) => s.type === "outdoor").length, color: "purple" },
     { label: "虚拟场景", value: list.filter((s) => s.type === "virtual").length, color: "orange" },
   ],
+  // 场景工厂：不展示顶部统计卡片
+  showStats: false,
 
   fetchUsage: getSceneUsage as unknown as (id: string) => Promise<{ total?: number; usage_count?: number }>,
   usageImpact: "删除可能影响分镜/剧本中的引用。",
@@ -357,6 +414,21 @@ const config: FactoryCRUDPageProps<Scene> = {
         lighting: (payload.extra.lighting ?? "").trim(),
         time_of_day: (payload.extra.time_of_day ?? "").trim(),
         weather: (payload.extra.weather ?? "").trim(),
+        // === AI 剧本分析扩展字段 ===
+        category: (payload.extra.category ?? "").trim(),
+        indoor_outdoor: (payload.extra.indoor_outdoor ?? "").trim(),
+        location: (payload.extra.location ?? "").trim(),
+        architecture: (payload.extra.architecture ?? "").trim(),
+        terrain: (payload.extra.terrain ?? "").trim(),
+        plants: (payload.extra.plants ?? "").trim(),
+        objects: (payload.extra.objects ?? "").trim(),
+        period: (payload.extra.period ?? "").trim(),
+        tone: (payload.extra.tone ?? "").trim(),
+        visual_style: (payload.extra.visual_style ?? "").trim(),
+        atmosphere_emotion: (payload.extra.atmosphere_emotion ?? "").trim(),
+        suitable_shots: (payload.extra.suitable_shots ?? "").trim(),
+        reusable_elements: (payload.extra.reusable_elements ?? "").trim(),
+        generation_prompt: payload.prompt,
         tags,
       } as any);
     },
@@ -375,6 +447,8 @@ const config: FactoryCRUDPageProps<Scene> = {
       image: (entity as { image?: string }).image,
       tags: (entity as { tags?: string[] }).tags,
       type: "scene",
+      asset_id: entity.id,
+      project_id: (entity as { project_id?: string }).project_id,
     });
   },
 };

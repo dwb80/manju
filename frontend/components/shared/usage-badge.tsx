@@ -1,3 +1,8 @@
+/**
+ * @file usage-badge.tsx
+ * @description 资产引用徽标组件，显示资产被剧本/分镜/对白等引用的次数，点击弹窗展示完整引用清单
+ */
+
 "use client";
 
 /**
@@ -9,6 +14,8 @@
 import { useEffect, useState } from "react";
 import { Link2, X, ExternalLink, Loader2 } from "lucide-react";
 import { getCharacterUsage, getSceneUsage, getPropUsage, type AssetUsage, type UsageReferenceItem } from "@/services/module.service";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tip } from "@/components/ui/tip";
 
 /** 资产类型，决定调用哪个引用查询接口。 */
 export type UsageEntityType = "character" | "scene" | "prop";
@@ -49,9 +56,9 @@ async function fetchUsage(entityType: UsageEntityType, entityId: string): Promis
 }
 
 /**
- * 通用引用徽标：
- * - 次数 = 0 时不显示，避免视觉噪声。
- * - 次数 > 0 时显示一个可点击的小徽标，点击后弹出引用清单。
+ * UsageBadge - 通用引用徽标组件
+ * @param {UsageBadgeProps} props - 组件属性
+ * @returns {JSX.Element | null} 渲染的引用徽标元素，次数为0时不显示
  */
 export function UsageBadge({ entityType, entityId, entityName, initialCount, onOpenSource }: UsageBadgeProps) {
   const [count, setCount] = useState<number>(initialCount ?? 0);
@@ -93,15 +100,16 @@ export function UsageBadge({ entityType, entityId, entityName, initialCount, onO
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300 hover:bg-emerald-500/25 transition-colors"
-        title={`查看「${entityName}」被哪些剧本/分镜引用`}
-      >
-        <Link2 className="h-3 w-3" />
-        被 {count} 处引用
-      </button>
+      <Tip label={`查看「${entityName}」被哪些剧本/分镜引用`}>
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300 hover:bg-emerald-500/25 transition-colors"
+        >
+          <Link2 className="h-3 w-3" />
+          被 {count} 处引用
+        </button>
+      </Tip>
 
       {isModalOpen && (
         <UsageDialog
@@ -136,12 +144,12 @@ function UsageDialog({
   const typeName = entityType === "character" ? "角色" : entityType === "scene" ? "场景" : "道具";
   const allRefs: UsageReferenceItem[] = usage
     ? [
-        ...usage.storyboards,
-        ...usage.scripts,
-        ...usage.dialogues,
-        ...usage.sceneCharacters,
-        ...usage.sceneLocations,
-      ]
+      ...usage.storyboards,
+      ...usage.scripts,
+      ...usage.dialogues,
+      ...usage.sceneCharacters,
+      ...usage.sceneLocations,
+    ]
     : [];
 
   return (
@@ -191,10 +199,10 @@ function UsageDialog({
               {(["storyboard", "script", "dialogue", "scene_character", "scene_location"] as const).map((category) => {
                 const items = usage[
                   category === "storyboard" ? "storyboards"
-                  : category === "script" ? "scripts"
-                  : category === "dialogue" ? "dialogues"
-                  : category === "scene_character" ? "sceneCharacters"
-                  : "sceneLocations"
+                    : category === "script" ? "scripts"
+                      : category === "dialogue" ? "dialogues"
+                        : category === "scene_character" ? "sceneCharacters"
+                          : "sceneLocations"
                 ] as UsageReferenceItem[];
                 if (items.length === 0) return null;
                 return (

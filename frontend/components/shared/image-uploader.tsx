@@ -1,3 +1,8 @@
+/**
+ * @file image-uploader.tsx
+ * @description 通用图片上传控件，支持本地上传和URL输入两种方式
+ */
+
 "use client";
 
 import { useRef, useState } from "react";
@@ -20,16 +25,9 @@ export interface ImageUploaderProps {
 }
 
 /**
- * 通用图片上传控件：支持本地上传 + URL 输入两种方式。
- *
- * 用法：
- * ```tsx
- * <ImageUploader
- *   value={character.image}
- *   onChange={(url) => setField('image', url)}
- *   onUpload={async (file) => await uploadFile(file)}
- * />
- * ```
+ * ImageUploader - 通用图片上传控件组件
+ * @param {ImageUploaderProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的上传控件元素
  */
 export function ImageUploader({
   value,

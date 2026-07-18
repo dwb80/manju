@@ -116,7 +116,9 @@ const COLUMNS_CLASS: Record<number, string> = {
 };
 
 /**
- * 统一统计卡组
+ * StatsOverview - 统一统计卡片组组件
+ * @param {StatsOverviewProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的统计卡片组元素
  */
 export function StatsOverview({
   cards,
@@ -137,16 +139,15 @@ export function StatsOverview({
             onKeyDown={
               isClickable
                 ? (e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault()
-                      card.onClick?.()
-                    }
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    card.onClick?.()
                   }
+                }
                 : undefined
             }
-            className={`rounded-lg border ${tone.border} ${tone.bg} px-4 py-3 ${
-              isClickable ? "cursor-pointer transition-colors hover:brightness-110" : ""
-            }`}
+            className={`rounded-lg border ${tone.border} ${tone.bg} px-4 py-3 ${isClickable ? "cursor-pointer transition-colors hover:brightness-110" : ""
+              }`}
             aria-label={`${card.title}：${typeof card.value === "number" ? card.value : ""}`}
           >
             <div className="flex items-center justify-between">

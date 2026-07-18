@@ -1,7 +1,31 @@
+/**
+ * @file script-module.ts
+ * @description 剧本模块的增删查改服务（已废弃，统一使用 script-center-impl.js）
+ */
+
 import type { AppContext } from "../app.js";
-import type { Script } from "../../types/script.js";
+import type { Script, ScriptDocument } from "../../types/script.js";
 import { id, nowIso } from "../../utils.js";
 import { recordAppLog } from "../audit-log.js";
+
+/** 将 ScriptDocument 映射为 Script（保持路由返回兼容） */
+function docToScript(doc: ScriptDocument): Script {
+  return {
+    id: doc.id,
+    project_id: doc.project_id,
+    title: doc.title,
+    description: doc.editor_json,
+    status: doc.status as Script["status"],
+    words: doc.words,
+    chapters: doc.chapters,
+    author: doc.author,
+    tags: (doc as any).tags ?? [],
+    version: doc.version,
+    created_at: doc.created_at,
+    updated_at: doc.updated_at,
+    deleted_at: doc.deleted_at,
+  };
+}
 
 export type ScriptInput = {
   project_id?: string;
@@ -15,60 +39,122 @@ export type ScriptInput = {
   version?: number;
 };
 
+/**
+ * listScripts - 列出项目中的剧本（排除已删除）
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 可选的项目 ID 过滤条件
+ * @returns {Promise<Script[]>} 剧本列表
+ */
 export async function listScripts(ctx: AppContext, projectId?: string): Promise<Script[]> {
-  const filter: Partial<Script> = projectId ? { project_id: projectId } : {};
-  const all = await ctx.scripts.findMany(filter, { sort: "desc" });
-  return all.filter((s) => !s.deleted_at);
+  const filter = projectId ? { project_id: projectId } : {};
+  const all = await ctx.scriptDocuments.findMany(filter, { sort: "desc" });
+  return all.filter((doc) => !doc.deleted_at).map(docToScript);
 }
 
+/**
+ * listDeletedScripts - 列出已删除的剧本
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 可选的项目 ID 过滤条件
+ * @returns {Promise<Script[]>} 已删除剧本列表
+ */
 export async function listDeletedScripts(ctx: AppContext, projectId?: string): Promise<Script[]> {
-  const filter: Partial<Script> = projectId ? { project_id: projectId } : {};
-  const all = await ctx.scripts.findMany(filter, { sort: "desc" });
-  return all.filter((s) => !!s.deleted_at);
+  const filter = projectId ? { project_id: projectId } : {};
+  const all = await ctx.scriptDocuments.findMany(filter, { sort: "desc" });
+  return all.filter((doc) => !!doc.deleted_at).map(docToScript);
 }
 
+/**
+ * createScript - 创建新剧本（同步写入 script_documents 和 scripts 表）
+ * @param {AppContext} ctx - 应用上下文
+ * @param {ScriptInput} input - 剧本输入数据
+ * @returns {Promise<Script>} 创建的剧本对象
+ */
 export async function createScript(ctx: AppContext, input: ScriptInput): Promise<Script> {
-  const script: Script = {
+  const now = nowIso();
+  const doc: ScriptDocument = {
     id: id("script"),
     project_id: input.project_id ?? "",
     title: input.title ?? "",
-    description: input.description ?? "",
-    status: (input.status as Script["status"]) ?? "draft",
+    author: input.author ?? "",
+    status: (input.status as ScriptDocument["status"]) ?? "draft",
+    genre: "",
     words: input.words ?? 0,
     chapters: input.chapters ?? 0,
-    author: input.author ?? "",
-    tags: input.tags ?? [],
+    editor_json: input.description ?? "",
     version: input.version ?? 1,
-    created_at: nowIso(),
-    updated_at: nowIso(),
+    created_at: now,
+    updated_at: now,
   };
-  await ctx.scripts.insert(script);
+  await ctx.scriptDocuments.insert(doc);
+  // 同步写入 scripts 表（保持兼容，后续废弃）
+  const script: Script = {
+    ...docToScript(doc),
+    tags: input.tags ?? [],
+  };
+  try { await ctx.scripts.insert(script); } catch { }
   return script;
 }
 
+/**
+ * updateScript - 更新指定剧本（同步更新 script_documents 和 scripts 表）
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} scriptId - 剧本 ID
+ * @param {ScriptInput} input - 更新数据
+ * @returns {Promise<Script>} 更新后的剧本对象
+ */
 export async function updateScript(ctx: AppContext, scriptId: string, input: ScriptInput): Promise<Script> {
-  const existing = await ctx.scripts.findById(scriptId);
+  const existing = await ctx.scriptDocuments.findById(scriptId);
   if (!existing) throw new Error("剧本不存在");
-  const patch: Partial<Script> = {
-    ...input,
-    status: input.status ? (input.status as Script["status"]) : undefined,
+  const patch: Partial<ScriptDocument> = {
+    ...(input.title !== undefined ? { title: input.title } : {}),
+    ...(input.author !== undefined ? { author: input.author } : {}),
+    ...(input.status !== undefined ? { status: input.status as ScriptDocument["status"] } : {}),
+    ...(input.words !== undefined ? { words: input.words } : {}),
+    ...(input.chapters !== undefined ? { chapters: input.chapters } : {}),
+    ...(input.description !== undefined ? { editor_json: input.description } : {}),
+    ...(input.version !== undefined ? { version: input.version } : {}),
     updated_at: nowIso(),
   };
-  await ctx.scripts.update(scriptId, patch);
-  return { ...existing, ...patch } as Script;
+  await ctx.scriptDocuments.update(scriptId, patch);
+  // 同步更新 scripts 表（保持兼容，后续废弃）
+  try {
+    const scriptPatch: Partial<Script> = {
+      ...input,
+      status: input.status ? (input.status as Script["status"]) : undefined,
+      updated_at: nowIso(),
+    };
+    await ctx.scripts.update(scriptId, scriptPatch);
+  } catch { }
+  return docToScript({ ...existing, ...patch } as ScriptDocument);
 }
 
+/**
+ * deleteScript - 软删除指定剧本（同步更新 script_documents 和 scripts 表）
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} scriptId - 剧本 ID
+ * @returns {Promise<{ deleted_at: string }>} 包含删除时间的对象
+ */
 export async function deleteScript(ctx: AppContext, scriptId: string): Promise<{ deleted_at: string }> {
-  const existing = await ctx.scripts.findById(scriptId);
+  const existing = await ctx.scriptDocuments.findById(scriptId);
   if (!existing) throw new Error("剧本不存在");
   if (existing.deleted_at) {
     return { deleted_at: existing.deleted_at };
   }
   const deletedAt = nowIso();
-  await ctx.scripts.update(scriptId, {
+  await ctx.scriptDocuments.update(scriptId, {
     deleted_at: deletedAt,
     updated_at: deletedAt,
-  } as Partial<Script>);
+  } as Partial<ScriptDocument>);
+  // 同步软删除 scripts 表（保持兼容，后续废弃）
+  try {
+    const script = await ctx.scripts.findById(scriptId);
+    if (script && !script.deleted_at) {
+      await ctx.scripts.update(scriptId, {
+        deleted_at: deletedAt,
+        updated_at: deletedAt,
+      } as Partial<Script>);
+    }
+  } catch { }
   void recordAppLog(ctx, {
     entityType: "script",
     entityId: scriptId,
@@ -80,15 +166,28 @@ export async function deleteScript(ctx: AppContext, scriptId: string): Promise<{
   return { deleted_at: deletedAt };
 }
 
+/**
+ * restoreScript - 恢复已软删除的剧本
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} scriptId - 剧本 ID
+ * @returns {Promise<void>}
+ */
 export async function restoreScript(ctx: AppContext, scriptId: string): Promise<void> {
-  const existing = await ctx.scripts.findById(scriptId);
+  const existing = await ctx.scriptDocuments.findById(scriptId);
   if (!existing) throw new Error("剧本不存在或已被彻底删除");
   if (!existing.deleted_at) throw new Error("剧本未处于软删状态");
   const restoredAt = nowIso();
-  await ctx.scripts.update(scriptId, {
+  await ctx.scriptDocuments.update(scriptId, {
     deleted_at: "",
     updated_at: restoredAt,
-  } as Partial<Script>);
+  } as Partial<ScriptDocument>);
+  // 同步恢复 scripts 表（保持兼容，后续废弃）
+  try {
+    const script = await ctx.scripts.findById(scriptId);
+    if (script && script.deleted_at) {
+      await ctx.scripts.update(scriptId, { deleted_at: "", updated_at: restoredAt } as Partial<Script>);
+    }
+  } catch { }
   void recordAppLog(ctx, {
     entityType: "script",
     entityId: scriptId,
@@ -105,6 +204,12 @@ const SCRIPT_PURGE_GRACE_DAYS = (() => {
   return Number.isFinite(n) && n > 0 ? n : 30;
 })();
 
+/**
+ * purgeScript - 彻底删除剧本及其关联数据（需要满足保留期要求）
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} scriptId - 剧本 ID
+ * @returns {Promise<object>} 包含删除信息、保留天数和级联删除统计的对象
+ */
 export async function purgeScript(ctx: AppContext, scriptId: string): Promise<{
   script_id: string;
   deleted_at: string;
@@ -112,7 +217,7 @@ export async function purgeScript(ctx: AppContext, scriptId: string): Promise<{
   grace_days: number;
   cascade: Record<string, number>;
 }> {
-  const existing = await ctx.scripts.findById(scriptId);
+  const existing = await ctx.scriptDocuments.findById(scriptId);
   if (!existing) throw new Error("剧本不存在");
   if (!existing.deleted_at) {
     throw new Error("剧本未处于软删状态,无法彻底删除");
@@ -157,8 +262,8 @@ export async function purgeScript(ctx: AppContext, scriptId: string): Promise<{
   for (const r of assessments) await ctx.scriptQualityAssessments.delete(r.id);
   try {
     await ctx.scriptDocuments.delete(scriptId);
-  } catch {}
-  await ctx.scripts.delete(scriptId);
+  } catch { }
+  try { await ctx.scripts.delete(scriptId); } catch { }
 
   const cascade = {
     script_comments: comments.length,

@@ -1,28 +1,22 @@
 import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
-
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "default" | "secondary" | "ghost" | "destructive" | "outline";
-  size?: "default" | "icon" | "sm";
-};
+import { buttonVariants, type ButtonVariantsProps } from "@/components/ui/button-variants";
 
 /** 统一按钮样式，支持默认、次级、幽灵、轮廓和危险操作几种状态。 */
-export function Button({ className, variant = "default", size = "default", ...props }: ButtonProps) {
-  return (
-    <button
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md border text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
-        variant === "default" && "border-primary bg-primary text-primary-foreground hover:bg-primary/90",
-        variant === "secondary" && "border-border bg-muted text-foreground hover:border-primary",
-        variant === "ghost" && "border-transparent bg-transparent hover:bg-muted",
-        variant === "outline" && "border-border bg-transparent text-foreground hover:bg-muted",
-        variant === "destructive" && "border-destructive bg-destructive text-white hover:bg-destructive/90",
-        size === "default" && "h-10 px-4",
-        size === "sm" && "h-8 px-3",
-        size === "icon" && "h-9 w-9",
-        className,
-      )}
-      {...props}
-    />
-  );
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    ButtonVariantsProps {
+  /** 当 asChild=true 时，把样式透传给唯一的子元素（用于把按钮样式套到 Link / 第三方组件）。 */
+  asChild?: boolean;
 }
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button";
+    return (
+      <Comp ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />
+    );
+  }
+);
+Button.displayName = "Button";

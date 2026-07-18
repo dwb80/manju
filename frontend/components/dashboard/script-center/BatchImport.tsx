@@ -1,3 +1,7 @@
+/**
+ * @file BatchImport.tsx
+ * @description 批量导入与格式转换组件，支持多文件导入和JSON/Markdown/FDX格式转换
+ */
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
@@ -38,6 +42,13 @@ interface BatchImportProps {
   onImportComplete?: (results: ImportFile[]) => void
 }
 
+/**
+ * BatchImport - 批量导入与格式转换组件
+ * @param {BatchImportProps} props - 组件属性
+ * @param {string} props.projectId - 项目ID
+ * @param {Function} props.onImportComplete - 导入完成回调
+ * @returns {JSX.Element} 渲染的批量导入界面
+ */
 export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
   const [files, setFiles] = useState<ImportFile[]>([])
   const [converting, setConverting] = useState(false)

@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file ScriptAnalysis.tsx
+ * @description 剧本分析组件，提供剧本统计数据展示、AI评分、角色出场频率、场景分布和节奏曲线
+ */
+
 import { useState, useEffect } from 'react'
 import {
   BarChart3,
@@ -17,6 +22,12 @@ interface ScriptAnalysisProps {
   scriptId: string
 }
 
+/**
+ * ScriptAnalysis - 剧本分析组件
+ * @param {ScriptAnalysisProps} props - 组件属性
+ * @param {string} props.scriptId - 剧本ID
+ * @returns {JSX.Element} 渲染的剧本分析界面
+ */
 export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
   const [statistics, setStatistics] = useState<any>(null)
   const [assessment, setAssessment] = useState<any>(null)

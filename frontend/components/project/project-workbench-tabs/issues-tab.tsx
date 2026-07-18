@@ -2,6 +2,7 @@
 
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import { ManagementTable as ProjectManagementTable } from "@/components/project/project-workbench";
 import type { ProjectIssue, ProjectIssueSeverity, ProjectIssueStatus, ProjectMember } from "@/lib/app-types";
 
@@ -78,28 +79,43 @@ export function IssuesTab(props: IssuesTabProps) {
                     </label>
                     <label className="space-y-1.5">
                         <span className="block text-sm font-medium text-[#d8d8d8]">级别</span>
-                        <select className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" value={props.issueDraft.severity ?? "low"} onChange={(event) => props.setIssueDraft((draft) => ({ ...draft, severity: event.target.value as ProjectIssueSeverity }))}>
-                            <option value="low">低</option>
-                            <option value="medium">中</option>
-                            <option value="high">高</option>
-                            <option value="critical">严重</option>
-                        </select>
+                        <ShadcnSelect
+                            options={[
+                                { value: "low", label: "低" },
+                                { value: "medium", label: "中" },
+                                { value: "high", label: "高" },
+                                { value: "critical", label: "严重" },
+                            ]}
+                            value={props.issueDraft.severity ?? "low"}
+                            onChange={(value) => props.setIssueDraft((draft) => ({ ...draft, severity: value as ProjectIssueSeverity }))}
+                            className="h-11 w-full text-sm"
+                        />
                     </label>
                     <label className="space-y-1.5">
                         <span className="block text-sm font-medium text-[#d8d8d8]">状态</span>
-                        <select className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" value={props.issueDraft.status ?? "open"} onChange={(event) => props.setIssueDraft((draft) => ({ ...draft, status: event.target.value as ProjectIssueStatus }))}>
-                            <option value="open">待处理</option>
-                            <option value="doing">处理中</option>
-                            <option value="resolved">已解决</option>
-                            <option value="closed">已关闭</option>
-                        </select>
+                        <ShadcnSelect
+                            options={[
+                                { value: "open", label: "待处理" },
+                                { value: "doing", label: "处理中" },
+                                { value: "resolved", label: "已解决" },
+                                { value: "closed", label: "已关闭" },
+                            ]}
+                            value={props.issueDraft.status ?? "open"}
+                            onChange={(value) => props.setIssueDraft((draft) => ({ ...draft, status: value as ProjectIssueStatus }))}
+                            className="h-11 w-full text-sm"
+                        />
                     </label>
                     <label className="space-y-1.5">
                         <span className="block text-sm font-medium text-[#d8d8d8]">负责人</span>
-                        <select className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" value={props.issueDraft.owner ?? ""} onChange={(event) => props.setIssueDraft((draft) => ({ ...draft, owner: event.target.value }))}>
-                            <option value="">负责人</option>
-                            {props.projectMembers.map((member) => <option key={member.id} value={member.name}>{member.name} · {member.role}</option>)}
-                        </select>
+                        <ShadcnSelect
+                            options={[
+                                { value: "", label: "负责人" },
+                                ...props.projectMembers.map((member) => ({ value: member.name, label: `${member.name} · ${member.role}` })),
+                            ]}
+                            value={props.issueDraft.owner ?? ""}
+                            onChange={(value) => props.setIssueDraft((draft) => ({ ...draft, owner: value }))}
+                            className="h-11 w-full text-sm"
+                        />
                     </label>
                 </div>
                 <label className="mt-3 block space-y-1.5">

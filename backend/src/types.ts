@@ -1,3 +1,16 @@
+/**
+ * @file types.ts
+ * @description 类型定义入口文件。作为兼容层，从各个领域类型文件 re-export 类型：
+ *   - 剧本相关类型（Script、ScriptDocument 等）
+ *   - 三厂资产类型（Character、Scene、Prop）
+ *   - 媒体类型（ImageTask、VideoTask、Audio）
+ *   - 项目管理类型（Project、ProjectTask、WorkItem 等）
+ *   - 模型中心类型（ModelConfig、ModelQuota 等）
+ *   - 审核与仪表盘类型
+ * 
+ * 旧模块引用 `../types.js` 时可正常解析，无需修改导入路径。
+ */
+
 // 兼容层：从新的领域类型文件 re-export 出去，旧模块 (`../types.js`) 引用这些类型时仍可解析。
 import type { VideoParams } from "./types/video.js";
 export type {
@@ -23,6 +36,8 @@ export type {
 } from "./types/script.js";
 export type { Character, CharacterRole, CharacterGender } from "./types/character.js";
 export type { CharacterImageHistory } from "./types/character-image-history.js";
+export type { PropImageHistory } from "./types/prop-image-history.js";
+export type { SceneImageHistory } from "./types/scene-image-history.js";
 export type { Scene, SceneType } from "./types/scene.js";
 export type { Prop, PropCategory } from "./types/prop.js";
 export type { Storyboard, StoryboardStatus, ProjectStoryboard, ProjectStoryboardStatus } from "./types/storyboard.js";
@@ -57,16 +72,25 @@ export type {
 
 export type Role = "system" | "user" | "assistant";
 export type TaskStatus = "pending" | "processing" | "success" | "failed";
-export type FavoriteType = "chat" | "image" | "video";
+export type FavoriteType = "chat" | "image" | "video" | "conversation" | "message";
+export type ConversationMode = "chat" | "image" | "video";
 
 export interface Conversation {
   id: string;
   title: string;
   model: string;
+  /** 会话模式：chat / image / video */
+  mode: ConversationMode;
   is_pinned: boolean;
   created_at: string;
   updated_at: string;
   project_id: string;
+  /**
+   * 未读助手消息计数。0 = 已读；>0 = 侧栏显示数字徽标。
+   * 助手消息落库时 +1，进入会话时归零。
+   * user 消息不计入（用户知道自己发了什么）。
+   */
+  unread_count: number;
 }
 
 export interface Project {
@@ -111,6 +135,12 @@ export interface VideoTask {
   seconds: string;
   size: string;
   error: string;
+  /**
+   * 关联的助手消息 ID。生成时由 generateVideo 写入；queryVideo 状态变更时通过该字段
+   * 定位会话里"视频生成中…"占位消息并回填 status/videoUrl/content。
+   * 旧任务该字段可能为空，queryVideo 会回退到按 meta.taskId 搜索。
+   */
+  message_id: string;
   created_at: string;
 }
 
@@ -128,6 +158,12 @@ export interface Settings {
   defaultChatModel: string;
   defaultImageSize: "1024x768" | "768x1024" | "1024x1024" | "1152x768" | "768x1152";
   defaultVideoRatio: "16:9" | "9:16" | "1:1";
+  /** AI 服务密钥。HTTP 接口只返回是否已配置，不回显该值。 */
+  apiKey?: string;
+  apiProvider?: "openai" | "agnes" | "claude" | "custom";
+  apiBaseUrl?: string;
+  userName?: string;
+  userEmail?: string;
 }
 
 /** VideoParams 由 ./types/video.js re-export，此处不再重复定义，避免冲突。 */

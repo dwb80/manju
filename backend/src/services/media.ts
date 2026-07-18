@@ -1,3 +1,17 @@
+/**
+ * @file media.ts
+ * @description 媒体文件服务模块。提供媒体文件的存储、缓存和转换功能：
+ *   - 图片上传和保存
+ *   - 远程媒体 URL 缓存到本地
+ *   - 图片压缩（用于 Agnes API 参考图输入）
+ *   - data URL 与本地文件路径的解析转换
+ * 
+ * 设计原则：
+ *   - 支持全局媒体目录和项目级媒体目录
+ *   - 对超过 Agnes API 10MB 限制的图片自动用 sharp 压缩
+ *   - 缓存失败时回退到原始 URL，不阻塞业务流程
+ */
+
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -140,7 +154,15 @@ export async function cacheMediaUrl(ctx: AppContext, url: string, kind: "images"
   }
 }
 
-/** 批量缓存图片或视频 URL，保持原顺序返回新地址列表。 */
+/**
+ * cacheMediaUrls - 批量缓存媒体 URL
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string[]} urls - 远程媒体 URL 数组
+ * @param {"images"|"videos"} kind - 媒体类型
+ * @param {string} taskId - 任务 ID
+ * @param {string} projectId - 项目 ID
+ * @returns {Promise<string[]>} 本地媒体 URL 数组
+ */
 export async function cacheMediaUrls(ctx: AppContext, urls: string[], kind: "images" | "videos", taskId: string, projectId = ""): Promise<string[]> {
   const next: string[] = [];
   for (let index = 0; index < urls.length; index += 1) {
@@ -162,7 +184,12 @@ export interface StoredUpload {
   type: string;
 }
 
-/** 保存用户上传的图片附件，并返回前端可预览的本地 URL。 */
+/**
+ * saveUploadedImage - 保存用户上传的图片
+ * @param {AppContext} ctx - 应用上下文
+ * @param {UploadInput} upload - 上传文件信息（文件名、类型、字节数据）
+ * @returns {Promise<StoredUpload>} 存储结果（URL、名称、大小、类型）
+ */
 export async function saveUploadedImage(ctx: AppContext, upload: UploadInput): Promise<StoredUpload> {
   const type = upload.contentType.split(";")[0].trim().toLowerCase();
   if (!type.startsWith("image/")) throw new Error("only image uploads are supported");
@@ -229,10 +256,13 @@ function isCompressibleImageMime(mime: string): boolean {
   return mime.startsWith("image/") && mime !== "image/svg+xml" && mime !== "image/x-icon" && mime !== "image/vnd.microsoft.icon";
 }
 
-/** 把本地媒体 URL 转成 data URL,供真实 Agnes 接口作为参考图输入。
- *  对超过 Agnes 10MB 硬限的图片自动用 sharp 压缩(base64 目标 < 9MB,留 10% 余量)。
- *  早期直接 return 原始 base64 没问题,但 12MB 图片 base64 后约 16MB,会触发
- *  `image queue input image size exceeds max 10485760 bytes` 错误。 */
+/**
+ * resolveMediaInput - 将本地媒体 URL 转换为 data URL
+ * 对超过 Agnes 10MB 限制的图片自动用 sharp 压缩。
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string|undefined} value - 本地媒体 URL
+ * @returns {Promise<string|undefined>} data URL 或原始值
+ */
 export async function resolveMediaInput(ctx: AppContext, value: string | undefined): Promise<string | undefined> {
   if (!value) return undefined;
   const target = await localMediaPath(ctx, value);
@@ -267,7 +297,7 @@ export async function resolveMediaInput(ctx: AppContext, value: string | undefin
           compressedBase64,
           limitBase64: AGNES_IMAGE_MAX_BASE64_BYTES,
         },
-        "reference image cannot be compressed under Agnes 10MB limit; Agnes API will likely return 400"
+        "参考图无法压缩到 Agnes 9MB（base64）以内，调用 API 时大概率会返回 400",
       );
     } else {
       rootLogger.info(
@@ -278,7 +308,7 @@ export async function resolveMediaInput(ctx: AppContext, value: string | undefin
           compressedBytes: compressed.compressedBytes,
           ratio: (compressed.compressedBytes / compressed.originalBytes).toFixed(2),
         },
-        "reference image compressed for Agnes 10MB limit"
+        "参考图已压缩到 Agnes 9MB 限制内",
       );
     }
     return compressed.dataUrl;
@@ -286,13 +316,18 @@ export async function resolveMediaInput(ctx: AppContext, value: string | undefin
     // sharp 失败(GIF/损坏图):降级用原图,让 API 自己报错给用户看
     rootLogger.warn(
       { event: "media.compress.failed", sourcePath: target, mime, err },
-      "sharp compress failed; falling back to original bytes (Agnes may 400)"
+      "sharp 压缩失败，回退到原图（Agnes API 可能返回 400）",
     );
     return `data:${mime};base64,${bytes.toString("base64")}`;
   }
 }
 
-/** 批量解析参考图输入，过滤掉空值。 */
+/**
+ * resolveMediaInputs - 批量解析参考图输入
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string[]} values - 本地媒体 URL 数组
+ * @returns {Promise<string[]>} 解析后的 data URL 数组（过滤空值）
+ */
 export async function resolveMediaInputs(ctx: AppContext, values: string[]): Promise<string[]> {
   const resolved: string[] = [];
   for (const value of values) {

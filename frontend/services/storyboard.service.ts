@@ -10,7 +10,7 @@ export async function listStoryboards(projectId?: string): Promise<Storyboard[]>
   return api<Storyboard[]>(`/api/storyboards${query}`);
 }
 
-export async function createStoryboard(data: {
+export interface CreateStoryboardInput {
   scene_id?: string;
   shot_number?: number;
   episode?: number;
@@ -26,30 +26,22 @@ export async function createStoryboard(data: {
   image_url?: string;
   video_url?: string;
   tags?: string[];
-}): Promise<Storyboard> {
+  /** 关联角色资产 ID 列表。 */
+  character_asset_ids?: string[];
+  /** 关联道具资产 ID 列表。 */
+  prop_asset_ids?: string[];
+  /** 项目 ID（批量剧本分析 / 跨模块调用时由调用方显式传入）。 */
+  project_id?: string;
+}
+
+export async function createStoryboard(data: CreateStoryboardInput): Promise<Storyboard> {
   return api<Storyboard>("/api/storyboards", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export async function updateStoryboard(id: string, data: Partial<{
-  scene_id: string;
-  shot_number: number;
-  episode: number;
-  title: string;
-  description: string;
-  duration: number;
-  camera_angle: string;
-  movement: string;
-  dialogue: string;
-  notes: string;
-  status: string;
-  order: number;
-  image_url: string;
-  video_url: string;
-  tags: string[];
-}>): Promise<Storyboard> {
+export async function updateStoryboard(id: string, data: Partial<CreateStoryboardInput>): Promise<Storyboard> {
   return api<Storyboard>(`/api/storyboards/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
@@ -124,10 +116,18 @@ export async function createStoryboardFromAsset(asset: {
   tags?: string[];
   type: "character" | "scene" | "prop";
   project_id?: string;
+  /** 资产 ID（用于注入到 character_asset_ids / prop_asset_ids / scene_asset_id）。 */
+  asset_id?: string;
 }): Promise<Storyboard> {
   const sourceName = asset.title ?? asset.name ?? "未命名资产";
   const title = `${sourceName} · 分镜`;
   const typeLabel = asset.type === "character" ? "角色" : asset.type === "scene" ? "场景" : "道具";
+
+  // 根据资产类型注入反向引用：让"角色/道具被分镜引用"的结构化关联自动建立。
+  const character_asset_ids = asset.type === "character" && asset.asset_id ? [asset.asset_id] : [];
+  const prop_asset_ids = asset.type === "prop" && asset.asset_id ? [asset.asset_id] : [];
+  const scene_id = asset.type === "scene" && asset.asset_id ? asset.asset_id : "";
+
   return createStoryboard({
     title,
     description: asset.description ?? "",
@@ -135,5 +135,9 @@ export async function createStoryboardFromAsset(asset: {
     image_url: asset.image_url ?? asset.image ?? "",
     tags: asset.tags ?? [],
     status: "draft",
+    character_asset_ids,
+    prop_asset_ids,
+    scene_id,
+    project_id: asset.project_id,
   });
 }

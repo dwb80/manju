@@ -1,3 +1,7 @@
+/**
+ * @file production-health.tsx
+ * @description 生产健康度组件，展示AI生产质量指标包括图片一致性、角色一致性等
+ */
 "use client";
 
 import { memo } from "react";
@@ -119,21 +123,26 @@ const MetricCard = memo(function MetricCard({
   );
 });
 
-/** 生产健康度组件 */
+/**
+ * ProductionHealth - 生产健康度组件
+ * @param {ProductionHealthProps} props - 组件属性
+ * @param {ProductionHealthData} props.data - 健康度数据
+ * @returns {JSX.Element} 渲染的健康度指标界面
+ */
 export const ProductionHealth = memo(function ProductionHealth({
   data,
 }: ProductionHealthProps) {
   const metrics: HealthMetricItem[] = [
     {
       icon: Image,
-      label: "图片一致性",
+      label: "图片任务成功率",
       value: data.imageConsistency,
       type: "percentage",
       color: getScoreColor(data.imageConsistency),
     },
     {
       icon: Users,
-      label: "角色一致性",
+      label: "视频任务成功率",
       value: data.characterConsistency,
       type: "percentage",
       color: getScoreColor(data.characterConsistency),
@@ -148,7 +157,7 @@ export const ProductionHealth = memo(function ProductionHealth({
     },
     {
       icon: Clock,
-      label: "平均耗时",
+      label: "平均耗时（未采集）",
       value: data.avgDuration,
       unit: "分钟",
       type: "number",

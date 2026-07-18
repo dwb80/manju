@@ -11,6 +11,7 @@
 
 import { Check, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import { EmptyStoryboards } from "@/components/shared";
 import type { ProjectStoryboardStatus } from "@/lib/app-types";
 import type { ProjectWorkbenchTabsProps } from "./types";
@@ -87,22 +88,26 @@ export function StoryboardsTab(props: Pick<
           <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.camera_move} placeholder="镜头运动" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, camera_move: event.target.value }))} />
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2 max-md:grid-cols-1">
-          <select
-            className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500"
+          <ShadcnSelect
+            options={[
+              { value: "", label: "绑定角色资产" },
+              ...characterAssets.map((asset) => ({ value: asset.id, label: asset.name })),
+            ]}
             value={storyboardDraft.character_asset_ids[0] ?? ""}
-            onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, character_asset_ids: event.target.value ? [event.target.value] : [] }))}
-          >
-            <option value="">绑定角色资产</option>
-            {characterAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.name}</option>)}
-          </select>
-          <select
-            className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500"
+            onChange={(value) =>
+              setStoryboardDraft((draft) => ({ ...draft, character_asset_ids: value ? [value] : [] }))
+            }
+            className="h-9 text-xs"
+          />
+          <ShadcnSelect
+            options={[
+              { value: "", label: "绑定场景资产" },
+              ...sceneAssets.map((asset) => ({ value: asset.id, label: asset.name })),
+            ]}
             value={storyboardDraft.scene_asset_id}
-            onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, scene_asset_id: event.target.value }))}
-          >
-            <option value="">绑定场景资产</option>
-            {sceneAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.name}</option>)}
-          </select>
+            onChange={(value) => setStoryboardDraft((draft) => ({ ...draft, scene_asset_id: value }))}
+            className="h-9 text-xs"
+          />
         </div>
         <textarea className="mt-2 min-h-16 w-full resize-none rounded-lg border border-white/10 bg-[#2f2f2f] px-3 py-2 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.description} placeholder="画面描述" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, description: event.target.value }))} />
         <textarea className="mt-2 min-h-16 w-full resize-none rounded-lg border border-white/10 bg-[#2f2f2f] px-3 py-2 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.prompt} placeholder="生成提示词" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, prompt: event.target.value }))} />

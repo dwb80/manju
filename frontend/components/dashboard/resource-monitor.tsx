@@ -1,3 +1,7 @@
+/**
+ * @file resource-monitor.tsx
+ * @description AI资源监控组件，实时展示GPU、CPU、队列等资源使用情况
+ */
 "use client";
 
 import { memo } from "react";
@@ -87,7 +91,12 @@ const ResourceItem = memo(function ResourceItem({
   );
 });
 
-/** AI资源监控组件 */
+/**
+ * ResourceMonitor - AI资源监控组件
+ * @param {ResourceMonitorProps} props - 组件属性
+ * @param {ResourceMonitorData} props.data - 资源监控数据
+ * @returns {JSX.Element} 渲染的资源监控界面
+ */
 export const ResourceMonitor = memo(function ResourceMonitor({
   data,
 }: ResourceMonitorProps) {
@@ -100,33 +109,22 @@ export const ResourceMonitor = memo(function ResourceMonitor({
         </div>
         <div>
           <h2 className="text-lg font-bold text-white">AI资源监控</h2>
-          <p className="text-sm text-[#888]">实时资源使用情况</p>
+          <p className="text-sm text-[#888]">任务队列与运行环境遥测</p>
         </div>
       </div>
 
       {/* 资源网格 */}
       <div className="grid grid-cols-2 gap-4">
-        {/* GPU使用率 */}
-        <ResourceItem
-          icon={Cpu}
-          label="GPU使用率"
-          value={data.gpuUsage}
-          unit="%"
-          showProgress
-          progress={data.gpuUsage}
-          color="blue"
-        />
-
-        {/* CPU使用率 */}
-        <ResourceItem
-          icon={HardDrive}
-          label="CPU使用率"
-          value={data.cpuUsage}
-          unit="%"
-          showProgress
-          progress={data.cpuUsage}
-          color="purple"
-        />
+        {data.telemetryAvailable ? (
+          <>
+            <ResourceItem icon={Cpu} label="GPU使用率" value={data.gpuUsage} unit="%" showProgress progress={data.gpuUsage} color="blue" />
+            <ResourceItem icon={HardDrive} label="CPU使用率" value={data.cpuUsage} unit="%" showProgress progress={data.cpuUsage} color="purple" />
+          </>
+        ) : (
+          <div className="col-span-2 rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-[#888]">
+            CPU/GPU 遥测尚未接入，当前不展示模拟利用率。
+          </div>
+        )}
 
         {/* 队列长度 */}
         <ResourceItem
@@ -136,13 +134,7 @@ export const ResourceMonitor = memo(function ResourceMonitor({
           color="cyan"
         />
 
-        {/* Worker数量 */}
-        <ResourceItem
-          icon={Users}
-          label="Worker数量"
-          value={data.workerCount}
-          color="emerald"
-        />
+        {data.telemetryAvailable && <ResourceItem icon={Users} label="Worker数量" value={data.workerCount} color="emerald" />}
       </div>
     </div>
   );

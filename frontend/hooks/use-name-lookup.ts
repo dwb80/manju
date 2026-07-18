@@ -1,3 +1,8 @@
+/**
+ * @file use-name-lookup.ts
+ * @description JOIN 缓存 Hook，根据 ID 列表获取并缓存外键实体的展示字段（name / title）
+ */
+
 "use client";
 
 /**

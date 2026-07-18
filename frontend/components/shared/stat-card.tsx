@@ -1,3 +1,8 @@
+/**
+ * @file stat-card.tsx
+ * @description 统计卡片组件，显示关键统计指标，支持趋势显示和可配置颜色
+ */
+
 "use client";
 
 import { ReactNode } from "react";
@@ -21,6 +26,11 @@ interface StatCardProps {
   color?: 'emerald' | 'blue' | 'purple' | 'orange';
 }
 
+/**
+ * StatCard - 统计卡片组件
+ * @param {StatCardProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的统计卡片元素
+ */
 export function StatCard({
   label,
   value,
@@ -66,17 +76,16 @@ export function StatCard({
   );
 }
 
-/**
- * 统计卡片网格组件
- *
- * 用于显示多个统计卡片的网格布局
- */
-
 interface StatCardGridProps {
   children: ReactNode;
   columns?: 2 | 3 | 4;
 }
 
+/**
+ * StatCardGrid - 统计卡片网格组件
+ * @param {StatCardGridProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的统计卡片网格元素
+ */
 export function StatCardGrid({ children, columns = 4 }: StatCardGridProps) {
   const gridClasses = {
     2: 'grid-cols-1 md:grid-cols-2',

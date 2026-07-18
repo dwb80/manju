@@ -1,17 +1,29 @@
 /**
+ * @file todo.ts
+ * @description 用户待办相关类型定义，用于汇总用户个人维度的轻量待办列表
+ */
+
+/**
  * 我的待办（评审优化 P1）
  *
  * 定位：与项目级 ProjectTask 不同，这是用户个人维度的轻量待办列表，
  * 用于汇总"我需要处理的事"，可以跨项目跳转。
- *
- * 设计原则：
- * - 软删除：通过 deleted_at 字段实现
- * - 状态：pending | doing | done
- * - 优先级：low | medium | high
- * - 关联：可选 link_type + link_id，指向具体的剧本/分镜/音频/项目等
  */
 
+/**
+ * 待办状态类型
+ * @property pending - 等待中
+ * @property doing - 进行中
+ * @property done - 已完成
+ */
 export type TodoStatus = "pending" | "doing" | "done";
+
+/**
+ * 待办优先级类型
+ * @property low - 低优先级
+ * @property medium - 中优先级
+ * @property high - 高优先级
+ */
 export type TodoPriority = "low" | "medium" | "high";
 
 /** 我的待办条目。 */

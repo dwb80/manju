@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * @file image-picker-aspect-ratio-select.tsx
+ * @description 图片比例下拉选择器组件，用于纵向空间紧张的场景
+ */
+
 import { ChevronDown } from "lucide-react";
 import type { AspectRatioOption, ImageRatio } from "@/lib/module-types";
 
@@ -81,7 +86,14 @@ export function AspectRatioSelect({
 }
 
 /**
- * 比例条 mini icon：16×16 的方形外框，内部按 w/h 比例填充的形状。
+ * RatioIcon - 比例条 mini icon 组件
+ * @param {Object} props - 组件属性
+ * @param {ImageRatio} props.ratio - 图片比例
+ * @param {boolean} props.selected - 是否选中
+ * @param {number} props.size - 图标大小（默认 14）
+ * @returns {JSX.Element} 渲染的 React 元素
+ * 
+ * 16×16 的方形外框，内部按 w/h 比例填充的形状。
  * 选中态用 emerald-400；未选中用 white/80。
  * 不同比例的内部形状宽度（统一 12 高的容器下）：
  *  - 1:1  → 12×12 (正方)

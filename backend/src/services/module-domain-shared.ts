@@ -1,3 +1,8 @@
+/**
+ * @file module-domain-shared.ts
+ * @description 提供软删除、恢复、永久删除、跨项目复制等通用操作的工具函数
+ */
+
 import type { AppContext } from "./app.js";
 import { id, nowIso } from "../utils.js";
 import type { Repository } from "../storage/repository.js";
@@ -10,6 +15,13 @@ export async function softDelete(ctx: AppContext, repo: Repository<any>, entityI
   return { id: entityId, deleted_at: deletedAt } as any;
 }
 
+/**
+ * restoreDeleted - 恢复已软删除的实体
+ * @param {AppContext} ctx - 应用上下文
+ * @param {Repository<any>} repo - 数据仓库实例
+ * @param {string} entityId - 实体 ID
+ * @returns {Promise<void>}
+ */
 export async function restoreDeleted(ctx: AppContext, repo: Repository<any>, entityId: string): Promise<void> {
   const existing = await repo.findById(entityId);
   if (!existing) throw new Error("记录不存在或已被永久删除");
@@ -23,10 +35,26 @@ export async function listDeletedInRepo(repo: Repository<any>, projectId?: strin
   return all.filter((it: any) => !!it.deleted_at);
 }
 
+/**
+ * permanentDelete - 永久删除指定实体
+ * @param {AppContext} ctx - 应用上下文
+ * @param {Repository<any>} repo - 数据仓库实例
+ * @param {string} entityId - 实体 ID
+ * @returns {Promise<void>}
+ */
 export async function permanentDelete(ctx: AppContext, repo: Repository<any>, entityId: string): Promise<void> {
   await repo.delete(entityId);
 }
 
+/**
+ * copyToProject - 将实体复制到目标项目
+ * @template T - 实体类型，包含 id、project_id、created_at 等字段
+ * @param {AppContext} ctx - 应用上下文
+ * @param {Repository<T>} repo - 数据仓库实例
+ * @param {string} sourceId - 源实体 ID
+ * @param {string} targetProjectId - 目标项目 ID
+ * @returns {Promise<T>} 复制后的实体
+ */
 export async function copyToProject<T extends { id: string; project_id: string; created_at: string; name?: string; title?: string }>(
   ctx: AppContext,
   repo: Repository<T>,

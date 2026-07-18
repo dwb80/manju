@@ -1,3 +1,8 @@
+/**
+ * @file production-efficiency.tsx
+ * @description 生产效率组件，显示项目生产效率和进度分析
+ */
+
 "use client";
 
 import { useState } from "react";

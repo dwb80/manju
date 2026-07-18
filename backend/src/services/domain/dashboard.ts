@@ -1,7 +1,16 @@
+/**
+ * @file dashboard.ts
+ * @description 驾驶舱服务模块 - 提供项目概览、生产流水线、AI任务监控、成本分析等仪表盘数据
+ */
+
 import type { AppContext } from "../app.js";
 import type { AITaskMonitor, CostBreakdown, DashboardData, DashboardKPI, ImageTask, ProductionHealth, ProductionPipeline, Project, ProjectClip, ProjectProgress, ProjectReview, ProjectScript, ProjectStoryboard, RecentGeneration, ResourceMonitorData, ReviewCenterData, TeamActivity, VideoTask } from "../../types.js";
 
-/** 获取驾驶舱KPI数据 */
+/**
+ * getDashboardKPI - 获取驾驶舱KPI数据
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<DashboardKPI>} KPI数据
+ */
 export async function getDashboardKPI(ctx: AppContext): Promise<DashboardKPI> {
   const projects = await ctx.projects.findMany();
   const images = await ctx.images.findMany();
@@ -26,8 +35,8 @@ export async function getDashboardKPI(ctx: AppContext): Promise<DashboardKPI> {
   const totalTasks = images.length + videos.length;
   const successRate = totalTasks > 0 ? Math.round((successImages + successVideos) / totalTasks * 100) : 100;
 
-  // 模拟GPU和成本数据（实际应从监控系统获取）
-  const gpuUtilization = Math.min(100, Math.round(runningAITasks * 8 + Math.random() * 20));
+  // 未接入主机资源遥测时不伪造利用率。
+  const gpuUtilization = 0;
   const todayCost = Math.round(todayImages * 0.5 + todayVideos * 2 + runningAITasks * 0.1);
 
   return {
@@ -37,12 +46,18 @@ export async function getDashboardKPI(ctx: AppContext): Promise<DashboardKPI> {
     runningAITasks,
     pendingReviews,
     gpuUtilization,
+    resourceTelemetryAvailable: false,
     todayCost,
     successRate,
   };
 }
 
-/** 获取生产流水线数据 */
+/**
+ * getProductionPipeline - 获取生产流水线数据
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID（可选）
+ * @returns {Promise<ProductionPipeline>} 流水线数据
+ */
 export async function getProductionPipeline(ctx: AppContext, projectId?: string): Promise<ProductionPipeline> {
   // 如果指定了项目，获取该项目的流水线，否则取第一个活跃项目
   const projects = await ctx.projects.findMany();
@@ -101,7 +116,11 @@ export async function getProductionPipeline(ctx: AppContext, projectId?: string)
   };
 }
 
-/** 获取我的项目进度列表 */
+/**
+ * getMyProjects - 获取我的项目进度列表
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<ProjectProgress[]>} 项目进度列表
+ */
 export async function getMyProjects(ctx: AppContext): Promise<ProjectProgress[]> {
   const projects = await ctx.projects.findMany();
   const result: ProjectProgress[] = [];
@@ -158,7 +177,11 @@ export async function getMyProjects(ctx: AppContext): Promise<ProjectProgress[]>
   return result;
 }
 
-/** 获取AI任务监控列表 */
+/**
+ * getAITasksMonitor - 获取AI任务监控列表
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<AITaskMonitor[]>} AI任务监控数据
+ */
 export async function getAITasksMonitor(ctx: AppContext): Promise<AITaskMonitor[]> {
   const images = await ctx.images.findMany();
   const videos = await ctx.videos.findMany();
@@ -173,8 +196,8 @@ export async function getAITasksMonitor(ctx: AppContext): Promise<AITaskMonitor[
       title: img.prompt.slice(0, 30) + "...",
       model: "FLUX",
       status: "running",
-      progress: img.status === "processing" ? Math.round(Math.random() * 80 + 10) : 0,
-      remainingTime: Math.round(Math.random() * 20 + 5) + "秒",
+      progress: 0,
+      remainingTime: "处理中",
       created_at: img.created_at,
       project_id: img.conversation_id ?? "",
     });
@@ -188,32 +211,21 @@ export async function getAITasksMonitor(ctx: AppContext): Promise<AITaskMonitor[
       title: vid.prompt.slice(0, 30) + "...",
       model: "Veo",
       status: "running",
-      progress: vid.progress || Math.round(Math.random() * 60 + 10),
-      remainingTime: Math.round(Math.random() * 120 + 30) + "秒",
+      progress: vid.progress || 0,
+      remainingTime: "处理中",
       created_at: vid.created_at,
       project_id: vid.conversation_id ?? "",
-    });
-  }
-
-  // 模拟配音任务
-  if (result.length < 5) {
-    result.push({
-      id: "tts-001",
-      type: "voiceover",
-      title: "Scene12 配音",
-      model: "TTS",
-      status: "waiting",
-      progress: 0,
-      remainingTime: "等待",
-      created_at: new Date().toISOString(),
-      project_id: "",
     });
   }
 
   return result.slice(0, 5);
 }
 
-/** 获取待审核中心数据 */
+/**
+ * getReviewCenter - 获取待审核中心数据
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<ReviewCenterData>} 待审核数据
+ */
 export async function getReviewCenter(ctx: AppContext): Promise<ReviewCenterData> {
   const projects = await ctx.projects.findMany();
   let images = 0, videos = 0, scripts = 0, storyboards = 0;
@@ -230,7 +242,11 @@ export async function getReviewCenter(ctx: AppContext): Promise<ReviewCenterData
   return { images, videos, scripts, storyboards };
 }
 
-/** 获取资源监控数据 */
+/**
+ * getResourceMonitor - 获取资源监控数据
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<ResourceMonitorData>} 资源监控数据
+ */
 export async function getResourceMonitor(ctx: AppContext): Promise<ResourceMonitorData> {
   const images = await ctx.images.findMany();
   const videos = await ctx.videos.findMany();
@@ -238,14 +254,19 @@ export async function getResourceMonitor(ctx: AppContext): Promise<ResourceMonit
   const runningTasks = images.filter((i: ImageTask) => i.status === "processing").length + videos.filter((v: VideoTask) => v.status === "processing").length;
 
   return {
-    gpuUsage: Math.min(100, Math.round(runningTasks * 12 + Math.random() * 15)),
-    cpuUsage: Math.round(Math.random() * 40 + 20),
-    queueLength: runningTasks + Math.round(Math.random() * 10),
-    workerCount: Math.max(1, Math.round(runningTasks / 2) + 2),
+    gpuUsage: 0,
+    cpuUsage: 0,
+    queueLength: runningTasks,
+    workerCount: 0,
+    telemetryAvailable: false,
   };
 }
 
-/** 获取成本明细 */
+/**
+ * getCostBreakdown - 获取成本明细
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<CostBreakdown>} 成本明细
+ */
 export async function getCostBreakdown(ctx: AppContext): Promise<CostBreakdown> {
   const images = await ctx.images.findMany();
   const videos = await ctx.videos.findMany();
@@ -255,15 +276,19 @@ export async function getCostBreakdown(ctx: AppContext): Promise<CostBreakdown> 
   const todayVideos = videos.filter((v: VideoTask) => v.created_at.slice(0, 10) === today && v.status === "success").length;
 
   return {
-    gpt: Math.round(Math.random() * 20 + 5),
-    claude: Math.round(Math.random() * 10 + 2),
+    gpt: 0,
+    claude: 0,
     images: Math.round(todayImages * 0.5),
     videos: Math.round(todayVideos * 2),
-    total: Math.round(todayImages * 0.5 + todayVideos * 2 + Math.random() * 30),
+    total: Math.round(todayImages * 0.5 + todayVideos * 2),
   };
 }
 
-/** 获取最近生成列表 */
+/**
+ * getRecentGenerations - 获取最近生成列表
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<RecentGeneration[]>} 最近生成列表
+ */
 export async function getRecentGenerations(ctx: AppContext): Promise<RecentGeneration[]> {
   const images = await ctx.images.findMany();
   const videos = await ctx.videos.findMany();
@@ -295,19 +320,27 @@ export async function getRecentGenerations(ctx: AppContext): Promise<RecentGener
   return result.slice(0, 5);
 }
 
-/** 获取团队动态 */
+/**
+ * getTeamActivities - 获取团队动态
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<TeamActivity[]>} 团队动态列表
+ */
 export async function getTeamActivities(ctx: AppContext): Promise<TeamActivity[]> {
-  // 模拟团队动态数据（实际应从活动日志获取）
-  return [
-    { id: "act-1", user: "张三", action: "审核通过", target: "Shot023", createdAt: new Date().toISOString() },
-    { id: "act-2", user: "李四", action: "修改剧本", target: "第12集", createdAt: new Date(Date.now() - 3600000).toISOString() },
-    { id: "act-3", user: "王五", action: "生成图片", target: "林逸角色", createdAt: new Date(Date.now() - 7200000).toISOString() },
-    { id: "act-4", user: "赵六", action: "提交审核", target: "Scene18", createdAt: new Date(Date.now() - 10800000).toISOString() },
-    { id: "act-5", user: "钱七", action: "完成配音", target: "Shot024", createdAt: new Date(Date.now() - 14400000).toISOString() },
-  ];
+  const logs = await ctx.appLogs.findMany({}, { sort: "desc", limit: 5 });
+  return logs.map((log) => ({
+    id: log.id,
+    user: log.operator || "system",
+    action: log.action,
+    target: log.entity_id,
+    createdAt: log.created_at,
+  }));
 }
 
-/** 获取生产健康度 */
+/**
+ * getProductionHealth - 获取生产健康度
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<ProductionHealth>} 生产健康度数据
+ */
 export async function getProductionHealth(ctx: AppContext): Promise<ProductionHealth> {
   const images = await ctx.images.findMany();
   const videos = await ctx.videos.findMany();
@@ -317,17 +350,24 @@ export async function getProductionHealth(ctx: AppContext): Promise<ProductionHe
   const totalTasks = images.length + videos.length;
 
   const failRate = totalTasks > 0 ? Math.round((failedImages + failedVideos) / totalTasks * 100 * 10) / 10 : 0;
+  const imageSuccessRate = images.length > 0 ? Math.round(images.filter((item) => item.status === "success").length / images.length * 100) : 100;
+  const videoSuccessRate = videos.length > 0 ? Math.round(videos.filter((item) => item.status === "success").length / videos.length * 100) : 100;
 
   return {
     overallScore: Math.max(0, Math.min(100, Math.round(100 - failRate * 5))),
-    imageConsistency: Math.round(Math.random() * 5 + 94),
-    characterConsistency: Math.round(Math.random() * 5 + 96),
+    imageConsistency: imageSuccessRate,
+    characterConsistency: videoSuccessRate,
     failRate,
-    avgDuration: Math.round(Math.random() * 10 + 15),
+    avgDuration: 0,
   };
 }
 
-/** 获取完整驾驶舱数据 */
+/**
+ * getDashboardData - 获取完整驾驶舱数据
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID（可选）
+ * @returns {Promise<DashboardData>} 完整驾驶舱数据
+ */
 export async function getDashboardData(ctx: AppContext, projectId?: string): Promise<DashboardData> {
   return {
     kpi: await getDashboardKPI(ctx),

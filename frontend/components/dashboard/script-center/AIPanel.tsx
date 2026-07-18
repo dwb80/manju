@@ -1,3 +1,7 @@
+/**
+ * @file AIPanel.tsx
+ * @description AI助手面板组件，提供剧本生成、优化和场景对话生成功能
+ */
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
@@ -63,6 +67,17 @@ function toInsertableContent(content: string): any {
   }))
 }
 
+/**
+ * AIPanel - AI助手面板组件
+ * @param {AIPanelProps} props - 组件属性
+ * @param {Editor | null} props.editor - TipTap 编辑器实例
+ * @param {boolean} props.hasSelection - 是否有选中文本
+ * @param {Function} props.onGenerateScript - 生成剧本回调
+ * @param {Function} props.onOptimizeScript - 优化剧本回调
+ * @param {Function} props.onGenerateScene - 生成场景回调
+ * @param {Function} props.onGenerateDialogue - 生成对话回调
+ * @returns {JSX.Element} 渲染的AI助手面板界面
+ */
 export function AIPanel({
   editor,
   hasSelection = false,

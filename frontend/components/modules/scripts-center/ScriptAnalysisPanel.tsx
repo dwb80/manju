@@ -5,8 +5,8 @@
  *
  * 功能：
  * - 调用 AI 分析剧本，提取角色、场景、道具
- * - 支持编辑、保存提取出的资产内容
- * - 支持按类型转入角色工厂、场景工厂、道具工厂
+ * - 支持编辑提取出的资产内容
+ * - 分析完成后提供"进入剧本编辑器"入口（不再做工厂流转）
  * - 重新分析时提示"重新分析中"
  */
 
@@ -18,12 +18,13 @@ import {
   Users,
   Image as ImageIcon,
   Package,
-  ArrowRight,
+  ExternalLink,
   Pencil,
   Check,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import type { Script } from "@/lib/module-types";
 import type { ExtractedAsset } from "./types";
 
@@ -31,61 +32,32 @@ export function ScriptAnalysisPanel({
   script,
   extractedAssets,
   isAnalyzing,
-  isTransferring,
   analyzeStatus,
   onAnalyze,
-  onToggleAsset,
-  onConfirmAll,
-  onTransfer,
-  onTransferByType,
+  onOpenEditor,
   onUpdateAsset,
 }: {
   script: Script;
   extractedAssets: ExtractedAsset[];
   isAnalyzing: boolean;
-  isTransferring: boolean;
   /** 当前分析状态文案，用于区分"分析中"/"重新分析中" */
   analyzeStatus: string;
   onAnalyze: () => void;
-  onToggleAsset: (id: string) => void;
-  onConfirmAll: (type: "character" | "scene" | "prop", confirm: boolean) => void;
-  onTransfer: () => void;
-  /** 按类型流转到对应工厂 */
-  onTransferByType: (type: "character" | "scene" | "prop") => void;
+  /** 跳转到剧本编辑器（在新标签页打开） */
+  onOpenEditor: () => void;
   /** 更新单个资产内容（编辑保存） */
   onUpdateAsset: (id: string, patch: Partial<ExtractedAsset>) => void;
 }) {
-  const description = script.description ?? "";
-  const wordCount = script.words ?? description.replace(/\s/g, "").length;
-
   const characters = extractedAssets.filter((a) => a.type === "character");
   const scenes = extractedAssets.filter((a) => a.type === "scene");
   const props = extractedAssets.filter((a) => a.type === "prop");
-  const confirmedCount = extractedAssets.filter((a) => a.confirmed).length;
 
   return (
     <div className="space-y-4">
-      {/* 剧本基本信息 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="text-xs text-[#888] mb-1">总字数</div>
-          <div className="text-lg font-bold text-white">{wordCount.toLocaleString()}</div>
-        </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="text-xs text-[#888] mb-1">提取角色</div>
-          <div className="text-lg font-bold text-blue-400">{characters.length}</div>
-        </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="text-xs text-[#888] mb-1">提取场景</div>
-          <div className="text-lg font-bold text-emerald-400">{scenes.length}</div>
-        </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="text-xs text-[#888] mb-1">提取道具</div>
-          <div className="text-lg font-bold text-yellow-400">{props.length}</div>
-        </div>
-      </div>
+      {/* 统计卡片已移除：页面专注于「点击分析 → AI 调用 → 结果展示 → 进入编辑」流程。
+          已导入剧本的字数 / 提取数量等统计信息可通过其他入口（剧本列表、剧本编辑器右侧）查看。 */}
 
-      {/* 分析按钮 */}
+      {/* 分析按钮 / 结果入口栏 */}
       {extractedAssets.length === 0 ? (
         <div className="text-center py-8">
           <BarChart3 className="h-12 w-12 text-[#666] mx-auto mb-3" />
@@ -106,23 +78,17 @@ export function ScriptAnalysisPanel({
         </div>
       ) : (
         <>
-          {/* 流转操作栏 */}
+          {/* 入口栏：总览 + 进入剧本编辑器 */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
             <div className="text-sm text-blue-200">
-              已确认 <span className="font-bold text-blue-400">{confirmedCount}</span> / {extractedAssets.length} 个资产
+              共 <span className="font-bold text-blue-400">{extractedAssets.length}</span> 个资产
+              <span className="text-blue-300/70 text-xs ml-2">
+                角色 {characters.length} · 场景 {scenes.length} · 道具 {props.length}
+              </span>
             </div>
-            <Button onClick={onTransfer} disabled={isTransferring || confirmedCount === 0} size="sm">
-              {isTransferring ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  流转中...
-                </>
-              ) : (
-                <>
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                  确认并流转到工厂
-                </>
-              )}
+            <Button onClick={onOpenEditor} size="sm">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              进入剧本编辑器
             </Button>
           </div>
 
@@ -132,12 +98,7 @@ export function ScriptAnalysisPanel({
               title="角色资产"
               icon={Users}
               iconColor="text-blue-400"
-              targetFactory="角色工厂"
               assets={characters}
-              onToggle={onToggleAsset}
-              onConfirmAll={(confirm) => onConfirmAll("character", confirm)}
-              onTransferToFactory={() => onTransferByType("character")}
-              isTransferring={isTransferring}
               onUpdateAsset={onUpdateAsset}
             />
           )}
@@ -148,12 +109,7 @@ export function ScriptAnalysisPanel({
               title="场景资产"
               icon={ImageIcon}
               iconColor="text-emerald-400"
-              targetFactory="场景工厂"
               assets={scenes}
-              onToggle={onToggleAsset}
-              onConfirmAll={(confirm) => onConfirmAll("scene", confirm)}
-              onTransferToFactory={() => onTransferByType("scene")}
-              isTransferring={isTransferring}
               onUpdateAsset={onUpdateAsset}
             />
           )}
@@ -164,12 +120,7 @@ export function ScriptAnalysisPanel({
               title="道具资产"
               icon={Package}
               iconColor="text-yellow-400"
-              targetFactory="道具工厂"
               assets={props}
-              onToggle={onToggleAsset}
-              onConfirmAll={(confirm) => onConfirmAll("prop", confirm)}
-              onTransferToFactory={() => onTransferByType("prop")}
-              isTransferring={isTransferring}
               onUpdateAsset={onUpdateAsset}
             />
           )}
@@ -196,73 +147,30 @@ export function ScriptAnalysisPanel({
   );
 }
 
-/** 资产分区组件 */
+/** 资产分区组件（仅展示 + 编辑） */
 function AssetSection({
   title,
   icon: Icon,
   iconColor,
-  targetFactory,
   assets,
-  onToggle,
-  onConfirmAll,
-  onTransferToFactory,
-  isTransferring,
   onUpdateAsset,
 }: {
   title: string;
   icon: typeof Users;
   iconColor: string;
-  targetFactory: string;
   assets: ExtractedAsset[];
-  onToggle: (id: string) => void;
-  onConfirmAll: (confirm: boolean) => void;
-  onTransferToFactory: () => void;
-  isTransferring: boolean;
   onUpdateAsset: (id: string, patch: Partial<ExtractedAsset>) => void;
 }) {
-  const confirmedCount = assets.filter((a) => a.confirmed).length;
-
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${iconColor}`} />
-          <span className="text-sm font-medium text-white">{title}</span>
-          <span className="text-xs text-[#888]">({confirmedCount}/{assets.length} 已确认)</span>
-          <span className="text-xs text-[#666]">→ {targetFactory}</span>
-        </div>
-        <div className="flex gap-1">
-          <button
-            onClick={() => onConfirmAll(true)}
-            className="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-          >
-            全选
-          </button>
-          <button
-            onClick={() => onConfirmAll(false)}
-            className="px-2 py-0.5 rounded text-xs bg-white/5 text-[#888] hover:bg-white/10"
-          >
-            取消全选
-          </button>
-          {/* 转入对应工厂按钮 */}
-          <button
-            onClick={onTransferToFactory}
-            disabled={isTransferring || confirmedCount === 0}
-            className="px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
-            title={`将已确认的资产转入${targetFactory}`}
-          >
-            转入{targetFactory}
-          </button>
-        </div>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={`h-4 w-4 ${iconColor}`} />
+        <span className="text-sm font-medium text-white">{title}</span>
+        <span className="text-xs text-[#888]">({assets.length})</span>
       </div>
       <div className="space-y-2">
         {assets.map((asset) => (
-          <AssetCard
-            key={asset.id}
-            asset={asset}
-            onToggle={onToggle}
-            onUpdateAsset={onUpdateAsset}
-          />
+          <AssetCard key={asset.id} asset={asset} onUpdateAsset={onUpdateAsset} />
         ))}
       </div>
     </div>
@@ -272,16 +180,13 @@ function AssetSection({
 /** 单个资产卡片，支持内联编辑保存 */
 function AssetCard({
   asset,
-  onToggle,
   onUpdateAsset,
 }: {
   asset: ExtractedAsset;
-  onToggle: (id: string) => void;
   onUpdateAsset: (id: string, patch: Partial<ExtractedAsset>) => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<ExtractedAsset>(asset);
-  const isTransferred = asset.id.startsWith("transferred-");
 
   const startEdit = () => {
     setDraft(asset);
@@ -311,20 +216,7 @@ function AssetCard({
   };
 
   return (
-    <div
-      className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-        asset.confirmed
-          ? "bg-emerald-500/5 border-emerald-500/30"
-          : "bg-white/5 border-white/10"
-      } ${isTransferred ? "opacity-50" : ""}`}
-    >
-      <input
-        type="checkbox"
-        checked={asset.confirmed}
-        onChange={() => onToggle(asset.id)}
-        disabled={isTransferred}
-        className="mt-1 h-4 w-4 rounded accent-emerald-500"
-      />
+    <div className="p-3 rounded-lg border bg-white/5 border-white/10">
       <div className="flex-1 min-w-0">
         {isEditing ? (
           /* 编辑模式 */
@@ -354,40 +246,43 @@ function AssetCard({
             {/* 类型专属属性编辑 */}
             {asset.type === "character" && (
               <div className="flex flex-wrap gap-2">
-                <select
+                <ShadcnSelect
+                  options={[
+                    { value: "", label: "角色类型" },
+                    { value: "protagonist", label: "主角" },
+                    { value: "antagonist", label: "反派" },
+                    { value: "supporting", label: "配角" },
+                    { value: "minor", label: "次要" },
+                  ]}
                   value={draft.role ?? ""}
-                  onChange={(e) => setDraft({ ...draft, role: e.target.value })}
-                  className="h-7 px-1 rounded bg-[#252525] border border-white/10 text-xs text-white"
-                >
-                  <option value="">角色类型</option>
-                  <option value="protagonist">主角</option>
-                  <option value="antagonist">反派</option>
-                  <option value="supporting">配角</option>
-                  <option value="minor">次要</option>
-                </select>
-                <select
+                  onChange={(value) => setDraft({ ...draft, role: value })}
+                  className="h-7 text-xs min-w-[110px]"
+                />
+                <ShadcnSelect
+                  options={[
+                    { value: "", label: "性别" },
+                    { value: "male", label: "男" },
+                    { value: "female", label: "女" },
+                    { value: "other", label: "其他" },
+                  ]}
                   value={draft.gender ?? ""}
-                  onChange={(e) => setDraft({ ...draft, gender: e.target.value })}
-                  className="h-7 px-1 rounded bg-[#252525] border border-white/10 text-xs text-white"
-                >
-                  <option value="">性别</option>
-                  <option value="male">男</option>
-                  <option value="female">女</option>
-                  <option value="other">其他</option>
-                </select>
+                  onChange={(value) => setDraft({ ...draft, gender: value })}
+                  className="h-7 text-xs min-w-[80px]"
+                />
               </div>
             )}
             {asset.type === "scene" && (
               <div className="flex flex-wrap gap-2">
-                <select
+                <ShadcnSelect
+                  options={[
+                    { value: "", label: "场景类型" },
+                    { value: "indoor", label: "室内" },
+                    { value: "outdoor", label: "室外" },
+                  ]}
                   value={draft.sceneType ?? ""}
-                  onChange={(e) => setDraft({ ...draft, sceneType: e.target.value })}
-                  className="h-7 px-1 rounded bg-[#252525] border border-white/10 text-xs text-white"
-                >
-                  <option value="">场景类型</option>
-                  <option value="indoor">室内</option>
-                  <option value="outdoor">室外</option>
-                </select>
+                  onChange={(value) => setDraft({ ...draft, sceneType: value })}
+                  className="h-7 text-xs min-w-[100px]"
+                />
                 <input
                   type="text"
                   value={draft.timeOfDay ?? ""}
@@ -442,19 +337,14 @@ function AssetCard({
           <>
             <div className="flex items-center gap-2">
               <span className="font-medium text-white text-sm">{asset.name}</span>
-              {isTransferred && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">已流转</span>
-              )}
               {/* 编辑按钮 */}
-              {!isTransferred && (
-                <button
-                  onClick={startEdit}
-                  className="ml-1 p-0.5 rounded text-[#888] hover:text-emerald-400 hover:bg-white/5"
-                  title="编辑"
-                >
-                  <Pencil className="h-3 w-3" />
-                </button>
-              )}
+              <button
+                onClick={startEdit}
+                className="ml-1 p-0.5 rounded text-[#888] hover:text-emerald-400 hover:bg-white/5"
+                title="编辑"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
             </div>
             <div className="text-xs text-[#888] mt-1">{asset.description}</div>
             {/* 资产属性 */}

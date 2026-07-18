@@ -1,3 +1,7 @@
+/**
+ * @file my-projects.tsx
+ * @description 我的项目卡片组件，展示用户参与的项目列表和进度
+ */
 "use client";
 
 import { memo } from "react";
@@ -46,7 +50,13 @@ const getAIStatusIcon = (status: ProjectProgress["aiStatus"]) => {
   }
 };
 
-/** 我的项目卡片组件 */
+/**
+ * MyProjects - 我的项目卡片组件
+ * @param {MyProjectsProps} props - 组件属性
+ * @param {ProjectProgress[]} props.projects - 项目列表
+ * @param {Function} props.onOpenProject - 打开项目回调
+ * @returns {JSX.Element} 渲染的项目列表界面
+ */
 export const MyProjects = memo(function MyProjects({ projects, onOpenProject }: MyProjectsProps) {
   return (
     <div className="mb-6 rounded-xl border border-white/10 bg-[#1a1a1a]">

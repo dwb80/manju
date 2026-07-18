@@ -21,8 +21,9 @@
  */
 
 import { useState, useEffect } from "react";
-import { Database, DollarSign, Zap, TrendingUp } from "lucide-react";
+import { Database, DollarSign, Zap, TrendingUp, BarChart3, Factory, ShieldCheck } from "lucide-react";
 import { DataCenter } from "@/components/data/data-center";
+import { ProjectOverviewSection } from "@/components/data/project-overview-section";
 import type { AICostData } from "@/components/data/ai-cost-stats";
 import type { ProductionEfficiencyData } from "@/components/data/production-efficiency";
 import {
@@ -31,6 +32,7 @@ import {
   Alert,
 } from "@/components/layout";
 import { createLogger } from "@/lib/logger";
+import { useProjectStore } from "@/lib/stores/project-store";
 
 // 模块级 logger
 const log = createLogger('data-page')
@@ -350,6 +352,11 @@ export default function DataCenterPage() {
           onViewTeamPerformance={handleViewTeamPerformance}
           onTimeRangeChange={handleTimeRangeChange}
         />
+      </section>
+
+      {/* spec 4.3 项目维度数据中心（成本/产能/质量 3 子 Tab） */}
+      <section className="px-6 py-2">
+        <ProjectOverviewSection />
       </section>
 
       <footer className="border-t border-white/10 px-6 py-4 text-xs text-[#666]">

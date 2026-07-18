@@ -19,7 +19,12 @@
  */
 import type { AssetUsage, UsageReferenceItem } from "@/services/character.service";
 
-/** 提取 `AssetUsage` 中的所有引用项，按出现顺序合并。 */
+/**
+ * flattenUsageReferences - 扁平化资产引用数据
+ * @description 将后端 AssetUsage 结构扁平化为工厂卡片需要的格式，提取所有引用项并合并集数信息
+ * @param {AssetUsage | null | undefined} usage - 后端返回的资产引用结构
+ * @returns {{count: number; references: {id: string; title: string}[]; episodes: number[]}} 扁平化后的引用数据
+ */
 export function flattenUsageReferences(
   usage: AssetUsage | null | undefined,
 ): {

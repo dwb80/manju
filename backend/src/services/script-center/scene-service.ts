@@ -29,6 +29,12 @@ export async function getScriptScene(ctx: AppContext, sceneId: string): Promise<
   return ctx.scriptScenes.findById(sceneId);
 }
 
+/**
+ * createScriptScene - 创建场景
+ * @param {AppContext} ctx - 应用上下文
+ * @param {ScriptSceneInput} input - 场景输入数据
+ * @returns {Promise<ScriptScene>} 返回创建的场景记录
+ */
 export async function createScriptScene(ctx: AppContext, input: ScriptSceneInput): Promise<ScriptScene> {
   // 1) 必填校验
   const projectId = input.project_id ?? "";
@@ -70,6 +76,13 @@ export async function createScriptScene(ctx: AppContext, input: ScriptSceneInput
   return scene;
 }
 
+/**
+ * updateScriptScene - 更新场景
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} sceneId - 场景ID
+ * @param {ScriptSceneInput} input - 更新数据
+ * @returns {Promise<ScriptScene>} 返回更新后的场景记录
+ */
 export async function updateScriptScene(
   ctx: AppContext,
   sceneId: string,
@@ -109,6 +122,12 @@ export async function updateScriptScene(
   return { ...existing, ...patch } as ScriptScene;
 }
 
+/**
+ * deleteScriptScene - 删除场景
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} sceneId - 场景ID
+ * @returns {Promise<void>}
+ */
 export async function deleteScriptScene(ctx: AppContext, sceneId: string): Promise<void> {
   // 防御性：避免硬删被剧本仍在引用的场景（级联由调用方在脚本硬删时执行）
   const existing = await ctx.scriptScenes.findById(sceneId);

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * @file character-image-generator/ImageGeneratorParams.tsx
+ * @description 角色图片生成器参数配置面板组件
+ */
+
 import { useRef } from "react";
 import {
   Loader2,
@@ -13,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tip } from "@/components/ui/tip";
 import { Input } from "@/components/ui/input";
 import {
   aspectRatioOptions,
@@ -152,7 +158,9 @@ export function ImageGeneratorParams({
             {scriptInfo.name && (
               <div className="flex justify-between gap-2">
                 <span className="text-gray-400 flex-shrink-0">角色名</span>
-                <span className="text-white truncate" title={scriptInfo.name}>{scriptInfo.name}</span>
+                <Tip label={scriptInfo.name} side="top">
+                  <span className="text-white truncate">{scriptInfo.name}</span>
+                </Tip>
               </div>
             )}
             {scriptInfo.role && (
@@ -233,9 +241,11 @@ export function ImageGeneratorParams({
             <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-gray-200">
               <span className="flex items-center gap-1.5">
                 模型
-                <span className="cursor-help text-gray-500 hover:text-gray-300" title={MODEL_OPTIONS[0].description}>
-                  <Info className="h-3.5 w-3.5" />
-                </span>
+                <Tip label={MODEL_OPTIONS[0].description} side="top" className="max-w-xs">
+                  <span className="cursor-help text-gray-500 hover:text-gray-300">
+                    <Info className="h-3.5 w-3.5" />
+                  </span>
+                </Tip>
               </span>
             </label>
             {MODEL_OPTIONS.length === 1 ? (

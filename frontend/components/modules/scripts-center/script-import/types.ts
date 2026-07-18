@@ -33,9 +33,12 @@ export interface PreviewCharacter {
   description?: string;
   role?: "protagonist" | "antagonist" | "supporting" | "minor";
   gender?: "male" | "female" | "other";
+  age?: string;
   appearance?: string;
   personality?: string;
   traits?: string[];
+  /** AI 原始返回的完整数据（导入时持久化到剧本文档） */
+  aiRawData?: Record<string, any>;
   /** 命中现有角色资产时的 id（直接复用） */
   matchedCharacterId?: string;
   /** 命中现有角色资产时的描述（用于展示） */
@@ -58,6 +61,8 @@ export interface PreviewSceneAsset {
   description?: string;
   visual_keywords?: string[];
   first_appearance?: string;
+  /** AI 原始返回的完整数据（导入时持久化到剧本文档） */
+  aiRawData?: Record<string, any>;
   /** 匹配到工厂场景时的 id */
   matchedSceneId?: string;
   matchedImageUrl?: string;
@@ -74,6 +79,8 @@ export interface PreviewPropAsset {
   size?: string;
   owner?: string;
   first_appearance?: string;
+  /** AI 原始返回的完整数据（导入时持久化到剧本文档） */
+  aiRawData?: Record<string, any>;
   /** 匹配到工厂道具时的 id */
   matchedPropId?: string;
   matchedImageUrl?: string;
@@ -92,8 +99,10 @@ export interface PreviewResult {
   sceneAssets: PreviewSceneAsset[];
   /** AI 提取的道具资产 */
   propAssets: PreviewPropAsset[];
-  /** 数据来源：ai=大模型 / local=本地正则 */
+  /** 数据来源：ai=大模型 / local=本地正则（已废弃，不再使用） */
   source: "ai" | "local";
   /** AI 输出警告 */
   warnings?: string[];
+  /** 完整的 AI 原始响应（导入时整体持久化到剧本文档，不丢弃任何字段） */
+  aiRawResponse?: Record<string, any>;
 }

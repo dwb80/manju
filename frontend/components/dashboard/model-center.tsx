@@ -1,8 +1,13 @@
+/**
+ * @file model-center.tsx
+ * @description 模型管理中心组件，用于管理和配置AI模型（聊天、图片、视频模型）
+ */
 "use client";
 
 import { memo, useState } from "react";
 import { MessageCircle, Image as ImageIcon, Video, Star, RefreshCw, Plus, Pencil, Trash2, Power, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tip } from "@/components/ui/tip";
 
 export type ModelType = "chat" | "image" | "video";
 
@@ -12,6 +17,8 @@ export interface ModelApiConfig {
   method: "POST" | "GET";
   headers?: Record<string, string>;
   statusEndpoint?: string;
+  /** 代理服务器URL（如 http://127.0.0.1:7897） */
+  proxyURL?: string;
 }
 
 /** 模型能力标签 */
@@ -96,6 +103,20 @@ interface ModelCenterProps {
   onViewDetail?: (model: ModelInfo) => void;
 }
 
+/**
+ * ModelCenter - 模型管理中心组件
+ * @param {ModelCenterProps} props - 组件属性
+ * @param {ModelInfo[]} props.models - 模型列表数据
+ * @param {boolean} props.isLoading - 是否正在加载
+ * @param {Function} props.onRefresh - 刷新回调
+ * @param {Function} props.onCreate - 创建新模型回调
+ * @param {Function} props.onEdit - 编辑模型回调
+ * @param {Function} props.onDelete - 删除模型回调
+ * @param {Function} props.onSetDefault - 设为默认模型回调
+ * @param {Function} props.onToggleEnabled - 切换启用状态回调
+ * @param {Function} props.onViewDetail - 查看详情回调
+ * @returns {JSX.Element} 渲染的模型管理界面
+ */
 export const ModelCenter = memo(function ModelCenter({
   models,
   isLoading = false,
@@ -233,11 +254,10 @@ export const ModelCenter = memo(function ModelCenter({
               <button
                 key={type}
                 onClick={() => setActiveTab(type)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-all ${
-                  isActive
-                    ? "bg-emerald-500/20 text-emerald-400"
-                    : "text-[#888] hover:bg-white/5 hover:text-white"
-                }`}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-all ${isActive
+                  ? "bg-emerald-500/20 text-emerald-400"
+                  : "text-[#888] hover:bg-white/5 hover:text-white"
+                  }`}
               >
                 <Icon className="h-4 w-4" />
                 {getTypeLabel(type)}
@@ -322,22 +342,23 @@ export const ModelCenter = memo(function ModelCenter({
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={() => onToggleEnabled(model.id, !model.is_enabled)}
-                      className={`rounded p-2 hover:bg-white/10 ${
-                        model.is_enabled ? "text-emerald-400 hover:text-emerald-300" : "text-[#666] hover:text-white"
-                      }`}
-                      title={model.is_enabled ? "禁用" : "启用"}
-                    >
-                      <Power className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => onDelete(model)}
-                      className="rounded p-2 text-[#888] hover:bg-red-500/10 hover:text-red-400"
-                      title="删除"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <Tip label={model.is_enabled ? "禁用" : "启用"}>
+                      <button
+                        onClick={() => onToggleEnabled(model.id, !model.is_enabled)}
+                        className={`rounded p-2 hover:bg-white/10 ${model.is_enabled ? "text-emerald-400 hover:text-emerald-300" : "text-[#666] hover:text-white"
+                          }`}
+                      >
+                        <Power className="h-4 w-4" />
+                      </button>
+                    </Tip>
+                    <Tip label="删除">
+                      <button
+                        onClick={() => onDelete(model)}
+                        className="rounded p-2 text-[#888] hover:bg-red-500/10 hover:text-red-400"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </Tip>
                   </div>
                 </div>
 

@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file QuickFix.tsx
+ * @description 一键修复建议组件，检测剧本中的连续性、语法、风格等问题并提供修复建议
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import {
   Wrench,
@@ -33,6 +38,14 @@ interface QuickFixProps {
   onBatchFix?: (fixes: FixIssue[]) => void
 }
 
+/**
+ * QuickFix - 一键修复建议组件
+ * @param {QuickFixProps} props - 组件属性
+ * @param {string} props.scriptId - 剧本ID
+ * @param {Function} [props.onApplyFix] - 应用单个修复回调
+ * @param {Function} [props.onBatchFix] - 批量修复回调
+ * @returns {JSX.Element} 渲染的问题修复界面
+ */
 export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
   const [issues, setIssues] = useState<FixIssue[]>([])
   const [loading, setLoading] = useState(true)

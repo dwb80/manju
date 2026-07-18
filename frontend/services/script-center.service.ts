@@ -1,4 +1,7 @@
-/** 剧本中心服务 */
+/**
+ * @file script-center.service.ts
+ * @description 剧本中心服务模块，提供剧本文档、剧集、场景的完整 CRUD 及 AI 分析功能
+ */
 
 const API_BASE = '/api'
 
@@ -43,6 +46,125 @@ async function extractApiError(response: Response, fallback: string): Promise<st
   return backendMessage
 }
 
+// 分析提取的资产类型
+// 字段命名与工厂表（Character / Scene / Prop）完全对齐：
+//   - Character: tags、identity / face / hair / body / temperament / costume_* / accessories
+//   - Scene: type（替代 scene_type，兼容回退）、category / indoor_outdoor / location / architecture / ...
+//   - Prop: appearance / size / importance_level / owner / shape / texture / ...
+// 字段缺失或工厂独占字段（image / usage_count / version / deleted_at / project_id+script_id 工厂专用列）
+// 由前端按需补默认值。
+interface ScriptAnalyzedCharacter {
+  id: string
+  document_id: string
+  project_id: string
+  name: string
+  role: string
+  gender: string
+  age: string
+  description: string
+  appearance: string
+  personality: string
+  traits: string[]
+  /** 工厂标签（与 factory Character.tags 对齐；存量数据可能为空，故 optional） */
+  tags?: string[]
+  factory_character_id?: string
+  status: 'extracted' | 'confirmed' | 'transferred'
+  created_at: string
+  updated_at: string
+
+  // === AI 剧本分析扩展字段（与 Character 表对齐） ===
+  identity?: string
+  face?: string
+  hair?: string
+  body?: string
+  temperament?: string
+  costume_name?: string
+  costume_description?: string
+  costume_color?: string
+  costume_material?: string
+  costume_style?: string
+  accessories?: string[]
+  emotion_states?: string
+  action_assets?: string
+  relationships?: string
+  first_appearance?: string
+  dialogue_count?: number
+  generation_prompt?: string
+  confidence?: string
+}
+
+interface ScriptAnalyzedScene {
+  id: string
+  document_id: string
+  project_id: string
+  name: string
+  /** 场景类型：indoor / outdoor / virtual（与 factory Scene.type 字段名一致；存量数据可能为空，故 optional） */
+  type?: string
+  /** 兼容旧字段：保留以读取历史数据；新写入请用 type */
+  scene_type?: string
+  description: string
+  lighting: string
+  time_of_day: string
+  weather: string
+  /** 工厂标签（与 factory Scene.tags 对齐；存量数据可能为空，故 optional） */
+  tags?: string[]
+  factory_scene_id?: string
+  status: 'extracted' | 'confirmed' | 'transferred'
+  created_at: string
+  updated_at: string
+
+  // === AI 剧本分析扩展字段（与 Scene 表对齐） ===
+  category?: string
+  indoor_outdoor?: string
+  location?: string
+  architecture?: string
+  terrain?: string
+  plants?: string
+  objects?: string
+  period?: string
+  tone?: string
+  visual_style?: string
+  atmosphere_emotion?: string
+  suitable_shots?: string
+  reusable_elements?: string
+  generation_prompt?: string
+  first_appearance?: string
+  confidence?: string
+}
+
+interface ScriptAnalyzedProp {
+  id: string
+  document_id: string
+  project_id: string
+  name: string
+  category: string
+  description: string
+  /** 外观造型（与 factory Prop.appearance 对齐；存量数据可能为空，故 optional） */
+  appearance?: string
+  material: string
+  /** 尺寸（与 factory Prop.size 对齐；存量数据可能为空，故 optional） */
+  size?: string
+  color: string
+  /** 工厂标签（与 factory Prop.tags 对齐；存量数据可能为空，故 optional） */
+  tags?: string[]
+  factory_prop_id?: string
+  status: 'extracted' | 'confirmed' | 'transferred'
+  created_at: string
+  updated_at: string
+
+  // === AI 剧本分析扩展字段（与 Prop 表对齐） ===
+  importance_level?: string
+  owner?: string
+  shape?: string
+  texture?: string
+  story_function?: string
+  visual_features?: string
+  camera_usage?: string
+  generation_prompt?: string
+  first_appearance?: string
+  confidence?: string
+}
+
 // 类型定义
 interface ScriptDocument {
   id: string
@@ -54,6 +176,8 @@ interface ScriptDocument {
   editor_json: any
   words?: number
   chapters?: number
+  /** 完整 AI 分析数据（导入时持久化，导入后可在剧本编辑器中查看） */
+  ai_raw_data?: string
   created_at: string
   updated_at: string
   version: number
@@ -149,26 +273,37 @@ export const scriptCenterService = {
     return response.json()
   },
 
-  /** 获取剧本列表 */
-  getDocuments: async (): Promise<ScriptDocument[]> => {
-    const response = await fetch(`${API_BASE}/script-documents`)
+  /** 获取剧本列表（支持按项目过滤） */
+  getDocuments: async (projectId?: string): Promise<ScriptDocument[]> => {
+    const url = projectId
+      ? `${API_BASE}/script-documents?projectId=${encodeURIComponent(projectId)}`
+      : `${API_BASE}/script-documents`;
+    const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('获取剧本列表失败')
+      throw new Error('获取剧本列表失败');
     }
-    return response.json()
+    // 方案 A 修复：后端用 sendJson 统一包装为 { code, message, data }，
+    // 这里必须取 .data，否则调用方拿到的就是包装对象，scripts.filter 会报错。
+    const payload = await response.json();
+    return (payload?.data ?? payload) as ScriptDocument[];
   },
 
   /** 创建剧本文档 */
   createDocument: async (data: Partial<ScriptDocument>): Promise<ScriptDocument> => {
+    const body = { ...data }
+    if (body.editor_json && typeof body.editor_json !== 'string') {
+      body.editor_json = JSON.stringify(body.editor_json) as any
+    }
     const response = await fetch(`${API_BASE}/script-documents`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify(body),
     })
     if (!response.ok) {
       throw new Error('创建剧本文档失败')
     }
-    return response.json()
+    const payload = await response.json()
+    return (payload?.data ?? payload) as ScriptDocument
   },
 
   /** 更新剧本文档 */
@@ -196,6 +331,41 @@ export const scriptCenterService = {
     if (!response.ok) {
       throw new Error('删除剧本文档失败')
     }
+  },
+
+  /** 获取回收站列表（已软删剧本文档） */
+  listDeletedDocuments: async (projectId?: string): Promise<ScriptDocument[]> => {
+    const url = projectId
+      ? `${API_BASE}/script-documents?projectId=${encodeURIComponent(projectId)}&deleted=1`
+      : `${API_BASE}/script-documents?deleted=1`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('获取回收站列表失败');
+    }
+    const payload = await response.json();
+    return (payload?.data ?? payload) as ScriptDocument[];
+  },
+
+  /** 恢复已软删的剧本文档 */
+  restoreDocument: async (id: string): Promise<ScriptDocument> => {
+    const response = await fetch(`${API_BASE}/script-documents/${id}/restore`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      throw new Error('恢复剧本文档失败');
+    }
+    return response.json();
+  },
+
+  /** 彻底删除剧本文档（需软删≥30天） */
+  purgeDocument: async (id: string): Promise<{ document_id: string; deleted_at: string; purged_at: string; grace_days: number; cascade: Record<string, number> }> => {
+    const response = await fetch(`${API_BASE}/script-documents/${id}/purge`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('彻底删除剧本文档失败');
+    }
+    return response.json();
   },
 
   // ========== 剧集管理 ==========
@@ -412,12 +582,18 @@ export const scriptCenterService = {
    *
    * @param content - 待分析的剧本文本
    * @param options.signal - 可选 AbortSignal，用于用户主动取消
+   * @param options.timeoutMs - 前端 AbortController 超时（毫秒），同时透传到后端覆盖 AI_TIMEOUTS.analyzeScript
+   *   默认 180_000（180s）。后端默认也是 180s，环境变量 AGNES_TIMEOUT_ANALYZE_SCRIPT_MS 可覆盖。
+   * @param options.model - 可选大模型 id（不传则后端走 DEFAULT_MODEL = "agnes-2.0-flash"）。
+   *   返回值里 `model` 字段为后端回填的"实际使用模型"，与请求透传的 model 一致（或为默认值）。
    */
   analyzeScript: async (
     content: string,
-    options: { signal?: AbortSignal } = {},
+    options: { signal?: AbortSignal; timeoutMs?: number; model?: string } = {},
   ): Promise<{
     source: 'ai'
+    /** 实际使用的大模型 id（如 "agnes-2.0-flash"），UI 用这个展示"使用 xxx 解析成功" */
+    model: string
     characters: Array<{
       name: string
       description: string
@@ -433,9 +609,11 @@ export const scriptCenterService = {
     episodes: Array<{ episode_no: number; title: string; synopsis: string }>
     warnings?: string[]
   }> => {
-    // 外部 signal 与内部 50s 超时合并：任一触发即中止
+    // 默认 180s；后端会再做一次"用 timeoutMs 还是 AI_TIMEOUTS.analyzeScript"的解析
+    const timeoutMs = options.timeoutMs ?? 180_000;
+    // 外部 signal 与内部 timeoutMs 合并：任一触发即中止
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 50_000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const onExternalAbort = () => controller.abort();
     if (options.signal) {
       if (options.signal.aborted) {
@@ -449,7 +627,13 @@ export const scriptCenterService = {
       resp = await fetch(`${API_BASE}/ai/script-analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, format: 'txt' }),
+        // options.model 透传给后端：非空字符串才传；空/undefined 让后端走 DEFAULT_MODEL
+        body: JSON.stringify({
+          content,
+          format: 'txt',
+          timeoutMs,
+          ...(typeof options.model === 'string' && options.model.trim() ? { model: options.model.trim() } : {}),
+        }),
         signal: controller.signal,
       });
     } finally {
@@ -478,20 +662,54 @@ export const scriptCenterService = {
       throw new Error('AI 分析返回数据为空');
     }
 
-    // 归一化角色字段：后端 AI 已返回 role/gender/appearance/personality/traits
-    const characters = (data.characters ?? []).map((c: any) => ({
-      name: c.name || '',
-      description: c.description || '',
-      role: c.role,
-      gender: c.gender,
-      age: c.age,
-      appearance: c.appearance,
-      personality: c.personality,
-      traits: Array.isArray(c.traits) ? c.traits : [],
-    }))
+    // 归一化角色字段：后端 AI 返回的是嵌套结构（basic / appearance / costume ...），
+    // 但下游 useScriptAnalyze.apply 和 CharacterDetailModal.analyzePreviewCharacter
+    // 都按"扁平结构"读 c.role / c.gender / c.age / c.appearance / c.traits，
+    // 这里必须把嵌套字段正确摊平，否则会出现：
+    //   1) 年龄识别了 28 但写库成 0（c.age 取不到 → 落空字符串/0）
+    //   2) 性别 / 角色定位都是 undefined
+    //   3) 外貌 / 性格 字段被传成 [object Object]
+    const characters = (data.characters ?? []).map((c: any) => {
+      // 年龄：AI 原始是字符串 ("28" / "少年" / "中年")，尝试解析为数字。
+      // 解析失败（"少年" 等描述性词）→ 留 undefined，让下游自己决定
+      const ageRaw = c?.basic?.age
+      const ageNum =
+        ageRaw !== undefined && ageRaw !== null && ageRaw !== ''
+          ? typeof ageRaw === 'number'
+            ? ageRaw
+            : parseInt(String(ageRaw), 10) || undefined
+          : undefined
+
+      // 外貌：AI 返回 {face, hair, body, temperament} 对象，需要拼成可读字符串
+      const ap = c?.appearance
+      const appearanceStr =
+        ap && typeof ap === 'object'
+          ? [ap.face, ap.hair, ap.body, ap.temperament].filter(Boolean).join('；')
+          : typeof ap === 'string'
+            ? ap
+            : ''
+
+      // 性格：AI 用 personality_keywords（字符串数组），前端扁平模型字段是 personality
+      const personalityKeywords = Array.isArray(c?.personality_keywords) ? c.personality_keywords : []
+      const personalityStr = personalityKeywords.join('、')
+
+      return {
+        name: c?.name || '',
+        // 描述：AI 没有顶层 description，用 generation_prompt（中文摘要）兜底
+        description: c?.description || c?.generation_prompt || '',
+        role: c?.basic?.role_type,
+        gender: c?.basic?.gender,
+        age: ageNum,
+        appearance: appearanceStr,
+        personality: personalityStr,
+        traits: personalityKeywords,
+      }
+    })
 
     return {
       source: 'ai',
+      // 后端会回填"实际使用的模型 id"；若后端未回填（极旧版本），回落为 options.model，都没有则空串
+      model: String(data.model || options.model || '').trim(),
       characters,
       scenes: data.scenes ?? data.sceneAssets ?? [],
       props: data.props ?? data.propAssets ?? [],
@@ -578,6 +796,122 @@ export const scriptCenterService = {
       throw new Error('导出分镜失败')
     }
     return response.json()
+  },
+
+  // ========== 分析提取资产 ==========
+  /** 获取剧本分析提取的资产 */
+  getAnalyzedAssets: async (documentId: string): Promise<{
+    characters: ScriptAnalyzedCharacter[]
+    scenes: ScriptAnalyzedScene[]
+    props: ScriptAnalyzedProp[]
+  }> => {
+    const response = await fetch(`${API_BASE}/script-documents/${documentId}/analyzed-assets`)
+    if (!response.ok) {
+      throw new Error('获取分析资产失败')
+    }
+    // 后端 sendJson 统一包成 { code, message, data }，必须解包 data
+    // 否则 `assets.characters` 是 undefined，map 会抛错被外层 catch 吞掉，
+    // 页面始终显示 "提取 0/0/0" 的空状态，无法复用已分析结果。
+    const payload = await response.json()
+    return (payload?.data ?? payload) as {
+      characters: ScriptAnalyzedCharacter[]
+      scenes: ScriptAnalyzedScene[]
+      props: ScriptAnalyzedProp[]
+    }
+  },
+
+  /** 保存剧本分析提取的资产（全量替换） */
+  saveAnalyzedAssets: async (
+    documentId: string,
+    projectId: string,
+    assets: {
+      characters: Omit<ScriptAnalyzedCharacter, 'id' | 'document_id' | 'project_id' | 'created_at' | 'updated_at'>[]
+      scenes: Omit<ScriptAnalyzedScene, 'id' | 'document_id' | 'project_id' | 'created_at' | 'updated_at'>[]
+      props: Omit<ScriptAnalyzedProp, 'id' | 'document_id' | 'project_id' | 'created_at' | 'updated_at'>[]
+    }
+  ): Promise<{
+    characters: ScriptAnalyzedCharacter[]
+    scenes: ScriptAnalyzedScene[]
+    props: ScriptAnalyzedProp[]
+  }> => {
+    const response = await fetch(`${API_BASE}/script-documents/${documentId}/analyzed-assets`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_id: projectId, ...assets }),
+    })
+    if (!response.ok) {
+      throw new Error('保存分析资产失败')
+    }
+    return response.json()
+  },
+
+  /** 更新分析角色状态（如流转到工厂后） */
+  updateAnalyzedCharacter: async (id: string, data: Partial<ScriptAnalyzedCharacter>): Promise<ScriptAnalyzedCharacter> => {
+    const response = await fetch(`${API_BASE}/analyzed-characters/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      throw new Error('更新分析角色失败')
+    }
+    return response.json()
+  },
+
+  /** 更新分析场景状态 */
+  updateAnalyzedScene: async (id: string, data: Partial<ScriptAnalyzedScene>): Promise<ScriptAnalyzedScene> => {
+    const response = await fetch(`${API_BASE}/analyzed-scenes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      throw new Error('更新分析场景失败')
+    }
+    return response.json()
+  },
+
+  /** 更新分析道具状态 */
+  updateAnalyzedProp: async (id: string, data: Partial<ScriptAnalyzedProp>): Promise<ScriptAnalyzedProp> => {
+    const response = await fetch(`${API_BASE}/analyzed-props/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      throw new Error('更新分析道具失败')
+    }
+    return response.json()
+  },
+
+  /** 删除分析角色（硬删：仅从当前剧本的视图移除，不影响工厂资源） */
+  deleteAnalyzedCharacter: async (id: string): Promise<void> => {
+    const response = await fetch(`${API_BASE}/analyzed-characters/${id}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error('删除分析角色失败')
+    }
+  },
+
+  /** 删除分析场景（硬删：仅从当前剧本的视图移除，不影响工厂资源） */
+  deleteAnalyzedScene: async (id: string): Promise<void> => {
+    const response = await fetch(`${API_BASE}/analyzed-scenes/${id}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error('删除分析场景失败')
+    }
+  },
+
+  /** 删除分析道具（硬删：仅从当前剧本的视图移除，不影响工厂资源） */
+  deleteAnalyzedProp: async (id: string): Promise<void> => {
+    const response = await fetch(`${API_BASE}/analyzed-props/${id}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error('删除分析道具失败')
+    }
   },
 
   // ========== AI评分与分析 ==========
@@ -781,4 +1115,7 @@ export type {
   AIDialogueGenerationRequest,
   AIStoryboardSplitRequest,
   ScriptComment,
+  ScriptAnalyzedCharacter,
+  ScriptAnalyzedScene,
+  ScriptAnalyzedProp,
 }

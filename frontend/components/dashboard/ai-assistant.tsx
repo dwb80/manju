@@ -1,3 +1,7 @@
+/**
+ * @file ai-assistant.tsx
+ * @description AI导演助手组件，提供快捷操作入口的浮动助手面板
+ */
 "use client";
 
 import { memo, useState } from "react";
@@ -13,6 +17,17 @@ interface AIAssistantProps {
   onViewFailedTasks?: () => void;
 }
 
+/**
+ * AIAssistant - AI导演助手组件
+ * @param {AIAssistantProps} props - 组件属性
+ * @param {Function} props.onCreateProject - 创建项目回调
+ * @param {Function} props.onWriteScript - 写剧本回调
+ * @param {Function} props.onGenerateStoryboard - 生成分镜回调
+ * @param {Function} props.onGenerateImage - 生成图片回调
+ * @param {Function} props.onGenerateVideo - 生成视频回调
+ * @param {Function} props.onViewFailedTasks - 查看失败任务回调
+ * @returns {JSX.Element} 渲染的AI助手浮动面板
+ */
 export const AIAssistant = memo(function AIAssistant({
   onCreateProject,
   onWriteScript,

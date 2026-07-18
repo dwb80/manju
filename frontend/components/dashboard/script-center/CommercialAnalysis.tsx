@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file CommercialAnalysis.tsx
+ * @description 商业分析组件，提供目标受众分析、市场竞争分析、收益预估、IP价值评估等商业数据
+ */
+
 import { useState, useEffect } from 'react'
 import {
   TrendingUp,
@@ -82,6 +87,12 @@ interface CommercialAnalysisProps {
   scriptId: string
 }
 
+/**
+ * CommercialAnalysis - 商业分析组件
+ * @param {CommercialAnalysisProps} props - 组件属性
+ * @param {string} props.scriptId - 剧本ID
+ * @returns {JSX.Element} 渲染的商业分析界面
+ */
 export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
   const [analysis, setAnalysis] = useState<CommercialAnalysisData | null>(null)
   const [loading, setLoading] = useState(true)

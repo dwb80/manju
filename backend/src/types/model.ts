@@ -1,4 +1,14 @@
-/** 模型类型：聊天、图片生成、视频生成 */
+/**
+ * @file model.ts
+ * @description AI模型配置相关类型定义，包括模型配置、能力、参数约束、价格、配额等
+ */
+
+/**
+ * 模型类型
+ * @property chat - 聊天模型
+ * @property image - 图片生成模型
+ * @property video - 视频生成模型
+ */
 export type ModelType = "chat" | "image" | "video";
 
 /** 模型API配置 */
@@ -11,6 +21,8 @@ export interface ModelApiConfig {
   headers?: Record<string, string>;
   /** 状态查询endpoint（视频模型异步生成） */
   statusEndpoint?: string;
+  /** 代理服务器URL（如 http://127.0.0.1:7897） */
+  proxyURL?: string;
 }
 
 /** 模型能力标签 */

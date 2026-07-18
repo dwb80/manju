@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * @file character-image-generator/ImageGeneratorPreview.tsx
+ * @description 角色图片生成器预览区域组件，展示生成结果和候选图片
+ */
+
 import { useCallback } from "react";
 import {
   Loader2,
@@ -31,6 +36,18 @@ export interface ImageGeneratorPreviewProps {
   onOpenOriginal: (url: string) => void;
 }
 
+/**
+ * ImageGeneratorPreview - 图片生成器预览区域
+ * @param {ImageGeneratorPreviewProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的 React 元素
+ * 
+ * 功能：
+ * - 显示生成中状态和进度
+ * - 展示候选图片网格（支持单图和多图）
+ * - 支持四宫格图片的分块预览
+ * - 设为角色资产操作
+ * - 查看原图功能
+ */
 export function ImageGeneratorPreview({
   isGenerating,
   isImg2Img,

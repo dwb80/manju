@@ -1,3 +1,7 @@
+/**
+ * @file OutlineView.tsx
+ * @description 大纲视图组件，展示剧本的剧集、场景、角色树形结构，支持拖拽排序
+ */
 'use client'
 
 import { useState, useCallback } from 'react'
@@ -34,6 +38,18 @@ interface OutlineViewProps {
   onBackToEdit?: () => void
 }
 
+/**
+ * OutlineView - 大纲视图组件
+ * @param {OutlineViewProps} props - 组件属性
+ * @param {OutlineNode[]} props.nodes - 大纲节点列表
+ * @param {Function} props.onNodeClick - 节点点击回调
+ * @param {Function} props.onNodeReorder - 节点排序回调
+ * @param {Function} props.onAddNode - 添加节点回调
+ * @param {Function} props.onNodeDelete - 删除节点回调
+ * @param {Function} props.onNodeRename - 重命名回调
+ * @param {Function} props.onBackToEdit - 返回编辑模式回调
+ * @returns {JSX.Element} 渲染的大纲视图界面
+ */
 export function OutlineView({
   nodes,
   onNodeClick,
@@ -114,9 +130,8 @@ export function OutlineView({
     return (
       <div key={node.id} className="outline-node">
         <div
-          className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-            dropTarget === node.id ? 'bg-emerald-500/20' : 'hover:bg-white/5'
-          }`}
+          className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${dropTarget === node.id ? 'bg-emerald-500/20' : 'hover:bg-white/5'
+            }`}
           style={{ paddingLeft: `${depth * 16 + 8}px` }}
           onClick={() => onNodeClick(node)}
           draggable

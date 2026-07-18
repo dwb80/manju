@@ -50,6 +50,10 @@ const helpCategories = [
   },
 ];
 
+/**
+ * HelpCenter - 帮助中心组件
+ * @returns {JSX.Element} 渲染的帮助中心元素
+ */
 export function HelpCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);

@@ -1,3 +1,8 @@
+/**
+ * @file project-overview.tsx
+ * @description 项目概览组件，为首次访问用户提供清晰的项目入口和工作流指引
+ */
+
 "use client";
 
 import { FileText, Film, FolderOpen, Image, Sparkles, Video } from "lucide-react";
@@ -15,27 +20,9 @@ type ProjectOverviewProps = {
 };
 
 /**
- * 项目概览组件：为首次访问用户提供清晰的项目入口和工作流指引。
- *
- * 功能：
- * - 显示欢迎区域和快捷操作面板
- * - 展示工作流程入口（剧本→分镜→资产→剪辑→交付）
- * - 显示置顶项目和最近项目列表
- *
- * @param projects - 项目列表
- * @param onOpenProject - 打开项目回调函数
- * @param onCreateConversation - 创建会话回调函数
- * @param onOpenChatMode - 打开聊天模式回调函数
- *
- * @example
- * ```tsx
- * <ProjectOverview
- *   projects={projects}
- *   onOpenProject={(id) => openProject(id)}
- *   onCreateConversation={() => createConversation()}
- *   onOpenChatMode={() => setMode("chat")}
- * />
- * ```
+ * ProjectOverview - 项目概览组件
+ * @param {ProjectOverviewProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的项目概览元素
  */
 export function ProjectOverview({ projects, onOpenProject, onCreateConversation, onOpenChatMode }: ProjectOverviewProps) {
   // 获取置顶项目和最近项目（按更新时间排序）
@@ -183,9 +170,8 @@ function WorkflowStage({ number, label, icon, color = "default" }: { number: num
   return (
     <div className="flex flex-col items-center gap-2">
       <div
-        className={`flex h-12 w-12 items-center justify-center rounded-xl border ${
-          color === "emerald" ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-white/10 bg-[#2a2a2a] text-[#a0a0a0]"
-        }`}
+        className={`flex h-12 w-12 items-center justify-center rounded-xl border ${color === "emerald" ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-white/10 bg-[#2a2a2a] text-[#a0a0a0]"
+          }`}
       >
         {icon || <span className="text-sm font-semibold">{number}</span>}
       </div>

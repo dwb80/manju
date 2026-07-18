@@ -1,3 +1,8 @@
+/**
+ * @file version-history-dialog.tsx
+ * @description 资产版本历史弹窗组件，适用于角色/场景/道具三个工厂共用
+ */
+
 "use client";
 
 /**
@@ -19,6 +24,13 @@
 import { useEffect, useState } from "react";
 import { History, Eye, RotateCcw, X, Clock, Tag, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { toast } from "@/components/common/toast";
 import { listVersions, restoreVersion } from "@/services/module.service";
@@ -75,40 +87,38 @@ function SnapshotViewer({
   if (!version) return null;
   const snapshot = parseSnapshot(version.data);
   return (
-    <div
-      className="fixed inset-0 z-[110] grid place-items-center bg-black/70 px-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-label="版本快照详情"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-3xl max-h-[80vh] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-          <div className="flex items-center gap-2 text-white">
-            <FileText className="h-4 w-4 text-emerald-400" />
-            <span className="text-sm font-semibold">v{version.version} 完整快照</span>
-            <span className="text-xs text-[#888]">· {formatTime(version.created_at)}</span>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent size="wide" className="border-border">
+        <DialogHeader>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2 text-foreground">
+              <FileText className="h-4 w-4 text-emerald-400" />
+              <span className="text-sm font-semibold">v{version.version} 完整快照</span>
+              <span className="text-xs text-muted-foreground">· {formatTime(version.created_at)}</span>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-white/10 hover:text-foreground"
+              aria-label="关闭"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-7 w-7 place-items-center rounded-md text-white/60 hover:bg-white/10 hover:text-white"
-            aria-label="关闭"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <pre className="flex-1 overflow-auto p-5 text-xs leading-5 text-[#cccccc] whitespace-pre-wrap break-all">
+        </DialogHeader>
+        <pre className="flex-1 overflow-auto p-5 text-xs leading-5 text-foreground whitespace-pre-wrap break-all">
           {snapshot ? JSON.stringify(snapshot, null, 2) : `（无法解析快照）\n\n${version.data}`}
         </pre>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
+/**
+ * VersionHistoryDialog - 版本历史弹窗组件
+ * @param {VersionHistoryDialogProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的版本历史弹窗元素
+ */
 export function VersionHistoryDialog({
   isOpen,
   onClose,
@@ -168,49 +178,30 @@ export function VersionHistoryDialog({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <>
-      <div
-        className="fixed inset-0 z-[100] grid place-items-center bg-black/60 px-4 backdrop-blur-sm"
-        role="dialog"
-        aria-modal="true"
-        aria-label="版本历史"
-        onClick={onClose}
-      >
-        <div
-          className="w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-2xl border border-white/10 bg-[#202020] shadow-2xl flex flex-col"
-          onClick={(e) => e.stopPropagation()}
-        >
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent size="wide" className="border-border">
           {/* 标题栏 */}
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-            <div className="flex items-center gap-2 text-white">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-foreground">
               <History className="h-5 w-5 text-emerald-400" />
               <div>
-                <div className="text-base font-semibold">
+                <DialogTitle>
                   {entityLabel}版本历史
-                  {entityName ? <span className="text-[#888] text-sm font-normal"> · {entityName}</span> : null}
-                </div>
-                <div className="text-xs text-[#888]">共 {versions.length} 个版本</div>
+                  {entityName ? <span className="text-muted-foreground text-sm font-normal"> · {entityName}</span> : null}
+                </DialogTitle>
+                <DialogDescription>共 {versions.length} 个版本</DialogDescription>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="grid h-8 w-8 place-items-center rounded-md text-white/60 hover:bg-white/10 hover:text-white"
-              aria-label="关闭"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+          </DialogHeader>
 
           {/* 列表 */}
           <div className="flex-1 overflow-y-auto p-3">
             {isLoading ? (
-              <div className="grid place-items-center py-12 text-sm text-[#888]">加载中…</div>
+              <div className="grid place-items-center py-12 text-sm text-muted-foreground">加载中…</div>
             ) : versions.length === 0 ? (
-              <div className="grid place-items-center py-12 text-sm text-[#888]">
+              <div className="grid place-items-center py-12 text-sm text-muted-foreground">
                 <div className="flex flex-col items-center gap-2">
                   <History className="h-8 w-8 opacity-40" />
                   <div>暂无版本历史</div>
@@ -230,7 +221,7 @@ export function VersionHistoryDialog({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-white">v{v.version}</span>
+                            <span className="text-sm font-semibold text-foreground">v{v.version}</span>
                             <span className={`text-[10px] px-1.5 py-0.5 rounded ${meta.className}`}>
                               {meta.label}
                             </span>
@@ -240,13 +231,13 @@ export function VersionHistoryDialog({
                               </span>
                             )}
                             {v.change_note && (
-                              <span className="text-xs text-[#aaa] flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Tag className="h-3 w-3 opacity-60" />
                                 {v.change_note}
                               </span>
                             )}
                           </div>
-                          <div className="mt-1 flex items-center gap-3 text-xs text-[#888]">
+                          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               {formatTime(v.created_at)}
@@ -284,8 +275,8 @@ export function VersionHistoryDialog({
               </ul>
             )}
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 单条快照查看 */}
       <SnapshotViewer version={viewing} onClose={() => setViewing(null)} />

@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file TagManager.tsx
+ * @description 标签管理组件，支持标签的添加、删除、搜索和选择功能
+ */
+
 import { useState, useEffect } from 'react'
 import {
   Tag,
@@ -31,6 +36,13 @@ const PRESET_COLORS = [
   '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
 ]
 
+/**
+ * TagManager - 标签管理组件
+ * @param {TagManagerProps} props - 组件属性
+ * @param {string} props.scriptId - 剧本ID
+ * @param {Function} [props.onTagSelect] - 选择标签回调
+ * @returns {JSX.Element} 渲染的标签管理界面
+ */
 export function TagManager({ scriptId, onTagSelect }: TagManagerProps) {
   const [tags, setTags] = useState<TagItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -157,11 +169,10 @@ export function TagManager({ scriptId, onTagSelect }: TagManagerProps) {
             {filteredTags.map((tag) => (
               <div
                 key={tag.id}
-                className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
-                  selectedTags.includes(tag.id)
+                className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${selectedTags.includes(tag.id)
                     ? 'bg-blue-500/10 border border-blue-500/20'
                     : 'bg-white/5 hover:bg-white/10'
-                }`}
+                  }`}
                 onClick={() => toggleTagSelection(tag.id)}
               >
                 {/* 标签颜色 */}
@@ -229,9 +240,8 @@ export function TagManager({ scriptId, onTagSelect }: TagManagerProps) {
                   {PRESET_COLORS.map((color) => (
                     <div
                       key={color}
-                      className={`w-6 h-6 rounded-full cursor-pointer transition-transform ${
-                        newTagColor === color ? 'scale-1.2 ring-2 ring-white/50' : ''
-                      }`}
+                      className={`w-6 h-6 rounded-full cursor-pointer transition-transform ${newTagColor === color ? 'scale-1.2 ring-2 ring-white/50' : ''
+                        }`}
                       style={{ backgroundColor: color }}
                       onClick={() => setNewTagColor(color)}
                     />

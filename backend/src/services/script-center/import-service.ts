@@ -34,6 +34,12 @@ import { splitTextIntoEpisodes } from "./parser.js";
 import { extractPlainText } from "./utils.js";
 import type { ParsedEpisode } from "./types.js";
 
+/**
+ * exportScriptAsJson - 导出剧本为JSON
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} documentId - 文档ID
+ * @returns {Promise<string>} 返回JSON字符串
+ */
 export async function exportScriptAsJson(ctx: AppContext, documentId: string): Promise<string> {
   const document = await ctx.scriptDocuments.findById(documentId);
   if (!document) throw new Error("剧本文档不存在");
@@ -53,6 +59,13 @@ export async function exportScriptAsJson(ctx: AppContext, documentId: string): P
   return JSON.stringify(exportData, null, 2);
 }
 
+/**
+ * importScriptFromJson - 从JSON导入剧本（含AI资产分析、剧集拆分、补偿式回滚）
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} jsonData - JSON数据字符串
+ * @returns {Promise<ScriptDocument>} 返回导入的剧本文档
+ */
 export async function importScriptFromJson(
   ctx: AppContext,
   projectId: string,
@@ -238,7 +251,7 @@ export async function importScriptFromJson(
         operator: "system",
         at: nowIso(),
       },
-      "script import completed",
+      "剧本导入完成",
     );
   } catch {
     // 日志失败不影响导入
@@ -248,6 +261,11 @@ export async function importScriptFromJson(
 }
 
 /** 规范化时间段枚举 */
+/**
+ * normalizeTimeOfDay - 规范化时间段枚举
+ * @param {string} value - 时间段字符串
+ * @returns {"day" | "night" | "dawn" | "dusk"} 返回规范化的时间段
+ */
 function normalizeTimeOfDay(value: string): "day" | "night" | "dawn" | "dusk" {
   const v = (value || "").toLowerCase();
   if (v.includes("夜") || v.includes("night")) return "night";
@@ -284,6 +302,13 @@ const INDOOR_OUTDOOR_TO_SCENE_TYPE: Record<string, "indoor" | "outdoor" | "virtu
  *   usage_count/version 初始化、版本快照、审计日志。
  * - 失败的资产不阻塞其他资产入库。
  */
+/**
+ * persistAnalyzedAssets - 将AI分析得到的资产写入对应的工厂表
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {AnalyzedAsset[]} assets - 分析资产列表
+ * @returns {Promise<void>}
+ */
 async function persistAnalyzedAssets(
   ctx: AppContext,
   projectId: string,
@@ -294,15 +319,37 @@ async function persistAnalyzedAssets(
     try {
       if (asset.type === "character") {
         // 注意：age 缺省时不要写 0（语义错误：不是 0 岁），交给 createCharacter 走 undefined
+        // AI 返回的年龄可能是 "25" / "少年" / "中年" 等字符串，尝试解析为数字
+        const parsedAge = asset.age ? parseInt(asset.age, 10) : undefined;
+        const age = parsedAge && !isNaN(parsedAge) && parsedAge > 0 ? parsedAge : undefined;
         await createCharacter(ctx, {
           project_id: projectId,
           name: asset.name,
           role: asset.role,
           gender: asset.gender,
-          age: undefined,
+          age,
           traits: asset.traits,
           description: asset.description,
           tags: ["剧本导入提取"],
+          // === AI 剧本分析扩展字段 ===
+          identity: asset.identity,
+          face: asset.face,
+          hair: asset.hair,
+          body: asset.body,
+          temperament: asset.temperament,
+          costume_name: asset.costume_name,
+          costume_description: asset.costume_description,
+          costume_color: asset.costume_color,
+          costume_material: asset.costume_material,
+          costume_style: asset.costume_style,
+          accessories: asset.accessories,
+          emotion_states: asset.emotion_states,
+          action_assets: asset.action_assets,
+          relationships: asset.relationships,
+          first_appearance: asset.first_appearance,
+          dialogue_count: asset.dialogue_count,
+          generation_prompt: asset.generationPrompt,
+          confidence: asset.confidence,
         });
       } else if (asset.type === "scene") {
         const sceneType = INDOOR_OUTDOOR_TO_SCENE_TYPE[asset.sceneType ?? ""] ?? "indoor";

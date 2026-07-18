@@ -6,6 +6,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 // 注意:@tiptap/starter-kit v3 已默认包含 Underline,无需单独导入,
 // 否则会触发 "Duplicate extension names found: ['underline']" 警告
 import TextAlign from '@tiptap/extension-text-align'
+import Underline from '@tiptap/extension-underline'
 import Highlight from '@tiptap/extension-highlight'
 import CharacterCount from '@tiptap/extension-character-count'
 import Focus from '@tiptap/extension-focus'
@@ -147,6 +148,15 @@ interface ScriptEditorProps {
   onTreeUpdate?: (tree: NavTreeNode[]) => void
 }
 
+/**
+ * ScriptEditor - 剧本编辑器组件
+ * @param {ScriptEditorProps} props - 组件属性
+ * @param {Object} props.document - 文档对象，包含 id、title、editor_json
+ * @param {Function} props.onSave - 保存回调
+ * @param {Function} props.onEditorReady - 编辑器就绪回调
+ * @param {Function} props.onTreeUpdate - 导航树更新回调
+ * @returns {JSX.Element} 渲染的剧本编辑器界面
+ */
 export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: ScriptEditorProps) {
   // 使用 ref 保持回调引用稳定，避免 debounce 实例被重复创建
   const onSaveRef = useRef(onSave)
@@ -184,7 +194,8 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
       Placeholder.configure({
         placeholder: '开始编写你的剧本...',
       }),
-      // Underline 由 StarterKit v3 默认提供,不再单独注册(避免 Duplicate extension 警告)
+      // Underline：项目使用 @tiptap/starter-kit@2.x（不含 Underline），需显式注册
+      Underline,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
@@ -228,11 +239,13 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
   useEffect(() => {
     if (editor && document.editor_json) {
       try {
-        editor.commands.setContent(document.editor_json, { emitUpdate: false })
+        // setContent 第二参数在 v2.6 中是 boolean（emitUpdate），
+        // 新版是 Partial<SetContentOptions>，两者签名不同；这里统一只传 boolean。
+        editor.commands.setContent(document.editor_json, false)
       } catch (err) {
         // 内容格式不合法时不崩溃，回退到空文档
         console.warn('编辑器内容加载失败，回退到空文档:', err)
-        editor.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] }, { emitUpdate: false })
+        editor.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] }, false)
       }
       // 文档加载后立即生成一次导航树（Feature 2.10）
       if (onTreeUpdate) {
@@ -268,10 +281,10 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
   return (
     <div className="script-editor bg-[#1a1a1a] rounded-lg border border-white/10 relative">
       {/* AI Bubble Menu - 选中文本时显示 */}
-      <AIBubbleMenu editor={editor} />
+      <AIBubbleMenu editor={editor as never} />
       {/* Slash Command Menu - 输入 / 触发命令 */}
-      <SlashCommandMenu editor={editor} />
-      <EditorContent editor={editor} />
+      <SlashCommandMenu editor={editor as never} />
+      <EditorContent editor={editor as never} />
       {/* 空白状态：明确引导用户如何开始 */}
       {isEmpty && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center px-6">

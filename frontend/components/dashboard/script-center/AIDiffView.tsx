@@ -91,6 +91,15 @@ function computeDiff(original: string, newText: string): DiffOp[] {
  *
  * 用户可点击"接受"替换选区，或"拒绝"恢复原文。
  */
+/**
+ * AIDiffView - AI修改对比视图组件
+ * @param {AIDiffViewProps} props - 组件属性
+ * @param {string} props.originalText - 原文内容
+ * @param {string} props.newText - AI生成的新文本
+ * @param {Function} props.onAccept - 接受修改回调
+ * @param {Function} props.onReject - 拒绝修改回调
+ * @returns {JSX.Element} 渲染的差异对比界面
+ */
 export function AIDiffView({ originalText, newText, onAccept, onReject }: AIDiffViewProps) {
   const diff = useMemo(() => computeDiff(originalText, newText), [originalText, newText])
   const { position, onDragStart } = useDraggable(-1, 80)

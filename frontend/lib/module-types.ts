@@ -110,6 +110,44 @@ export interface Character extends BaseEntity {
   usage_count?: number;
   /** 当前版本号（任务12：统一版本管理） */
   version?: number;
+
+  // === AI 剧本分析扩展字段 ===
+  /** 角色身份，如 剑客、公主、侦探 */
+  identity?: string;
+  /** 面部特征 */
+  face?: string;
+  /** 发型、发色、长度 */
+  hair?: string;
+  /** 身材体型 */
+  body?: string;
+  /** 气质，如 优雅、粗犷、冷峻 */
+  temperament?: string;
+  /** 服装名称 */
+  costume_name?: string;
+  /** 服装详细描述 */
+  costume_description?: string;
+  /** 服装主色调 */
+  costume_color?: string;
+  /** 服装材质 */
+  costume_material?: string;
+  /** 服装风格 */
+  costume_style?: string;
+  /** 配饰列表，如 玉佩、耳环、腰带 */
+  accessories?: string[];
+  /** 情绪状态 JSON 数组字符串 */
+  emotion_states?: string;
+  /** 动作资产 JSON 数组字符串 */
+  action_assets?: string;
+  /** 人物关系 JSON 数组字符串 */
+  relationships?: string;
+  /** 首次出现场次，如 EP01-Scene01 */
+  first_appearance?: string;
+  /** 对白数量 */
+  dialogue_count?: number;
+  /** AI 生图标准化提示词 */
+  generation_prompt?: string;
+  /** 推断可信度：confirmed / inferred */
+  confidence?: string;
 }
 
 /** 角色关系 */
@@ -154,6 +192,48 @@ export interface CharacterImageHistory {
   created_at: string;
 }
 
+/**
+ * 道具图片生成历史（与后端 PropImageHistory 对齐）。
+ * 与 CharacterImageHistory 同构，仅外键字段名为 prop_id。
+ */
+export interface PropImageHistory {
+  id: string;
+  prop_id: string;
+  project_id: string;
+  url: string;
+  ratio: string;
+  model: string;
+  size: string;
+  prompt: string;
+  negative_prompt?: string;
+  response_format: string;
+  n: number;
+  is_applied: boolean;
+  applied_at: string;
+  created_at: string;
+}
+
+/**
+ * 场景图片生成历史（与后端 SceneImageHistory 对齐）。
+ * 与 CharacterImageHistory 同构，仅外键字段名为 scene_id。
+ */
+export interface SceneImageHistory {
+  id: string;
+  scene_id: string;
+  project_id: string;
+  url: string;
+  ratio: string;
+  model: string;
+  size: string;
+  prompt: string;
+  negative_prompt?: string;
+  response_format: string;
+  n: number;
+  is_applied: boolean;
+  applied_at: string;
+  created_at: string;
+}
+
 // ==================== 场景工厂类型 ====================
 
 /** 场景类型 */
@@ -177,6 +257,40 @@ export interface Scene extends BaseEntity {
   usage_count?: number;
   /** 当前版本号（任务12：统一版本管理） */
   version?: number;
+
+  // === AI 剧本分析扩展字段（与 AIScene 对齐） ===
+  /** 场景分类 */
+  category?: string;
+  /** 室内/室外/混合 */
+  indoor_outdoor?: string;
+  /** 具体地点描述 */
+  location?: string;
+  /** 建筑风格 */
+  architecture?: string;
+  /** 地形特征 */
+  terrain?: string;
+  /** 植物描述 */
+  plants?: string;
+  /** 场景中物体描述 */
+  objects?: string;
+  /** 时代/时期 */
+  period?: string;
+  /** 氛围基调 */
+  tone?: string;
+  /** 视觉风格 */
+  visual_style?: string;
+  /** 氛围情绪 */
+  atmosphere_emotion?: string;
+  /** 适合镜头 JSON 数组字符串 */
+  suitable_shots?: string;
+  /** 可复用元素 JSON 数组字符串 */
+  reusable_elements?: string;
+  /** AI 生图标准化提示词 */
+  generation_prompt?: string;
+  /** 首次出现场次 */
+  first_appearance?: string;
+  /** 推断可信度 */
+  confidence?: string;
 }
 
 // ==================== 道具工厂类型 ====================
@@ -208,6 +322,28 @@ export interface Prop extends BaseEntity {
   usage_count?: number;
   /** 当前版本号（任务12：统一版本管理） */
   version?: number;
+
+  // === AI 剧本分析扩展字段（与 AIProp 对齐） ===
+  /** 重要性级别 */
+  importance_level?: string;
+  /** 所属角色 */
+  owner?: string;
+  /** 形状 */
+  shape?: string;
+  /** 纹理 */
+  texture?: string;
+  /** 故事功能 */
+  story_function?: string;
+  /** 视觉特征 JSON 数组字符串 */
+  visual_features?: string;
+  /** 镜头使用 JSON 数组字符串 */
+  camera_usage?: string;
+  /** AI 生图标准化提示词 */
+  generation_prompt?: string;
+  /** 首次出现场次 */
+  first_appearance?: string;
+  /** 推断可信度 */
+  confidence?: string;
 }
 
 // ==================== 资产版本管理（任务12：统一版本管理） ====================
@@ -259,6 +395,16 @@ export interface Storyboard extends BaseEntity {
   video_task_id?: string;
   video_url?: string;
   tags?: string[];
+  /**
+   * 关联角色资产 ID 列表（来自角色工厂）。
+   * 反向展示：角色工厂的 UsageBadge 会统计本字段非空且包含该角色 ID 的分镜数。
+   */
+  character_asset_ids?: string[];
+  /**
+   * 关联道具资产 ID 列表（来自道具工厂）。
+   * 反向展示：道具工厂的 UsageBadge 会统计本字段非空且包含该道具 ID 的分镜数。
+   */
+  prop_asset_ids?: string[];
 }
 
 // ==================== 视频生产线类型 ====================

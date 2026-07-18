@@ -1,5 +1,20 @@
+/**
+ * @file utils.ts
+ * @description 通用工具函数集合。提供：
+ *   - ID 生成（带业务前缀）
+ *   - 时间处理（ISO 字符串、日期截取）
+ *   - Token 估算（粗略计算文本 token 数）
+ *   - 参数校验（requireString、clampNumber）
+ *   - 对象深拷贝（jsonClone）
+ *   - AI 调用超时控制（withTimeout、AI_TIMEOUTS）
+ *   - AI 调用异常包装（safeAICall、AICallError）
+ * 
+ * 超时配置支持通过环境变量动态调整，修改 .env 后重启进程即可生效。
+ */
+
 import { randomUUID } from "node:crypto";
 import { rootLogger, currentLogContext } from "./logger.js";
+import { isAgnesRateLimitError } from "./ai/agnes-client.js";
 
 export const DEFAULT_MODEL = "agnes-2.0-flash";
 
@@ -8,7 +23,11 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
-/** 从 ISO 时间中截取日期部分（保留供导出文件名等场景使用）。 */
+/**
+ * datePart - 从 ISO 时间截取日期部分
+ * @param {string} iso - ISO 时间字符串
+ * @returns {string} 日期部分（YYYY-MM-DD）
+ */
 export function datePart(iso: string): string {
   return iso.slice(0, 10);
 }
@@ -18,7 +37,11 @@ export function id(prefix: string): string {
   return `${prefix}-${randomUUID()}`;
 }
 
-/** 粗略估算文本 token 数，用于本地记录和展示。 */
+/**
+ * estimateTokens - 粗略估算文本 token 数
+ * @param {string} text - 待估算的文本
+ * @returns {number} 预估的 token 数量
+ */
 export function estimateTokens(text: string): number {
   const asciiWords = text.match(/[A-Za-z0-9_]+/g)?.length ?? 0;
   const cjkChars = text.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
@@ -46,12 +69,8 @@ export function jsonClone<T>(value: T): T {
 }
 
 /**
- * 给 Promise 套一个超时。超时会自动 abort 调用方传入的 AbortController，
- * 并抛一个带超时常识的错误，让上层区分"网络/AI 排队慢"与"业务错"。
- *
- * 用法：
- *   const ctrl = new AbortController();
- *   await withTimeout(ctx.ai.generateImage(params, ctrl.signal), 60_000, "generateImage", ctrl);
+ * TimeoutError - 超时错误类
+ * 用于区分"网络/AI 排队慢"与"业务错"。
  */
 export class TimeoutError extends Error {
   readonly timeoutMs: number;
@@ -64,7 +83,16 @@ export class TimeoutError extends Error {
   }
 }
 
-export function withTimeout<T>(
+/**
+ * withTimeout - 为 Promise 添加超时控制
+ * @param {Promise<T>} promise - 待包装的 Promise
+ * @param {number} timeoutMs - 超时时间（毫秒）
+ * @param {string} operation - 操作名称（用于错误提示）
+ * @param {AbortController} controller - AbortController 实例
+ * @returns {Promise<T>} 带超时控制的 Promise
+ * @throws {TimeoutError} 超时时抛出
+ */
+export async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
   operation: string,
@@ -85,7 +113,7 @@ export function withTimeout<T>(
         durationMs: Date.now() - startedAt,
         ...ctxFields,
         err,
-      }, `timeout after ${timeoutMs}ms in ${operation}`);
+      }, `操作 "${operation}" 超时（${timeoutMs}ms），已触发 abort`);
       reject(err);
     }, timeoutMs);
   });
@@ -99,7 +127,7 @@ export function withTimeout<T>(
         durationMs: Date.now() - startedAt,
         ...ctxFields,
         err,
-      }, `error in ${operation}: ${err instanceof Error ? err.message : String(err)}`);
+      }, `操作 "${operation}" 异常：${err instanceof Error ? err.message : String(err)}`);
       throw err;
     })
     .finally(() => {
@@ -107,12 +135,137 @@ export function withTimeout<T>(
     });
 }
 
-/** 默认 AI 调用超时配置（毫秒）。 */
-export const AI_TIMEOUTS = {
+/**
+ * AICallError - AI 调用统一异常类
+ * 用于包装所有 AI 相关调用中的异常，提供统一错误格式。
+ */
+export class AICallError extends Error {
+  readonly operation: string;
+  readonly cause: unknown;
+  constructor(operation: string, message: string, cause: unknown) {
+    super(message);
+    this.name = "AICallError";
+    this.operation = operation;
+    this.cause = cause;
+  }
+}
+
+/**
+ * safeAICall - AI 调用统一异常包装器
+ * @param {string} operation - 操作名称
+ * @param {() => Promise<T>} fn - 待执行的异步函数
+ * @returns {Promise<T>} 执行结果
+ * @throws {AICallError} AI 调用失败时抛出
+ * @throws {TimeoutError} 超时时抛出（保持原类型）
+ */
+export async function safeAICall<T>(
+  operation: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    return await fn();
+  } catch (err) {
+    const durationMs = Date.now() - startedAt;
+    const ctxFields = currentLogContext();
+
+    // 限流/超时：保持原类型透传，仅补日志
+    if (isAgnesRateLimitError(err)) {
+      rootLogger.warn(
+        {
+          event: "ai.call.rate_limited",
+          operation,
+          durationMs,
+          ...ctxFields,
+          err,
+        },
+        `AI 限流（${operation}）：${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw err;
+    }
+    if (err instanceof TimeoutError) {
+      rootLogger.warn(
+        {
+          event: "ai.call.timeout",
+          operation,
+          durationMs,
+          ...ctxFields,
+          err,
+        },
+        `AI 调用超时（${operation}）：${err.message}`,
+      );
+      throw err;
+    }
+
+    // 业务错误（带 err.status 的 4xx）→ 不包装，保留 status / code 字段
+    // 让 router 顶层 catch 能识别并透传 HTTP 状态码（如 budget_exceeded → 402）。
+    const status = (err as Error & { status?: number })?.status;
+    if (typeof status === "number" && status >= 400 && status < 500) {
+      const code = (err as Error & { code?: string })?.code;
+      rootLogger.warn(
+        {
+          event: "ai.call.business_error",
+          operation,
+          durationMs,
+          status,
+          code,
+          ...ctxFields,
+          err,
+        },
+        `AI 业务错误（${operation}）：${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw err;
+    }
+
+    // 其它错误：包装为 AICallError，保留 cause 供日志查询
+    const originalMessage = err instanceof Error ? err.message : String(err);
+    const wrapped = new AICallError(
+      operation,
+      `AI 调用失败 (${operation}): ${originalMessage}`,
+      err,
+    );
+    rootLogger.error(
+      {
+        event: "ai.call.failed",
+        operation,
+        durationMs,
+        ...ctxFields,
+        err,
+      },
+      `AI 调用失败（${operation}）：${originalMessage}`,
+    );
+    throw wrapped;
+  }
+}
+
+function readPositiveIntMs(envKey: string, fallback: number): number {
+  const raw = process.env[envKey];
+  if (raw == null || raw === "") return fallback;
+  const v = Number(raw);
+  if (!Number.isFinite(v) || v <= 0 || !Number.isInteger(v)) {
+    // 环境变量值非法时给一次 stderr 提示，但不影响使用
+    console.warn(
+      `[AI_TIMEOUTS] 环境变量 ${envKey}=${JSON.stringify(raw)} 不是正整数，回退到默认值 ${fallback}ms`,
+    );
+    return fallback;
+  }
+  return v;
+}
+
+const DEFAULT_AI_TIMEOUTS = {
   chat: 60_000,           // 60s：聊天流式响应
-  generateImage: 60_000,  // 60s：图片生成
+  generateImage: 180_000, // 180s：真实 Agnes 单图在高峰期可能超过 90s
   generateVideo: 30_000,  // 30s：视频任务创建（只创建任务，不等结果）
   queryTask: 20_000,      // 20s：视频状态查询
   enhancePrompt: 30_000,  // 30s：提示词增强
-  analyzeScript: 60_000,  // 60s：剧本 AI 分析
+  analyzeScript: 180_000, // 180s：剧本 AI 分析（可被请求体 timeoutMs 覆盖）
+} as const;
+
+export const AI_TIMEOUTS = {
+  get chat() { return readPositiveIntMs("AGNES_TIMEOUT_CHAT_MS", DEFAULT_AI_TIMEOUTS.chat); },
+  get generateImage() { return readPositiveIntMs("AGNES_TIMEOUT_GENERATE_IMAGE_MS", DEFAULT_AI_TIMEOUTS.generateImage); },
+  get generateVideo() { return readPositiveIntMs("AGNES_TIMEOUT_GENERATE_VIDEO_MS", DEFAULT_AI_TIMEOUTS.generateVideo); },
+  get queryTask() { return readPositiveIntMs("AGNES_TIMEOUT_QUERY_TASK_MS", DEFAULT_AI_TIMEOUTS.queryTask); },
+  get enhancePrompt() { return readPositiveIntMs("AGNES_TIMEOUT_ENHANCE_PROMPT_MS", DEFAULT_AI_TIMEOUTS.enhancePrompt); },
+  get analyzeScript() { return readPositiveIntMs("AGNES_TIMEOUT_ANALYZE_SCRIPT_MS", DEFAULT_AI_TIMEOUTS.analyzeScript); },
 } as const;

@@ -2,6 +2,7 @@
 
 import { Check, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import { ManagementTable as ProjectManagementTable } from "@/components/project/project-workbench";
 import type { ProjectScript } from "@/lib/app-types";
 
@@ -88,12 +89,17 @@ export function ScriptsTab(props: ScriptsTabProps) {
                     </label>
                     <label className="contents">
                         <span className="pt-3 text-right text-sm font-medium text-[#d8d8d8] max-md:pt-0 max-md:text-left">状态</span>
-                        <select className="h-11 rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" value={props.scriptForm.status} onChange={(event) => props.setScriptForm((draft) => ({ ...draft, status: event.target.value as ProjectScript["status"] }))}>
-                            <option value="draft">草稿</option>
-                            <option value="ready">可拆分镜</option>
-                            <option value="storyboarded">已生成分镜</option>
-                            <option value="archived">已归档</option>
-                        </select>
+                        <ShadcnSelect
+                            options={[
+                                { value: "draft", label: "草稿" },
+                                { value: "ready", label: "可拆分镜" },
+                                { value: "storyboarded", label: "已生成分镜" },
+                                { value: "archived", label: "已归档" },
+                            ]}
+                            value={props.scriptForm.status}
+                            onChange={(value) => props.setScriptForm((draft) => ({ ...draft, status: value as ProjectScript["status"] }))}
+                            className="h-11 text-sm"
+                        />
                     </label>
                     <label className="contents">
                         <span className="pt-3 text-right text-sm font-medium text-[#d8d8d8] max-md:pt-0 max-md:text-left">标题</span>

@@ -1,3 +1,8 @@
+/**
+ * @file asset.ts
+ * @description 项目资产服务模块 - 管理项目资产库的增删改查，包括角色、场景、样式等资产类型
+ */
+
 import type { AppContext } from "../app.js";
 import type { ProjectAsset, ProjectAssetKind } from "../../types.js";
 import { id, nowIso } from "../../utils.js";
@@ -29,7 +34,14 @@ function normalizeProjectAssetKind(kind: unknown): ProjectAssetKind {
   return projectAssetKinds.includes(kind as ProjectAssetKind) ? kind as ProjectAssetKind : "image";
 }
 
-/** 查询项目资产库，支持类型、关键词、标签和收藏状态筛选。 */
+/**
+ * listProjectAssets - 查询项目资产库
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {Object} filters - 筛选条件
+ * @returns {Promise<ProjectAsset[]>} 资产列表
+ * @description 支持类型、关键词、标签和收藏状态筛选
+ */
 export async function listProjectAssets(ctx: AppContext, projectId: string, filters: { kind?: string | null; q?: string | null; tag?: string | null; favorite?: string | null } = {}): Promise<ProjectAsset[]> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const filter: Partial<ProjectAsset> = { project_id: projectId };
@@ -52,7 +64,14 @@ export async function listProjectAssets(ctx: AppContext, projectId: string, filt
   return assets;
 }
 
-/** 新增项目资产库条目，把表单字段清洗后保存到主数据库。 */
+/**
+ * createProjectAsset - 新增项目资产
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectAssetInput} input - 资产输入参数
+ * @returns {Promise<ProjectAsset>} 创建的资产
+ * @description 把表单字段清洗后保存到主数据库
+ */
 export async function createProjectAsset(ctx: AppContext, projectId: string, input: ProjectAssetInput): Promise<ProjectAsset> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const now = nowIso();
@@ -80,7 +99,15 @@ export async function createProjectAsset(ctx: AppContext, projectId: string, inp
   return asset;
 }
 
-/** 更新项目资产库条目，只覆盖本次请求明确传入的字段。 */
+/**
+ * updateProjectAsset - 更新项目资产
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} assetId - 资产ID
+ * @param {ProjectAssetInput} patch - 更新字段
+ * @returns {Promise<ProjectAsset>} 更新后的资产
+ * @description 只覆盖本次请求明确传入的字段
+ */
 export async function updateProjectAsset(ctx: AppContext, projectId: string, assetId: string, patch: ProjectAssetInput): Promise<ProjectAsset> {
   const existing = await ctx.projectAssets.findById(assetId);
   if (!existing || existing.project_id !== projectId) throw new Error("project asset not found");
@@ -103,7 +130,13 @@ export async function updateProjectAsset(ctx: AppContext, projectId: string, ass
   return (await ctx.projectAssets.findById(assetId)) as ProjectAsset;
 }
 
-/** 删除项目资产库条目。 */
+/**
+ * deleteProjectAsset - 删除项目资产
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} assetId - 资产ID
+ * @returns {Promise<void>}
+ */
 export async function deleteProjectAsset(ctx: AppContext, projectId: string, assetId: string): Promise<void> {
   const existing = await ctx.projectAssets.findById(assetId);
   if (!existing || existing.project_id !== projectId) throw new Error("project asset not found");

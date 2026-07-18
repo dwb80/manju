@@ -42,6 +42,7 @@ export interface KPICardsProps {
     runningAITasks: number;
     pendingReviews: number;
     gpuUtilization: number;
+    resourceTelemetryAvailable?: boolean;
     todayCost: number;
     successRate: number;
   };
@@ -135,7 +136,12 @@ const KPICard = memo(function KPICard({
   );
 });
 
-/** KPI卡片组件 */
+/**
+ * KPICards - KPI卡片组件
+ * @param {KPICardsProps} props - 组件属性
+ * @param {Object} props.kpi - KPI数据对象
+ * @returns {JSX.Element} 渲染的KPI卡片网格界面
+ */
 export const KPICards = memo(function KPICards({ kpi }: KPICardsProps) {
   // 构建KPI卡片数据
   const kpiItems: KPICardData[] = [
@@ -176,14 +182,14 @@ export const KPICards = memo(function KPICards({ kpi }: KPICardsProps) {
     },
     {
       id: "gpuUtilization",
-      label: "GPU利用率",
-      value: `${kpi.gpuUtilization}%`,
+      label: "GPU遥测",
+      value: kpi.resourceTelemetryAvailable ? `${kpi.gpuUtilization}%` : "未接入",
       icon: Gauge,
       color: "pink",
     },
     {
       id: "todayCost",
-      label: "今日AI费用",
+      label: "今日费用估算",
       value: `¥${kpi.todayCost.toFixed(2)}`,
       icon: DollarSign,
       color: "emerald",

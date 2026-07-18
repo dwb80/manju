@@ -8,6 +8,7 @@
 
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import type { ProjectTaskStatus } from "@/lib/app-types";
 import type { ProjectWorkbenchTabsProps } from "./types";
 
@@ -59,14 +60,15 @@ export function TasksTab(props: Pick<
           </label>
           <label className="space-y-1.5">
             <span className="block text-sm font-medium text-[#d8d8d8]">负责人</span>
-            <select
-              className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500"
+            <ShadcnSelect
+              options={[
+                { value: "", label: "未分配" },
+                ...projectMembers.map((member) => ({ value: member.name, label: `${member.name} · ${member.role}` })),
+              ]}
               value={taskDraft.owner ?? ""}
-              onChange={(event) => setTaskDraft((draft) => ({ ...draft, owner: event.target.value }))}
-            >
-              <option value="">未分配</option>
-              {projectMembers.map((member) => <option key={member.id} value={member.name}>{member.name} · {member.role}</option>)}
-            </select>
+              onChange={(value) => setTaskDraft((draft) => ({ ...draft, owner: value }))}
+              className="h-11 w-full text-sm"
+            />
           </label>
           <label className="space-y-1.5">
             <span className="block text-sm font-medium text-[#d8d8d8]">截止日期</span>

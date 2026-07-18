@@ -51,11 +51,23 @@ export async function createBackup(
   return backup;
 }
 
+/**
+ * listBackups - 列出项目全部备份
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ScriptBackup[]>} 返回备份列表
+ */
 export async function listBackups(ctx: AppContext, projectId: string): Promise<ScriptBackup[]> {
   return ctx.scriptBackups.findMany({ project_id: projectId }, { sort: "desc" });
 }
 
 // 剧本版本（薄封装，与 Backup 同表；前端走 /api/script-versions 直接操作）
+/**
+ * listScriptVersions - 列出某文档关联的版本
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} documentId - 文档ID
+ * @returns {Promise<ScriptBackup[]>} 返回版本列表
+ */
 export async function listScriptVersions(
   ctx: AppContext,
   documentId: string
@@ -63,6 +75,18 @@ export async function listScriptVersions(
   return ctx.scriptBackups.findMany({ document_id: documentId }, { sort: "desc" });
 }
 
+/**
+ * createScriptVersion - 创建一个轻量版本快照
+ * @param {AppContext} ctx - 应用上下文
+ * @param {object} input - 版本输入数据
+ * @param {string} input.documentId - 文档ID
+ * @param {string} input.editorJson - 编辑器JSON内容
+ * @param {number} input.version - 版本号
+ * @param {string} [input.changes] - 变更说明
+ * @param {"auto" | "manual" | "scheduled"} [input.type] - 版本类型
+ * @param {string} [input.createdBy] - 创建者ID
+ * @returns {Promise<ScriptBackup>} 返回创建的版本记录
+ */
 export async function createScriptVersion(
   ctx: AppContext,
   input: {
@@ -99,6 +123,12 @@ export async function deleteScriptVersion(ctx: AppContext, versionId: string): P
   await ctx.scriptBackups.delete(versionId);
 }
 
+/**
+ * restoreBackup - 恢复备份
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} backupId - 备份ID
+ * @returns {Promise<void>}
+ */
 export async function restoreBackup(ctx: AppContext, backupId: string): Promise<void> {
   const backup = await ctx.scriptBackups.findById(backupId);
   if (!backup || backup.status !== "completed") throw new Error("备份不存在或不可用");

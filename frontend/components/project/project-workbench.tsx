@@ -2,6 +2,13 @@
 
 import { type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type WorkbenchPagerProps = {
   total: number;
@@ -12,7 +19,9 @@ type WorkbenchPagerProps = {
 };
 
 /**
- * Renders the standard management pagination bar used by project workspace list pages.
+ * WorkbenchPager - 工作台分页器组件
+ * @param {WorkbenchPagerProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的分页器元素
  */
 export function WorkbenchPager({ total, page, pageSize, label, onPageChange }: WorkbenchPagerProps) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -45,17 +54,17 @@ type ManagementTableProps = {
  */
 export function ManagementTable({ columns, children }: ManagementTableProps) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#202020]">
-      <table className="w-full min-w-[860px] border-collapse text-left text-sm">
-        <thead className="border-b border-white/10 bg-white/[0.04] text-[#d8d8d8]">
-          <tr>
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <Table className="min-w-[860px] text-left text-sm">
+        <TableHeader className="border-b border-border bg-white/[0.04] text-[#d8d8d8]">
+          <TableRow>
             {columns.map((column) => (
-              <th key={column} className="px-4 py-3 font-semibold">{column}</th>
+              <TableHead key={column} className="px-4 py-3 font-semibold">{column}</TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/10">{children}</tbody>
-      </table>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="divide-y divide-white/10">{children}</TableBody>
+      </Table>
     </div>
   );
 }

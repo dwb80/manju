@@ -39,7 +39,13 @@ export interface FilterTabsBarProps {
 }
 
 /**
- * 工厂页通用筛选 Tabs
+ * FilterTabsBar - 工厂页通用筛选 Tabs 组件
+ * @description 工厂页的"全部/最近使用/我创建的/已收藏"切换 Tabs，由 useFilterState 驱动
+ * @param {FilterTabConfig[]} tabs - Tab 配置列表（来自 useFilterState）
+ * @param {FilterTabId} activeTab - 当前激活的 Tab ID
+ * @param {(tab: FilterTabId) => void} onChange - Tab 切换回调
+ * @param {string} [className] - 容器 className
+ * @returns {JSX.Element} 渲染的筛选 Tabs 组件
  */
 export function FilterTabsBar({ tabs, activeTab, onChange, className = '' }: FilterTabsBarProps) {
   const handleClick = (tab: FilterTabConfig) => {

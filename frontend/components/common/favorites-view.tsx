@@ -15,7 +15,11 @@ export type FavoritesViewProps = {
   onImageLoad: () => void;
 };
 
-/** 渲染收藏视图 */
+/**
+ * FavoritesView - 收藏视图组件
+ * @param {FavoritesViewProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的收藏视图元素
+ */
 export function FavoritesView({
   favorites,
   onRefresh,

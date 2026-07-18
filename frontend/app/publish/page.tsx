@@ -24,6 +24,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Rocket, Video, Calendar, CheckCircle2, Clock } from "lucide-react";
 import { PublishCenter, PublishStatistics } from "@/components/publish/publish-center";
+import { PublishPlan as PublishPlanManager, type PublishPlanForm } from "@/components/publish/publish-plan";
 import type {
   PublishedVideo,
   PublishPlan,
@@ -79,6 +80,13 @@ interface PublishPlanResponse {
   updated_at: string;
 }
 
+function toUiPlanStatus(status: PublishPlanResponse["status"]): PublishPlan["status"] {
+  if (status === "publishing") return "executing";
+  if (status === "published") return "completed";
+  if (status === "cancelled" || status === "failed") return "cancelled";
+  return "planned";
+}
+
 /**
  * 发布中心页面组件
  */
@@ -124,6 +132,7 @@ export default function PublishCenterPage() {
       const videosResult: ApiResponse<PublishedVideoResponse[]> = await videosResponse.json();
       const plansResult: ApiResponse<PublishPlanResponse[]> = await plansResponse.json();
 
+      let loadedVideos: PublishedVideo[] = [];
       // 处理成片
       if (videosResult.code === 0 && videosResult.data) {
         const videos = videosResult.data;
@@ -141,6 +150,7 @@ export default function PublishCenterPage() {
           thumbnailUrl: "",
         }));
         setRecentVideos(convertedVideos);
+        loadedVideos = convertedVideos;
 
         const now = new Date();
         const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -163,10 +173,10 @@ export default function PublishCenterPage() {
         const convertedPlans: PublishPlan[] = plansData.map(plan => ({
           id: plan.id,
           name: plan.name,
-          status: plan.status as "planned" | "executing" | "completed" | "cancelled",
+          status: toUiPlanStatus(plan.status),
           date: plan.plannedDate || plan.created_at,
-          videos: recentVideos.filter(v => plan.videos.includes(v.id)),
-          platforms: plan.platforms as any[],
+          videos: loadedVideos.filter(v => plan.videos.includes(v.id)),
+          platforms: plan.platforms.map((platform) => platform === "custom" ? "other" : platform) as any[],
           owner: plan.assignee,
           createdAt: plan.created_at,
           updatedAt: plan.updated_at,
@@ -197,12 +207,51 @@ export default function PublishCenterPage() {
 
   function handleViewAllVideos() {
     log.debug('view all videos')
-    router.push("/videos");
+    router.push("/video-production");
   }
 
-  async function handleCreatePlan() {
+  function handleCreatePlan() {
     log.debug('create plan')
-    notify.info("创建发布计划功能即将上线")
+    document.getElementById("publish-plan-manager")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    notify.info("请在发布计划管理区填写计划")
+  }
+
+  const toApiStatus = (status: PublishPlanForm["status"]) => ({
+    planned: "scheduled", executing: "publishing", completed: "published", cancelled: "cancelled",
+  } as const)[status];
+
+  const toApiPlatform = (platform: string) => platform === "other" ? "custom" : platform;
+
+  async function createPlan(form: PublishPlanForm) {
+    const response = await fetch("/api/publish/plans", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: form.name, status: toApiStatus(form.status), plannedDate: form.date, videos: form.videoIds, platforms: form.platforms.map(toApiPlatform), assignee: form.owner }),
+    });
+    const result: ApiResponse<PublishPlanResponse> = await response.json();
+    if (result.code !== 0) return notify.error(result.message || "创建发布计划失败");
+    notify.success("发布计划已创建");
+    await loadData();
+  }
+
+  async function editPlan(planId: string, form: PublishPlanForm) {
+    const response = await fetch(`/api/publish/plans/${planId}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: form.name, status: toApiStatus(form.status), plannedDate: form.date, videos: form.videoIds, platforms: form.platforms.map(toApiPlatform), assignee: form.owner }),
+    });
+    const result: ApiResponse<PublishPlanResponse> = await response.json();
+    if (result.code !== 0) return notify.error(result.message || "更新发布计划失败");
+    notify.success("发布计划已更新");
+    await loadData();
+  }
+
+  async function deletePlan(planId: string) {
+    const response = await fetch(`/api/publish/plans/${planId}`, { method: "DELETE" });
+    const result: ApiResponse<{ deleted: boolean }> = await response.json();
+    if (result.code !== 0) return notify.error(result.message || "删除发布计划失败");
+    notify.success("发布计划已删除");
+    await loadData();
   }
 
   function handleViewStatistics() {
@@ -291,9 +340,9 @@ export default function PublishCenterPage() {
     <main className="min-h-screen bg-[#181818] text-[#ececec]">
       {/* === 统一页面头 === */}
       <StandalonePageHeader
-        title="发布中心"
-        description="管理成片与发布计划，追踪发布进度。支持多平台发布管理和成片预览下载。"
-        breadcrumbs={["首页", "发布中心"]}
+        title="发布准备中心"
+        description="管理成片、发布计划与平台物料，生成可交付发布包；平台账号授权与自动投放尚未接入。"
+        breadcrumbs={["首页", "发布准备中心"]}
         extraRight={
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -364,6 +413,16 @@ export default function PublishCenterPage() {
           onDownloadVideo={handleDownloadVideo}
           onPackageVideo={handlePackageVideo}
         />
+        <div id="publish-plan-manager" className="mt-8 scroll-mt-6 rounded-xl border border-white/10 bg-[#171717] p-6">
+          <PublishPlanManager
+            plans={plans}
+            availableVideos={recentVideos.filter((video) => video.publishStatus !== "published")}
+            availableOwners={Array.from(new Set(["默认负责人", ...plans.map((plan) => plan.owner).filter(Boolean)]))}
+            onCreatePlan={createPlan}
+            onEditPlan={editPlan}
+            onDeletePlan={deletePlan}
+          />
+        </div>
       </section>
 
       <footer className="border-t border-white/10 px-6 py-4 text-xs text-[#666]">

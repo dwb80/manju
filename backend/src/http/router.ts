@@ -1,3 +1,20 @@
+/**
+ * @file router.ts
+ * @description HTTP 主路由模块
+ *
+ * 提供 Node.js HTTP 服务器的核心路由分发能力：
+ * - API 路由：/api/* 下所有接口的请求分发和处理
+ * - 静态文件：backend/public 目录下的前端资源服务
+ * - 媒体文件：/media/* 和 /project-media/* 的图片视频访问
+ * - 文件上传：multipart 图片上传和解析
+ * - SSE 聊天：流式聊天响应推送
+ *
+ * 设计要点：
+ * - 手写路由匹配（无框架依赖），性能优先
+ * - 统一的 JSON 响应格式 { code, message, data }
+ * - traceId 全链路追踪（AsyncLocalStorage）
+ * - CORS 支持，允许前端开发服务器跨域调用
+ */
 import { createReadStream } from "node:fs";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
@@ -7,23 +24,52 @@ import { randomUUID } from "node:crypto";
 import { rootLogger, withLogContext, logLineToFile } from "../logger.js";
 import { getRuntimeConfig } from "../config/env.js";
 import type { AppContext } from "../services/app.js";
+import { attachDebugHook } from "./request-debug.js";
 import { addFavorite, addMessage, createConversation, createLocalImageTask, deleteConversation, ensureConversation, generateImage, generateVideo, listConversations, listImages, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateSettings } from "../services/domain.js";
 import { enhancePrompt } from "../services/domain/image.js";
-import { createProject, listProjects, updateProject, deleteProject } from "../services/domain/project.js";
+import {
+  createProject, listProjects, updateProject, deleteProject, summarizeProject,
+  listProjectTasks, createProjectTask, updateProjectTask, deleteProjectTask,
+  listProjectMembers, createProjectMember, updateProjectMember, deleteProjectMember,
+  listProjectIssues, createProjectIssue, updateProjectIssue, deleteProjectIssue,
+  listProjectMilestones, createProjectMilestone, updateProjectMilestone, deleteProjectMilestone,
+  exportProjectManifest, exportProjectPackageIndex,
+} from "../services/domain/project.js";
+import {
+  listProjectEpisodes, createProjectEpisode, updateProjectEpisode, deleteProjectEpisode,
+  listProjectScripts, listDeletedProjectScripts, createProjectScript, updateProjectScript, deleteProjectScript, restoreProjectScript, purgeProjectScript,
+  breakdownProjectScript, exportProjectScriptsText,
+} from "../services/domain/script.js";
+import {
+  listProjectReviews, createProjectReview, updateProjectReview, deleteProjectReview,
+} from "../services/domain/review.js";
+import {
+  listProjectStoryboards, createProjectStoryboard, updateProjectStoryboard, deleteProjectStoryboard,
+  batchUpdateProjectStoryboards, exportProjectStoryboardsCsv, exportProjectEditListCsv,
+} from "../services/domain/storyboard.js";
 import { saveUploadedImage, type UploadInput } from "../services/media.js";
-import { listCharacters, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters, listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes, listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps, getCharacterUsage, getSceneUsage, getPropUsage, copyCharactersToProjects, copyScenesToProjects, copyPropsToProjects, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets, listVersions, getVersion, restoreVersion, listStoryboards, createStoryboard, updateStoryboard, deleteStoryboard, softDeleteStoryboard, restoreStoryboard as restoreStoryboardById, listDeletedStoryboards, permanentDeleteStoryboard, copyStoryboardToProject, generateVideoFromStoryboard, listAudios, createAudio, updateAudio, deleteAudio, softDeleteAudio, restoreAudio as restoreAudioById, listDeletedAudios, permanentDeleteAudio, copyAudioToProject, generateTTS, listModuleVideoTasks, createModuleVideoTask, updateModuleVideoTask, deleteModuleVideoTask, softDeleteVideo, restoreVideo as restoreVideoById, listDeletedVideos, permanentDeleteVideo, copyVideoToProject, syncVideoTaskStatus, retryVideoTask, regenerateVideo, softDeleteClip, restoreClip, listDeletedClips, permanentDeleteClip, copyClipToProject, listScripts, createScript, updateScript as updateScriptRecord, deleteScript as deleteScriptRecord, restoreScript, purgeScript, listDeletedScripts } from "../services/module-domain.js";
-import { listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment, listScriptDocuments, getScriptDocument, createScriptDocument, updateScriptDocument, deleteScriptDocument, listScriptEpisodes, listScriptScenes, createScriptEpisode, createScriptScene, createScriptDialogue, optimizeScriptWithAI } from "../services/script-center-impl.js";
+import { listCharacters, createCharacter, updateCharacter, deleteCharacter, restoreCharacter, listDeletedCharacters, permanentDeleteCharacters, batchDeleteCharacters, batchUpdateCharacters, listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes, listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps, getCharacterUsage, getSceneUsage, getPropUsage, copyCharactersToProjects, copyScenesToProjects, copyPropsToProjects, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets, listVersions, getVersion, restoreVersion, listStoryboards, createStoryboard, updateStoryboard, deleteStoryboard, softDeleteStoryboard, restoreStoryboard as restoreStoryboardById, listDeletedStoryboards, permanentDeleteStoryboard, copyStoryboardToProject, generateVideoFromStoryboard, listAudios, createAudio, updateAudio, deleteAudio, softDeleteAudio, restoreAudio as restoreAudioById, listDeletedAudios, permanentDeleteAudio, copyAudioToProject, generateTTS, listModuleVideoTasks, createModuleVideoTask, updateModuleVideoTask, deleteModuleVideoTask, softDeleteVideo, restoreVideo as restoreVideoById, listDeletedVideos, permanentDeleteVideo, copyVideoToProject, syncVideoTaskStatus, retryVideoTask, regenerateVideo, softDeleteClip, restoreClip, listDeletedClips, permanentDeleteClip, copyClipToProject, listAssets, createAsset, updateAsset, deleteAsset } from "../services/module-domain.js";
+import {
+  listScriptComments, createScriptComment, updateScriptComment, deleteScriptComment,
+  listScriptDocuments, getScriptDocument, createScriptDocument, updateScriptDocument, deleteScriptDocument, listDeletedScriptDocuments, restoreScriptDocument, purgeScriptDocument,
+  listScriptEpisodes, listScriptScenes, createScriptEpisode, createScriptScene, createScriptDialogue, generateScriptWithAI, optimizeScriptWithAI,
+  listScriptAnalyzedAssets, replaceScriptAnalyzedAssets, updateScriptAnalyzedCharacter, updateScriptAnalyzedScene, updateScriptAnalyzedProp, deleteScriptAnalyzedCharacter, deleteScriptAnalyzedScene, deleteScriptAnalyzedProp,
+} from "../services/script-center-impl.js";
 import { matchFactoryRoute } from "./factory-router.js";
 import { handleAITasksRouter } from "./ai-tasks-router.js";
 import { handleDataRouter } from "./data-router.js";
 import { handleModelsRouter } from "./models-router.js";
 import { handlePublishRouter } from "./publish-router.js";
 import { handlePipelineRouter } from "./pipeline-router.js";
+import { handleAssistantRouter } from "./assistant-router.js";
+import { handleAdminRouter } from "./admin-router.js";
+import { readJsonBody as readJson } from "./http-utils.js";
 import { analyzeScriptWithAI } from "../services/script-analyze-ai.js";
 import { listProjectClips, createProjectClip, updateProjectClip, softDeleteProjectClip, syncProjectClipsFromStoryboards } from "../services/domain/storyboard.js";
 import { recordAppLog } from "../services/audit-log.js";
-import type { Conversation, Message, Project } from "../types.js";
-import { DEFAULT_MODEL, estimateTokens, requireString } from "../utils.js";
+import type { Conversation, Message, Project, Todo, TodoStatus, TodoPriority } from "../types.js";
+import { DEFAULT_MODEL, estimateTokens, id, nowIso, requireString, TimeoutError } from "../utils.js";
+import type { ReviewItem, ReviewStatus, ReviewTargetType, RejectionReasonCode } from "../types/horizontal.js";
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
 
@@ -38,20 +84,44 @@ const mediaTypes: Record<string, string> = {
   ".mov": "video/quicktime",
 };
 
-/** 同时把日志打印到终端并写入 backend/data/logs。 */
+/**
+ * logLine - 同时打印日志到终端和写入文件
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} message - 日志消息
+ * @returns {void}
+ */
 function logLine(ctx: AppContext, message: string): void {
   // 评审增量改造 P0：同时写 pino（stdout JSON）和原文件日志（兼容旧 grep）
   rootLogger.info({ event: "compat", msg: message });
   void logLineToFile(message);
 }
 
-/** 给每个请求挂上完成日志，记录方法、路径、状态码和耗时。 */
+/**
+ * attachRequestLogger - 为请求挂载完成日志记录器
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {string} traceId - 请求追踪ID
+ * @returns {void}
+ * @description 在请求完成时记录方法、路径、状态码和耗时
+ */
 function attachRequestLogger(ctx: AppContext, req: IncomingMessage, res: ServerResponse, traceId: string): void {
   const started = Date.now();
   let logged = false;
   const method = req.method ?? "GET";
   const url = req.url ?? "/";
   const log = rootLogger.child({ traceId, method, url });
+  // 请求开始时立即打 info 日志：30s+ 的长请求（脚本分析、生图、生视频）
+  // 在还没结束时，运维 / 用户需要能看到"请求已进入"以便排查卡在哪一步。
+  // 字段刻意保持小：traceId + method/url + ua，便于从大日志里 grep 同一请求。
+  log.info(
+    {
+      event: "http.request.start",
+      ua: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      remoteAddr: req.socket?.remoteAddress ?? null,
+    },
+    `→ 收到请求：${method} ${url}`,
+  );
   /** 只记录一次请求结束事件，避免 finish 和 close 重复写日志。 */
   const finish = (event: "finish" | "close") => {
     if (logged) return;
@@ -59,15 +129,21 @@ function attachRequestLogger(ctx: AppContext, req: IncomingMessage, res: ServerR
     const ms = Date.now() - started;
     const statusCode = res.statusCode;
     const level = statusCode >= 500 ? "error" : statusCode >= 400 ? "warn" : "info";
-    log[level]({ event: "http.request", statusCode, durationMs: ms, lifecycle: event }, `${method} ${url} ${statusCode} ${ms}ms ${event}`);
+    const lifecycleText = event === "finish" ? "正常结束" : "连接中断";
+    log[level]({ event: "http.request", statusCode, durationMs: ms, lifecycle: event }, `${method} ${url} ${statusCode} ${ms}ms ${lifecycleText}`);
     // 兼容旧 grep：单行写到 data/logs
-    void logLineToFile(`${method} ${url} ${statusCode} ${ms}ms ${event} traceId=${traceId}`);
+    const lifecycleZh = event === "finish" ? "完成" : "中断";
+    void logLineToFile(`${method} ${url} ${statusCode} ${ms}ms ${lifecycleZh} traceId=${traceId}`);
   };
   res.once("finish", () => finish("finish"));
   res.once("close", () => finish("close"));
 }
 
-/** 从请求头解析或生成 traceId（评审增量改造 P0）。 */
+/**
+ * resolveTraceId - 从请求头解析或生成 traceId
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @returns {string} traceId，优先使用请求头中的 x-request-id
+ */
 function resolveTraceId(req: IncomingMessage): string {
   const header = req.headers["x-request-id"];
   if (typeof header === "string" && header.trim().length > 0 && header.length <= 128) {
@@ -76,15 +152,13 @@ function resolveTraceId(req: IncomingMessage): string {
   return `tr-${randomUUID()}`;
 }
 
-/** 读取 JSON 请求体，并解析成普通对象。 */
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.from(chunk));
-  const text = Buffer.concat(chunks).toString("utf8");
-  return text ? JSON.parse(text) as Record<string, unknown> : {};
-}
-
-/** 读取原始请求体，并限制最大字节数以保护上传接口。 */
+/**
+ * readBody - 读取原始请求体，并限制最大字节数
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {number} maxBytes - 最大字节数限制
+ * @returns {Promise<Buffer>} 请求体 Buffer
+ * @throws {Error} 当请求体超过最大字节数时抛出错误
+ */
 async function readBody(req: IncomingMessage, maxBytes: number): Promise<Buffer> {
   const chunks: Buffer[] = [];
   let total = 0;
@@ -97,7 +171,13 @@ async function readBody(req: IncomingMessage, maxBytes: number): Promise<Buffer>
   return Buffer.concat(chunks);
 }
 
-/** 发送统一格式的成功 JSON 响应。 */
+/**
+ * sendJson - 发送统一格式的成功 JSON 响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {T} data - 响应数据
+ * @param {number} status - HTTP 状态码，默认 200
+ * @returns {void}
+ */
 function sendJson<T>(res: ServerResponse, data: T, status = 200): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify({ code: 0, message: "ok", data }));
@@ -108,38 +188,80 @@ const ERROR_CODE_BAD_REQUEST = 1002;
 const ERROR_CODE_UNAUTHORIZED = 1003;
 const ERROR_CODE_NOT_FOUND = 1004;
 const ERROR_CODE_SERVER = 1005;
+const ERROR_CODE_BUDGET_EXCEEDED = 1010; // 项目预算硬上限超支（HTTP 402）
 
-/** 把 HTTP 状态码映射到业务错误码。 */
+/**
+ * errorCodeForStatus - 将 HTTP 状态码映射到业务错误码
+ * @param {number} status - HTTP 状态码
+ * @returns {number} 业务错误码
+ */
 function errorCodeForStatus(status: number): number {
   if (status === 400) return ERROR_CODE_BAD_REQUEST;
   if (status === 401 || status === 403) return ERROR_CODE_UNAUTHORIZED;
+  if (status === 402) return ERROR_CODE_BUDGET_EXCEEDED;
   if (status === 404) return ERROR_CODE_NOT_FOUND;
   if (status >= 500) return ERROR_CODE_SERVER;
   return 1001;
 }
 
-/** 发送统一格式的错误 JSON 响应。 */
+/**
+ * sendError - 发送统一格式的错误 JSON 响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {unknown} error - 错误对象
+ * @param {number} status - HTTP 状态码，默认 400
+ * @returns {void}
+ */
 function sendError(res: ServerResponse, error: unknown, status = 400): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify({ code: errorCodeForStatus(status), message: (error as Error).message ?? "error", data: null }));
 }
 
-/** 设置跨域响应头，允许前端开发服务器调用后端。 */
-function applyCors(req: IncomingMessage, res: ServerResponse): void {
+/**
+ * applyCors - 设置跨域响应头
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {void}
+ * @description 允许前端开发服务器跨域调用后端
+ */
+function applyCors(req: IncomingMessage, res: ServerResponse): boolean {
   const origin = req.headers.origin;
-  res.setHeader("access-control-allow-origin", typeof origin === "string" ? origin : "*");
+  const configured = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const allowed = new Set(configured.length > 0 ? configured : [
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://localhost:3101",
+    "http://127.0.0.1:3101",
+  ]);
+  if (typeof origin === "string" && !allowed.has(origin)) return false;
+  if (typeof origin === "string") {
+    res.setHeader("access-control-allow-origin", origin);
+    res.setHeader("vary", "Origin");
+  }
   res.setHeader("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   res.setHeader("access-control-allow-headers", "content-type,authorization");
   res.setHeader("access-control-max-age", "86400");
+  return true;
 }
 
-/** 把请求 URL 拆成路由片段，方便手写路由判断。 */
+/**
+ * routeParts - 将请求 URL 拆分为路由片段
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @returns {string[]} 路由片段数组
+ */
 function routeParts(req: IncomingMessage): string[] {
   const url = new URL(req.url ?? "/", "http://localhost");
   return url.pathname.split("/").filter(Boolean);
 }
 
-/** 提供 backend/public 下的静态文件。 */
+/**
+ * serveStatic - 提供 backend/public 下的静态文件服务
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
+ */
 async function serveStatic(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", "http://localhost");
   const requested = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
@@ -159,7 +281,13 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse): Promise<v
   }
 }
 
-/** 提供全局 data/media 下的图片、视频和上传文件。 */
+/**
+ * serveMedia - 提供全局 data/media 下的图片、视频和上传文件
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
+ */
 async function serveMedia(ctx: AppContext, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", "http://localhost");
   const requested = decodeURIComponent(url.pathname.replace(/^\/media\/?/, ""));
@@ -179,7 +307,13 @@ async function serveMedia(ctx: AppContext, req: IncomingMessage, res: ServerResp
   }
 }
 
-/** 提供项目目录下的图片和视频文件。 */
+/**
+ * serveProjectMedia - 提供项目目录下的图片和视频文件
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
+ */
 async function serveProjectMedia(ctx: AppContext, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", "http://localhost");
   const [projectId, ...rest] = url.pathname.replace(/^\/project-media\/?/, "").split("/").filter(Boolean);
@@ -207,7 +341,12 @@ async function serveProjectMedia(ctx: AppContext, req: IncomingMessage, res: Ser
   }
 }
 
-/** 按分隔符拆分 Buffer，用于解析 multipart 表单。 */
+/**
+ * splitBuffer - 按分隔符拆分 Buffer
+ * @param {Buffer} value - 待拆分的 Buffer
+ * @param {Buffer} delimiter - 分隔符 Buffer
+ * @returns {Buffer[]} 拆分后的 Buffer 数组
+ */
 function splitBuffer(value: Buffer, delimiter: Buffer): Buffer[] {
   const parts: Buffer[] = [];
   let start = 0;
@@ -223,19 +362,35 @@ function splitBuffer(value: Buffer, delimiter: Buffer): Buffer[] {
   return parts;
 }
 
-/** 从 multipart 分段头中读取指定头字段。 */
+/**
+ * headerValue - 从 multipart 分段头中读取指定头字段
+ * @param {string} headers - 分段头字符串
+ * @param {string} name - 头字段名称
+ * @returns {string} 头字段值
+ */
 function headerValue(headers: string, name: string): string {
   const line = headers.split(/\r?\n/).find((item) => item.toLowerCase().startsWith(`${name.toLowerCase()}:`));
   return line?.slice(line.indexOf(":") + 1).trim() ?? "";
 }
 
-/** 从 Content-Disposition 中提取 filename 等参数。 */
+/**
+ * dispositionParam - 从 Content-Disposition 中提取参数
+ * @param {string} value - Content-Disposition 字段值
+ * @param {string} name - 参数名称
+ * @returns {string} 参数值
+ */
 function dispositionParam(value: string, name: string): string {
   const match = new RegExp(`${name}="([^"]*)"`).exec(value);
   return match?.[1] ?? "";
 }
 
-/** 解析 multipart 图片上传请求，并限制文件数量和单文件大小。 */
+/**
+ * parseMultipartImages - 解析 multipart 图片上传请求
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {Buffer} body - 请求体 Buffer
+ * @returns {UploadInput[]} 上传文件信息数组
+ * @description 限制文件数量和单文件大小（单张图片上限 200MB，单次最多 4 张）
+ */
 function parseMultipartImages(req: IncomingMessage, body: Buffer): UploadInput[] {
   const contentType = req.headers["content-type"] ?? "";
   const boundary = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(Array.isArray(contentType) ? contentType[0] : contentType)?.[1]
@@ -273,7 +428,13 @@ function parseMultipartImages(req: IncomingMessage, body: Buffer): UploadInput[]
   return uploads.slice(0, 4);
 }
 
-/** 处理图片附件上传，并返回本地媒体 URL。 */
+/**
+ * handleUpload - 处理图片附件上传，返回本地媒体 URL
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
+ */
 async function handleUpload(ctx: AppContext, req: IncomingMessage, res: ServerResponse): Promise<void> {
   // body 上限 = 200MB × 4 张 + multipart 开销 = 850MB（按 4 张 200MB 满载估算）
   const body = await readBody(req, 850 * 1024 * 1024);
@@ -284,7 +445,14 @@ async function handleUpload(ctx: AppContext, req: IncomingMessage, res: ServerRe
   sendJson(res, stored);
 }
 
-/** 处理聊天请求，以 SSE 方式把模型回复片段推给前端。 */
+/**
+ * handleChat - 处理聊天请求，以 SSE 方式推送模型回复
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
+ * @description 使用 Server-Sent Events 实现流式聊天响应
+ */
 async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const body = await readJson(req);
   const conversationId = requireString(body.conversationId, "conversationId");
@@ -311,25 +479,84 @@ async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResp
   req.on("close", () => controller.abort());
 
   let full = "";
-  for await (const chunk of ctx.ai.chat({ conversationId, message: userText, model: DEFAULT_MODEL }, controller.signal)) {
-    if (controller.signal.aborted) break;
-    full += chunk.content;
-    res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+  // 注意：SSE header 已经写完，这里的 for-await 抛错**不能**让 router 顶层兜底变 500，
+  // 只能转成 SSE 错误事件推给前端，让前端 EventSource 拿到 error 后再 toast 提示用户。
+  try {
+    for await (const chunk of ctx.ai.chat({ conversationId, message: userText, model: DEFAULT_MODEL }, controller.signal)) {
+      if (controller.signal.aborted) break;
+      full += chunk.content;
+      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    }
+  } catch (err) {
+    // 不重抛，避免 router 顶层再写 500（这时 SSE header 已发出，写不进去会爆）
+    const message = err instanceof Error ? err.message : String(err);
+    rootLogger.error(
+      { event: "chat.stream.failed", conversationId, err },
+      `聊天流式响应失败（会话 ${conversationId}）：${message}`,
+    );
+    // 通过 SSE 推送错误事件；前端 EventSource 可在 onerror 中区分业务错误与连接断开
+    if (!res.writableEnded) {
+      try {
+        res.write(`event: error\ndata: ${JSON.stringify({ message, name: err instanceof Error ? err.name : "Error" })}\n\n`);
+      } catch {
+        // ignore
+      }
+    }
   }
   if (full) {
-    await addMessage(ctx, {
-      conversation_id: conversationId,
-      role: "assistant",
-      content: full,
-      meta: { model: DEFAULT_MODEL, tokens: estimateTokens(full) },
-    });
+    try {
+      // 4 中心横切：敏感词标红（详见 docs/spec.md 3.1）
+      // 流式收完的全文做一次敏感词扫描，命中词写入消息 meta。
+      // 前端读消息时根据 meta.sensitiveWords 数组做高亮展示。
+      let sensitiveWords: string[] = [];
+      try {
+        const scan = await ctx.sensitiveWordService.check(full);
+        if (scan.hit && scan.words.length > 0) {
+          sensitiveWords = scan.words.map((w) => w.word);
+          rootLogger.warn(
+            { event: "chat.sensitive_hit", conversationId, count: sensitiveWords.length, words: sensitiveWords },
+            `AI 回复命中敏感词：${sensitiveWords.join("、")}`,
+          );
+        }
+      } catch (scanErr) {
+        // 敏感词服务异常不阻塞消息持久化
+        rootLogger.debug(
+          { event: "chat.sensitive_scan_failed", err: String(scanErr) },
+          "敏感词扫描失败，跳过标红",
+        );
+      }
+      await addMessage(ctx, {
+        conversation_id: conversationId,
+        role: "assistant",
+        content: full,
+        meta: {
+          model: DEFAULT_MODEL,
+          tokens: estimateTokens(full),
+          ...(sensitiveWords.length > 0 ? { sensitiveWords } : {}),
+        },
+      });
+    } catch (err) {
+      // 持久化失败不应阻塞用户：仅记日志
+      rootLogger.warn(
+        { event: "chat.persist_failed", conversationId, err },
+        "聊天结束后持久化助手消息失败",
+      );
+    }
   }
   ctx.aborts.delete(conversationId);
-  res.write(`event: done\ndata: {}\n\n`);
-  res.end();
+  if (!res.writableEnded) {
+    res.write(`event: done\ndata: {}\n\n`);
+    res.end();
+  }
 }
 
-/** 分发所有 /api 路径到具体业务函数。 */
+/**
+ * handleApi - 分发所有 /api 路径到具体业务函数
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
+ */
 async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const method = req.method ?? "GET";
   const parts = routeParts(req);
@@ -337,57 +564,167 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     if (method === "GET" && parts.join("/") === "api/health") return sendJson(res, { status: "ok", config: getRuntimeConfig() });
     if (method === "GET" && parts.join("/") === "api/projects") return sendJson(res, await listProjects(ctx));
     if (method === "POST" && parts.join("/") === "api/projects") return sendJson(res, await createProject(ctx, await readJson(req)));
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2]) return sendJson(res, await updateProject(ctx, parts[2], await readJson(req) as Partial<Project>));
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2] && !parts[3]) return sendJson(res, await updateProject(ctx, parts[2], await readJson(req) as Partial<Project>));
     if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "open-folder") return sendJson(res, await openProjectFolder(ctx, parts[2]));
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2]) {
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && !parts[3]) {
       await deleteProject(ctx, parts[2]);
       return sendJson(res, { deleted: true });
     }
-    // 剧本模块（按项目隔离）
-    if (method === "GET" && parts.join("/") === "api/scripts") {
-      return sendJson(res, await listScripts(ctx));
+    // ===== 项目工作台 =====
+    // 所有嵌套资源都校验 projectId，避免跨项目读取或修改。
+    if (parts[0] === "api" && parts[1] === "projects" && parts[2]) {
+      const projectId = parts[2];
+      const resource = parts[3];
+      const resourceId = parts[4];
+      const action = parts[5];
+
+      if (method === "GET" && resource === "summary" && !resourceId) return sendJson(res, await summarizeProject(ctx, projectId));
+
+      if (resource === "tasks") {
+        if (method === "GET" && !resourceId) return sendJson(res, await listProjectTasks(ctx, projectId));
+        if (method === "POST" && !resourceId) return sendJson(res, await createProjectTask(ctx, projectId, await readJson(req)));
+        if (method === "PUT" && resourceId) return sendJson(res, await updateProjectTask(ctx, projectId, resourceId, await readJson(req)));
+        if (method === "DELETE" && resourceId) { await deleteProjectTask(ctx, projectId, resourceId); return sendJson(res, { deleted: true }); }
+      }
+      if (resource === "members") {
+        if (method === "GET" && !resourceId) return sendJson(res, await listProjectMembers(ctx, projectId));
+        if (method === "POST" && !resourceId) return sendJson(res, await createProjectMember(ctx, projectId, await readJson(req)));
+        if (method === "PUT" && resourceId) return sendJson(res, await updateProjectMember(ctx, projectId, resourceId, await readJson(req)));
+        if (method === "DELETE" && resourceId) { await deleteProjectMember(ctx, projectId, resourceId); return sendJson(res, { deleted: true }); }
+      }
+      if (resource === "issues") {
+        if (method === "GET" && !resourceId) return sendJson(res, await listProjectIssues(ctx, projectId));
+        if (method === "POST" && !resourceId) return sendJson(res, await createProjectIssue(ctx, projectId, await readJson(req)));
+        if (method === "PUT" && resourceId) return sendJson(res, await updateProjectIssue(ctx, projectId, resourceId, await readJson(req)));
+        if (method === "DELETE" && resourceId) { await deleteProjectIssue(ctx, projectId, resourceId); return sendJson(res, { deleted: true }); }
+      }
+      if (resource === "milestones") {
+        if (method === "GET" && !resourceId) return sendJson(res, await listProjectMilestones(ctx, projectId));
+        if (method === "POST" && !resourceId) return sendJson(res, await createProjectMilestone(ctx, projectId, await readJson(req)));
+        if (method === "PUT" && resourceId) return sendJson(res, await updateProjectMilestone(ctx, projectId, resourceId, await readJson(req)));
+        if (method === "DELETE" && resourceId) { await deleteProjectMilestone(ctx, projectId, resourceId); return sendJson(res, { deleted: true }); }
+      }
+      if (resource === "episodes") {
+        if (method === "GET" && !resourceId) return sendJson(res, await listProjectEpisodes(ctx, projectId));
+        if (method === "POST" && !resourceId) return sendJson(res, await createProjectEpisode(ctx, projectId, await readJson(req)));
+        if (method === "PUT" && resourceId) return sendJson(res, await updateProjectEpisode(ctx, projectId, resourceId, await readJson(req)));
+        if (method === "DELETE" && resourceId) { await deleteProjectEpisode(ctx, projectId, resourceId); return sendJson(res, { deleted: true }); }
+      }
+      if (resource === "scripts") {
+        if (method === "GET" && !resourceId) {
+          const url = new URL(req.url ?? "/", "http://localhost");
+          return sendJson(res, url.searchParams.get("deleted") === "1" ? await listDeletedProjectScripts(ctx, projectId) : await listProjectScripts(ctx, projectId));
+        }
+        if (method === "POST" && !resourceId) return sendJson(res, await createProjectScript(ctx, projectId, await readJson(req)));
+        if (method === "PUT" && resourceId && !action) return sendJson(res, await updateProjectScript(ctx, projectId, resourceId, await readJson(req)));
+        if (method === "DELETE" && resourceId && !action) return sendJson(res, await deleteProjectScript(ctx, projectId, resourceId));
+        if (method === "POST" && resourceId && action === "restore") return sendJson(res, await restoreProjectScript(ctx, projectId, resourceId));
+        if (method === "DELETE" && resourceId && action === "purge") return sendJson(res, await purgeProjectScript(ctx, projectId, resourceId));
+      }
+      if (resource === "reviews") {
+        if (method === "GET" && !resourceId) {
+          const url = new URL(req.url ?? "/", "http://localhost");
+          return sendJson(res, await listProjectReviews(ctx, projectId, { target_type: url.searchParams.get("target_type"), target_id: url.searchParams.get("target_id") }));
+        }
+        if (method === "POST" && !resourceId) return sendJson(res, await createProjectReview(ctx, projectId, await readJson(req)));
+        if (method === "PUT" && resourceId) return sendJson(res, await updateProjectReview(ctx, projectId, resourceId, await readJson(req)));
+        if (method === "DELETE" && resourceId) { await deleteProjectReview(ctx, projectId, resourceId); return sendJson(res, { deleted: true }); }
+      }
+      if (resource === "storyboards") {
+        if (method === "GET" && !resourceId) return sendJson(res, await listProjectStoryboards(ctx, projectId));
+        if (method === "POST" && !resourceId) return sendJson(res, await createProjectStoryboard(ctx, projectId, await readJson(req)));
+        if (method === "POST" && resourceId === "batch") return sendJson(res, await batchUpdateProjectStoryboards(ctx, projectId, await readJson(req)));
+        if (method === "POST" && resourceId === "breakdown") return sendJson(res, await breakdownProjectScript(ctx, projectId, await readJson(req)));
+        if (method === "PUT" && resourceId && !action) return sendJson(res, await updateProjectStoryboard(ctx, projectId, resourceId, await readJson(req)));
+        if (method === "DELETE" && resourceId && !action) { await deleteProjectStoryboard(ctx, projectId, resourceId); return sendJson(res, { deleted: true }); }
+        if (method === "POST" && resourceId && action === "generate-image") {
+          const body = await readJson(req);
+          const task = await generateImage(ctx, { ...body, projectId });
+          await updateProjectStoryboard(ctx, projectId, resourceId, { image_task_id: task.id, image_url: task.image_urls[0] ?? "", status: "image" });
+          return sendJson(res, task);
+        }
+        if (method === "POST" && resourceId && action === "generate-video") {
+          const body = await readJson(req);
+          const storyboard = (await listProjectStoryboards(ctx, projectId)).find((item) => item.id === resourceId);
+          if (!storyboard) throw new Error("project storyboard not found");
+          const task = await generateVideo(ctx, { ...body, projectId, image: body.image ?? storyboard.image_url });
+          await updateProjectStoryboard(ctx, projectId, resourceId, { video_task_id: task.id, video_url: task.video_url, status: "video" });
+          return sendJson(res, task);
+        }
+      }
+      if (resource === "clips") {
+        if (method === "GET" && !resourceId) return sendJson(res, await listProjectClips(ctx, projectId));
+        if (method === "POST" && !resourceId) return sendJson(res, await createProjectClip(ctx, projectId, await readJson(req)));
+        if (method === "POST" && resourceId === "sync") return sendJson(res, await syncProjectClipsFromStoryboards(ctx, projectId));
+        if (method === "PUT" && resourceId) return sendJson(res, await updateProjectClip(ctx, projectId, resourceId, await readJson(req)));
+        if (method === "DELETE" && resourceId) { await softDeleteProjectClip(ctx, projectId, resourceId); return sendJson(res, { deleted: true }); }
+      }
+      if (resource === "exports") {
+        if (method === "GET" && resourceId === "manifest.json") return sendJson(res, await exportProjectManifest(ctx, projectId));
+        if (method === "POST" && resourceId === "package") return sendJson(res, await exportProjectPackageIndex(ctx, projectId));
+        if (method === "GET" && resourceId === "storyboards.csv") {
+          res.writeHead(200, { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="storyboards-${projectId}.csv"` });
+          return void res.end(`\uFEFF${await exportProjectStoryboardsCsv(ctx, projectId)}`);
+        }
+        if (method === "GET" && resourceId === "edit-list.csv") {
+          res.writeHead(200, { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="edit-list-${projectId}.csv"` });
+          return void res.end(`\uFEFF${await exportProjectEditListCsv(ctx, projectId)}`);
+        }
+        if (method === "GET" && resourceId === "scripts.txt") {
+          res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "content-disposition": `attachment; filename="scripts-${projectId}.txt"` });
+          return void res.end(await exportProjectScriptsText(ctx, projectId));
+        }
+      }
     }
-    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && !parts[4]) {
-      return sendJson(res, await listScripts(ctx, parts[2]));
+    // ===== 项目资产（资产中心）=====
+    // GET    /api/projects/:projectId/assets
+    // POST   /api/projects/:projectId/assets
+    // PUT    /api/projects/:projectId/assets/:assetId
+    // DELETE /api/projects/:projectId/assets/:assetId
+    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && !parts[4]) {
+      return sendJson(res, await listAssets(ctx, parts[2]));
     }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts") {
-      const body = await readJson(req);
-      return sendJson(res, await createScript(ctx, { ...(body as any), project_id: parts[2] }));
+    if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && !parts[4]) {
+      const body = await readJson(req) as Record<string, unknown>;
+      return sendJson(res, await createAsset(ctx, { ...body, project_id: parts[2] }));
     }
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4]) {
-      return sendJson(res, await updateScriptRecord(ctx, parts[4], await readJson(req) as any));
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && parts[4]) {
+      return sendJson(res, await updateAsset(ctx, parts[4], await readJson(req) as any));
     }
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4] && !parts[5]) {
-      return sendJson(res, await deleteScriptRecord(ctx, parts[4]));
-    }
-    if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4] && parts[5] === "restore") {
-      return sendJson(res, await restoreScript(ctx, parts[4]));
-    }
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4] && parts[5] === "purge") {
-      return sendJson(res, await purgeScript(ctx, parts[4]));
-    }
-    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "scripts" && parts[4] === "recycle-bin") {
-      return sendJson(res, await listDeletedScripts(ctx, parts[2]));
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "assets" && parts[4]) {
+      await deleteAsset(ctx, parts[4]);
+      return sendJson(res, { deleted: true });
     }
     // 剧本富文本结构（剧集/场景/对白）—— 给剧本导入用，POST 单条写入
     if (method === "POST" && parts.join("/") === "api/script-documents") {
       return sendJson(res, await createScriptDocument(ctx, await readJson(req) as any));
     }
     if (method === "GET" && parts.join("/") === "api/script-documents") {
-      const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const projectId = url.searchParams.get("projectId") ?? undefined;
+      const deleted = url.searchParams.get("deleted");
+      if (deleted === "1") {
+        return sendJson(res, await listDeletedScriptDocuments(ctx, projectId));
+      }
       return sendJson(res, await listScriptDocuments(ctx, projectId));
     }
-    if (method === "GET" && parts[0] === "api" && parts[1] === "script-documents" && parts[2]) {
+    if (method === "GET" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && !parts[3]) {
       const doc = await getScriptDocument(ctx, parts[2]);
       if (!doc) throw new Error("剧本文档不存在");
       return sendJson(res, doc);
     }
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "script-documents" && parts[2]) {
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && !parts[3]) {
       return sendJson(res, await updateScriptDocument(ctx, parts[2], await readJson(req) as any));
     }
-    if (method === "DELETE" && parts[0] === "api" && parts[1] === "script-documents" && parts[2]) {
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && !parts[3]) {
       await deleteScriptDocument(ctx, parts[2]);
       return sendJson(res, { deleted: true });
+    }
+    if (method === "POST" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && parts[3] === "restore") {
+      return sendJson(res, await restoreScriptDocument(ctx, parts[2]));
+    }
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && parts[3] === "purge") {
+      return sendJson(res, await purgeScriptDocument(ctx, parts[2]));
     }
     if (method === "POST" && parts.join("/") === "api/script-episodes") {
       return sendJson(res, await createScriptEpisode(ctx, await readJson(req) as any));
@@ -396,12 +733,9 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const url = new URL(req.url ?? "/", "http://localhost");
       const projectId = url.searchParams.get("projectId") ?? "";
       const documentId = url.searchParams.get("documentId") ?? undefined;
-      // 若提供 documentId，先查出该 doc 所属项目，再用 projectId 过滤
-      if (documentId) {
-        const doc = await getScriptDocument(ctx, documentId);
-        return sendJson(res, await listScriptEpisodes(ctx, doc?.project_id ?? projectId));
-      }
-      return sendJson(res, await listScriptEpisodes(ctx, projectId));
+      // 若提供 documentId：按 document 严格过滤（避免拉到同项目下其他剧本/孤儿剧集）
+      // 否则按 project 过滤（已自动排除孤儿剧集）
+      return sendJson(res, await listScriptEpisodes(ctx, projectId, documentId));
     }
     if (method === "POST" && parts.join("/") === "api/script-scenes") {
       return sendJson(res, await createScriptScene(ctx, await readJson(req) as any));
@@ -454,8 +788,52 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     if (method === "POST" && parts.join("/") === "api/chat") return handleChat(ctx, req, res);
     if (method === "POST" && parts.join("/") === "api/ai/script-analyze") {
-      const body = (await readJson(req)) as { content?: string; format?: string; useLocal?: boolean };
-      return sendJson(res, await analyzeScriptWithAI(ctx, { content: body.content || "", format: body.format || "txt", useLocal: body.useLocal }));
+      const body = (await readJson(req)) as { content?: string; format?: string; useLocal?: boolean; timeoutMs?: number; model?: string };
+      return sendJson(res, await analyzeScriptWithAI(ctx, {
+        content: body.content || "",
+        format: body.format || "txt",
+        useLocal: body.useLocal,
+        // 前端可通过 body.timeoutMs 覆盖 AI_TIMEOUTS.analyzeScript（默认 180s）
+        // 用法：fetch('/api/ai/script-analyze', { body: JSON.stringify({ content, timeoutMs: 240000 }) })
+        timeoutMs: body.timeoutMs,
+        // 前端可通过 body.model 指定大模型；不传则走 DEFAULT_MODEL（agnes-2.0-flash）。
+        // 返回的 data.model 字段会回填实际使用的模型 id，前端用这个展示"使用 xxx 解析成功"。
+        model: body.model,
+      }));
+    }
+    // 剧本分析提取资产 CRUD
+    if (method === "GET" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && parts[3] === "analyzed-assets") {
+      return sendJson(res, await listScriptAnalyzedAssets(ctx, parts[2]));
+    }
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && parts[3] === "analyzed-assets") {
+      const body = await readJson(req) as any;
+      return sendJson(res, await replaceScriptAnalyzedAssets(ctx, parts[2], body.project_id, {
+        characters: body.characters || [],
+        scenes: body.scenes || [],
+        props: body.props || [],
+      }));
+    }
+    if (method === "PATCH" && parts[0] === "api" && parts[1] === "analyzed-characters" && parts[2]) {
+      return sendJson(res, await updateScriptAnalyzedCharacter(ctx, parts[2], await readJson(req) as any));
+    }
+    if (method === "PATCH" && parts[0] === "api" && parts[1] === "analyzed-scenes" && parts[2]) {
+      return sendJson(res, await updateScriptAnalyzedScene(ctx, parts[2], await readJson(req) as any));
+    }
+    if (method === "PATCH" && parts[0] === "api" && parts[1] === "analyzed-props" && parts[2]) {
+      return sendJson(res, await updateScriptAnalyzedProp(ctx, parts[2], await readJson(req) as any));
+    }
+    // 删除单条剧本中心分析资产（硬删：仅从当前剧本的视图移除，工厂资源不受影响）
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "analyzed-characters" && parts[2]) {
+      await deleteScriptAnalyzedCharacter(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "analyzed-scenes" && parts[2]) {
+      await deleteScriptAnalyzedScene(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
+    }
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "analyzed-props" && parts[2]) {
+      await deleteScriptAnalyzedProp(ctx, parts[2]);
+      return sendJson(res, { deleted: true });
     }
     if (method === "POST" && parts.join("/") === "api/ai/script-optimize") {
       const body = await readJson(req);
@@ -465,6 +843,26 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
         return sendError(res, new Error("content 或 script_id 不能为空"), 400);
       }
       return sendJson(res, await optimizeScriptWithAI(ctx, "local-user", body as any));
+    }
+    if (method === "POST" && parts.join("/") === "api/ai/script-generate") {
+      const body = (await readJson(req)) as {
+        prompt?: string;
+        style?: string;
+        genre?: string;
+        length?: number;
+        project_id?: string;
+      };
+      const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+      if (!prompt) {
+        return sendError(res, new Error("prompt 不能为空"), 400);
+      }
+      return sendJson(res, await generateScriptWithAI(ctx, "local-user", {
+        prompt,
+        style: body.style,
+        genre: body.genre,
+        length: body.length,
+        project_id: body.project_id,
+      } as any));
     }
     if (method === "POST" && parts.join("/") === "api/uploads") return handleUpload(ctx, req, res);
     if (method === "POST" && parts.join("/") === "api/chat/stop") {
@@ -497,7 +895,7 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
         const userAgent = typeof item.userAgent === "string" ? item.userAgent : "";
         const sessionId = typeof item.sessionId === "string" ? item.sessionId : "";
         const pinoLevel: "debug" | "info" | "warn" | "error" = level === "error" ? "error" : level === "warn" ? "warn" : level === "debug" ? "debug" : "info";
-        rootLogger[pinoLevel]({ event: "client.log", source: "frontend", module: moduleName, url, userAgent, sessionId, ...payload }, `[client][${moduleName}] ${message}`);
+        rootLogger[pinoLevel]({ event: "client.log", source: "frontend", module: moduleName, url, userAgent, sessionId, ...payload }, `[客户端][${moduleName}] ${message}`);
         if (level === "error" || level === "warn") {
           void recordAppLog(ctx, {
             entityType: "project",
@@ -547,8 +945,16 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       await ctx.favorites.delete(parts[2]);
       return sendJson(res, { deleted: true });
     }
-    if (method === "GET" && parts.join("/") === "api/settings") return sendJson(res, await ctx.settings.get());
-    if (method === "PUT" && parts.join("/") === "api/settings") return sendJson(res, await updateSettings(ctx, await readJson(req)));
+    if (method === "GET" && parts.join("/") === "api/settings") {
+      const settings = await ctx.settings.get();
+      const { apiKey: _secret, ...publicSettings } = settings;
+      return sendJson(res, { ...publicSettings, apiKeyConfigured: Boolean(settings.apiKey) });
+    }
+    if (method === "PUT" && parts.join("/") === "api/settings") {
+      const settings = await updateSettings(ctx, await readJson(req));
+      const { apiKey: _secret, ...publicSettings } = settings;
+      return sendJson(res, { ...publicSettings, apiKeyConfigured: Boolean(settings.apiKey) });
+    }
     // 审计日志查询（评审增量改造 P2-2）：按 entity_type / action / 时间窗过滤。
     if (method === "GET" && parts.join("/") === "api/logs") {
       const url = new URL(req.url ?? "/", "http://localhost");
@@ -649,6 +1055,117 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const restored = await restoreVersion(ctx, parts[2]);
       return sendJson(res, restored);
     }
+    // === 我的待办（/api/todos） ===
+    // GET /api/todos?owner=&status=&includeDeleted=true
+    if (method === "GET" && parts[0] === "api" && parts[1] === "todos" && !parts[2]) {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const owner = url.searchParams.get("owner") ?? undefined;
+      const status = url.searchParams.get("status") as TodoStatus | null;
+      const includeDeleted = url.searchParams.get("includeDeleted") === "true";
+      const all = await ctx.todos.findMany(owner ? { owner } : {}, { sort: "desc" });
+      const filtered = all.filter((t) => {
+        if (!includeDeleted && t.deleted_at) return false;
+        if (status && t.status !== status) return false;
+        return true;
+      });
+      return sendJson(res, filtered);
+    }
+    // POST /api/todos
+    if (method === "POST" && parts[0] === "api" && parts[1] === "todos" && !parts[2]) {
+      const body = await readJson(req);
+      const now = nowIso();
+      const todo: Todo = {
+        id: id("todo"),
+        owner: requireString(body.owner, "owner"),
+        title: requireString(body.title, "title"),
+        description: typeof body.description === "string" ? body.description : "",
+        status: (body.status as TodoStatus) || "pending",
+        priority: (body.priority as TodoPriority) || "medium",
+        due_date: typeof body.due_date === "string" ? body.due_date : "",
+        link_type: typeof body.link_type === "string" ? body.link_type : "",
+        link_id: typeof body.link_id === "string" ? body.link_id : "",
+        link_url: typeof body.link_url === "string" ? body.link_url : "",
+        created_at: now,
+        updated_at: now,
+        deleted_at: "",
+      };
+      await ctx.todos.insert(todo);
+      return sendJson(res, todo);
+    }
+    // PUT /api/todos/:id
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "todos" && parts[2]) {
+      const existing = await ctx.todos.findById(parts[2]);
+      if (!existing) throw new Error("todo not found");
+      const body = await readJson(req);
+      const { id: _id, created_at: _created, ...rest } = body as Record<string, unknown>;
+      await ctx.todos.update(parts[2], { ...rest, updated_at: nowIso() } as Partial<Todo>);
+      const updated = await ctx.todos.findById(parts[2]);
+      return sendJson(res, updated);
+    }
+    // DELETE /api/todos/:id?hard=true
+    if (method === "DELETE" && parts[0] === "api" && parts[1] === "todos" && parts[2]) {
+      const existing = await ctx.todos.findById(parts[2]);
+      if (!existing) throw new Error("todo not found");
+      const hard = new URL(req.url ?? "/", "http://localhost").searchParams.get("hard") === "true";
+      if (hard) {
+        await ctx.todos.delete(parts[2]);
+      } else {
+        await ctx.todos.update(parts[2], { deleted_at: nowIso() });
+      }
+      return sendJson(res, { deleted: true });
+    }
+    // POST /api/todos/:id/restore
+    if (method === "POST" && parts[0] === "api" && parts[1] === "todos" && parts[2] && parts[3] === "restore") {
+      const existing = await ctx.todos.findById(parts[2]);
+      if (!existing) throw new Error("todo not found");
+      await ctx.todos.update(parts[2], { deleted_at: "", updated_at: nowIso() });
+      return sendJson(res, { restored: true });
+    }
+    // === 审核中心（/api/reviews） ===
+    // GET /api/reviews?projectId=&status=  → 列表
+    if (method === "GET" && parts[0] === "api" && parts[1] === "reviews" && !parts[2]) {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const projectId = url.searchParams.get("projectId");
+      const status = url.searchParams.get("status") as ReviewStatus | null;
+      if (!projectId) throw new Error("projectId required");
+      const items = status
+        ? await ctx.reviewService.listByStatus(projectId, status)
+        : await ctx.reviewItems.findMany({ project_id: projectId }, { sort: "desc" });
+      return sendJson(res, items);
+    }
+    // GET /api/reviews/stats?projectId=  → 看板统计
+    if (method === "GET" && parts[0] === "api" && parts[1] === "reviews" && parts[2] === "stats" && !parts[3]) {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const projectId = url.searchParams.get("projectId");
+      if (!projectId) throw new Error("projectId required");
+      return sendJson(res, await ctx.reviewService.stats(projectId));
+    }
+    // POST /api/reviews  → 提交审核（生产模块调用）
+    if (method === "POST" && parts[0] === "api" && parts[1] === "reviews" && !parts[2]) {
+      const body = await readJson(req);
+      const item = await ctx.reviewService.submit({
+        targetType: requireString(body.targetType, "targetType") as ReviewTargetType,
+        targetId: requireString(body.targetId, "targetId"),
+        projectId: requireString(body.projectId, "projectId"),
+        submittedBy: requireString(body.submittedBy, "submittedBy"),
+      });
+      return sendJson(res, item);
+    }
+    // POST /api/reviews/:id/approve  → 通过
+    if (method === "POST" && parts[0] === "api" && parts[1] === "reviews" && parts[2] && parts[3] === "approve") {
+      const body = await readJson(req);
+      const reviewerId = requireString(body.reviewerId, "reviewerId");
+      const item = await ctx.reviewService.approve(parts[2], reviewerId);
+      return sendJson(res, item);
+    }
+    // POST /api/reviews/:id/reject  → 打回
+    if (method === "POST" && parts[0] === "api" && parts[1] === "reviews" && parts[2] && parts[3] === "reject") {
+      const body = await readJson(req);
+      const reviewerId = requireString(body.reviewerId, "reviewerId");
+      const reasonCode = requireString(body.reasonCode, "reasonCode") as RejectionReasonCode;
+      const item = await ctx.reviewService.reject(parts[2], reviewerId, reasonCode);
+      return sendJson(res, item);
+    }
     // 委托到独立路由模块（ai-tasks / data / models / publish）
     if (parts[0] === "api" && parts[1] === "ai" && parts[2] === "tasks") {
       return handleAITasksRouter(ctx, req, res);
@@ -665,14 +1182,39 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     if (parts[0] === "api" && parts[1] === "pipeline") {
       return handlePipelineRouter(ctx, req, res);
     }
+    if (parts[0] === "api" && parts[1] === "assistant") {
+      return handleAssistantRouter(ctx, req, res);
+    }
+    if (parts[0] === "api" && parts[1] === "admin") {
+      return handleAdminRouter(ctx, req, res);
+    }
     sendError(res, new Error("not found"), 404);
   } catch (error) {
     logLine(ctx, `ERROR ${(error as Error).stack ?? (error as Error).message ?? String(error)}`);
-    sendError(res, error);
+    // 同样地，AI 流式超时需要 504 而不是默认 400，让外层 catch 只兜底其它真错误
+    if (error instanceof TimeoutError) {
+      sendError(res, error, 504);
+    } else {
+      // 业务错误（带 err.status 的 4xx）→ 透传 HTTP 状态码。
+      // 兜底避免 4 中心横切的业务错误（如 budget_exceeded 402）被默认 400 吃掉。
+      // 注意：这里只处理 sendError(res, error)（默认 400）的情况，
+      // 已经有 status 4xx 的显式 sendError(res, error, status) 不受影响。
+      const errorStatus = (error as Error & { status?: number })?.status;
+      if (typeof errorStatus === "number" && errorStatus >= 400 && errorStatus < 500) {
+        sendError(res, error, errorStatus);
+      } else {
+        sendError(res, error);
+      }
+    }
   }
 }
 
-/** 创建 Node HTTP Server，并挂载 API、媒体和静态页面路由。 */
+/**
+ * createServer - 创建 Node HTTP 服务器
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {http.Server} HTTP 服务器实例
+ * @description 创建并配置 HTTP 服务器，挂载 API、媒体和静态页面路由
+ */
 export function createServer(ctx: AppContext): http.Server {
   return http.createServer(async (req, res) => {
     // 评审增量改造 P0：每个请求生成 traceId，AsyncLocalStorage 绑定，
@@ -682,11 +1224,54 @@ export function createServer(ctx: AppContext): http.Server {
     withLogContext({ traceId }, () => {
       // 同步完成所有操作（createServer 的 handler 是 async，用 .then() 处理）
       Promise.resolve(handleRequest(ctx, req, res, traceId)).catch((err) => {
-        rootLogger.error({ event: "http.unhandled", err }, "unhandled error in request");
+        // AI 流式调用超时（withTimeout 抛 TimeoutError）→ 用 504 Gateway Timeout 区分
+        // 真实服务故障（500）。否则前端只能看到 "Internal Server Error"，无法分辨
+        // "AI 排队慢" vs "服务挂了"，定位成本极高。
+        if (err instanceof TimeoutError) {
+          rootLogger.warn({ event: "http.upstream_timeout", err: { message: err.message, op: err.operation, timeoutMs: err.timeoutMs } }, "上游 AI 服务响应超时");
+          try {
+            if (!res.headersSent) {
+              res.writeHead(504, { "content-type": "application/json; charset=utf-8" });
+              res.end(JSON.stringify({
+                code: 1006,
+                message: err.message ?? "AI 服务响应超时，请稍后重试",
+                data: { timeoutMs: err.timeoutMs, operation: err.operation },
+              }));
+            }
+          } catch {
+            // ignore
+          }
+          return;
+        }
+        // 业务错误（带 err.status）→ 透传 HTTP 状态码。
+        // 典型：预算超支 (402)、鉴权 (401/403)、未授权 (404)。
+        // 范围限定 400-499，避免业务误把 5xx 也带上来。
+        const status = (err as Error & { status?: number })?.status;
+        if (typeof status === "number" && status >= 400 && status < 500) {
+          const code = (err as Error & { code?: string })?.code;
+          rootLogger.warn(
+            { event: "http.business_error", status, code, err: { message: (err as Error).message } },
+            `业务错误：${(err as Error).message}`,
+          );
+          try {
+            if (!res.headersSent) {
+              res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
+              res.end(JSON.stringify({
+                code: errorCodeForStatus(status),
+                message: (err as Error).message ?? "error",
+                data: code ? { code } : null,
+              }));
+            }
+          } catch {
+            // ignore
+          }
+          return;
+        }
+        rootLogger.error({ event: "http.unhandled", err }, "请求处理出现未捕获异常");
         try {
           if (!res.headersSent) {
             res.writeHead(500, { "content-type": "application/json; charset=utf-8" });
-            res.end(JSON.stringify({ code: 1005, message: (err as Error).message ?? "internal error", data: null }));
+            res.end(JSON.stringify({ code: 1005, message: "服务器内部错误", data: { traceId } }));
           }
         } catch {
           // ignore
@@ -696,15 +1281,34 @@ export function createServer(ctx: AppContext): http.Server {
   });
 }
 
-/** 实际处理一个 HTTP 请求（被 createServer 包在 traceId 上下文中）。 */
+/**
+ * handleRequest - 实际处理一个 HTTP 请求
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {string} traceId - 请求追踪ID
+ * @returns {Promise<void>}
+ * @description 被 createServer 包在 traceId 上下文中执行
+ */
 async function handleRequest(
   ctx: AppContext,
   req: IncomingMessage,
   res: ServerResponse,
   traceId: string,
 ): Promise<void> {
+  const startedAt = Date.now();
   attachRequestLogger(ctx, req, res, traceId);
-  applyCors(req, res);
+  // debug hook：仅 LOG_LEVEL=debug 时真正抓 body/headers，
+  // info 级别 attachDebugHook 内部直接 return，零开销
+  attachDebugHook(req, res, traceId, startedAt);
+  res.setHeader("x-content-type-options", "nosniff");
+  res.setHeader("x-frame-options", "DENY");
+  res.setHeader("referrer-policy", "no-referrer");
+  if (!applyCors(req, res)) {
+    res.writeHead(403, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ code: ERROR_CODE_UNAUTHORIZED, message: "不允许的请求来源", data: { traceId } }));
+    return;
+  }
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();

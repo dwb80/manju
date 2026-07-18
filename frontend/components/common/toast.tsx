@@ -1,3 +1,8 @@
+/**
+ * @file toast.tsx
+ * @description Toast消息组件和全局Toast API，提供成功、进度、错误等多种类型的消息提示
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -32,32 +37,9 @@ type ToastProps = {
 };
 
 /**
- * Toast 消息组件：提供清晰的操作反馈。
- *
- * 支持三种类型：
- * - success：成功提示，自动消失
- * - progress：进度提示，显示进度条，可取消
- * - error：错误提示，自动消失
- *
- * @param type - Toast 类型
- * @param title - 标题
- * @param description - 描述文本
- * @param progress - 进度百分比（0-100）
- * @param onCancel - 取消回调
- * @param duration - 显示时长（毫秒）
- * @param id - Toast ID
- * @param onClose - 关闭回调
- *
- * @example
- * ```tsx
- * <Toast
- *   id="toast-1"
- *   type="success"
- *   title="操作成功"
- *   description="项目已创建"
- *   onClose={(id) => removeToast(id)}
- * />
- * ```
+ * Toast - Toast消息组件
+ * @param {ToastProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的Toast消息元素
  */
 export function Toast({ type, title, description, progress, onCancel, duration = 3000, id, onClose, action }: ToastProps) {
   const [visible, setVisible] = useState(true);

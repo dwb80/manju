@@ -81,6 +81,39 @@ import {
   deleteImageHistory,
   clearImageHistory,
 } from "../services/character-image-history.js";
+import {
+  listPropImageHistory,
+  appendPropImageHistory,
+  markPropImageApplied,
+  markPropImageUnapplied,
+  deletePropImageHistory,
+  clearPropImageHistory,
+} from "../services/prop-image-history.js";
+import {
+  listSceneImageHistory,
+  appendSceneImageHistory,
+  markSceneImageApplied,
+  markSceneImageUnapplied,
+  deleteSceneImageHistory,
+  clearSceneImageHistory,
+} from "../services/scene-image-history.js";
+import {
+  listCharacterImages,
+  createCharacterImage,
+  updateCharacterImage,
+  deleteCharacterImage,
+  cascadeDeleteCharacterImages,
+  listSceneImages,
+  createSceneImage,
+  updateSceneImage,
+  deleteSceneImage,
+  cascadeDeleteSceneImages,
+  listPropImages,
+  createPropImage,
+  updatePropImage,
+  deletePropImage,
+  cascadeDeletePropImages,
+} from "../services/factory/asset-image-service.js";
 import { requireString } from "../utils.js";
 
 /** 角色子路径保留字，避免与具体 ID 冲突 */
@@ -91,6 +124,7 @@ const RESERVED_CHARACTER_SUBPATHS = new Set<string>([
   "batch",
   "usage",
   "restore",
+  "images",
 ]);
 
 export interface FactoryRouteHelpers {
@@ -101,12 +135,26 @@ export interface FactoryRouteHelpers {
   sendError: (res: ServerResponse, error: unknown, status?: number) => void;
 }
 
+/**
+ * queryParam - 获取查询参数值
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {string} name - 参数名称
+ * @returns {string | undefined} 参数值
+ */
 function queryParam(req: IncomingMessage, name: string): string | undefined {
   const url = new URL(req.url ?? "/", "http://localhost");
   return url.searchParams.get(name) ?? undefined;
 }
 
-/** 匹配并处理 factory 路由；返回 true 表示已处理，false 表示不归我管 */
+/**
+ * matchFactoryRoute - 匹配并处理 factory 路由
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {FactoryRouteHelpers} h - 路由辅助工具对象
+ * @returns {Promise<boolean>} true 表示已处理，false 表示不归我管
+ * @description 处理角色/场景/道具/分镜/音频/视频/剪辑等工厂类资产的 CRUD 操作
+ */
 export async function matchFactoryRoute(
   ctx: AppContext,
   req: IncomingMessage,
@@ -192,6 +240,30 @@ export async function matchFactoryRoute(
       sendJson(res, ch);
       return true;
     }
+    // ===== 角色图片（一对多）=====
+    // GET /api/characters/:id/images - 列出角色的所有图
+    // POST /api/characters/:id/images - 给角色新增一张图
+    if (method === "GET" && seg3 === "images") {
+      const characterId = requireString(seg2, "id");
+      sendJson(res, await listCharacterImages(ctx, characterId));
+      return true;
+    }
+    if (method === "POST" && seg3 === "images") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const characterId = requireString(seg2, "id");
+      const url = requireString(body.url, "url");
+      const record = await createCharacterImage(ctx, {
+        character_id: characterId,
+        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        script_id: typeof body.script_id === "string" ? body.script_id : undefined,
+        url,
+        prompt: typeof body.prompt === "string" ? body.prompt : undefined,
+        view_type: typeof body.view_type === "string" ? body.view_type : undefined,
+        is_primary: body.is_primary === 1 ? 1 : 0,
+      });
+      sendJson(res, record);
+      return true;
+    }
     return false;
   }
 
@@ -259,6 +331,28 @@ export async function matchFactoryRoute(
       sendJson(res, await copyScenesToProjects(ctx, sourceId, targetProjectIds));
       return true;
     }
+    // ===== 场景图片（一对多）=====
+    if (method === "GET" && seg3 === "images") {
+      const sceneId = requireString(seg2, "id");
+      sendJson(res, await listSceneImages(ctx, sceneId));
+      return true;
+    }
+    if (method === "POST" && seg3 === "images") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const sceneId = requireString(seg2, "id");
+      const url = requireString(body.url, "url");
+      const record = await createSceneImage(ctx, {
+        scene_id: sceneId,
+        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        script_id: typeof body.script_id === "string" ? body.script_id : undefined,
+        url,
+        prompt: typeof body.prompt === "string" ? body.prompt : undefined,
+        view_type: typeof body.view_type === "string" ? body.view_type : undefined,
+        is_primary: body.is_primary === 1 ? 1 : 0,
+      });
+      sendJson(res, record);
+      return true;
+    }
     return false;
   }
 
@@ -324,6 +418,28 @@ export async function matchFactoryRoute(
         : [];
       if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
       sendJson(res, await copyPropsToProjects(ctx, sourceId, targetProjectIds));
+      return true;
+    }
+    // ===== 道具图片（一对多）=====
+    if (method === "GET" && seg3 === "images") {
+      const propId = requireString(seg2, "id");
+      sendJson(res, await listPropImages(ctx, propId));
+      return true;
+    }
+    if (method === "POST" && seg3 === "images") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const propId = requireString(seg2, "id");
+      const url = requireString(body.url, "url");
+      const record = await createPropImage(ctx, {
+        prop_id: propId,
+        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        script_id: typeof body.script_id === "string" ? body.script_id : undefined,
+        url,
+        prompt: typeof body.prompt === "string" ? body.prompt : undefined,
+        view_type: typeof body.view_type === "string" ? body.view_type : undefined,
+        is_primary: body.is_primary === 1 ? 1 : 0,
+      });
+      sendJson(res, record);
       return true;
     }
     return false;
@@ -551,6 +667,205 @@ export async function matchFactoryRoute(
       const body = (await readJson(req)) as Record<string, unknown>;
       const characterId = requireString(body.character_id, "character_id");
       const count = await clearImageHistory(ctx, characterId);
+      sendJson(res, { deleted: count });
+      return true;
+    }
+    return false;
+  }
+
+  // ===== 单张图片的 PATCH/DELETE 端点（顶层路径，避免被资产 GET 路由吃掉）=====
+  // PATCH /api/character-images/:id - 更新（view_type / prompt / is_primary / url）
+  // DELETE /api/character-images/:id - 删图
+  if (seg0 === "api" && seg1 === "character-images" && seg2) {
+    if (method === "PATCH") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const patch: Record<string, unknown> = {};
+      if (typeof body.prompt === "string") patch.prompt = body.prompt;
+      if (typeof body.view_type === "string") patch.view_type = body.view_type;
+      if (body.is_primary === 0 || body.is_primary === 1) patch.is_primary = body.is_primary;
+      if (typeof body.url === "string") patch.url = body.url;
+      const updated = await updateCharacterImage(ctx, seg2, patch as any);
+      if (!updated) {
+        sendError(res, new Error("图片不存在"), 404);
+        return true;
+      }
+      sendJson(res, updated);
+      return true;
+    }
+    if (method === "DELETE") {
+      const ok = await deleteCharacterImage(ctx, seg2);
+      sendJson(res, { deleted: ok });
+      return true;
+    }
+    return false;
+  }
+  // PATCH/DELETE /api/scene-images/:id
+  if (seg0 === "api" && seg1 === "scene-images" && seg2) {
+    if (method === "PATCH") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const patch: Record<string, unknown> = {};
+      if (typeof body.prompt === "string") patch.prompt = body.prompt;
+      if (typeof body.view_type === "string") patch.view_type = body.view_type;
+      if (body.is_primary === 0 || body.is_primary === 1) patch.is_primary = body.is_primary;
+      if (typeof body.url === "string") patch.url = body.url;
+      const updated = await updateSceneImage(ctx, seg2, patch as any);
+      if (!updated) {
+        sendError(res, new Error("图片不存在"), 404);
+        return true;
+      }
+      sendJson(res, updated);
+      return true;
+    }
+    if (method === "DELETE") {
+      const ok = await deleteSceneImage(ctx, seg2);
+      sendJson(res, { deleted: ok });
+      return true;
+    }
+    return false;
+  }
+  // PATCH/DELETE /api/prop-images/:id
+  if (seg0 === "api" && seg1 === "prop-images" && seg2) {
+    if (method === "PATCH") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const patch: Record<string, unknown> = {};
+      if (typeof body.prompt === "string") patch.prompt = body.prompt;
+      if (typeof body.view_type === "string") patch.view_type = body.view_type;
+      if (body.is_primary === 0 || body.is_primary === 1) patch.is_primary = body.is_primary;
+      if (typeof body.url === "string") patch.url = body.url;
+      const updated = await updatePropImage(ctx, seg2, patch as any);
+      if (!updated) {
+        sendError(res, new Error("图片不存在"), 404);
+        return true;
+      }
+      sendJson(res, updated);
+      return true;
+    }
+    if (method === "DELETE") {
+      const ok = await deletePropImage(ctx, seg2);
+      sendJson(res, { deleted: ok });
+      return true;
+    }
+    return false;
+  }
+
+  // ===== 道具图片生成历史 =====
+  // 路由：
+  //   GET    /api/prop-image-history?propId=xxx                列出该道具所有历史
+  //   POST   /api/prop-image-history                          追加一条（AI 生成图后调用）
+  //   PATCH  /api/prop-image-history/:id/apply                标记已应用
+  //   PATCH  /api/prop-image-history/:id/unapply              取消应用标记
+  //   DELETE /api/prop-image-history/:id                      删除单条
+  //   POST   /api/prop-image-history/clear                    清空某道具所有
+  if (seg0 === "api" && seg1 === "prop-image-history") {
+    if (method === "GET" && parts.join("/") === "api/prop-image-history") {
+      const propId = requireString(queryParam(req, "propId"), "propId");
+      sendJson(res, await listPropImageHistory(ctx, propId));
+      return true;
+    }
+    if (method === "POST" && parts.join("/") === "api/prop-image-history") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const propId = requireString(body.prop_id, "prop_id");
+      const url = requireString(body.url, "url");
+      const record = await appendPropImageHistory(ctx, {
+        prop_id: propId,
+        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        url,
+        ratio: typeof body.ratio === "string" ? body.ratio : "1:1",
+        model: typeof body.model === "string" ? body.model : "",
+        size: typeof body.size === "string" ? body.size : "",
+        prompt: typeof body.prompt === "string" ? body.prompt : "",
+        negative_prompt: typeof body.negative_prompt === "string" ? body.negative_prompt : "",
+        response_format: typeof body.response_format === "string" ? body.response_format : "url",
+        n: typeof body.n === "number" ? body.n : 1,
+      });
+      sendJson(res, record);
+      return true;
+    }
+    if (method === "PATCH" && seg2 && seg3 === "apply") {
+      const record = await markPropImageApplied(ctx, seg2);
+      if (!record) {
+        sendError(res, new Error("记录不存在"), 404);
+        return true;
+      }
+      sendJson(res, record);
+      return true;
+    }
+    if (method === "PATCH" && seg2 && seg3 === "unapply") {
+      await markPropImageUnapplied(ctx, seg2);
+      sendJson(res, { ok: true });
+      return true;
+    }
+    if (method === "DELETE" && seg2) {
+      const ok = await deletePropImageHistory(ctx, seg2);
+      sendJson(res, { deleted: ok });
+      return true;
+    }
+    if (method === "POST" && parts.join("/") === "api/prop-image-history/clear") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const propId = requireString(body.prop_id, "prop_id");
+      const count = await clearPropImageHistory(ctx, propId);
+      sendJson(res, { deleted: count });
+      return true;
+    }
+    return false;
+  }
+
+  // ===== 场景图片生成历史 =====
+  // 路由：
+  //   GET    /api/scene-image-history?sceneId=xxx              列出该场景所有历史
+  //   POST   /api/scene-image-history                         追加一条（AI 生成图后调用）
+  //   PATCH  /api/scene-image-history/:id/apply               标记已应用
+  //   PATCH  /api/scene-image-history/:id/unapply             取消应用标记
+  //   DELETE /api/scene-image-history/:id                     删除单条
+  //   POST   /api/scene-image-history/clear                   清空某场景所有
+  if (seg0 === "api" && seg1 === "scene-image-history") {
+    if (method === "GET" && parts.join("/") === "api/scene-image-history") {
+      const sceneId = requireString(queryParam(req, "sceneId"), "sceneId");
+      sendJson(res, await listSceneImageHistory(ctx, sceneId));
+      return true;
+    }
+    if (method === "POST" && parts.join("/") === "api/scene-image-history") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const sceneId = requireString(body.scene_id, "scene_id");
+      const url = requireString(body.url, "url");
+      const record = await appendSceneImageHistory(ctx, {
+        scene_id: sceneId,
+        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        url,
+        ratio: typeof body.ratio === "string" ? body.ratio : "1:1",
+        model: typeof body.model === "string" ? body.model : "",
+        size: typeof body.size === "string" ? body.size : "",
+        prompt: typeof body.prompt === "string" ? body.prompt : "",
+        negative_prompt: typeof body.negative_prompt === "string" ? body.negative_prompt : "",
+        response_format: typeof body.response_format === "string" ? body.response_format : "url",
+        n: typeof body.n === "number" ? body.n : 1,
+      });
+      sendJson(res, record);
+      return true;
+    }
+    if (method === "PATCH" && seg2 && seg3 === "apply") {
+      const record = await markSceneImageApplied(ctx, seg2);
+      if (!record) {
+        sendError(res, new Error("记录不存在"), 404);
+        return true;
+      }
+      sendJson(res, record);
+      return true;
+    }
+    if (method === "PATCH" && seg2 && seg3 === "unapply") {
+      await markSceneImageUnapplied(ctx, seg2);
+      sendJson(res, { ok: true });
+      return true;
+    }
+    if (method === "DELETE" && seg2) {
+      const ok = await deleteSceneImageHistory(ctx, seg2);
+      sendJson(res, { deleted: ok });
+      return true;
+    }
+    if (method === "POST" && parts.join("/") === "api/scene-image-history/clear") {
+      const body = (await readJson(req)) as Record<string, unknown>;
+      const sceneId = requireString(body.scene_id, "scene_id");
+      const count = await clearSceneImageHistory(ctx, sceneId);
       sendJson(res, { deleted: count });
       return true;
     }

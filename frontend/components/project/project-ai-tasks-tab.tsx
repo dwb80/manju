@@ -1,3 +1,8 @@
+/**
+ * @file project-ai-tasks-tab.tsx
+ * @description 项目AI任务Tab组件，显示项目关联的AI任务队列
+ */
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";

@@ -83,6 +83,8 @@ export function AIGenerateDialog({
       onClose={onClose}
       onSave={handleSave}
       isLoading={isLoading}
+      submitLabel="开始生成"
+      loadingLabel="生成中..."
     />
   );
 }

@@ -20,6 +20,11 @@ import { normalizeTimeOfDay, parseSceneHeader } from "./utils.js";
 /**
  * 将剧本纯文本按章节（heading）拆分为剧集，剧集下进一步拆分为场景和对白。
  */
+/**
+ * splitTextIntoEpisodes - 将剧本纯文本按章节拆分为剧集
+ * @param {string} text - 剧本纯文本
+ * @returns {ParsedEpisode[]} 返回解析后的剧集列表
+ */
 export function splitTextIntoEpisodes(text: string): ParsedEpisode[] {
   if (!text || text.trim().length === 0) {
     return [
@@ -105,6 +110,12 @@ export function splitTextIntoEpisodes(text: string): ParsedEpisode[] {
 }
 
 /** 从 Markdown 块中解析一集（已包含 H1 标题行） */
+/**
+ * parseEpisodeFromMarkdown - 从Markdown块中解析一集
+ * @param {number} episodeNo - 剧集序号
+ * @param {string} block - Markdown块（已包含H1标题行）
+ * @returns {ParsedEpisode} 返回解析后的剧集
+ */
 export function parseEpisodeFromMarkdown(episodeNo: number, block: string): ParsedEpisode {
   const lines = block.split("\n");
   const titleLine = lines[0] || "";
@@ -143,6 +154,12 @@ export function parseEpisodeFromMarkdown(episodeNo: number, block: string): Pars
  *   ## Scene 2 / 茶信馆门口 / 白天
  *   ## 场景01 茶信馆门口 白天
  */
+/**
+ * parseSceneFromMarkdown - 解析单个场景
+ * @param {number} sceneNo - 场景序号
+ * @param {string} block - 场景Markdown块
+ * @returns {ParsedScene} 返回解析后的场景
+ */
 export function parseSceneFromMarkdown(sceneNo: number, block: string): ParsedScene {
   const lines = block.split("\n");
   const headerLine = lines[0] || "";
@@ -173,6 +190,11 @@ export function parseSceneFromMarkdown(sceneNo: number, block: string): ParsedSc
  * - 使用成对括号配对函数 `extractEmotionAndRest`，避免旧正则 `[^）)]+` 在 emotion 含嵌套括号时被截断
  * - 如果行只有 `**Name**（emotion）` 没有冒号，认为是 stage direction，不算对白
  */
+/**
+ * parseNameEmotionText - 从一行中解析角色名、情绪和对白文本
+ * @param {string} line - 文本行
+ * @returns {{name: string; emotion: string; text: string} | null} 返回解析结果，格式不匹配则返回null
+ */
 function parseNameEmotionText(line: string): { name: string; emotion: string; text: string } | null {
   // 期望行首以 **...** 开头
   const m = line.match(/^\*\*([^*]+)\*\*(.*)$/);
@@ -201,6 +223,13 @@ function parseNameEmotionText(line: string): { name: string; emotion: string; te
  * 处理成对嵌套（如 （他笑（自嘲）） ），内部允许出现同种括号。
  * 返回 { inner: 配对区间内的内容, endIdx: 右括号位置, -1 表示未闭合 }
  */
+/**
+ * matchBalanced - 查找配对的右括号
+ * @param {string} s - 源字符串
+ * @param {number} start - 开始位置
+ * @param {string} close - 右括号字符
+ * @returns {{inner: string; endIdx: number}} 返回内部内容和右括号位置
+ */
 function matchBalanced(s: string, start: number, close: string): { inner: string; endIdx: number } {
   const open = close === "）" ? "（" : "(";
   let depth = 1;
@@ -221,6 +250,11 @@ function matchBalanced(s: string, start: number, close: string): { inner: string
  * - `> **萧晓**（冷笑）：终于舍得出来了？` → dialogue (emotion: 冷笑)
  * - `**林逸**: 与你无关。` → dialogue
  * - `林逸：与你无关。` → dialogue
+ */
+/**
+ * parseDialoguesFromText - 解析对白
+ * @param {string} text - 场景描述文本
+ * @returns {ParsedDialogue[]} 返回解析后的对白列表
  */
 export function parseDialoguesFromText(text: string): ParsedDialogue[] {
   if (!text) return [];
@@ -284,6 +318,11 @@ export function parseDialoguesFromText(text: string): ParsedDialogue[] {
 }
 
 /** 当无 scene 标题时，从段落生成单场景（含对白） */
+/**
+ * parseScenesFromParagraphs - 当无scene标题时，从段落生成单场景
+ * @param {string[]} paragraphs - 段落数组
+ * @returns {ParsedScene[]} 返回解析后的场景列表
+ */
 export function parseScenesFromParagraphs(paragraphs: string[]): ParsedScene[] {
   if (paragraphs.length === 0) return [];
   const text = paragraphs.join("\n");

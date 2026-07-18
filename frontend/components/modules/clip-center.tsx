@@ -175,6 +175,8 @@ const config: FactoryCRUDPageProps<ProjectClip> = {
     { label: "剪辑中", value: list.filter((c) => c.status === "editing").length, color: "purple" },
     { label: "已完成", value: list.filter((c) => c.status === "done").length, color: "orange" },
   ],
+  // 剪辑中心：不展示顶部统计卡片
+  showStats: false,
 };
 
 export function ClipCenterPage() {

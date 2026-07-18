@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/lib/stores/project-store";
+import { useHasMounted } from "@/lib/hooks/use-has-mounted";
 import type { FactoryEntity } from "./types";
 
 interface UseFactoryEntityResult<TEntity extends FactoryEntity> {
@@ -28,18 +29,17 @@ interface UseFactoryEntityResult<TEntity extends FactoryEntity> {
 }
 
 /**
- * 通用工厂数据 hook：负责根据项目加载实体。
- * @param fetchList - 实际拉取列表的服务函数
- *
- * 优化点：
- * - 使用 useRef 保存 fetchList，避免函数引用变化导致重复请求
- * - 只在 selectedProjectId 变化时触发加载
- * - reload 使用最新的 fetchList 引用
+ * useFactoryEntity - 通用工厂数据 Hook
+ * @description 负责根据项目加载实体，封装列表加载、选中状态管理等功能
+ * @template TEntity - 工厂实体类型，需继承 FactoryEntity
+ * @param {(projectId: string) => Promise<TEntity[]>} fetchList - 实际拉取列表的服务函数
+ * @returns {UseFactoryEntityResult<TEntity>} 包含 items、isLoading、reload、selectedIds 等状态
  */
 export function useFactoryEntity<TEntity extends FactoryEntity>(
   fetchList: (projectId: string) => Promise<TEntity[]>,
 ): UseFactoryEntityResult<TEntity> {
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
+  const hasMounted = useHasMounted();
   const [items, setItems] = useState<TEntity[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -49,16 +49,18 @@ export function useFactoryEntity<TEntity extends FactoryEntity>(
   fetchListRef.current = fetchList;
 
   const reload = useCallback(async () => {
-    if (!selectedProjectId) {
+    // 等待客户端 mount（zustand persist 从 localStorage 读取完成），
+    // 避免 SSR/CSR 状态不一致导致的 hydration mismatch
+    if (!selectedProjectId || !hasMounted) {
       setItems([]);
       return;
     }
     const data = await fetchListRef.current(selectedProjectId);
     setItems(data);
-  }, [selectedProjectId]);
+  }, [selectedProjectId, hasMounted]);
 
   useEffect(() => {
-    if (!selectedProjectId) {
+    if (!selectedProjectId || !hasMounted) {
       setItems([]);
       return;
     }
@@ -66,7 +68,7 @@ export function useFactoryEntity<TEntity extends FactoryEntity>(
     reload()
       .catch((err) => console.error("useFactoryEntity: failed to load", err))
       .finally(() => setIsLoading(false));
-  }, [selectedProjectId, reload]);
+  }, [selectedProjectId, hasMounted, reload]);
 
   // 切换项目时清空选择
   useEffect(() => {

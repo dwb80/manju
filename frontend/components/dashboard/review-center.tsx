@@ -1,3 +1,7 @@
+/**
+ * @file review-center.tsx
+ * @description 待审核中心组件，展示各类资产（图片、视频、剧本、分镜）的待审核数量
+ */
 "use client";
 
 import { memo } from "react";
@@ -80,7 +84,13 @@ const ReviewItemCard = memo(function ReviewItemCard({
   );
 });
 
-/** 待审核中心组件 */
+/**
+ * ReviewCenter - 待审核中心组件
+ * @param {ReviewCenterProps} props - 组件属性
+ * @param {ReviewCenterData} props.data - 审核数据
+ * @param {Function} props.onItemClick - 点击回调
+ * @returns {JSX.Element} 渲染的待审核中心界面
+ */
 export const ReviewCenter = memo(function ReviewCenter({
   data,
   onItemClick,

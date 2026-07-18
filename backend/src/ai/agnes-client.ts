@@ -1,3 +1,10 @@
+/**
+ * @file agnes-client.ts
+ * @description Agnes API 客户端模块，提供与 Agnes AI 服务的完整交互能力，
+ *              包括聊天、图片生成、视频生成和任务状态查询等功能。
+ *              支持真实 API 调用，已废弃的 Mock 客户端仅作兼容保留。
+ */
+
 import type { ChatChunk, ChatParams, ImageParams, TaskStatus, VideoParams } from "../types.js";
 import { rootLogger } from "../logger.js";
 
@@ -33,7 +40,7 @@ export interface AgnesClient {
   generateVideo(params: VideoParams, signal?: AbortSignal): Promise<{ taskId: string; providerTaskId?: string; videoId?: string; progress?: number; seconds?: string; size?: string }>;
   /** 查询视频任务状态和结果地址。 */
   queryTask(taskId: string, signal?: AbortSignal): Promise<{ status: TaskStatus; videoUrl?: string; error?: string }>;
-  /** 调用 TTS 文本转语音（占位：Agnes 暂未提供 TTS，返回空 file_url 让前端降级）。 */
+  /** 调用 TTS 文本转语音；不支持的 Provider 必须明确抛错。 */
   generateTTS(params: { text: string; voice?: string; emotion?: string; speed?: number; format?: string }, signal?: AbortSignal): Promise<{ file_url: string; duration: number; status: string; voice?: string; emotion?: string }>;
   /** 查询任务状态（兼容旧版）。 */
   queryVideoStatus(taskId: string, signal?: AbortSignal): Promise<{ status: string; progress: number; file_url: string; error: string }>;
@@ -70,6 +77,28 @@ function pickString(value: unknown, keys: string[]): string {
     if (typeof candidate === "string" && candidate.length > 0) return candidate;
   }
   return "";
+}
+
+/**
+ * 把 HTTP 响应安全地解析成 JSON 对象。
+ * 如果响应体不是合法 JSON（例如上游代理返回了 HTML 错误页、空 body、纯文本等），
+ * 会抛出带 body 摘要的明确错误，而不是把 `SyntaxError: Unexpected token ...` 直接抛给上层。
+ * 这样上层（safeAICall / 前端 toast）能给出"返回结果不是有效 JSON"的可读提示。
+ */
+async function readJsonSafe(response: Response, context: string): Promise<unknown> {
+  const text = await response.text();
+  if (!text) {
+    throw new Error(`Agnes ${context} 返回空响应（status=${response.status}）`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    const preview = text.slice(0, 200).replace(/\s+/g, " ");
+    throw new Error(
+      `Agnes ${context} 返回结果不是有效 JSON（status=${response.status}）：${preview}` +
+      (err instanceof Error ? ` | parse error: ${err.message}` : ""),
+    );
+  }
 }
 
 /** 从聊天接口的多种返回格式中提取文本内容。 */
@@ -116,8 +145,28 @@ export class RealAgnesClient implements AgnesClient {
 
   /** 调用 Agnes 聊天接口，并把 SSE 或普通 JSON 响应统一转成文本片段。 */
   async *chat(params: ChatParams, signal?: AbortSignal): AsyncIterable<ChatChunk> {
+    const debugEnabled = rootLogger.isLevelEnabled("debug");
+    const streamStartedAt = debugEnabled ? Date.now() : 0;
+    let chunkCount = 0;
+    let totalChars = 0;
+    const model = params.model ?? "agnes-2.0-flash";
+    if (debugEnabled) {
+      rootLogger.debug(
+        {
+          event: "ai.chat.start",
+          provider: "agnes",
+          model,
+          promptPreview: params.message.length > 500
+            ? `${params.message.slice(0, 500)}...<已截断，原始长度=${params.message.length}>`
+            : params.message,
+          promptLen: params.message.length,
+        },
+        `聊天开始：模型=${model}，提示词=${params.message.length} 字符`,
+      );
+    }
+
     const response = await this.post(this.chatPath, {
-      model: params.model ?? "agnes-2.0-flash",
+      model,
       stream: true,
       messages: [{ role: "user", content: params.message }],
     }, signal);
@@ -138,10 +187,53 @@ export class RealAgnesClient implements AgnesClient {
           if (!line) continue;
           const data = line.slice(5).trim();
           if (data === "[DONE]") {
+            if (debugEnabled) {
+              rootLogger.debug(
+                {
+                  event: "ai.chat.finish",
+                  provider: "agnes",
+                  model,
+                  chunkCount,
+                  totalChars,
+                  durationMs: Date.now() - streamStartedAt,
+                },
+                `聊天结束：共 ${chunkCount} 个分片，${totalChars} 字符`,
+              );
+            }
             yield { content: "", done: true };
             return;
           }
-          const content = parseContent(JSON.parse(data));
+          if (!data) continue;
+          // 单条 SSE data 解析失败不应让整段聊天流崩溃（上游偶尔会塞心跳/注释行），
+          // 跳过该条并记 warn，保持流式继续输出。
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(data);
+          } catch (err) {
+            rootLogger.warn(
+              { event: "ai.chat.sse_bad_data", preview: data.slice(0, 200), err: String(err) },
+              "跳过一条非 JSON 格式的 SSE 数据行",
+            );
+            continue;
+          }
+          const content = parseContent(parsed);
+          chunkCount += 1;
+          totalChars += content.length;
+          if (debugEnabled && (chunkCount === 1 || chunkCount % 20 === 0)) {
+            // 仅在第 1 片和每 20 片打一次进度，避免每片都打日志拖慢流
+            rootLogger.debug(
+              {
+                event: "ai.chat.chunk",
+                provider: "agnes",
+                model,
+                chunkCount,
+                totalChars,
+                lastChunkLen: content.length,
+                durationMs: Date.now() - streamStartedAt,
+              },
+              `聊天分片 #${chunkCount}：新增 ${content.length} 字符（累计=${totalChars}）`,
+            );
+          }
           if (content) yield { content };
         }
       }
@@ -149,7 +241,7 @@ export class RealAgnesClient implements AgnesClient {
       return;
     }
 
-    const payload = await response.json();
+    const payload = await readJsonSafe(response, "chat");
     const content = parseContent(payload);
     yield { content, done: true };
   }
@@ -188,7 +280,7 @@ export class RealAgnesClient implements AgnesClient {
           response_format: responseFormat,
         },
       }, signal);
-      const payload = await response.json();
+      const payload = await readJsonSafe(response, "image generation");
       const imageUrls = parseImageUrls(payload);
       if (imageUrls.length === 0) throw new Error("Agnes image API returned no image URLs");
       return { imageUrls };
@@ -235,7 +327,7 @@ export class RealAgnesClient implements AgnesClient {
           failed: failCount,
           err: firstError,
         },
-        "Agnes image generation partially failed; returning successful URLs only"
+        `Agnes 图片部分生成失败：请求 ${n} 张，成功 ${successCount} 张，失败 ${failCount} 张；仅返回成功部分`,
       );
     }
     return { imageUrls };
@@ -264,7 +356,7 @@ export class RealAgnesClient implements AgnesClient {
         response_format: responseFormat,
       },
     }, signal);
-    const payload = await response.json();
+    const payload = await readJsonSafe(response, "image generation");
     return parseImageUrls(payload);
   }
 
@@ -279,7 +371,7 @@ export class RealAgnesClient implements AgnesClient {
       num_frames: params.duration === 10 ? 241 : 121,
       frame_rate: 24,
     }, signal);
-    const payload = await response.json();
+    const payload = await readJsonSafe(response, "video generation");
     const data = asRecord(asRecord(payload).data);
     const taskId = pickString(payload, ["video_id", "videoId", "task_id", "taskId", "id"]) ||
       pickString(data, ["video_id", "videoId", "task_id", "taskId", "id"]);
@@ -291,7 +383,7 @@ export class RealAgnesClient implements AgnesClient {
   async queryTask(taskId: string, signal?: AbortSignal): Promise<{ status: TaskStatus; videoUrl?: string; error?: string }> {
     const path = this.videoTaskPathTemplate.replace(":taskId", encodeURIComponent(taskId));
     const response = await this.get(path, signal);
-    const payload = await response.json();
+    const payload = await readJsonSafe(response, "video task status");
     const data = asRecord(asRecord(payload).data);
     const rawStatus = pickString(payload, ["status"]) || pickString(data, ["status"]) || "processing";
     const status = this.normalizeStatus(rawStatus);
@@ -301,10 +393,10 @@ export class RealAgnesClient implements AgnesClient {
     return { status, videoUrl: videoUrl || undefined, error: error || undefined };
   }
 
-  /** 文本转语音：Agnes 暂不提供 TTS，前端按占位实现处理。 */
-  async generateTTS(params: { text: string; voice?: string; emotion?: string; speed?: number; format?: string }, signal?: AbortSignal): Promise<{ file_url: string; duration: number; status: string; voice?: string; emotion?: string }> {
-    void params; void signal;
-    return { file_url: "", duration: 0, status: "queued", voice: params.voice, emotion: params.emotion };
+  /** 文本转语音：Agnes 当前不提供 TTS，禁止返回空文件伪装成已排队。 */
+  async generateTTS(_params: { text: string; voice?: string; emotion?: string; speed?: number; format?: string }, signal?: AbortSignal): Promise<{ file_url: string; duration: number; status: string; voice?: string; emotion?: string }> {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    throw new Error("当前 Agnes Provider 不支持 TTS，请配置支持语音合成的 Provider");
   }
 
   /** 查询视频任务状态（带进度和错误），与 queryTask 等价。 */
@@ -329,15 +421,93 @@ export class RealAgnesClient implements AgnesClient {
     });
   }
 
-  /** 统一发送 Agnes HTTP 请求，并把非 2xx 响应转成可读错误（429 抛 AgnesRateLimitError）。 */
+  /**
+   * 统一发送 Agnes HTTP 请求，并把非 2xx 响应转成可读错误（429 抛 AgnesRateLimitError）。
+   * 调试日志（LOG_LEVEL=debug 时才打）：
+   *   - 进：route / method / body 摘要（去掉 api key 头）
+   *   - 出：status / content-length / 耗时
+   *   - 错误：自动在 catch 处打 warn，detail 截断到 1KB
+   */
   private async request(route: string, init: RequestInit): Promise<Response> {
-    const response = await fetch(joinUrl(this.baseUrl, route), {
-      ...init,
-      headers: {
-        authorization: `Bearer ${this.apiKey}`,
-        ...(init.headers ?? {}),
-      },
-    });
+    const url = joinUrl(this.baseUrl, route);
+    const method = (init.method ?? "POST").toString();
+    const debugEnabled = rootLogger.isLevelEnabled("debug");
+    const startedAt = debugEnabled ? Date.now() : 0;
+
+    if (debugEnabled) {
+      // 把 body 截到 1KB 后再打，避免 prompt 很长时日志爆炸
+      let bodyPreview: unknown = null;
+      if (typeof init.body === "string") {
+        bodyPreview = init.body.length > 1024
+          ? `${init.body.slice(0, 1024)}...<truncated, total=${init.body.length}>`
+          : init.body;
+      } else if (init.body instanceof Uint8Array) {
+        bodyPreview = `<Uint8Array ${init.body.byteLength} bytes>`;
+      }
+      // 强制屏蔽 API key 头（万一调用方覆盖了默认 header）
+      const safeHeaders: Record<string, string> = {};
+      for (const [k, v] of Object.entries((init.headers ?? {}) as Record<string, string>)) {
+        if (/^authorization$/i.test(k)) {
+          safeHeaders[k] = "***REDACTED***";
+        } else {
+          safeHeaders[k] = v;
+        }
+      }
+      rootLogger.debug(
+        {
+          event: "ai.api.request",
+          provider: "agnes",
+          method,
+          route,
+          url,
+          headers: safeHeaders,
+          body: bodyPreview,
+        },
+        `→ 调用 Agnes：${method} ${route}`,
+      );
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...init,
+        headers: {
+          authorization: `Bearer ${this.apiKey}`,
+          ...(init.headers ?? {}),
+        },
+      });
+    } catch (err) {
+      if (debugEnabled) {
+        rootLogger.warn(
+          {
+            event: "ai.api.network_error",
+            provider: "agnes",
+            route,
+            durationMs: Date.now() - startedAt,
+            err: err instanceof Error ? { name: err.name, message: err.message } : String(err),
+          },
+          `✗ Agnes 网络异常：${route}`,
+        );
+      }
+      throw err;
+    }
+
+    if (debugEnabled) {
+      rootLogger.debug(
+        {
+          event: "ai.api.response",
+          provider: "agnes",
+          method,
+          route,
+          status: response.status,
+          contentLength: response.headers.get("content-length"),
+          contentType: response.headers.get("content-type"),
+          durationMs: Date.now() - startedAt,
+        },
+        `← Agnes 响应：${response.status} ${route}`,
+      );
+    }
+
     if (!response.ok) {
       const detail = await response.text();
       // 限流：抛类型化错误，让上层做重试 / 降级
@@ -377,7 +547,12 @@ export class MockAgnesClient implements AgnesClient {
   async queryVideoStatus(): Promise<{ status: string; progress: number; file_url: string; error: string }> { throw new Error("MockAgnesClient 已废弃") }
 }
 
-/** 创建真实 Agnes API 客户端。未配置 AGNES_API_KEY 时直接抛错，不提供任何 mock 兜底。 */
+/**
+ * createAgnesClient - 创建真实 Agnes API 客户端实例
+ * @param {NodeJS.ProcessEnv} env - 环境变量来源，默认使用 process.env
+ * @returns {AgnesClient} Agnes 客户端实例
+ * @throws {Error} 当未配置 AGNES_API_KEY 时抛出错误
+ */
 export function createAgnesClient(env = process.env): AgnesClient {
   if (!env.AGNES_API_KEY) {
     throw new Error("AGNES_API_KEY 未配置：所有 AI 能力（剧本分析、聊天、生图、生视频）必须通过真实 API。请在 backend/.env 配置 AGNES_API_KEY 后重启。")

@@ -1,3 +1,8 @@
+/**
+ * @file cross-project-copy.ts
+ * @description 跨项目资产复制服务，提供角色、场景、道具的批量复制功能
+ */
+
 import type { AppContext } from "../app.js";
 import type { Character } from "../../types/character.js";
 import type { Scene } from "../../types/scene.js";
@@ -6,6 +11,13 @@ import { id, nowIso } from "../../utils.js";
 import { recordVersion } from "./asset-version.js";
 import { recordAppLog } from "../audit-log.js";
 
+/**
+ * copyCharactersToProjects - 将角色复制到多个目标项目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} sourceId - 源角色 ID
+ * @param {string[]} targetProjectIds - 目标项目 ID 列表
+ * @returns {Promise<{ copied: number; skipped: number; items: Character[] }>} 复制结果统计和复制的角色列表
+ */
 export async function copyCharactersToProjects(
   ctx: AppContext,
   sourceId: string,
@@ -62,6 +74,13 @@ export async function copyCharactersToProjects(
   return { copied, skipped, items: result };
 }
 
+/**
+ * copyScenesToProjects - 将场景复制到多个目标项目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} sourceId - 源场景 ID
+ * @param {string[]} targetProjectIds - 目标项目 ID 列表
+ * @returns {Promise<{ copied: number; skipped: number; items: Scene[] }>} 复制结果统计和复制的场景列表
+ */
 export async function copyScenesToProjects(
   ctx: AppContext,
   sourceId: string,
@@ -110,6 +129,13 @@ export async function copyScenesToProjects(
   return { copied, skipped, items: result };
 }
 
+/**
+ * copyPropsToProjects - 将道具复制到多个目标项目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} sourceId - 源道具 ID
+ * @param {string[]} targetProjectIds - 目标项目 ID 列表
+ * @returns {Promise<{ copied: number; skipped: number; items: Prop[] }>} 复制结果统计和复制的道具列表
+ */
 export async function copyPropsToProjects(
   ctx: AppContext,
   sourceId: string,

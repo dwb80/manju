@@ -25,6 +25,7 @@ import { useScriptStore } from '@/lib/stores/script-store'
 import { createCharacter } from '@/services/character.service'
 import { createScene as createFactoryScene } from '@/services/scene.service'
 import { createProp as createFactoryProp } from '@/services/prop.service'
+import { scriptCenterService } from '@/services/script-center.service'
 import { notify } from '@/lib/notify'
 import { createLogger } from '@/lib/logger'
 import {
@@ -231,6 +232,15 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
             name: cName,
             role: char.role || 'supporting',
             gender: char.gender || 'other',
+            // 修复：AI 识别出年龄（如 28）但 c.age 没传给 createCharacter，
+            // 导致工厂角色 age 默认 0。character.service 的 updateCharacter 也是
+            // 同样的 age 字段，这里和 import-service 行为保持一致：parseInt 后传数字。
+            age:
+              typeof char.age === 'number' && Number.isFinite(char.age) && char.age > 0
+                ? char.age
+                : typeof char.age === 'string' && char.age.trim()
+                  ? parseInt(char.age, 10) || undefined
+                  : undefined,
             description: mergedDescription,
             traits: char.traits || [],
             tags: ['剧本分析提取'],
@@ -418,6 +428,70 @@ export function useScriptAnalyze(params: UseScriptAnalyzeParams): UseScriptAnaly
         } catch (err) {
           log.warn('restructure content failed', { error: (err as Error).message })
         }
+      }
+
+      // 6) 写入剧本中心 analyzed-assets（独立表）
+      //   - 这是"剧本编辑器右侧面板"的唯一数据源
+      //   - 即使上面 2/3a/4 步的工厂写入失败，右侧面板也仍能看到 AI 提取的资产
+      //   - factory_*_id 字段用"如果已经命中工厂就带上，没命中就空"——让用户后续可单独"流转到工厂"
+      try {
+        const projectId = document.project_id || ''
+        const matchedFactoryChar = new Map<string, string>()
+        for (const c of freshCharacters) matchedFactoryChar.set(c.name, c.id)
+        const matchedFactoryScene = new Map<string, string>()
+        for (const s of freshSceneAssets) matchedFactoryScene.set(s.name, s.id)
+        const matchedFactoryProp = new Map<string, string>()
+        for (const p of freshProps) matchedFactoryProp.set(p.name, p.id)
+
+        await scriptCenterService.saveAnalyzedAssets(
+          document.id,
+          projectId,
+          {
+            characters: preview.characters.map((c: any) => ({
+              name: c.name || '',
+              role: c.role || '',
+              gender: c.gender || '',
+              age: typeof c.age === 'number' ? String(c.age) : (c.age || ''),
+              description: c.description || '',
+              appearance: c.appearance || '',
+              personality: c.personality || '',
+              traits: Array.isArray(c.traits) ? c.traits : [],
+              tags: [],
+              status: 'extracted',
+              factory_character_id: matchedFactoryChar.get(c.name),
+              importance_level: c.role || '',
+            })),
+            scenes: preview.scenes.map((s: any) => ({
+              name: s.location_name || s.name || '',
+              type: s.type || 'outdoor',
+              scene_type: s.type || 'outdoor',
+              description: s.description || '',
+              lighting: '',
+              time_of_day: s.time_of_day || '',
+              weather: '',
+              tags: [],
+              status: 'extracted',
+              factory_scene_id: matchedFactoryScene.get(s.location_name || s.name),
+            })),
+            props: preview.props.map((p: any) => ({
+              name: p.name || '',
+              category: p.category || '',
+              description: p.description || '',
+              appearance: '',
+              material: '',
+              size: '',
+              color: '',
+              tags: [],
+              status: 'extracted',
+              factory_prop_id: matchedFactoryProp.get(p.name),
+            })),
+          },
+        )
+        log.info('analyzed-assets saved to script center', { documentId: document.id })
+      } catch (err) {
+        // analyzed-assets 写入失败不影响主流程：工厂资产已经写好，notify 用户即可
+        log.warn('saveAnalyzedAssets failed (non-fatal)', { error: (err as Error).message })
+        notify.warn('剧本中心资产记录失败，请刷新页面重试', '不影响工厂资产')
       }
 
       log.info('apply success', { createdChars, createdScenes, createdProps, existingChars, existingScenes, existingProps })

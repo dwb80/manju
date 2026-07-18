@@ -118,14 +118,6 @@ interface ProductionStage {
   color: string;
 }
 
-const productionStages: ProductionStage[] = [
-  { name: "剧本", progress: 100, count: 20, color: "emerald" },
-  { name: "分镜", progress: 70, count: 14, color: "blue" },
-  { name: "图片", progress: 90, count: 18, color: "purple" },
-  { name: "视频", progress: 40, count: 8, color: "orange" },
-  { name: "审核", progress: 20, count: 4, color: "pink" },
-];
-
 /** 实时任务数据 */
 interface RealTimeTask {
   id: string;
@@ -134,13 +126,6 @@ interface RealTimeTask {
   duration: number;
   status: "running" | "queued" | "completed";
 }
-
-const realTimeTasks: RealTimeTask[] = [
-  { id: "00123", name: "生成林逸战斗镜头", model: "Flux", duration: 25, status: "running" },
-  { id: "00124", name: "生成茶信馆场景", model: "Flux", duration: 18, status: "running" },
-  { id: "00125", name: "生成萧晓对话分镜", model: "SDXL", duration: 12, status: "queued" },
-  { id: "00126", name: "生成林逸角色图", model: "Flux", duration: 30, status: "completed" },
-];
 
 /** 任务卡类型 */
 interface TaskCard {
@@ -153,13 +138,13 @@ interface TaskCard {
 }
 
 const taskCards: TaskCard[] = [
-  { id: "script", title: "剧本创作", description: "创建或编辑剧本", icon: <FileText className="h-5 w-5" />, color: "emerald", route: "/scripts/new" },
+  { id: "script", title: "剧本创作", description: "创建或编辑剧本", icon: <FileText className="h-5 w-5" />, color: "emerald", route: "/scripts" },
   { id: "character", title: "角色设计", description: "设计角色形象", icon: <Users className="h-5 w-5" />, color: "blue", route: "/characters" },
   { id: "scene", title: "场景设计", description: "设计场景背景", icon: <Image className="h-5 w-5" />, color: "purple", route: "/scenes" },
   { id: "storyboard", title: "生成分镜", description: "从剧本生成分镜", icon: <Film className="h-5 w-5" />, color: "orange", route: "/storyboards" },
-  { id: "image", title: "生成图片", description: "AI生成场景图片", icon: <Image className="h-5 w-5" />, color: "pink", route: "/images" },
-  { id: "video", title: "生成视频", description: "AI生成视频片段", icon: <Video className="h-5 w-5" />, color: "cyan", route: "/videos" },
-  { id: "voice", title: "生成配音", description: "AI生成配音音频", icon: <Sparkles className="h-5 w-5" />, color: "amber", route: "/voices" },
+  { id: "image", title: "生成图片", description: "AI生成场景图片", icon: <Image className="h-5 w-5" />, color: "pink", route: "/assistant?mode=image" },
+  { id: "video", title: "生成视频", description: "AI生成视频片段", icon: <Video className="h-5 w-5" />, color: "cyan", route: "/video-production" },
+  { id: "voice", title: "音频中心", description: "管理配音与音频素材", icon: <Sparkles className="h-5 w-5" />, color: "amber", route: "/audio" },
 ];
 
 /** 项目统计数据 */
@@ -173,71 +158,28 @@ interface ProjectStats {
   productionStages: ProductionStage[];
 }
 
-/** 根据项目ID和真实项目列表生成统计数据 */
-function generateProjectStats(projectId: string, projects: Project[]): ProjectStats {
-  const project = projects.find((p) => p.id === projectId);
-  if (!project) {
-    return {
-      totalEpisodes: 0,
-      completedEpisodes: 0,
-      delayedItems: 0,
-      riskItems: 0,
-      overallProgress: 0,
-      currentStage: "未开始",
-      productionStages: [
-        { name: "剧本", progress: 0, count: 0, color: "emerald" },
-        { name: "分镜", progress: 0, count: 0, color: "blue" },
-        { name: "图片", progress: 0, count: 0, color: "purple" },
-        { name: "视频", progress: 0, count: 0, color: "orange" },
-        { name: "审核", progress: 0, count: 0, color: "pink" },
-      ],
-    };
-  }
+const EMPTY_PROJECT_STATS: ProjectStats = {
+  totalEpisodes: 0, completedEpisodes: 0, delayedItems: 0, riskItems: 0,
+  overallProgress: 0, currentStage: "未开始",
+  productionStages: [
+    { name: "剧本", progress: 0, count: 0, color: "emerald" },
+    { name: "分镜", progress: 0, count: 0, color: "blue" },
+    { name: "图片", progress: 0, count: 0, color: "purple" },
+    { name: "视频", progress: 0, count: 0, color: "orange" },
+    { name: "审核", progress: 0, count: 0, color: "pink" },
+  ],
+};
 
-  const episodeCount = project.episode_count ?? 0;
-  // 基于项目状态推断进度（简化策略，后续可接入真实资产统计）
-  const statusProgressMap: Record<string, number> = {
-    draft: 10,
-    planning: 20,
-    active: 50,
-    reviewing: 80,
-    completed: 100,
-    archived: 100,
-  };
-  const overallProgress = statusProgressMap[project.status] ?? 0;
-  const completedEpisodes = Math.round((episodeCount * overallProgress) / 100);
-
-  // 根据进度推断当前阶段
-  let currentStage = "剧本创作";
-  if (overallProgress >= 100) currentStage = "已完结";
-  else if (overallProgress >= 80) currentStage = "审核发布";
-  else if (overallProgress >= 60) currentStage = "视频制作";
-  else if (overallProgress >= 40) currentStage = "图片生成";
-  else if (overallProgress >= 20) currentStage = "分镜制作";
-
-  return {
-    totalEpisodes: episodeCount,
-    completedEpisodes,
-    delayedItems: 0,
-    riskItems: 0,
-    overallProgress,
-    currentStage,
-    productionStages: [
-      { name: "剧本", progress: Math.min(100, overallProgress + 20), count: episodeCount, color: "emerald" },
-      { name: "分镜", progress: Math.min(100, Math.max(0, overallProgress)), count: Math.round(episodeCount * 0.8), color: "blue" },
-      { name: "图片", progress: Math.min(100, Math.max(0, overallProgress - 20)), count: Math.round(episodeCount * 0.6), color: "purple" },
-      { name: "视频", progress: Math.min(100, Math.max(0, overallProgress - 40)), count: Math.round(episodeCount * 0.4), color: "orange" },
-      { name: "审核", progress: Math.min(100, Math.max(0, overallProgress - 60)), count: Math.round(episodeCount * 0.2), color: "pink" },
-    ],
-  };
-}
+const percent = (done: number, total: number) => total > 0 ? Math.min(100, Math.round(done / total * 100)) : 0;
 
 /** 驾驶舱组件 */
 export function HomeDashboard() {
   const router = useRouter();
-  const { selectedProjectId, setSelectedProjectId } = useProjectStore();
+  const { selectedProjectId } = useProjectStore();
   const [currentView, setCurrentView] = useState<"cockpit" | "workspace" | "pipeline">("cockpit");
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectStats, setProjectStats] = useState<ProjectStats>(EMPTY_PROJECT_STATS);
+  const [realTimeTasks, setRealTimeTasks] = useState<RealTimeTask[]>([]);
 
   // 加载真实项目列表。
   // - 挂载时拉一次；
@@ -269,10 +211,65 @@ export function HomeDashboard() {
     return projects.find((p) => p.id === selectedProjectId) || null;
   }, [selectedProjectId, projects]);
 
-  // 根据项目ID动态计算统计数据
-  const projectStats = useMemo(() => {
-    return generateProjectStats(selectedProjectId, projects);
-  }, [selectedProjectId, projects]);
+  // 从项目工作台资源和统一 AI 任务接口计算指标，不再按项目状态猜测数据。
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedProjectId) {
+      setProjectStats(EMPTY_PROJECT_STATS);
+      setRealTimeTasks([]);
+      return;
+    }
+    async function loadMetrics() {
+      try {
+        const [episodes, issues, milestones, scripts, storyboards, reviews, taskResult] = await Promise.all([
+          api<Array<{ status: string }>>(`/api/projects/${selectedProjectId}/episodes`),
+          api<Array<{ status: string; severity: string }>>(`/api/projects/${selectedProjectId}/issues`),
+          api<Array<{ status: string }>>(`/api/projects/${selectedProjectId}/milestones`),
+          api<Array<{ id: string }>>(`/api/projects/${selectedProjectId}/scripts`),
+          api<Array<{ image_url?: string; video_url?: string }>>(`/api/projects/${selectedProjectId}/storyboards`),
+          api<Array<{ status: string }>>(`/api/projects/${selectedProjectId}/reviews`),
+          api<{ tasks: Array<{ id: string; prompt: string; model: string; duration: number | null; status: string }> }>(`/api/ai/tasks?projectId=${encodeURIComponent(selectedProjectId)}&pageSize=20`),
+        ]);
+        if (cancelled) return;
+        const completedEpisodes = episodes.filter((item) => ["done", "completed", "已完成"].includes(item.status)).length;
+        const images = storyboards.filter((item) => Boolean(item.image_url)).length;
+        const videos = storyboards.filter((item) => Boolean(item.video_url)).length;
+        const reviewed = reviews.filter((item) => ["resolved", "rejected"].includes(item.status)).length;
+        const stages: ProductionStage[] = [
+          { name: "剧本", progress: percent(scripts.length, episodes.length), count: scripts.length, color: "emerald" },
+          { name: "分镜", progress: percent(storyboards.length, Math.max(scripts.length, 1)), count: storyboards.length, color: "blue" },
+          { name: "图片", progress: percent(images, storyboards.length), count: images, color: "purple" },
+          { name: "视频", progress: percent(videos, storyboards.length), count: videos, color: "orange" },
+          { name: "审核", progress: percent(reviewed, storyboards.length), count: reviewed, color: "pink" },
+        ];
+        const firstIncomplete = stages.find((stage) => stage.progress < 100);
+        setProjectStats({
+          totalEpisodes: episodes.length,
+          completedEpisodes,
+          delayedItems: milestones.filter((item) => item.status === "delayed").length,
+          riskItems: issues.filter((item) => !["resolved", "closed"].includes(item.status) && ["high", "critical"].includes(item.severity)).length,
+          overallProgress: Math.round(stages.reduce((sum, stage) => sum + stage.progress, 0) / stages.length),
+          currentStage: firstIncomplete?.name ?? (stages.some((stage) => stage.count > 0) ? "已完结" : "未开始"),
+          productionStages: stages,
+        });
+        setRealTimeTasks(taskResult.tasks.map((task) => ({
+          id: task.id,
+          name: task.prompt || `${task.model} 任务`,
+          model: task.model,
+          duration: task.duration ?? 0,
+          status: task.status === "processing" ? "running" : task.status === "pending" ? "queued" : "completed",
+        })));
+      } catch (err) {
+        if (!cancelled) {
+          setProjectStats(EMPTY_PROJECT_STATS);
+          setRealTimeTasks([]);
+          log.error("load dashboard metrics failed", { error: (err as Error).message });
+        }
+      }
+    }
+    loadMetrics();
+    return () => { cancelled = true; };
+  }, [selectedProjectId]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#181818] overflow-hidden">
@@ -437,23 +434,9 @@ function ProjectCockpit({
           <CardHeader>
             <CardTitle className="text-white text-base">待办事项</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <TodoItem
-              title="审核EP03分镜"
-              type="审核"
-              urgent
-              onClick={() => onNavigate("/projects/proj-1")}
-            />
-            <TodoItem
-              title="确认EP05角色设定"
-              type="待确认"
-              onClick={() => onNavigate("/characters")}
-            />
-            <TodoItem
-              title="EP02视频生成完成"
-              type="通知"
-              onClick={() => onNavigate("/videos")}
-            />
+          <CardContent className="space-y-3">
+            <p className="text-sm text-[#888]">驾驶舱不生成模拟待办，请前往待办中心查看已保存任务。</p>
+            <Button variant="outline" size="sm" onClick={() => onNavigate("/todos")}>查看我的待办</Button>
           </CardContent>
         </Card>
 
@@ -463,21 +446,9 @@ function ProjectCockpit({
             <CardTitle className="text-white text-base">风险预警</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <RiskItem
-              title="EP04延期风险"
-              severity="high"
-              description="截止日期临近，进度仅50%"
-            />
-            <RiskItem
-              title="角色一致性问题"
-              severity="medium"
-              description="林逸形象在不同分镜中差异较大"
-            />
-            <RiskItem
-              title="场景资产缺失"
-              severity="low"
-              description="茶信馆内景图片待补充"
-            />
+            {projectStats.riskItems > 0 && <RiskItem title="存在未关闭的高风险问题" severity="high" description={`共 ${projectStats.riskItems} 项，请在项目中心处理`} />}
+            {projectStats.delayedItems > 0 && <RiskItem title="存在延期里程碑" severity="medium" description={`共 ${projectStats.delayedItems} 项，请检查交付日期`} />}
+            {projectStats.riskItems === 0 && projectStats.delayedItems === 0 && <p className="text-sm text-[#888]">当前真实项目数据中未发现高风险或延期项。</p>}
           </CardContent>
         </Card>
       </div>

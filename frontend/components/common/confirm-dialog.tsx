@@ -1,7 +1,22 @@
+/**
+ * @file confirm-dialog.tsx
+ * @description 确认弹窗组件，用于删除、移除等危险操作的二次确认
+ */
+
 "use client";
 
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type ConfirmDialogProps = {
     title: string;
@@ -11,25 +26,39 @@ type ConfirmDialogProps = {
     onConfirm: () => void;
 };
 
-/** 确认弹窗组件，用于删除、移除等危险操作的二次确认。 */
+/**
+ * ConfirmDialog - 确认弹窗组件
+ * @param {ConfirmDialogProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的确认弹窗元素
+ */
 export function ConfirmDialog({ title, description, confirmLabel, onClose, onConfirm }: ConfirmDialogProps) {
     return (
-        <div className="fixed inset-0 z-[95] grid place-items-center bg-black/60 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}>
-            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#202020] p-5 shadow-2xl">
-                <div className="flex items-start gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-500/15 text-red-200">
-                        <AlertTriangle className="h-5 w-5" />
+        <AlertDialog open onOpenChange={(open) => !open && onClose()}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <div className="flex items-start gap-3">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-500/15 text-red-200">
+                            <AlertTriangle className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <AlertDialogTitle>{title}</AlertDialogTitle>
+                            <AlertDialogDescription className="mt-2 leading-6">
+                                {description}
+                            </AlertDialogDescription>
+                        </div>
                     </div>
-                    <div>
-                        <div className="text-base font-semibold text-white">{title}</div>
-                        <div className="mt-2 text-sm leading-6 text-[#cfcfcf]">{description}</div>
-                    </div>
-                </div>
-                <div className="mt-5 flex justify-end gap-2">
-                    <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-                    <Button size="sm" variant="destructive" onClick={onConfirm}>{confirmLabel}</Button>
-                </div>
-            </div>
-        </div>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel asChild>
+                        <Button size="sm" variant="secondary">取消</Button>
+                    </AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                        <Button size="sm" variant="destructive" onClick={onConfirm}>
+                            {confirmLabel}
+                        </Button>
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }

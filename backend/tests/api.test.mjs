@@ -5,15 +5,11 @@ import path from "node:path";
 import test from "node:test";
 import { createServer } from "../dist/src/http/router.js";
 import { createAppContext } from "../dist/src/services/app.js";
-
-// 测试环境必须提供 AGNES_API_KEY（已废弃 mock 模式，无法不提供 Key 启动服务）
-if (!process.env.AGNES_API_KEY) {
-  process.env.AGNES_API_KEY = "test-key-for-integration";
-}
+import { FakeAIClient } from "../dist/src/ai/fake-ai-client.js";
 
 async function withServer(fn) {
   const root = await mkdtemp(path.join(os.tmpdir(), "agnes-api-"));
-  const ctx = createAppContext(root, { mediaCacheEnabled: false });
+  const ctx = await createAppContext(root, { mediaCacheEnabled: false, aiClient: new FakeAIClient() });
   const server = createServer(ctx);
   await new Promise(resolve => server.listen(0, resolve));
   const address = server.address();
@@ -148,7 +144,7 @@ test("media endpoint serves local files and rejects path traversal", async () =>
   const mediaDir = path.join(root, "data", "media", "images", "2026-07-02");
   await mkdir(mediaDir, { recursive: true });
   await writeFile(path.join(mediaDir, "sample.png"), Buffer.from([137, 80, 78, 71]));
-  const ctx = createAppContext(root, { mediaCacheEnabled: false });
+  const ctx = await createAppContext(root, { mediaCacheEnabled: false, aiClient: new FakeAIClient() });
   const server = createServer(ctx);
   await new Promise(resolve => server.listen(0, resolve));
   const address = server.address();
@@ -182,5 +178,129 @@ test("upload endpoint stores image files under media uploads", async () => {
     const stored = await fetch(`${base}${payload.data[0].url}`);
     assert.equal(stored.status, 200);
     assert.equal(stored.headers.get("content-type"), "image/png");
+  });
+});
+
+test("project workbench routes support nested resources, summary and exports", async () => {
+  await withServer(async (base) => {
+    const project = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "工作台回归项目" }) });
+    const other = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "隔离项目" }) });
+
+    const member = await json(base, `/api/projects/${project.id}/members`, { method: "POST", body: JSON.stringify({ name: "导演", role: "负责人" }) });
+    const episode = await json(base, `/api/projects/${project.id}/episodes`, { method: "POST", body: JSON.stringify({ episode: 1, title: "第一集" }) });
+    const task = await json(base, `/api/projects/${project.id}/tasks`, { method: "POST", body: JSON.stringify({ title: "绘制分镜" }) });
+    const issue = await json(base, `/api/projects/${project.id}/issues`, { method: "POST", body: JSON.stringify({ title: "角色一致性", severity: "high" }) });
+    const milestone = await json(base, `/api/projects/${project.id}/milestones`, { method: "POST", body: JSON.stringify({ title: "首集交付" }) });
+    const script = await json(base, `/api/projects/${project.id}/scripts`, { method: "POST", body: JSON.stringify({ episode: 1, title: "第一集剧本", content: "场景：雨夜街道" }) });
+    const storyboard = await json(base, `/api/projects/${project.id}/storyboards`, { method: "POST", body: JSON.stringify({ episode: 1, title: "街道远景", prompt: "雨夜街道远景" }) });
+    const review = await json(base, `/api/projects/${project.id}/reviews`, { method: "POST", body: JSON.stringify({ target_type: "storyboard", target_id: storyboard.id, comment: "需要加强光影" }) });
+    const clip = await json(base, `/api/projects/${project.id}/clips`, { method: "POST", body: JSON.stringify({ storyboard_id: storyboard.id, title: "镜头一" }) });
+
+    assert.equal((await json(base, `/api/projects/${project.id}/members`))[0].id, member.id);
+    assert.equal((await json(base, `/api/projects/${project.id}/episodes`))[0].id, episode.id);
+    assert.equal((await json(base, `/api/projects/${project.id}/scripts`))[0].id, script.id);
+    assert.equal((await json(base, `/api/projects/${project.id}/reviews`))[0].id, review.id);
+    assert.equal((await json(base, `/api/projects/${project.id}/clips`))[0].id, clip.id);
+
+    const softDeleted = await json(base, `/api/projects/${project.id}/scripts/${script.id}`, { method: "DELETE" });
+    assert.ok(softDeleted.deleted_at);
+    assert.equal((await json(base, `/api/projects/${project.id}/scripts`)).length, 0);
+    assert.equal((await json(base, `/api/projects/${project.id}/scripts?deleted=1`))[0].id, script.id);
+    const restoredScript = await json(base, `/api/projects/${project.id}/scripts/${script.id}/restore`, { method: "POST" });
+    assert.equal(restoredScript.id, script.id);
+
+    const completed = await json(base, `/api/projects/${project.id}/tasks/${task.id}`, { method: "PUT", body: JSON.stringify({ status: "done" }) });
+    assert.equal(completed.status, "done");
+    const resolved = await json(base, `/api/projects/${project.id}/issues/${issue.id}`, { method: "PUT", body: JSON.stringify({ status: "resolved" }) });
+    assert.equal(resolved.status, "resolved");
+    await json(base, `/api/projects/${project.id}/milestones/${milestone.id}`, { method: "PUT", body: JSON.stringify({ status: "done" }) });
+
+    const summary = await json(base, `/api/projects/${project.id}/summary`);
+    assert.equal(summary.members, 1);
+    assert.equal(summary.episodes, 1);
+    assert.equal(summary.tasks, 1);
+    assert.equal(summary.completed_tasks, 1);
+    assert.equal(summary.open_issues, 0);
+    assert.equal(summary.open_milestones, 0);
+
+    const crossProject = await fetch(`${base}/api/projects/${other.id}/tasks/${task.id}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "done" }),
+    });
+    assert.notEqual(crossProject.status, 200);
+
+    const manifest = await json(base, `/api/projects/${project.id}/exports/manifest.json`);
+    assert.equal(manifest.project.id, project.id);
+    const csv = await fetch(`${base}/api/projects/${project.id}/exports/storyboards.csv`);
+    assert.equal(csv.status, 200);
+    assert.match(await csv.text(), /街道远景/);
+    const scriptsText = await fetch(`${base}/api/projects/${project.id}/exports/scripts.txt`);
+    assert.equal(scriptsText.status, 200);
+    assert.match(await scriptsText.text(), /第一集剧本/);
+  });
+});
+
+test("settings never echo API keys and preserve or clear the stored secret explicitly", async () => {
+  await withServer(async (base) => {
+    const saved = await json(base, "/api/settings", { method: "PUT", body: JSON.stringify({ apiKey: "test-secret-value", apiProvider: "agnes" }) });
+    assert.equal("apiKey" in saved, false);
+    assert.equal(saved.apiKeyConfigured, true);
+
+    const preserved = await json(base, "/api/settings", { method: "PUT", body: JSON.stringify({ theme: "dark" }) });
+    assert.equal(preserved.apiKeyConfigured, true);
+    assert.equal("apiKey" in preserved, false);
+
+    const loaded = await json(base, "/api/settings");
+    assert.equal(loaded.apiKeyConfigured, true);
+    assert.equal("apiKey" in loaded, false);
+
+    const cleared = await json(base, "/api/settings", { method: "PUT", body: JSON.stringify({ clearApiKey: true }) });
+    assert.equal(cleared.apiKeyConfigured, false);
+    assert.equal("apiKey" in cleared, false);
+  });
+});
+
+test("publish plans persist and validate referenced videos", async () => {
+  await withServer(async (base) => {
+    const conversation = await json(base, "/api/conversations", { method: "POST", body: JSON.stringify({ title: "发布测试" }) });
+    const video = await json(base, "/api/videos/generate", { method: "POST", body: JSON.stringify({ conversationId: conversation.id, prompt: "发布成片" }) });
+    await json(base, `/api/videos/${video.id}`);
+
+    const plan = await json(base, "/api/publish/plans", { method: "POST", body: JSON.stringify({ name: "周五发布", status: "scheduled", videos: [video.id], platforms: ["douyin"], assignee: "运营" }) });
+    assert.equal(plan.name, "周五发布");
+    assert.deepEqual(plan.videos, [video.id]);
+    assert.deepEqual(plan.platforms, ["douyin"]);
+    assert.equal((await json(base, "/api/publish/plans")).length, 1);
+
+    const updated = await json(base, `/api/publish/plans/${plan.id}`, { method: "PUT", body: JSON.stringify({ status: "published" }) });
+    assert.equal(updated.status, "published");
+    await json(base, `/api/publish/plans/${plan.id}`, { method: "DELETE" });
+    assert.equal((await json(base, "/api/publish/plans")).length, 0);
+  });
+});
+
+test("security baseline masks model secrets, limits JSON bodies and rejects unknown origins", async () => {
+  await withServer(async (base) => {
+    const modelsResponse = await fetch(`${base}/api/models`);
+    const modelsPayload = await modelsResponse.json();
+    assert.equal(modelsPayload.code, 0);
+    assert.ok(Array.isArray(modelsPayload.data));
+    for (const model of modelsPayload.data) {
+      const headers = model.api_config?.headers ?? {};
+      assert.equal(Object.keys(headers).some((key) => /authorization|api-key/i.test(key)), false);
+    }
+
+    const tooLarge = await fetch(`${base}/api/settings`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ value: "x".repeat(1024 * 1024 + 1) }),
+    });
+    assert.equal(tooLarge.status, 413);
+
+    const rejectedOrigin = await fetch(`${base}/api/health`, {
+      headers: { origin: "https://malicious.example" },
+    });
+    assert.equal(rejectedOrigin.status, 403);
   });
 });

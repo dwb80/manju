@@ -1,5 +1,11 @@
+/**
+ * @file publish-plan.tsx
+ * @description 发布计划组件，管理视频发布计划和排期
+ */
+
 "use client";
 
+import { ShadcnSelect } from "@/components/ui/select";
 import { useState } from "react";
 import {
   Calendar,
@@ -328,18 +334,15 @@ export function PublishPlan({
               <label className="mb-2 block text-sm font-medium text-white">
                 负责人
               </label>
-              <select
+              <ShadcnSelect
+                options={[
+                  { value: "", label: "选择负责人" },
+                  ...availableOwners.map((o) => ({ value: o, label: o })),
+                ]}
                 value={form.owner}
-                onChange={(e) => setForm((prev) => ({ ...prev, owner: e.target.value }))}
-                className="w-full rounded-lg border border-white/10 bg-[#202020] px-4 py-2 text-sm text-white focus:border-white/20 focus:outline-none"
-              >
-                <option value="">选择负责人</option>
-                {availableOwners.map((owner) => (
-                  <option key={owner} value={owner}>
-                    {owner}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setForm((prev) => ({ ...prev, owner: value }))}
+                className="h-10"
+              />
             </div>
 
             {/* 计划状态 */}
@@ -376,11 +379,10 @@ export function PublishPlan({
                   <button
                     key={platform}
                     onClick={() => togglePlatform(platform)}
-                    className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
-                      form.platforms.includes(platform)
+                    className={`rounded-lg border px-3 py-2 text-sm transition-colors ${form.platforms.includes(platform)
                         ? "border-blue-500/50 bg-blue-500/10 text-blue-400"
                         : "border-white/10 bg-[#202020] text-[#888] hover:border-white/20"
-                    }`}
+                      }`}
                   >
                     {getPlatformName(platform)}
                   </button>
@@ -402,11 +404,10 @@ export function PublishPlan({
                     <button
                       key={video.id}
                       onClick={() => toggleVideo(video.id)}
-                      className={`w-full rounded-lg border p-3 text-left transition-colors ${
-                        form.videoIds.includes(video.id)
+                      className={`w-full rounded-lg border p-3 text-left transition-colors ${form.videoIds.includes(video.id)
                           ? "border-blue-500/50 bg-blue-500/10"
                           : "border-white/5 bg-[#1a1a1a] hover:border-white/10"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -540,11 +541,10 @@ export function PublishPlan({
                             <Video className="h-3.5 w-3.5 text-blue-400" />
                             <span className="text-sm text-white">{video.name}</span>
                             <span
-                              className={`rounded-full px-2 py-0.5 text-xs ${
-                                video.publishStatus === "published"
+                              className={`rounded-full px-2 py-0.5 text-xs ${video.publishStatus === "published"
                                   ? "bg-emerald-500/10 text-emerald-400"
                                   : "bg-orange-500/10 text-orange-400"
-                              }`}
+                                }`}
                             >
                               {video.publishStatus === "published" ? "已发布" : "待发布"}
                             </span>
@@ -567,11 +567,10 @@ export function PublishPlan({
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-blue-500 transition-all"
                           style={{
-                            width: `${
-                              (plan.videos.filter((v) => v.publishStatus === "published").length /
+                            width: `${(plan.videos.filter((v) => v.publishStatus === "published").length /
                                 plan.videos.length) *
                               100
-                            }%`,
+                              }%`,
                           }}
                         />
                       </div>

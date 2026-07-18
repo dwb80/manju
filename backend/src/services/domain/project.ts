@@ -1,3 +1,8 @@
+/**
+ * @file project.ts
+ * @description 项目服务模块 - 管理项目的创建、更新、删除、成员、任务、问题和里程碑等核心业务
+ */
+
 import type { AppContext } from "../app.js";
 import type { Conversation, Project, ProjectAsset, ProjectClip, ProjectEpisode, ProjectIssue, ProjectIssueSeverity, ProjectIssueStatus, ProjectMember, ProjectMilestone, ProjectMilestoneStatus, ProjectReview, ProjectScript, ProjectStoryboard, ProjectTask, ProjectTaskStatus, Settings } from "../../types.js";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -137,7 +142,13 @@ async function ensureProjectStorage(ctx: AppContext, storagePath: string): Promi
   ]);
 }
 
-/** 创建项目记录，并绑定它的本地存储目录。 */
+/**
+ * createProject - 创建项目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {CreateProjectInput} input - 项目输入参数
+ * @returns {Promise<Project>} 创建的项目
+ * @description 创建项目记录，并绑定它的本地存储目录
+ */
 export async function createProject(ctx: AppContext, input: CreateProjectInput): Promise<Project> {
   const now = nowIso();
   const projectId = id("p");
@@ -165,14 +176,24 @@ export async function createProject(ctx: AppContext, input: CreateProjectInput):
   return project;
 }
 
-/** 确保存在默认项目，用于第一次打开项目列表时展示。 */
+/**
+ * ensureDefaultProject - 确保存在默认项目
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<Project>} 默认项目
+ * @description 用于第一次打开项目列表时展示
+ */
 export async function ensureDefaultProject(ctx: AppContext): Promise<Project> {
   const existing = await ctx.projects.findMany({}, { sort: "asc", limit: 1 });
   if (existing[0]) return existing[0];
   return createProject(ctx, { name: "manju", is_default: true });
 }
 
-/** 获取所有项目，首次调用时会自动补默认项目。 */
+/**
+ * listProjects - 获取所有项目
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<Project[]>} 项目列表
+ * @description 首次调用时会自动补默认项目
+ */
 export async function listProjects(ctx: AppContext): Promise<Project[]> {
   await ensureDefaultProject(ctx);
   const projects = await ctx.projects.findMany({}, { sort: "asc" });
@@ -181,7 +202,14 @@ export async function listProjects(ctx: AppContext): Promise<Project[]> {
     .sort((left, right) => Number(right.is_pinned) - Number(left.is_pinned) || left.name.localeCompare(right.name, "zh-Hans"));
 }
 
-/** 更新项目基础信息和漫剧制作规划字段。 */
+/**
+ * updateProject - 更新项目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {Partial<Pick<Project, ...>>} patch - 更新字段
+ * @returns {Promise<Project>} 更新后的项目
+ * @description 更新项目基础信息和漫剧制作规划字段
+ */
 export async function updateProject(ctx: AppContext, projectId: string, patch: Partial<Pick<Project, "name" | "category" | "status" | "description" | "episode_count" | "owner" | "due_date" | "is_default" | "is_pinned" | "archived_at">>): Promise<Project> {
   const existing = await ctx.projects.findById(projectId);
   if (!existing) throw new Error("project not found");
@@ -197,7 +225,13 @@ export async function updateProject(ctx: AppContext, projectId: string, patch: P
   return (await ctx.projects.findById(projectId)) as Project;
 }
 
-/** 汇总一个项目下的会话、图片、视频数量和最近活动时间。 */
+/**
+ * summarizeProject - 汇总项目统计
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ProjectSummary>} 项目汇总信息
+ * @description 汇总一个项目下的会话、图片、视频数量和最近活动时间
+ */
 export async function summarizeProject(ctx: AppContext, projectId: string): Promise<ProjectSummary> {
   const project = await ctx.projects.findById(projectId);
   if (!project) throw new Error("project not found");
@@ -236,19 +270,37 @@ export async function summarizeProject(ctx: AppContext, projectId: string): Prom
   };
 }
 
-/** 列出项目任务，按创建时间升序组成看板数据。 */
+/**
+ * listProjectTasks - 列出项目任务
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ProjectTask[]>} 任务列表
+ * @description 按创建时间升序组成看板数据
+ */
 export async function listProjectTasks(ctx: AppContext, projectId: string): Promise<ProjectTask[]> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   return ctx.projectTasks.findMany({ project_id: projectId } as Partial<ProjectTask>, { sort: "asc" });
 }
 
-/** 列出项目成员，用于任务负责人、审核人和小团队职责分工。 */
+/**
+ * listProjectMembers - 列出项目成员
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ProjectMember[]>} 成员列表
+ * @description 用于任务负责人、审核人和小团队职责分工
+ */
 export async function listProjectMembers(ctx: AppContext, projectId: string): Promise<ProjectMember[]> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   return ctx.projectMembers.findMany({ project_id: projectId } as Partial<ProjectMember>, { sort: "asc" });
 }
 
-/** 新增项目成员。 */
+/**
+ * createProjectMember - 新增项目成员
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectMemberInput} input - 成员输入参数
+ * @returns {Promise<ProjectMember>} 创建的成员
+ */
 export async function createProjectMember(ctx: AppContext, projectId: string, input: ProjectMemberInput): Promise<ProjectMember> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   const now = nowIso();
@@ -266,7 +318,15 @@ export async function createProjectMember(ctx: AppContext, projectId: string, in
   return member;
 }
 
-/** 更新项目成员姓名、角色、联系方式和备注。 */
+/**
+ * updateProjectMember - 更新项目成员
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} memberId - 成员ID
+ * @param {ProjectMemberInput} patch - 更新字段
+ * @returns {Promise<ProjectMember>} 更新后的成员
+ * @description 更新项目成员姓名、角色、联系方式和备注
+ */
 export async function updateProjectMember(ctx: AppContext, projectId: string, memberId: string, patch: ProjectMemberInput): Promise<ProjectMember> {
   const existing = await ctx.projectMembers.findById(memberId);
   if (!existing || existing.project_id !== projectId) throw new Error("project member not found");
@@ -279,20 +339,40 @@ export async function updateProjectMember(ctx: AppContext, projectId: string, me
   return (await ctx.projectMembers.findById(memberId)) as ProjectMember;
 }
 
-/** 删除项目成员，不会删除其名下历史任务，只保留任务上的负责人文本。 */
+/**
+ * deleteProjectMember - 删除项目成员
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} memberId - 成员ID
+ * @returns {Promise<void>}
+ * @description 不会删除其名下历史任务，只保留任务上的负责人文本
+ */
 export async function deleteProjectMember(ctx: AppContext, projectId: string, memberId: string): Promise<void> {
   const existing = await ctx.projectMembers.findById(memberId);
   if (!existing || existing.project_id !== projectId) throw new Error("project member not found");
   await ctx.projectMembers.delete(memberId);
 }
 
-/** 列出项目风险和问题，默认按创建时间排序。 */
+/**
+ * listProjectIssues - 列出项目问题
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ProjectIssue[]>} 问题列表
+ * @description 列出项目风险和问题，默认按创建时间排序
+ */
 export async function listProjectIssues(ctx: AppContext, projectId: string): Promise<ProjectIssue[]> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   return ctx.projectIssues.findMany({ project_id: projectId } as Partial<ProjectIssue>, { sort: "asc" });
 }
 
-/** 新增项目风险或问题。 */
+/**
+ * createProjectIssue - 新增项目问题
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectIssueInput} input - 问题输入参数
+ * @returns {Promise<ProjectIssue>} 创建的问题
+ * @description 新增项目风险或问题
+ */
 export async function createProjectIssue(ctx: AppContext, projectId: string, input: ProjectIssueInput): Promise<ProjectIssue> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   const now = nowIso();
@@ -313,7 +393,14 @@ export async function createProjectIssue(ctx: AppContext, projectId: string, inp
   return issue;
 }
 
-/** 更新项目风险或问题。 */
+/**
+ * updateProjectIssue - 更新项目问题
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} issueId - 问题ID
+ * @param {ProjectIssueInput} patch - 更新字段
+ * @returns {Promise<ProjectIssue>} 更新后的问题
+ */
 export async function updateProjectIssue(ctx: AppContext, projectId: string, issueId: string, patch: ProjectIssueInput): Promise<ProjectIssue> {
   const existing = await ctx.projectIssues.findById(issueId);
   if (!existing || existing.project_id !== projectId) throw new Error("project issue not found");
@@ -343,7 +430,13 @@ export async function listProjectMilestones(ctx: AppContext, projectId: string):
   return milestones.sort((left, right) => (left.due_date || "9999").localeCompare(right.due_date || "9999") || left.created_at.localeCompare(right.created_at));
 }
 
-/** 新增项目里程碑或交付节点。 */
+/**
+ * createProjectMilestone - 新增项目里程碑
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectMilestoneInput} input - 里程碑输入参数
+ * @returns {Promise<ProjectMilestone>} 创建的里程碑
+ */
 export async function createProjectMilestone(ctx: AppContext, projectId: string, input: ProjectMilestoneInput): Promise<ProjectMilestone> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   const now = nowIso();
@@ -362,7 +455,14 @@ export async function createProjectMilestone(ctx: AppContext, projectId: string,
   return milestone;
 }
 
-/** 更新项目里程碑。 */
+/**
+ * updateProjectMilestone - 更新项目里程碑
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} milestoneId - 里程碑ID
+ * @param {ProjectMilestoneInput} patch - 更新字段
+ * @returns {Promise<ProjectMilestone>} 更新后的里程碑
+ */
 export async function updateProjectMilestone(ctx: AppContext, projectId: string, milestoneId: string, patch: ProjectMilestoneInput): Promise<ProjectMilestone> {
   const existing = await ctx.projectMilestones.findById(milestoneId);
   if (!existing || existing.project_id !== projectId) throw new Error("project milestone not found");
@@ -376,14 +476,27 @@ export async function updateProjectMilestone(ctx: AppContext, projectId: string,
   return (await ctx.projectMilestones.findById(milestoneId)) as ProjectMilestone;
 }
 
-/** 删除项目里程碑。 */
+/**
+ * deleteProjectMilestone - 删除项目里程碑
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} milestoneId - 里程碑ID
+ * @returns {Promise<void>}
+ */
 export async function deleteProjectMilestone(ctx: AppContext, projectId: string, milestoneId: string): Promise<void> {
   const existing = await ctx.projectMilestones.findById(milestoneId);
   if (!existing || existing.project_id !== projectId) throw new Error("project milestone not found");
   await ctx.projectMilestones.delete(milestoneId);
 }
 
-/** 在项目下创建一条制作任务。 */
+/**
+ * createProjectTask - 创建项目任务
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectTaskInput} input - 任务输入参数
+ * @returns {Promise<ProjectTask>} 创建的任务
+ * @description 在项目下创建一条制作任务
+ */
 export async function createProjectTask(ctx: AppContext, projectId: string, input: ProjectTaskInput): Promise<ProjectTask> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const now = nowIso();
@@ -402,7 +515,15 @@ export async function createProjectTask(ctx: AppContext, projectId: string, inpu
   return task;
 }
 
-/** 更新项目制作任务标题、状态、负责人、截止日期和备注。 */
+/**
+ * updateProjectTask - 更新项目任务
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} taskId - 任务ID
+ * @param {ProjectTaskInput} patch - 更新字段
+ * @returns {Promise<ProjectTask>} 更新后的任务
+ * @description 更新项目制作任务标题、状态、负责人、截止日期和备注
+ */
 export async function updateProjectTask(ctx: AppContext, projectId: string, taskId: string, patch: ProjectTaskInput): Promise<ProjectTask> {
   const existing = await ctx.projectTasks.findById(taskId);
   if (!existing || existing.project_id !== projectId) throw new Error("project task not found");
@@ -416,14 +537,26 @@ export async function updateProjectTask(ctx: AppContext, projectId: string, task
   return (await ctx.projectTasks.findById(taskId)) as ProjectTask;
 }
 
-/** 删除指定项目制作任务。 */
+/**
+ * deleteProjectTask - 删除项目任务
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} taskId - 任务ID
+ * @returns {Promise<void>}
+ */
 export async function deleteProjectTask(ctx: AppContext, projectId: string, taskId: string): Promise<void> {
   const existing = await ctx.projectTasks.findById(taskId);
   if (!existing || existing.project_id !== projectId) throw new Error("project task not found");
   await ctx.projectTasks.delete(taskId);
 }
 
-/** 导出项目素材包清单 JSON，先给打包和归档提供稳定索引。 */
+/**
+ * exportProjectManifest - 导出项目素材包清单
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<Record<string, unknown>>} 项目清单JSON
+ * @description 导出项目素材包清单JSON，先给打包和归档提供稳定索引
+ */
 export async function exportProjectManifest(ctx: AppContext, projectId: string): Promise<Record<string, unknown>> {
   const project = await ctx.projects.findById(projectId);
   if (!project) throw new Error("project not found");
@@ -467,7 +600,13 @@ export async function exportProjectManifest(ctx: AppContext, projectId: string):
   };
 }
 
-/** 在项目存储目录生成一组交付索引文件，方便剪辑、归档和人工查阅。 */
+/**
+ * exportProjectPackageIndex - 导出项目交付索引文件
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<{path: string; files: string[]}>} 导出目录和文件列表
+ * @description 在项目存储目录生成一组交付索引文件，方便剪辑、归档和人工查阅
+ */
 export async function exportProjectPackageIndex(ctx: AppContext, projectId: string): Promise<{ path: string; files: string[] }> {
   const project = await ctx.projects.findById(projectId);
   if (!project) throw new Error("project not found");
@@ -499,7 +638,13 @@ export async function exportProjectPackageIndex(ctx: AppContext, projectId: stri
   return { path: exportDir, files: files.map((file) => file.name) };
 }
 
-/** 在服务器所在机器的资源管理器中打开项目存储目录。 */
+/**
+ * openProjectFolder - 打开项目存储目录
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<{path: string}>} 项目目录路径
+ * @description 在服务器所在机器的资源管理器中打开项目存储目录
+ */
 export async function openProjectFolder(ctx: AppContext, projectId: string): Promise<{ path: string }> {
   const project = await ctx.projects.findById(projectId);
   if (!project?.storage_path) throw new Error("project not found");
@@ -515,7 +660,13 @@ export async function openProjectFolder(ctx: AppContext, projectId: string): Pro
   return { path: target };
 }
 
-/** 删除项目记录，并把原本归属该项目的会话改为未归属。 */
+/**
+ * deleteProject - 删除项目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<void>}
+ * @description 删除项目记录，并把原本归属该项目的会话改为未归属
+ */
 export async function deleteProject(ctx: AppContext, projectId: string): Promise<void> {
   const conversations = await ctx.conversations.findMany({ project_id: projectId } as Partial<Conversation>);
   for (const conversation of conversations) {
@@ -544,7 +695,13 @@ export async function deleteProject(ctx: AppContext, projectId: string): Promise
   await ctx.projects.delete(projectId);
 }
 
-/** 合并并保存用户设置。 */
+/**
+ * updateSettings - 更新用户设置
+ * @param {AppContext} ctx - 应用上下文
+ * @param {Partial<Settings>} body - 设置更新字段
+ * @returns {Promise<Settings>} 更新后的设置
+ * @description 合并并保存用户设置
+ */
 export async function updateSettings(ctx: AppContext, body: Partial<Settings>): Promise<Settings> {
   const current = await ctx.settings.get();
   return ctx.settings.set({ ...current, ...body });

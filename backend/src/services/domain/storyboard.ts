@@ -1,3 +1,8 @@
+/**
+ * @file storyboard.ts
+ * @description 分镜服务模块 - 管理项目分镜表和剪辑清单的增删改查、批量更新和CSV导出
+ */
+
 import type { AppContext } from "../app.js";
 import type { ProjectClip, ProjectClipStatus, ProjectStoryboard, ProjectStoryboardStatus } from "../../types.js";
 import { encodeCsvCell } from "../../storage/csv-export.js";
@@ -74,7 +79,13 @@ export function normalizeStringList(value: unknown): string[] {
   return Array.from(new Set(items.map((item) => String(item).trim()).filter(Boolean)));
 }
 
-/** 查询项目分镜表，并按集、场、镜头号做自然排序。 */
+/**
+ * listProjectStoryboards - 查询项目分镜表
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ProjectStoryboard[]>} 分镜列表
+ * @description 按集、场、镜头号做自然排序
+ */
 export async function listProjectStoryboards(ctx: AppContext, projectId: string): Promise<ProjectStoryboard[]> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const items = await ctx.projectStoryboards.findMany({ project_id: projectId } as Partial<ProjectStoryboard>, { sort: "asc" });
@@ -91,7 +102,13 @@ export async function listProjectStoryboards(ctx: AppContext, projectId: string)
   );
 }
 
-/** 在项目下创建一个分镜条目。 */
+/**
+ * createProjectStoryboard - 创建分镜条目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectStoryboardInput} input - 分镜输入参数
+ * @returns {Promise<ProjectStoryboard>} 创建的分镜
+ */
 export async function createProjectStoryboard(ctx: AppContext, projectId: string, input: ProjectStoryboardInput): Promise<ProjectStoryboard> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const now = nowIso();
@@ -125,7 +142,15 @@ export async function createProjectStoryboard(ctx: AppContext, projectId: string
   return storyboard;
 }
 
-/** 更新项目分镜，只覆盖请求里明确传入的字段。 */
+/**
+ * updateProjectStoryboard - 更新项目分镜
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} storyboardId - 分镜ID
+ * @param {ProjectStoryboardInput} patch - 更新字段
+ * @returns {Promise<ProjectStoryboard>} 更新后的分镜
+ * @description 只覆盖请求里明确传入的字段
+ */
 export async function updateProjectStoryboard(ctx: AppContext, projectId: string, storyboardId: string, patch: ProjectStoryboardInput): Promise<ProjectStoryboard> {
   const existing = await ctx.projectStoryboards.findById(storyboardId);
   if (!existing || existing.project_id !== projectId) throw new Error("project storyboard not found");
@@ -154,14 +179,27 @@ export async function updateProjectStoryboard(ctx: AppContext, projectId: string
   return (await ctx.projectStoryboards.findById(storyboardId)) as ProjectStoryboard;
 }
 
-/** 删除项目分镜。 */
+/**
+ * deleteProjectStoryboard - 删除项目分镜
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} storyboardId - 分镜ID
+ * @returns {Promise<void>}
+ */
 export async function deleteProjectStoryboard(ctx: AppContext, projectId: string, storyboardId: string): Promise<void> {
   const existing = await ctx.projectStoryboards.findById(storyboardId);
   if (!existing || existing.project_id !== projectId) throw new Error("project storyboard not found");
   await ctx.projectStoryboards.delete(storyboardId);
 }
 
-/** 批量更新分镜状态或备注，用于审核流和制作阶段推进。 */
+/**
+ * batchUpdateProjectStoryboards - 批量更新分镜
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {StoryboardBatchInput} input - 批量更新参数
+ * @returns {Promise<ProjectStoryboard[]>} 更新后的分镜列表
+ * @description 用于审核流和制作阶段推进
+ */
 export async function batchUpdateProjectStoryboards(ctx: AppContext, projectId: string, input: StoryboardBatchInput): Promise<ProjectStoryboard[]> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   const ids = normalizeStringList(input.ids);
@@ -178,7 +216,13 @@ export async function batchUpdateProjectStoryboards(ctx: AppContext, projectId: 
   return updated;
 }
 
-/** 获取项目剪辑清单，按集数、场次、镜号和剪辑顺序排列。 */
+/**
+ * listProjectClips - 获取项目剪辑清单
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ProjectClip[]>} 剪辑清单
+ * @description 按集数、场次、镜号和剪辑顺序排列
+ */
 export async function listProjectClips(ctx: AppContext, projectId: string): Promise<ProjectClip[]> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   const items = await ctx.projectClips.findMany({ project_id: projectId } as Partial<ProjectClip>, { sort: "asc" });
@@ -193,7 +237,14 @@ export async function listProjectClips(ctx: AppContext, projectId: string): Prom
     );
 }
 
-/** 创建剪辑条目，可直接绑定某条分镜的视频作为素材。 */
+/**
+ * createProjectClip - 创建剪辑条目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectClipInput} input - 剪辑输入参数
+ * @returns {Promise<ProjectClip>} 创建的剪辑
+ * @description 可直接绑定某条分镜的视频作为素材
+ */
 export async function createProjectClip(ctx: AppContext, projectId: string, input: ProjectClipInput): Promise<ProjectClip> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   const storyboard = input.storyboard_id ? await ctx.projectStoryboards.findById(input.storyboard_id) : null;
@@ -225,7 +276,15 @@ export async function createProjectClip(ctx: AppContext, projectId: string, inpu
   return clip;
 }
 
-/** 更新剪辑入点、出点、顺序、状态和备注。 */
+/**
+ * updateProjectClip - 更新剪辑条目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} clipId - 剪辑ID
+ * @param {ProjectClipInput} patch - 更新字段
+ * @returns {Promise<ProjectClip>} 更新后的剪辑
+ * @description 更新剪辑入点、出点、顺序、状态和备注
+ */
 export async function updateProjectClip(ctx: AppContext, projectId: string, clipId: string, patch: ProjectClipInput): Promise<ProjectClip> {
   const existing = await ctx.projectClips.findById(clipId);
   if (!existing || existing.project_id !== projectId) throw new Error("project clip not found");
@@ -246,14 +305,27 @@ export async function updateProjectClip(ctx: AppContext, projectId: string, clip
   return (await ctx.projectClips.findById(clipId)) as ProjectClip;
 }
 
-/** 删除剪辑清单中的一个条目。 */
+/**
+ * deleteProjectClip - 删除剪辑条目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} clipId - 剪辑ID
+ * @returns {Promise<void>}
+ */
 export async function deleteProjectClip(ctx: AppContext, projectId: string, clipId: string): Promise<void> {
   const existing = await ctx.projectClips.findById(clipId);
   if (!existing || existing.project_id !== projectId) throw new Error("project clip not found");
   await ctx.projectClips.delete(clipId);
 }
 
-/** 软删除剪辑（设置 deleted_at），可在 5 秒内撤销或从回收站恢复。 */
+/**
+ * softDeleteProjectClip - 软删除剪辑条目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} clipId - 剪辑ID
+ * @returns {Promise<void>}
+ * @description 设置 deleted_at，可在 5 秒内撤销或从回收站恢复
+ */
 export async function softDeleteProjectClip(ctx: AppContext, projectId: string, clipId: string): Promise<void> {
   const existing = await ctx.projectClips.findById(clipId);
   if (!existing || existing.project_id !== projectId) throw new Error("project clip not found");
@@ -261,7 +333,13 @@ export async function softDeleteProjectClip(ctx: AppContext, projectId: string, 
   await ctx.projectClips.update(clipId, { deleted_at: now, updated_at: now } as Partial<ProjectClip>);
 }
 
-/** 从已有视频分镜同步剪辑清单，跳过已经绑定过的分镜。 */
+/**
+ * syncProjectClipsFromStoryboards - 从分镜同步剪辑清单
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ProjectClip[]>} 创建的剪辑列表
+ * @description 从已有视频分镜同步剪辑清单，跳过已经绑定过的分镜
+ */
 export async function syncProjectClipsFromStoryboards(ctx: AppContext, projectId: string): Promise<ProjectClip[]> {
   const storyboards = await listProjectStoryboards(ctx, projectId);
   const existing = await listProjectClips(ctx, projectId);
@@ -286,7 +364,13 @@ export async function syncProjectClipsFromStoryboards(ctx: AppContext, projectId
   return created;
 }
 
-/** 导出项目分镜表 CSV，供 Excel、剪辑清单和外部协作使用。 */
+/**
+ * exportProjectStoryboardsCsv - 导出分镜表CSV
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<string>} CSV文本
+ * @description 供Excel、剪辑清单和外部协作使用
+ */
 export async function exportProjectStoryboardsCsv(ctx: AppContext, projectId: string): Promise<string> {
   const storyboards = await listProjectStoryboards(ctx, projectId);
   const headers = ["集数", "场次", "镜号", "标题", "画面描述", "对白", "角色", "场景", "景别", "镜头运动", "时长", "提示词", "底图", "视频", "状态", "备注"];
@@ -314,7 +398,13 @@ export async function exportProjectStoryboardsCsv(ctx: AppContext, projectId: st
   ].join("\n");
 }
 
-/** 导出剪辑清单 CSV，优先使用人工剪辑表，没有剪辑表时按分镜兜底。 */
+/**
+ * exportProjectEditListCsv - 导出剪辑清单CSV
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<string>} CSV文本
+ * @description 优先使用人工剪辑表，没有剪辑表时按分镜兜底
+ */
 export async function exportProjectEditListCsv(ctx: AppContext, projectId: string): Promise<string> {
   const clips = await listProjectClips(ctx, projectId);
   if (clips.length > 0) {

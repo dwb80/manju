@@ -43,6 +43,11 @@ export interface EntityPickerProps<T extends { id: string; name?: string; title?
   className?: string;
 }
 
+/**
+ * EntityPicker - 实体引用选择器组件
+ * @param {EntityPickerProps<T>} props - 组件属性
+ * @returns {JSX.Element} 渲染的选择器元素
+ */
 export function EntityPicker<T extends { id: string; name?: string; title?: string }>({
   name,
   label,

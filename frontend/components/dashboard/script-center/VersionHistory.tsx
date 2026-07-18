@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file VersionHistory.tsx
+ * @description 版本历史管理组件，支持查看、恢复、删除历史版本以及版本对比功能
+ */
+
 import { useState, useCallback } from 'react'
 import { History, RotateCcw, Eye, Trash2, GitCompare, X, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -20,6 +25,16 @@ interface VersionHistoryProps {
   onCompare?: (versionId1: string, versionId2: string) => Promise<{ diff: any }>
 }
 
+/**
+ * VersionHistory - 版本历史管理组件
+ * @param {VersionHistoryProps} props - 组件属性
+ * @param {Version[]} props.versions - 版本列表
+ * @param {Function} props.onRestore - 恢复版本回调
+ * @param {Function} props.onView - 查看版本回调
+ * @param {Function} props.onDelete - 删除版本回调
+ * @param {Function} [props.onCompare] - 版本对比回调
+ * @returns {JSX.Element} 渲染的版本历史界面
+ */
 export function VersionHistory({
   versions,
   onRestore,

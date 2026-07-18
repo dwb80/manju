@@ -1,6 +1,13 @@
+/**
+ * @file video.ts
+ * @description 视频生成相关类型定义，包括视频参数、视频任务等
+ */
+
 import type { TaskStatus } from "./common.js";
 
-/** 视频生成入参，兼容文生视频、图生视频和关键帧模式。 */
+/**
+ * 视频生成入参，兼容文生视频、图生视频和关键帧模式
+ */
 export interface VideoParams {
   prompt: string;
   image?: string;
@@ -34,10 +41,22 @@ export interface VideoTask {
   seconds: string;
   size: string;
   error: string;
+  /**
+   * 关联的助手消息 ID。生成时由 generateVideo 写入；queryVideo 状态变更时通过该字段
+   * 定位会话里"视频生成中…"占位消息并回填 status/videoUrl/content。
+   * 旧任务该字段可能为空，queryVideo 会回退到按 meta.taskId 搜索。
+   */
+  message_id: string;
   created_at: string;
 }
 
-/** 视频任务状态（独立模块） */
+/**
+ * 视频任务状态类型（独立模块）
+ * @property queued - 排队中
+ * @property processing - 处理中
+ * @property completed - 已完成
+ * @property failed - 失败
+ */
 export type ModuleVideoTaskStatus = 'queued' | 'processing' | 'completed' | 'failed';
 
 /** 视频任务实体（独立模块）。 */

@@ -1,3 +1,8 @@
+/**
+ * @file template-selector.tsx
+ * @description 资产模板/预设选择器组件，三厂共用的快速填表模板选择对话框
+ */
+
 "use client";
 
 /**
@@ -19,6 +24,14 @@
 import { useEffect, useState } from "react";
 import { LayoutTemplate, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "@/components/common/toast";
 
 /** 模板的最小通用形态：三厂只取自己关心的字段。 */
@@ -120,6 +133,11 @@ function pickSecondaryChip(template: AssetTemplate, entityType: TemplateEntityTy
   return null;
 }
 
+/**
+ * TemplateSelector - 模板选择器组件
+ * @param {TemplateSelectorProps} props - 组件属性
+ * @returns {JSX.Element | null} 渲染的模板选择器元素
+ */
 export function TemplateSelector({
   isOpen,
   onClose,
@@ -158,45 +176,32 @@ export function TemplateSelector({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[95] grid place-items-center bg-black/60 px-4 backdrop-blur-sm overflow-y-auto py-8"
-      role="dialog"
-      aria-modal="true"
-      aria-label="选择模板"
-    >
-      <div className="w-full max-w-4xl max-h-[calc(100vh-4rem)] rounded-2xl border border-white/10 bg-[#202020] p-5 shadow-2xl flex flex-col">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent size="wide" className="border-border">
         {/* 标题栏 */}
-        <div className="flex items-center justify-between mb-4 flex-shrink-0">
+        <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-md bg-emerald-500/15 text-emerald-300">
               <LayoutTemplate className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">使用模板快速创建{entityLabel}</h2>
-              <p className="text-xs text-[#888] mt-0.5">
+              <DialogTitle>使用模板快速创建{entityLabel}</DialogTitle>
+              <DialogDescription>
                 从常用预设中选择一个，应用后仍可在表单中继续修改
-              </p>
+              </DialogDescription>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center"
-            aria-label="关闭"
-          >
-            <X className="h-4 w-4 text-[#888]" />
-          </button>
-        </div>
+        </DialogHeader>
 
         {/* 内容 */}
         <div className="flex-1 min-h-0 overflow-y-auto pr-1">
           {isLoading ? (
-            <div className="grid place-items-center py-16 text-[#888]">
+            <div className="grid place-items-center py-16 text-muted-foreground">
               <Loader2 className="h-6 w-6 animate-spin mb-2" />
               <span className="text-sm">加载模板中…</span>
             </div>
           ) : templates.length === 0 ? (
-            <div className="grid place-items-center py-16 text-[#888]">
+            <div className="grid place-items-center py-16 text-muted-foreground">
               <span className="text-sm">暂无可用模板</span>
             </div>
           ) : (
@@ -207,7 +212,7 @@ export function TemplateSelector({
                 return (
                   <div
                     key={tpl.id}
-                    className="group flex flex-col gap-2 rounded-lg border border-white/10 bg-[#1a1a1a] p-3 hover:border-emerald-500/60 transition-colors"
+                    className="group flex flex-col gap-2 rounded-lg border border-border bg-card p-3 hover:border-emerald-500/60 transition-colors"
                   >
                     {/* 缩略图占位 / 头部 */}
                     <div className="flex items-center gap-2">
@@ -215,7 +220,7 @@ export function TemplateSelector({
                         {(tpl.name || "?").charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-white truncate">{tpl.name}</h3>
+                        <h3 className="text-sm font-medium text-foreground truncate">{tpl.name}</h3>
                         <div className="flex flex-wrap items-center gap-1 mt-0.5">
                           {primary && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
@@ -223,7 +228,7 @@ export function TemplateSelector({
                             </span>
                           )}
                           {secondary && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-[#aaa]">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground">
                               {secondary}
                             </span>
                           )}
@@ -232,7 +237,7 @@ export function TemplateSelector({
                     </div>
                     {/* 描述 */}
                     {tpl.description && (
-                      <p className="text-xs text-[#888] line-clamp-3 min-h-[2.5rem]">
+                      <p className="text-xs text-muted-foreground line-clamp-3 min-h-[2.5rem]">
                         {tpl.description}
                       </p>
                     )}
@@ -256,12 +261,12 @@ export function TemplateSelector({
         </div>
 
         {/* 底部操作 */}
-        <div className="flex justify-end pt-4 mt-4 border-t border-white/10 flex-shrink-0">
+        <DialogFooter className="border-t border-border pt-4 mt-4">
           <Button type="button" size="sm" variant="secondary" onClick={onClose}>
             取消
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

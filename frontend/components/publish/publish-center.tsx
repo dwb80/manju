@@ -1,3 +1,8 @@
+/**
+ * @file publish-center.tsx
+ * @description 发布中心组件，管理视频发布计划和已发布视频列表
+ */
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -14,6 +19,16 @@ import {
   Package,
 } from "lucide-react";
 import { Pagination } from "@/components/shared";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { PublishedVideo, PublishPlan as PublishPlanType, PublishPlatform } from "./published-videos-list";
 
 /**
@@ -365,75 +380,70 @@ export function PublishCenter({
 
         {/* 最新成片 Tab */}
         {activeTab === "videos" && (
-          <div className="overflow-x-auto">
+          <div>
             {paginatedVideos.length > 0 ? (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">成片名称</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">所属项目</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden sm:table-cell">时长</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">发布状态</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden lg:table-cell">发布平台</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">创建时间</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-[#888]">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedVideos.map((video) => (
-                    <tr key={video.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-500/10">
-                            <PlayCircle className="h-4 w-4 text-blue-400" />
+              <div className="rounded-md border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>成片名称</TableHead>
+                      <TableHead className="hidden md:table-cell">所属项目</TableHead>
+                      <TableHead className="hidden sm:table-cell">时长</TableHead>
+                      <TableHead>发布状态</TableHead>
+                      <TableHead className="hidden lg:table-cell">发布平台</TableHead>
+                      <TableHead className="hidden md:table-cell">创建时间</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedVideos.map((video) => (
+                      <TableRow key={video.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-500/10">
+                              <PlayCircle className="h-4 w-4 text-blue-400" />
+                            </div>
+                            <span className="font-medium text-foreground">{video.name}</span>
                           </div>
-                          <span className="font-medium text-white">{video.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{video.projectName}</td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden sm:table-cell">{formatDuration(video.duration)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${video.publishStatus === "published"
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-orange-500/10 text-orange-400"
-                          }`}>
-                          {video.publishStatus === "published" ? "已发布" : "待发布"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden lg:table-cell">
-                        {video.publishedPlatform ? getPlatformIcon(video.publishedPlatform) : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{formatDate(video.createdAt)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center gap-2 justify-end">
-                          <button
-                            onClick={() => onPreviewVideo?.(video)}
-                            className="rounded-md border border-white/10 bg-[#1a1a1a] px-2 py-1 text-xs text-white transition-colors hover:border-white/20"
-                          >
-                            预览
-                          </button>
-                          <button
-                            onClick={() => onDownloadVideo?.(video)}
-                            className="rounded-md bg-blue-500/10 px-2 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-500/20"
-                          >
-                            下载
-                          </button>
-                          {onPackageVideo && (
-                            <button
-                              onClick={() => onPackageVideo(video)}
-                              className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-300 transition-colors hover:bg-amber-500/20"
-                              title="一键打包（生成发布 manifest）"
-                            >
-                              <Package className="h-3 w-3" />
-                              打包
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground hidden md:table-cell">{video.projectName}</TableCell>
+                        <TableCell className="text-muted-foreground hidden sm:table-cell">{formatDuration(video.duration)}</TableCell>
+                        <TableCell>
+                          <Badge variant={video.publishStatus === "published" ? "success" : "warning"}>
+                            {video.publishStatus === "published" ? "已发布" : "待发布"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground hidden lg:table-cell">
+                          {video.publishedPlatform ? getPlatformIcon(video.publishedPlatform) : "-"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground hidden md:table-cell">{formatDate(video.createdAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center gap-1 justify-end">
+                            <Button variant="ghost" size="sm" onClick={() => onPreviewVideo?.(video)}>
+                              预览
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => onDownloadVideo?.(video)}>
+                              下载
+                            </Button>
+                            {onPackageVideo && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onPackageVideo(video)}
+                                className="text-amber-400 hover:text-amber-300"
+                                title="一键打包（生成发布 manifest）"
+                              >
+                                <Package className="h-3 w-3" />
+                                打包
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
               <div className="py-12 text-center">
                 <Video className="mx-auto h-12 w-12 text-[#666]" />
@@ -460,77 +470,70 @@ export function PublishCenter({
 
         {/* 发布计划 Tab */}
         {activeTab === "plans" && (
-          <div className="overflow-x-auto">
+          <div>
             {paginatedPlans.length > 0 ? (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">计划名称</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">计划日期</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">状态</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden lg:table-cell">发布平台</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden sm:table-cell">成片数</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">负责人</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-[#888]">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedPlans.map((plan) => (
-                    <tr key={plan.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded bg-purple-500/10">
-                            <Calendar className="h-4 w-4 text-purple-400" />
-                          </div>
-                          <span className="font-medium text-white">{plan.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{plan.date}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${plan.status === "completed"
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : plan.status === "executing"
-                            ? "bg-blue-500/10 text-blue-400"
-                            : plan.status === "cancelled"
-                              ? "bg-red-500/10 text-red-400"
-                              : "bg-orange-500/10 text-orange-400"
-                          }`}>
-                          {plan.status === "completed"
-                            ? "已完成"
-                            : plan.status === "executing"
-                              ? "执行中"
-                              : plan.status === "cancelled"
-                                ? "已取消"
-                                : "计划中"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <div className="flex flex-wrap gap-1">
-                          {plan.platforms.slice(0, 2).map((platform) => (
-                            <span key={platform} className="rounded-md bg-white/5 px-1.5 py-0.5 text-xs text-[#888]">
-                              {getPlatformIcon(platform)}
-                            </span>
-                          ))}
-                          {plan.platforms.length > 2 && (
-                            <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-xs text-[#666]">
-                              +{plan.platforms.length - 2}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden sm:table-cell">{plan.videos.length} 个</td>
-                      <td className="px-4 py-3 text-sm text-[#888] hidden md:table-cell">{plan.owner}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          className="rounded-md border border-white/10 bg-[#1a1a1a] px-2 py-1 text-xs text-white transition-colors hover:border-white/20"
-                        >
-                          查看
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="rounded-md border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>计划名称</TableHead>
+                      <TableHead className="hidden md:table-cell">计划日期</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead className="hidden lg:table-cell">发布平台</TableHead>
+                      <TableHead className="hidden sm:table-cell">成片数</TableHead>
+                      <TableHead className="hidden md:table-cell">负责人</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedPlans.map((plan) => {
+                      const statusBadge =
+                        plan.status === "completed" ? (
+                          <Badge variant="success">已完成</Badge>
+                        ) : plan.status === "executing" ? (
+                          <Badge variant="info">执行中</Badge>
+                        ) : plan.status === "cancelled" ? (
+                          <Badge variant="destructive">已取消</Badge>
+                        ) : (
+                          <Badge variant="warning">计划中</Badge>
+                        );
+                      return (
+                        <TableRow key={plan.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 items-center justify-center rounded bg-purple-500/10">
+                                <Calendar className="h-4 w-4 text-purple-400" />
+                              </div>
+                              <span className="font-medium text-foreground">{plan.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground hidden md:table-cell">{plan.date}</TableCell>
+                          <TableCell>{statusBadge}</TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            <div className="flex flex-wrap gap-1">
+                              {plan.platforms.slice(0, 2).map((platform) => (
+                                <Badge key={platform} variant="outline">
+                                  {getPlatformIcon(platform)}
+                                </Badge>
+                              ))}
+                              {plan.platforms.length > 2 && (
+                                <Badge variant="muted">+{plan.platforms.length - 2}</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground hidden sm:table-cell">{plan.videos.length} 个</TableCell>
+                          <TableCell className="text-muted-foreground hidden md:table-cell">{plan.owner}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm">
+                              查看
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
               <div className="py-12 text-center">
                 <Calendar className="mx-auto h-12 w-12 text-[#666]" />

@@ -14,6 +14,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AppContext } from "../services/app.js";
 import type { ModelType } from "../types.js";
 import { rootLogger } from "../logger.js";
+import { HttpBodyError, readJsonBody } from "./http-utils.js";
 import {
   listModels,
   getModelById,
@@ -23,21 +24,17 @@ import {
   setDefaultModel,
   toggleModelEnabled,
   seedModelConfigs,
+  toPublicModelConfig,
+  withoutClientSecrets,
   type ModelInput,
 } from "../services/model-center-impl.js";
 
 /**
- * 读取JSON请求体
- */
-async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.from(chunk));
-  const text = Buffer.concat(chunks).toString("utf8");
-  return text ? (JSON.parse(text) as Record<string, unknown>) : {};
-}
-
-/**
- * 发送JSON响应
+ * sendJsonResponse - 发送 JSON 响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {T} data - 响应数据
+ * @param {number} status - HTTP 状态码，默认 200
+ * @returns {void}
  */
 function sendJsonResponse<T>(res: ServerResponse, data: T, status = 200): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -45,7 +42,11 @@ function sendJsonResponse<T>(res: ServerResponse, data: T, status = 200): void {
 }
 
 /**
- * 发送错误响应
+ * sendErrorResponse - 发送错误响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {unknown} error - 错误对象
+ * @param {number} status - HTTP 状态码，默认 400
+ * @returns {void}
  */
 function sendErrorResponse(res: ServerResponse, error: unknown, status = 400): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -59,7 +60,9 @@ function sendErrorResponse(res: ServerResponse, error: unknown, status = 400): v
 }
 
 /**
- * 解析查询参数中的模型类型
+ * parseTypeQuery - 解析查询参数中的模型类型
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @returns {ModelType | undefined} 模型类型（chat/image/video）
  */
 function parseTypeQuery(req: IncomingMessage): ModelType | undefined {
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -71,7 +74,11 @@ function parseTypeQuery(req: IncomingMessage): ModelType | undefined {
 }
 
 /**
- * 处理模型中心相关的HTTP请求
+ * handleModelsRouter - 处理模型中心相关的 HTTP 请求
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
  */
 export async function handleModelsRouter(
   ctx: AppContext,
@@ -90,20 +97,20 @@ export async function handleModelsRouter(
     if (method === "GET" && pathname === "/api/models") {
       const type = parseTypeQuery(req);
       const models = await listModels(ctx, type);
-      sendJsonResponse(res, models);
+      sendJsonResponse(res, models.map(toPublicModelConfig));
       return;
     }
 
     // POST /api/models - 创建新模型
     if (method === "POST" && pathname === "/api/models") {
       const body = await readJsonBody(req);
-      const input = body as unknown as ModelInput;
+      const input = withoutClientSecrets(body as unknown as ModelInput);
       if (!input.name) {
         sendErrorResponse(res, new Error("模型名称不能为空"));
         return;
       }
       const model = await createModel(ctx, input);
-      sendJsonResponse(res, model, 201);
+      sendJsonResponse(res, toPublicModelConfig(model), 201);
       return;
     }
 
@@ -118,16 +125,18 @@ export async function handleModelsRouter(
         sendErrorResponse(res, new Error("模型不存在"), 404);
         return;
       }
-      sendJsonResponse(res, model);
+      sendJsonResponse(res, toPublicModelConfig(model));
       return;
     }
 
     // PUT /api/models/:id - 更新模型配置
     if (method === "PUT" && modelId) {
       const body = await readJsonBody(req);
-      const input = body as unknown as ModelInput;
-      const model = await updateModel(ctx, decodeURIComponent(modelId), input);
-      sendJsonResponse(res, model);
+      const decodedId = decodeURIComponent(modelId);
+      const existing = await getModelById(ctx, decodedId);
+      const input = withoutClientSecrets(body as unknown as ModelInput, existing);
+      const model = await updateModel(ctx, decodedId, input);
+      sendJsonResponse(res, toPublicModelConfig(model));
       return;
     }
 
@@ -146,7 +155,7 @@ export async function handleModelsRouter(
         return;
       }
       const model = await setDefaultModel(ctx, decodeURIComponent(id));
-      sendJsonResponse(res, model);
+      sendJsonResponse(res, toPublicModelConfig(model));
       return;
     }
 
@@ -160,7 +169,7 @@ export async function handleModelsRouter(
       const body = await readJsonBody(req);
       const enabled = Boolean(body.enabled);
       const model = await toggleModelEnabled(ctx, decodeURIComponent(id), enabled);
-      sendJsonResponse(res, model);
+      sendJsonResponse(res, toPublicModelConfig(model));
       return;
     }
 
@@ -168,6 +177,6 @@ export async function handleModelsRouter(
     sendErrorResponse(res, new Error("未找到模型中心路由"), 404);
   } catch (error) {
     rootLogger.error({ event: "router.error", route: "models", err: error }, `模型中心路由错误`);
-    sendErrorResponse(res, error);
+    sendErrorResponse(res, error, error instanceof HttpBodyError ? error.status : 400);
   }
 }

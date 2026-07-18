@@ -20,6 +20,11 @@ interface ProjectHeaderProps {
     onSave: () => Promise<void>;
 }
 
+/**
+ * ProjectHeader - 项目头部组件
+ * @param {ProjectHeaderProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的项目头部元素
+ */
 export function ProjectHeader({
     selectedProject,
     projectDraft,

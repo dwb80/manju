@@ -3,10 +3,11 @@
 /**
  * 剧集预览组件
  * 展示解析结果：剧集列表、每个剧集下的场景、每个场景下的对白
+ *
+ * 按需求变更：不再使用 lucide-react 图标，改用纯文本 [-]/[+] 折叠符。
  */
 
 import { useState } from "react";
-import { FileText, ChevronDown, ChevronRight } from "lucide-react";
 import type { PreviewEpisode, PreviewScene } from "./types";
 import { formatSceneAnchor } from "./utils";
 
@@ -37,7 +38,7 @@ export function EpisodePreview({ episodes }: EpisodePreviewProps) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+    <div className="p-4 space-y-2">
       {episodes.map((ep) => {
         const epId = `ep-${ep.episode_no}`;
         const expanded = expandedEpisodes.has(epId);
@@ -48,12 +49,9 @@ export function EpisodePreview({ episodes }: EpisodePreviewProps) {
               onClick={() => toggleEpisode(epId)}
               className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/5 transition-colors text-left"
             >
-              {expanded ? (
-                <ChevronDown className="h-3 w-3 text-gray-500" />
-              ) : (
-                <ChevronRight className="h-3 w-3 text-gray-500" />
-              )}
-              <FileText className="h-3 w-3 text-emerald-400" />
+              <span className="text-xs text-gray-500 font-mono w-7 inline-block text-center">
+                {expanded ? "[-]" : "[+]"}
+              </span>
               <span className="text-sm font-medium text-white flex-1">
                 第{ep.episode_no}集 · {ep.title}
               </span>
@@ -81,11 +79,9 @@ export function EpisodePreview({ episodes }: EpisodePreviewProps) {
                           onClick={() => toggleScene(scId)}
                           className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 transition-colors text-left"
                         >
-                          {scExpanded ? (
-                            <ChevronDown className="h-3 w-3 text-gray-500" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3 text-gray-500" />
-                          )}
+                          <span className="text-xs text-gray-500 font-mono w-5 inline-block text-center">
+                            {scExpanded ? "[-]" : "[+]"}
+                          </span>
                           <span className="text-xs text-emerald-400">景{scene.scene_no}</span>
                           <span className="text-xs text-white flex-1">
                             {formatSceneAnchor(scene)}

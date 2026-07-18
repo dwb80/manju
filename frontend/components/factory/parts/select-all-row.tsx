@@ -10,6 +10,20 @@
 
 import { CheckSquare, Square } from "lucide-react";
 
+/**
+ * SelectAllRow - 全选/部分选中提示行组件
+ * @description 工厂页顶部的全选控制行，显示当前可见项的全选状态，支持点击切换全选
+ * @param {boolean} isAllSelected - 是否已全选
+ * @param {boolean} isPartial - 是否部分选中
+ * @param {number} allCount - 总项数
+ * @param {() => void} onToggle - 切换全选回调
+ * @param {React.ReactNode} [totalSelectedLabel] - 右侧追加的额外信息（如"已选 N 项"）
+ * @param {boolean} [showSelectAll=true] - 是否显示全选按钮
+ * @param {string} [selectAllLabel="全选当前筛选结果"] - 全选按钮文字
+ * @param {string} [selectedLabel="已全选当前筛选结果"] - 已全选时的文字
+ * @param {string} [partialLabel="已选部分"] - 部分选中时的文字
+ * @returns {JSX.Element} 渲染的全选提示行
+ */
 export function SelectAllRow({
   isAllSelected,
   isPartial,

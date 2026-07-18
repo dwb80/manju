@@ -3,8 +3,10 @@
 import { useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Check, Copy, Download, ExternalLink, ImagePlus, Loader2, MessageSquare, Paperclip, RefreshCw, Send, Square, Trash2, Video, Wand2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { ChatPanel } from "@/components/layout/workspace-panels";
+import { Tip } from "@/components/ui/tip";
 import { imageSizeOptions, defaultVideoSize, estimateVideoSeconds, statusText } from "@/lib/project-workflow";
 import type { Attachment, ImageRequest, ImageSettings, ImageTask, Message, Mode, VideoSettings, VideoTask } from "@/lib/app-types";
 
@@ -94,10 +96,10 @@ export function CreativeStudio(props: CreativeStudioProps) {
                 <ModeTab active={isImage} icon={<ImagePlus className="h-3.5 w-3.5" />} label="图片" onClick={() => props.onModeChange("image")} />
                 <ModeTab active={!isImage} icon={<Video className="h-3.5 w-3.5" />} label="视频" onClick={() => props.onModeChange("video")} />
               </div>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={() => (isImage ? props.onRefreshImages() : props.onRefreshVideos())} 
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => (isImage ? props.onRefreshImages() : props.onRefreshVideos())}
                 className="transition-all duration-200 hover:scale-105 hover:bg-white/10"
                 aria-label="刷新内容"
               >
@@ -199,11 +201,10 @@ export function CreativeStudio(props: CreativeStudioProps) {
                 {(isImage ? props.visibleImagesChronological : props.videos).slice(-10).map((item, index) => (
                   <div
                     key={item.id}
-                    className={`h-1.5 w-1.5 rounded-full transition-all duration-200 ${
-                      index === (isImage ? props.visibleImagesChronological.length : props.videos.length) - 1
-                        ? "bg-emerald-400 scale-125"
-                        : "bg-[#555]"
-                    }`}
+                    className={`h-1.5 w-1.5 rounded-full transition-all duration-200 ${index === (isImage ? props.visibleImagesChronological.length : props.videos.length) - 1
+                      ? "bg-emerald-400 scale-125"
+                      : "bg-[#555]"
+                      }`}
                   />
                 ))}
               </div>
@@ -230,11 +231,11 @@ export function CreativeStudio(props: CreativeStudioProps) {
               {/* 生成历史快捷入口（最近10条） */}
               <div className="flex items-center gap-1">
                 {isImage && props.visibleImagesChronological.slice(-10).map((task, index) => (
-                  <div
-                    key={task.id}
-                    className={`h-2 w-2 rounded-full transition-all duration-200 ${index === props.visibleImagesChronological.length - 1 ? "bg-emerald-400 scale-150" : "bg-[#555]"}`}
-                    title={task.prompt}
-                  />
+                  <Tip key={task.id} label={task.prompt} side="top" className="max-w-md">
+                    <div
+                      className={`h-2 w-2 rounded-full transition-all duration-200 ${index === props.visibleImagesChronological.length - 1 ? "bg-emerald-400 scale-150" : "bg-[#555]"}`}
+                    />
+                  </Tip>
                 ))}
                 {isImage && props.visibleImagesChronological.length === 0 && <span className="text-xs text-[#666]">无历史</span>}
               </div>
@@ -299,9 +300,8 @@ function ImageParamsForm({ settings, onChange }: { settings: ImageSettings; onCh
             {["1024x1024", "1024x1792", "1792x1024"].map((size) => (
               <button
                 key={size}
-                className={`shrink-0 rounded-md border px-3 py-1.5 text-xs transition-all duration-200 ${
-                  settings.size === size ? "border-emerald-500 bg-emerald-500/10 text-emerald-300" : "border-white/10 bg-[#2a2a2a] text-[#a0a0a0] hover:bg-white/10"
-                }`}
+                className={`shrink-0 rounded-md border px-3 py-1.5 text-xs transition-all duration-200 ${settings.size === size ? "border-emerald-500 bg-emerald-500/10 text-emerald-300" : "border-white/10 bg-[#2a2a2a] text-[#a0a0a0] hover:bg-white/10"
+                  }`}
                 onClick={() => onChange((draft) => ({ ...draft, size: size as ImageSettings["size"] }))}
               >
                 {size === "1024x1024" ? "1:1" : size === "1024x1792" ? "竖版" : "横版"}
@@ -311,15 +311,12 @@ function ImageParamsForm({ settings, onChange }: { settings: ImageSettings; onCh
         </div>
         <label className="block space-y-2">
           <span className="text-xs text-[#a0a0a0]">输出尺寸</span>
-          <select
-            className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+          <ShadcnSelect
+            options={imageSizeOptions.map((o) => ({ value: o.value, label: o.label }))}
             value={settings.size}
-            onChange={(event) => onChange((draft) => ({ ...draft, size: event.target.value as ImageSettings["size"] }))}
-          >
-            {imageSizeOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
+            onChange={(value) => onChange((draft) => ({ ...draft, size: value as ImageSettings["size"] }))}
+            className="h-10"
+          />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block space-y-2">
@@ -335,14 +332,15 @@ function ImageParamsForm({ settings, onChange }: { settings: ImageSettings; onCh
           </label>
           <label className="block space-y-2">
             <span className="text-xs text-[#a0a0a0]">输出格式</span>
-            <select
-              className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+            <ShadcnSelect
+              options={[
+                { value: "url", label: "URL" },
+                { value: "b64_json", label: "Base64" },
+              ]}
               value={settings.response_format}
-              onChange={(event) => onChange((draft) => ({ ...draft, response_format: event.target.value as "url" | "b64_json" }))}
-            >
-              <option value="url">URL</option>
-              <option value="b64_json">Base64</option>
-            </select>
+              onChange={(value) => onChange((draft) => ({ ...draft, response_format: value as "url" | "b64_json" }))}
+              className="h-10"
+            />
           </label>
         </div>
       </div>
@@ -398,42 +396,41 @@ function VideoParamsForm({ settings, onChange }: { settings: VideoSettings; onCh
       </label>
       <label className="block space-y-2">
         <span className="text-xs text-[#a0a0a0]">画幅比例</span>
-        <select
-          className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+        <ShadcnSelect
+          options={(["16:9", "9:16", "1:1", "4:3", "3:4"] as VideoSettings["ratio"][]).map((r) => ({ value: r, label: r }))}
           value={settings.ratio}
-          onChange={(event) => {
-            const ratio = event.target.value as VideoSettings["ratio"];
+          onChange={(value) => {
+            const ratio = value as VideoSettings["ratio"];
             onChange((draft) => ({ ...draft, ratio, ...defaultVideoSize(ratio) }));
           }}
-        >
-          {(["16:9", "9:16", "1:1", "4:3", "3:4"] as VideoSettings["ratio"][]).map((ratio) => (
-            <option key={ratio} value={ratio}>{ratio}</option>
-          ))}
-        </select>
+          className="h-10"
+        />
       </label>
       <label className="block space-y-2">
         <span className="text-xs text-[#a0a0a0]">生成模式</span>
-        <select
-          className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+        <ShadcnSelect
+          options={[
+            { value: "ti2vid", label: "文生/图生视频" },
+            { value: "keyframes", label: "关键帧动画" },
+          ]}
           value={settings.mode}
-          onChange={(event) => onChange((draft) => ({ ...draft, mode: event.target.value as VideoSettings["mode"] }))}
-        >
-          <option value="ti2vid">文生/图生视频</option>
-          <option value="keyframes">关键帧动画</option>
-        </select>
+          onChange={(value) => onChange((draft) => ({ ...draft, mode: value as VideoSettings["mode"] }))}
+          className="h-10"
+        />
       </label>
       <label className="block space-y-2">
         <span className="text-xs text-[#a0a0a0]">时长档位</span>
-        <select
-          className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-          value={settings.num_frames}
-          onChange={(event) => onChange((draft) => ({ ...draft, num_frames: Number(event.target.value) }))}
-        >
-          <option value={81}>81 帧 · 约 3 秒</option>
-          <option value={121}>121 帧 · 约 5 秒</option>
-          <option value={241}>241 帧 · 约 10 秒</option>
-          <option value={441}>441 帧 · 约 18 秒</option>
-        </select>
+        <ShadcnSelect
+          options={[
+            { value: "81", label: "81 帧 · 约 3 秒" },
+            { value: "121", label: "121 帧 · 约 5 秒" },
+            { value: "241", label: "241 帧 · 约 10 秒" },
+            { value: "441", label: "441 帧 · 约 18 秒" },
+          ]}
+          value={String(settings.num_frames)}
+          onChange={(value) => onChange((draft) => ({ ...draft, num_frames: Number(value) }))}
+          className="h-10"
+        />
       </label>
       <div className="grid grid-cols-2 gap-3">
         <label className="block space-y-2">
@@ -694,9 +691,8 @@ function VideoGalleryStrip({
         return (
           <button
             key={task.id}
-            className={`group relative flex h-full w-48 shrink-0 overflow-hidden rounded-xl border transition-all duration-200 ${
-              selectedId === task.id ? "border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-white/10 hover:border-white/30 hover:scale-[1.02]"
-            }`}
+            className={`group relative flex h-full w-48 shrink-0 overflow-hidden rounded-xl border transition-all duration-200 ${selectedId === task.id ? "border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-white/10 hover:border-white/30 hover:scale-[1.02]"
+              }`}
             onClick={() => onSelect(task.id)}
           >
             {/* 状态图标 */}

@@ -10,15 +10,16 @@
  */
 
 import { useEffect, useState, useMemo } from "react";
-import { Film, Pencil, Trash2, CheckSquare, Wand2 } from "lucide-react";
+import { Film, Pencil, Trash2, CheckSquare, Wand2, Users, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FactoryCRUDPage, type FactoryCRUDPageProps, getEntityLabel } from "@/components/factory";
+import { EntityPicker } from "@/components/shared/entity-picker";
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import { toast } from "@/components/common/toast";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { clearApiCache } from "@/lib/api-client";
 import { useNameLookup } from "@/hooks/use-name-lookup";
-import type { Storyboard, Scene } from "@/lib/module-types";
+import type { Storyboard, Scene, Character, Prop } from "@/lib/module-types";
 import {
   listStoryboards,
   createStoryboard,
@@ -30,12 +31,34 @@ import {
   copyStoryboardToProjects,
   generateVideoFromStoryboard,
 } from "@/services/storyboard.service";
-import { getScenesByIds } from "@/services/scene.service";
+import { getScenesByIds, listScenes } from "@/services/scene.service";
+import { listCharacters } from "@/services/character.service";
+import { listProps } from "@/services/prop.service";
 import {
   STORYBOARD_STATUS_LABELS,
   STORYBOARD_STATUS_COLORS,
   STORYBOARD_STATUS_OPTIONS,
 } from "@/lib/module-dictionaries";
+
+/** 角色类型中文标签（与角色工厂保持一致）。 */
+const characterRoleLabels: Record<string, string> = {
+  protagonist: "主角",
+  supporting: "配角",
+  antagonist: "反派",
+  minor: "次要",
+};
+
+/** 道具类别中文标签。 */
+const propCategoryLabels: Record<string, string> = {
+  weapon: "武器",
+  tool: "工具",
+  clothing: "服饰",
+  food: "食物",
+  vehicle: "交通",
+  artifact: "法宝",
+  furniture: "家具",
+  other: "其他",
+};
 
 /** 分镜表单字段配置。 */
 const storyboardFields: FormFieldConfig[] = [
@@ -56,6 +79,34 @@ const storyboardFields: FormFieldConfig[] = [
   { name: "dialogue", label: "台词", type: "textarea", placeholder: "请输入台词内容", rows: 2 },
   { name: "notes", label: "备注", type: "textarea", placeholder: "请输入备注信息", rows: 2 },
   { name: "scene_id", label: "场景ID", type: "text", placeholder: "请输入场景ID" },
+  {
+    name: "character_asset_ids",
+    label: "出场角色（多选）",
+    type: "entity-multi",
+    placeholder: "点击选择角色...",
+    entityMultiConfig: {
+      fetcher: (projectId: string) => listCharacters(projectId),
+      formatLabel: (c) => (c as { name?: string }).name ?? "",
+      formatHint: (c) => {
+        const role = (c as { role?: string }).role;
+        return role ? characterRoleLabels[role] ?? role : "";
+      },
+    },
+  },
+  {
+    name: "prop_asset_ids",
+    label: "相关道具（多选）",
+    type: "entity-multi",
+    placeholder: "点击选择道具...",
+    entityMultiConfig: {
+      fetcher: (projectId: string) => listProps(projectId),
+      formatLabel: (p) => (p as { name?: string }).name ?? "",
+      formatHint: (p) => {
+        const category = (p as { category?: string }).category;
+        return category ? propCategoryLabels[category] ?? category : "";
+      },
+    },
+  },
 ];
 
 /** 集数下拉选项（1-20）。 */
@@ -94,6 +145,8 @@ const config: FactoryCRUDPageProps<Storyboard> = {
     dialogue: sb.dialogue ?? "",
     notes: sb.notes ?? "",
     scene_id: sb.scene_id ?? "",
+    character_asset_ids: sb.character_asset_ids ?? [],
+    prop_asset_ids: sb.prop_asset_ids ?? [],
   }),
 
   /** 分镜是纵向时间轴，用单列长卡片。 */
@@ -137,19 +190,25 @@ const config: FactoryCRUDPageProps<Storyboard> = {
     { label: "审核中", value: list.filter((s) => s.status === "approved" || s.status === "production").length, color: "purple" },
     { label: "已完成", value: list.filter((s) => s.status === "completed").length, color: "orange" },
   ],
+  // 分镜导演台：不展示顶部统计卡片
+  showStats: false,
 };
 
 /**
- * 单条分镜行（含场景名反向展示）
+ * 单条分镜行（含场景/角色/道具名反向展示）
  */
 function StoryboardRow({
   sb,
   actions,
   sceneNameMap,
+  characterNameMap,
+  propNameMap,
 }: {
   sb: Storyboard;
   actions: import("@/components/factory").CardActions;
   sceneNameMap: Record<string, string>;
+  characterNameMap: Record<string, string>;
+  propNameMap: Record<string, string>;
 }) {
   const status = sb.status ?? "draft";
   const color =
@@ -158,6 +217,12 @@ function StoryboardRow({
   const label = STORYBOARD_STATUS_LABELS[status as keyof typeof STORYBOARD_STATUS_LABELS] ?? status;
   const display = getEntityLabel(sb, "未命名分镜");
   const sceneName = sb.scene_id ? sceneNameMap[sb.scene_id] : undefined;
+  const characterNames = (sb.character_asset_ids ?? [])
+    .map((id) => characterNameMap[id])
+    .filter((n): n is string => Boolean(n));
+  const propNames = (sb.prop_asset_ids ?? [])
+    .map((id) => propNameMap[id])
+    .filter((n): n is string => Boolean(n));
   return (
     <div
       className={`group relative rounded-lg border bg-[#202020] p-4 transition-colors ${
@@ -207,6 +272,36 @@ function StoryboardRow({
           <p className="text-sm text-white line-clamp-2">{display}</p>
           {sb.dialogue && (
             <p className="mt-1 text-sm text-white/70 italic line-clamp-1">"{sb.dialogue}"</p>
+          )}
+          {(characterNames.length > 0 || propNames.length > 0) && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {characterNames.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  <Users className="h-3 w-3 text-blue-400" />
+                  {characterNames.map((name, idx) => (
+                    <span
+                      key={`${name}-${idx}`}
+                      className="inline-flex items-center rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-300"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {propNames.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  <Package className="h-3 w-3 text-amber-400" />
+                  {propNames.map((name, idx) => (
+                    <span
+                      key={`${name}-${idx}`}
+                      className="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-300"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-[#666]">
             {sb.camera_angle && <span>机位: {sb.camera_angle}</span>}
@@ -288,7 +383,29 @@ export function StoryboardDirectorPage() {
     [list],
   );
 
-  const fetcher = useMemo(
+  // 收集所有分镜里出现过的角色 ID，去重后批量反查名字
+  const characterIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const sb of list) {
+      for (const id of sb.character_asset_ids ?? []) {
+        if (id) ids.add(id);
+      }
+    }
+    return Array.from(ids);
+  }, [list]);
+
+  // 收集所有分镜里出现过的道具 ID，去重后批量反查名字
+  const propIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const sb of list) {
+      for (const id of sb.prop_asset_ids ?? []) {
+        if (id) ids.add(id);
+      }
+    }
+    return Array.from(ids);
+  }, [list]);
+
+  const sceneFetcher = useMemo(
     () => async (ids: string[]) => {
       if (!selectedProjectId) return [];
       return getScenesByIds(selectedProjectId, ids);
@@ -296,7 +413,46 @@ export function StoryboardDirectorPage() {
     [selectedProjectId],
   );
 
-  const sceneNameMap = useNameLookup<Scene>(sceneIds, fetcher, (items, ids) => {
+  const characterFetcher = useMemo(
+    () => async (ids: string[]) => {
+      if (!selectedProjectId) return [];
+      // 走全量 list + 客户端过滤，避免新增 getCharactersByIds 接口
+      const all = await listCharacters(selectedProjectId);
+      const idSet = new Set(ids);
+      return all.filter((c) => idSet.has(c.id));
+    },
+    [selectedProjectId],
+  );
+
+  const propFetcher = useMemo(
+    () => async (ids: string[]) => {
+      if (!selectedProjectId) return [];
+      const all = await listProps(selectedProjectId);
+      const idSet = new Set(ids);
+      return all.filter((p) => idSet.has(p.id));
+    },
+    [selectedProjectId],
+  );
+
+  const sceneNameMap = useNameLookup<Scene>(sceneIds, sceneFetcher, (items, ids) => {
+    const m: Record<string, string> = {};
+    for (const it of items) m[it.id] = it.name;
+    for (const id of ids) if (!(id in m)) m[id] = "";
+    return m;
+  });
+
+  const characterNameMap = useNameLookup<Character>(
+    characterIds,
+    characterFetcher,
+    (items, ids) => {
+      const m: Record<string, string> = {};
+      for (const it of items) m[it.id] = it.name;
+      for (const id of ids) if (!(id in m)) m[id] = "";
+      return m;
+    },
+  );
+
+  const propNameMap = useNameLookup<Prop>(propIds, propFetcher, (items, ids) => {
     const m: Record<string, string> = {};
     for (const it of items) m[it.id] = it.name;
     for (const id of ids) if (!(id in m)) m[id] = "";
@@ -351,7 +507,13 @@ export function StoryboardDirectorPage() {
         </Button>
       }
       renderCard={(sb, actions) => (
-        <StoryboardRow sb={sb} actions={actions} sceneNameMap={sceneNameMap} />
+        <StoryboardRow
+          sb={sb}
+          actions={actions}
+          sceneNameMap={sceneNameMap}
+          characterNameMap={characterNameMap}
+          propNameMap={propNameMap}
+        />
       )}
     />
   );

@@ -1,5 +1,6 @@
 /**
- * 角色工厂 API
+ * @file character.service.ts
+ * @description 角色工厂 API，提供角色的 CRUD、软删除、引用统计、批量操作、跨项目复制等接口
  *
  * 设计原则：
  * - 仅暴露本模块的 CRUD / 软删除 / 引用 / 批量 / 跨项目复制 / 模板。

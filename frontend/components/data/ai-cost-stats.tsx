@@ -1,3 +1,8 @@
+/**
+ * @file ai-cost-stats.tsx
+ * @description AI成本统计组件，显示AI调用的成本和用量统计
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -13,6 +18,7 @@ import {
   Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tip } from "@/components/ui/tip";
 
 /**
  * AI成本数据点类型
@@ -141,11 +147,12 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
             return (
               <div key={index} className="flex flex-1 flex-col items-center gap-2">
                 <div className="relative w-full">
-                  <div
-                    className="w-full rounded-t-md bg-gradient-to-t from-blue-500/80 to-blue-400/80 transition-all hover:from-blue-500 hover:to-blue-400"
-                    style={{ height: `${Math.max(heightPercent, 5)}%` }}
-                    title={`$${point.totalCost.toFixed(2)}`}
-                  />
+                  <Tip label={`$${point.totalCost.toFixed(2)}`} side="top">
+                    <div
+                      className="w-full rounded-t-md bg-gradient-to-t from-blue-500/80 to-blue-400/80 transition-all hover:from-blue-500 hover:to-blue-400"
+                      style={{ height: `${Math.max(heightPercent, 5)}%` }}
+                    />
+                  </Tip>
                 </div>
                 <div className="text-xs text-[#666]">{point.date}</div>
               </div>
@@ -168,37 +175,40 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
         <div className="h-8 overflow-hidden rounded-lg bg-[#202020]">
           <div className="flex h-full">
             {imagePercent > 0 && (
-              <div
-                className="flex items-center justify-center bg-purple-500/80 transition-all hover:bg-purple-500"
-                style={{ width: `${imagePercent}%` }}
-                title={`图片: ${imagePercent.toFixed(1)}%`}
-              >
-                {imagePercent > 10 && (
-                  <span className="text-xs font-medium text-white">{imagePercent.toFixed(0)}%</span>
-                )}
-              </div>
+              <Tip label={`图片: ${imagePercent.toFixed(1)}%`} side="top">
+                <div
+                  className="flex items-center justify-center bg-purple-500/80 transition-all hover:bg-purple-500"
+                  style={{ width: `${imagePercent}%` }}
+                >
+                  {imagePercent > 10 && (
+                    <span className="text-xs font-medium text-white">{imagePercent.toFixed(0)}%</span>
+                  )}
+                </div>
+              </Tip>
             )}
             {videoPercent > 0 && (
-              <div
-                className="flex items-center justify-center bg-cyan-500/80 transition-all hover:bg-cyan-500"
-                style={{ width: `${videoPercent}%` }}
-                title={`视频: ${videoPercent.toFixed(1)}%`}
-              >
-                {videoPercent > 10 && (
-                  <span className="text-xs font-medium text-white">{videoPercent.toFixed(0)}%</span>
-                )}
-              </div>
+              <Tip label={`视频: ${videoPercent.toFixed(1)}%`} side="top">
+                <div
+                  className="flex items-center justify-center bg-cyan-500/80 transition-all hover:bg-cyan-500"
+                  style={{ width: `${videoPercent}%` }}
+                >
+                  {videoPercent > 10 && (
+                    <span className="text-xs font-medium text-white">{videoPercent.toFixed(0)}%</span>
+                  )}
+                </div>
+              </Tip>
             )}
             {chatPercent > 0 && (
-              <div
-                className="flex items-center justify-center bg-blue-500/80 transition-all hover:bg-blue-500"
-                style={{ width: `${chatPercent}%` }}
-                title={`聊天: ${chatPercent.toFixed(1)}%`}
-              >
-                {chatPercent > 10 && (
-                  <span className="text-xs font-medium text-white">{chatPercent.toFixed(0)}%</span>
-                )}
-              </div>
+              <Tip label={`聊天: ${chatPercent.toFixed(1)}%`} side="top">
+                <div
+                  className="flex items-center justify-center bg-blue-500/80 transition-all hover:bg-blue-500"
+                  style={{ width: `${chatPercent}%` }}
+                >
+                  {chatPercent > 10 && (
+                    <span className="text-xs font-medium text-white">{chatPercent.toFixed(0)}%</span>
+                  )}
+                </div>
+              </Tip>
             )}
           </div>
         </div>

@@ -1,4 +1,11 @@
-/** AI 漫剧项目的主档案，负责串起剧本、分镜、资产、剪辑和交付物。 */
+/**
+ * @file project.ts
+ * @description 项目相关类型定义，包括项目实体、任务、成员、剧集、问题、里程碑、剪辑片段等
+ */
+
+/**
+ * AI 漫剧项目的主档案，负责串起剧本、分镜、资产、剪辑和交付物
+ */
 export interface Project {
   id: string;
   name: string;
@@ -17,7 +24,16 @@ export interface Project {
   archived_at: string;
 }
 
-/** 项目任务在制作流程中的状态列。 */
+/**
+ * 项目任务状态类型（制作流程中的状态）
+ * @property todo - 待办
+ * @property script - 剧本阶段
+ * @property storyboard - 分镜阶段
+ * @property image - 图片阶段
+ * @property video - 视频阶段
+ * @property review - 审核阶段
+ * @property done - 已完成
+ */
 export type ProjectTaskStatus = "todo" | "script" | "storyboard" | "image" | "video" | "review" | "done";
 
 /** 工作台任务，用来跟踪某个制作动作的负责人、状态和截止日期。 */
@@ -59,7 +75,22 @@ export interface ProjectEpisode {
   updated_at: string;
 }
 
+/**
+ * 项目问题状态类型
+ * @property open - 待处理
+ * @property doing - 处理中
+ * @property resolved - 已解决
+ * @property closed - 已关闭
+ */
 export type ProjectIssueStatus = "open" | "doing" | "resolved" | "closed";
+
+/**
+ * 项目问题严重度类型
+ * @property low - 低
+ * @property medium - 中
+ * @property high - 高
+ * @property critical - 严重
+ */
 export type ProjectIssueSeverity = "low" | "medium" | "high" | "critical";
 
 /** 项目问题单，记录制作过程中需要修复或确认的事项。 */
@@ -92,6 +123,13 @@ export interface ProjectMilestone {
   updated_at: string;
 }
 
+/**
+ * 项目剪辑片段状态类型
+ * @property todo - 待办
+ * @property editing - 剪辑中
+ * @property review - 审核中
+ * @property done - 已完成
+ */
 export type ProjectClipStatus = "todo" | "editing" | "review" | "done";
 
 /** 剪辑片段，表示最终剪辑清单中的一个可排序视频段。 */
@@ -127,10 +165,29 @@ export interface ProjectClip {
   deleted_at?: string;
 }
 
-/** 发布计划状态 */
+/**
+ * 发布计划状态类型
+ * @property draft - 草稿
+ * @property scheduled - 已安排
+ * @property publishing - 发布中
+ * @property published - 已发布
+ * @property failed - 发布失败
+ * @property cancelled - 已取消
+ */
 export type PublishPlanStatus = "draft" | "scheduled" | "publishing" | "published" | "failed" | "cancelled";
 
-/** 发布平台类型 */
+/**
+ * 发布平台类型
+ * @property youtube - YouTube
+ * @property bilibili - B站
+ * @property douyin - 抖音
+ * @property tiktok - TikTok
+ * @property kuaishou - 快手
+ * @property xiaohongshu - 小红书
+ * @property weibo - 微博
+ * @property wechat - 微信
+ * @property custom - 自定义
+ */
 export type PublishPlatform = "youtube" | "bilibili" | "douyin" | "tiktok" | "kuaishou" | "xiaohongshu" | "weibo" | "wechat" | "custom";
 
 /** 发布计划，用于管理成片的发布安排 */
@@ -197,6 +254,8 @@ export interface DashboardKPI {
   pendingReviews: number;
   /** GPU利用率 */
   gpuUtilization: number;
+  /** 是否接入真实资源遥测。 */
+  resourceTelemetryAvailable?: boolean;
   /** 今日AI费用（元） */
   todayCost: number;
   /** AI任务成功率 */
@@ -257,6 +316,7 @@ export interface ResourceMonitorData {
   cpuUsage: number;
   queueLength: number;
   workerCount: number;
+  telemetryAvailable?: boolean;
 }
 
 /** AI成本明细 */

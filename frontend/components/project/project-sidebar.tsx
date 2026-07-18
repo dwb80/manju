@@ -9,6 +9,11 @@ interface ProjectSidebarProps {
     onOpenWorkbenchPage: (tab: WorkbenchTab) => void;
 }
 
+/**
+ * ProjectSidebar - 项目侧边栏组件
+ * @param {ProjectSidebarProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的项目侧边栏元素
+ */
 export function ProjectSidebar({
     selectedProject,
     projectWorkbenchTab,

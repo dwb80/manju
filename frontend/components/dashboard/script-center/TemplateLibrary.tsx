@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file TemplateLibrary.tsx
+ * @description 剧本模板库组件，提供模板浏览、搜索、预览和创建功能
+ */
+
 import { useState, useEffect } from 'react'
 import {
   BookOpen,
@@ -38,6 +43,13 @@ interface TemplateLibraryProps {
   onCreateFromTemplate?: (template: Template | string) => Promise<void>
 }
 
+/**
+ * TemplateLibrary - 剧本模板库组件
+ * @param {TemplateLibraryProps} props - 组件属性
+ * @param {Function} [props.onSelectTemplate] - 选择模板回调
+ * @param {Function} [props.onCreateFromTemplate] - 从模板创建回调
+ * @returns {JSX.Element} 渲染的模板库界面
+ */
 export function TemplateLibrary({
   onSelectTemplate,
   onCreateFromTemplate,
@@ -249,17 +261,15 @@ export function TemplateLibrary({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-1 rounded ${
-              viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-[#888]'
-            }`}
+            className={`p-1 rounded ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-[#888]'
+              }`}
           >
             <Grid className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-1 rounded ${
-              viewMode === 'list' ? 'bg-white/10 text-white' : 'text-[#888]'
-            }`}
+            className={`p-1 rounded ${viewMode === 'list' ? 'bg-white/10 text-white' : 'text-[#888]'
+              }`}
           >
             <List className="h-4 w-4" />
           </button>
@@ -286,11 +296,10 @@ export function TemplateLibrary({
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
-                selectedCategory === category.id
+              className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${selectedCategory === category.id
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
                   : 'bg-white/5 text-[#888] border border-white/10 hover:bg-white/10'
-              }`}
+                }`}
             >
               <span>{category.icon}</span>
               <span>{category.label}</span>

@@ -1,3 +1,8 @@
+/**
+ * @file standalone-page-header.tsx
+ * @description 独立页面的统一头部组件，提供返回按钮、面包屑导航和页面标题描述
+ */
+
 "use client";
 
 /**
@@ -22,10 +27,18 @@
  *   />
  */
 
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, LayoutDashboard } from "lucide-react";
 import { createLogger } from "@/lib/logger";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 // 模块级 logger
 const log = createLogger('standalone-page-header')
@@ -105,42 +118,48 @@ export function StandalonePageHeader({
 
           {/* 面包屑导航 */}
           {breadcrumbs.length > 0 && (
-            <nav
-              className="flex items-center gap-2 text-sm text-[#888]"
-              aria-label="面包屑导航"
-            >
-              {breadcrumbs.map((item, index) => {
-                const isLast = index === breadcrumbs.length - 1
-                return (
-                  <span key={item} className="flex items-center gap-2">
-                    {index === 0 && (
-                      <LayoutDashboard
-                        className="h-3 w-3"
-                        aria-hidden="true"
-                      />
-                    )}
-                    {isLast ? (
-                      <span className="text-white font-medium" aria-current="page">
-                        {item}
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleBreadcrumbClick(index, item)}
-                        className="hover:text-white transition-colors"
-                      >
-                        {item}
-                      </button>
-                    )}
-                    {!isLast && (
-                      <span className="text-white/40" aria-hidden="true">
-                        /
-                      </span>
-                    )}
-                  </span>
-                )
-              })}
-            </nav>
+            <Breadcrumb>
+              <BreadcrumbList>
+                {breadcrumbs.map((item, index) => {
+                  const isLast = index === breadcrumbs.length - 1;
+                  return (
+                    <React.Fragment key={item}>
+                      {index > 0 && <BreadcrumbSeparator />}
+                      <BreadcrumbItem>
+                        {isLast ? (
+                          <BreadcrumbPage>
+                            {index === 0 && (
+                              <LayoutDashboard
+                                className="mr-1 inline h-3 w-3"
+                                aria-hidden="true"
+                              />
+                            )}
+                            {item}
+                          </BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink
+                            onClick={() => index === 0 && handleBreadcrumbClick(index, item)}
+                            className="cursor-pointer"
+                          >
+                            {index === 0 ? (
+                              <button type="button">
+                                <LayoutDashboard
+                                  className="mr-1 inline h-3 w-3"
+                                  aria-hidden="true"
+                                />
+                                {item}
+                              </button>
+                            ) : (
+                              <span className="opacity-70">{item}</span>
+                            )}
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                    </React.Fragment>
+                  );
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
           )}
         </div>
 

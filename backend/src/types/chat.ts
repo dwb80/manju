@@ -1,14 +1,35 @@
+/**
+ * @file chat.ts
+ * @description 聊天会话相关类型定义，包括会话、消息、附件、工具调用等类型
+ */
+
 import type { Role } from "./common.js";
 
-/** 一个历史会话，可以归属到某个项目，也可以放在“不使用项目”下。 */
+/**
+ * 会话模式类型
+ * @property chat - 普通聊天模式
+ * @property image - 图片生成模式
+ * @property video - 视频生成模式
+ */
+export type ConversationMode = "chat" | "image" | "video";
+
+/** 一个历史会话，可以归属到某个项目，也可以放在"不使用项目"下。 */
 export interface Conversation {
   id: string;
   title: string;
   model: string;
+  /** 会话模式：chat / image / video */
+  mode: ConversationMode;
   is_pinned: boolean;
   created_at: string;
   updated_at: string;
   project_id: string;
+  /**
+   * 未读助手消息计数。0 = 已读；>0 = 侧栏显示数字徽标。
+   * 助手消息落库时 +1，进入会话时归零。
+   * user 消息不计入（用户知道自己发了什么）。
+   */
+  unread_count: number;
 }
 
 /** 会话消息，meta 中会保存附件、生成参数等扩展信息。 */

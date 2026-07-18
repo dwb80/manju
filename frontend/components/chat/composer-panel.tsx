@@ -1,3 +1,8 @@
+/**
+ * @file composer-panel.tsx
+ * @description 输入面板组件，组合输入框和参数控制
+ */
+
 "use client";
 
 import { useEffect } from "react";
@@ -5,6 +10,8 @@ import type { RefObject } from "react";
 import { ImagePlus, Loader2, Paperclip, Pencil, Send, Video, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ShadcnSelect } from "@/components/ui/select";
+import { Tip } from "@/components/ui/tip";
 import { defaultVideoSize, estimateVideoSeconds, aspectRatioOptions, defaultSizeFromRatio, imageSizeOptions } from "@/lib/project-workflow";
 import { formatBytes } from "@/lib/media-tools";
 import type { Attachment, ChatSettings, ImageRatio, ImageSettings, Mode, VideoMode, VideoRatio, VideoSettings } from "@/lib/app-types";
@@ -124,13 +131,12 @@ export function ComposerPanel({
             <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
               <label className="space-y-2">
                 <span className="text-xs text-[#b4b4b4]">模型</span>
-                <select
-                  className="w-full rounded-xl border border-white/10 bg-[#1e1e1e] px-4 py-2.5 text-sm outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                <ShadcnSelect
+                  options={[{ value: "agnes-2.0-flash", label: "agnes-2.0-flash" }]}
                   value={chatSettings.model}
-                  onChange={(event) => onChatSettingsChange((draft) => ({ ...draft, model: event.target.value }))}
-                >
-                  <option value="agnes-2.0-flash">agnes-2.0-flash</option>
-                </select>
+                  onChange={(value) => onChatSettingsChange((draft) => ({ ...draft, model: value }))}
+                  className="h-10"
+                />
               </label>
               <label className="space-y-2">
                 <span className="text-xs text-[#b4b4b4]">Temperature</span>
@@ -223,14 +229,15 @@ export function ComposerPanel({
               </label>
               <label className="space-y-2">
                 <span className="block text-sm font-medium text-[#cfcfcf]">输出格式</span>
-                <select
-                  className="h-12 w-full rounded-xl border border-white/10 bg-[#303030] px-4 text-sm text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                <ShadcnSelect
+                  options={[
+                    { value: "url", label: "URL" },
+                    { value: "b64_json", label: "Base64" },
+                  ]}
                   value={imageSettings.response_format}
-                  onChange={(event) => onImageSettingsChange((draft) => ({ ...draft, response_format: event.target.value as "url" | "b64_json" }))}
-                >
-                  <option value="url">URL</option>
-                  <option value="b64_json">Base64</option>
-                </select>
+                  onChange={(value) => onImageSettingsChange((draft) => ({ ...draft, response_format: value as "url" | "b64_json" }))}
+                  className="h-12"
+                />
               </label>
             </div>
             <div className="mt-4 grid grid-cols-[1fr] gap-4">
@@ -289,16 +296,17 @@ export function ComposerPanel({
               </label>
               <label className="space-y-2">
                 <span className="block text-sm font-medium text-[#cfcfcf]">时长档位</span>
-                <select
-                  className="h-12 w-full rounded-xl border border-white/10 bg-[#303030] px-4 text-sm text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                  value={videoSettings.num_frames}
-                  onChange={(event) => onVideoSettingsChange((draft) => ({ ...draft, num_frames: Number(event.target.value) }))}
-                >
-                  <option value={81}>81 帧，约 {estimateVideoSeconds(81, videoSettings.frame_rate)} 秒</option>
-                  <option value={121}>121 帧，约 {estimateVideoSeconds(121, videoSettings.frame_rate)} 秒</option>
-                  <option value={241}>241 帧，约 {estimateVideoSeconds(241, videoSettings.frame_rate)} 秒</option>
-                  <option value={441}>441 帧，约 {estimateVideoSeconds(441, videoSettings.frame_rate)} 秒</option>
-                </select>
+                <ShadcnSelect
+                  options={[
+                    { value: "81", label: `81 帧，约 ${estimateVideoSeconds(81, videoSettings.frame_rate)} 秒` },
+                    { value: "121", label: `121 帧，约 ${estimateVideoSeconds(121, videoSettings.frame_rate)} 秒` },
+                    { value: "241", label: `241 帧，约 ${estimateVideoSeconds(241, videoSettings.frame_rate)} 秒` },
+                    { value: "441", label: `441 帧，约 ${estimateVideoSeconds(441, videoSettings.frame_rate)} 秒` },
+                  ]}
+                  value={String(videoSettings.num_frames)}
+                  onChange={(value) => onVideoSettingsChange((draft) => ({ ...draft, num_frames: Number(value) }))}
+                  className="h-12"
+                />
               </label>
               <label className="space-y-2">
                 <span className="block text-sm font-medium text-[#cfcfcf]">帧率</span>
@@ -372,11 +380,22 @@ export function ComposerPanel({
             />
             <Button aria-label="上传附件" size="icon" variant="ghost" onClick={() => fileInputRef.current?.click()} className="transition-all duration-200 hover:scale-105 hover:bg-white/10"><Paperclip className="h-4 w-4" /></Button>
             {(["chat", "image", "video"] as Mode[]).map((item) => (
-              <Button key={item} size="sm" variant={mode === item ? "default" : "ghost"} onClick={() => onModeChange(item)} title={item === "chat" ? "Ctrl+1" : item === "image" ? "Ctrl+2" : "Ctrl+3"} className="transition-all duration-200">
-                {item === "chat" && <span className="flex items-center gap-1.5">聊天<span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-[#888]">Ctrl+1</span></span>}
-                {item === "image" && <><ImagePlus className="h-4 w-4" />图片<span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-[#888]">Ctrl+2</span></>}
-                {item === "video" && <><Video className="h-4 w-4" />视频<span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-[#888]">Ctrl+3</span></>}
-              </Button>
+              <Tip
+                key={item}
+                label={item === "chat" ? "Ctrl+1" : item === "image" ? "Ctrl+2" : "Ctrl+3"}
+                side="bottom"
+              >
+                <Button
+                  size="sm"
+                  variant={mode === item ? "default" : "ghost"}
+                  onClick={() => onModeChange(item)}
+                  className="transition-all duration-200"
+                >
+                  {item === "chat" && <span className="flex items-center gap-1.5">聊天<span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-[#888]">Ctrl+1</span></span>}
+                  {item === "image" && <><ImagePlus className="h-4 w-4" />图片<span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-[#888]">Ctrl+2</span></>}
+                  {item === "video" && <><Video className="h-4 w-4" />视频<span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-[#888]">Ctrl+3</span></>}
+                </Button>
+              </Tip>
             ))}
             {(mode === "image" || mode === "video") && (
               <Button size="sm" variant="secondary" disabled={enhancingPrompt || !prompt.trim()} onClick={onEnhancePrompt} className="transition-all duration-200 hover:scale-[1.02] disabled:opacity-60">

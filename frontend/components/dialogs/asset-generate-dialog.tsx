@@ -1,5 +1,21 @@
-import { X, Check } from "lucide-react";
+/**
+ * @file asset-generate-dialog.tsx
+ * @description 资产生成对话框组件，用于AI生成资产图片
+ */
+
+"use client";
+
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { ImageTask, ProjectAssetKind } from "@/lib/app-types";
 import { projectAssetKinds } from "@/lib/project-workflow";
 
@@ -15,9 +31,14 @@ interface AssetGenerateDialogProps {
     generatedAssetDialog: GeneratedAssetDialog | null;
     onSubmit: () => Promise<void>;
     onClose: () => void;
-    onFieldChange: (key: string, value: any) => void;
+    onFieldChange: (key: string, value: ProjectAssetKind | string) => void;
 }
 
+/**
+ * 生成图归档到项目资产的弹窗。
+ *
+ * 基于 shadcn Dialog 封装，保留旧 API 接口，调用方零迁移成本。
+ */
 export function AssetGenerateDialog({
     generatedAssetDialog,
     onSubmit,
@@ -27,43 +48,71 @@ export function AssetGenerateDialog({
     if (!generatedAssetDialog) return null;
 
     return (
-        <div className="fixed inset-0 z-[92] grid place-items-center bg-black/60 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="加入资产库">
-            <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-[#202020] shadow-2xl">
-                <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                    <div>
-                        <div className="text-base font-semibold text-white">加入资产库</div>
-                        <div className="mt-1 text-xs text-[#b4b4b4]">把这张生成图归档到项目资产，后续可作为参考图或分镜底图复用。</div>
-                    </div>
-                    <button className="grid h-8 w-8 place-items-center rounded-lg text-[#d8d8d8] hover:bg-white/10 hover:text-white" onClick={onClose} aria-label="关闭加入资产库">
-                        <X className="h-4 w-4" />
-                    </button>
-                </div>
-                <div className="space-y-3 p-5">
-                    <label className="grid grid-cols-[96px_1fr] items-center gap-3 max-sm:grid-cols-1 max-sm:gap-1">
-                        <span className="text-right text-xs font-medium text-[#d8d8d8] max-sm:text-left">资产类型</span>
-                        <select
-                            className="h-10 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none focus:border-emerald-500"
-                            value={generatedAssetDialog.kind}
-                            onChange={(event) => onFieldChange("kind", event.target.value as ProjectAssetKind)}
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="border-border">
+                <DialogHeader>
+                    <DialogTitle>加入资产库</DialogTitle>
+                    <DialogDescription>
+                        把这张生成图归档到项目资产，后续可作为参考图或分镜底图复用。
+                    </DialogDescription>
+                </DialogHeader>
+
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        void onSubmit();
+                    }}
+                    className="space-y-3"
+                >
+                    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[96px_1fr] sm:items-center sm:gap-3">
+                        <label
+                            htmlFor="asset-generate-kind"
+                            className="text-xs font-medium text-muted-foreground sm:text-right"
                         >
-                            {projectAssetKinds.map((kind) => <option key={kind.key} value={kind.key}>{kind.label}</option>)}
+                            资产类型
+                        </label>
+                        <select
+                            id="asset-generate-kind"
+                            value={generatedAssetDialog.kind}
+                            onChange={(event) =>
+                                onFieldChange("kind", event.target.value as ProjectAssetKind)
+                            }
+                            className="h-10 w-full rounded-md border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-emerald-500"
+                        >
+                            {projectAssetKinds.map((kind) => (
+                                <option key={kind.key} value={kind.key}>
+                                    {kind.label}
+                                </option>
+                            ))}
                         </select>
-                    </label>
-                    <label className="grid grid-cols-[96px_1fr] items-center gap-3 max-sm:grid-cols-1 max-sm:gap-1">
-                        <span className="text-right text-xs font-medium text-[#d8d8d8] max-sm:text-left">资产名称</span>
-                        <input
-                            className="h-10 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none focus:border-emerald-500"
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[96px_1fr] sm:items-center sm:gap-3">
+                        <label
+                            htmlFor="asset-generate-name"
+                            className="text-xs font-medium text-muted-foreground sm:text-right"
+                        >
+                            资产名称
+                        </label>
+                        <Input
+                            id="asset-generate-name"
                             value={generatedAssetDialog.name}
                             placeholder="请输入资产名称"
                             onChange={(event) => onFieldChange("name", event.target.value)}
                         />
-                    </label>
-                </div>
-                <div className="flex justify-end gap-2 border-t border-white/10 px-5 py-4">
-                    <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-                    <Button size="sm" onClick={() => void onSubmit()}><Check className="h-4 w-4" />加入资产库</Button>
-                </div>
-            </div>
-        </div>
+                    </div>
+
+                    <DialogFooter className="pt-2">
+                        <Button size="sm" variant="secondary" type="button" onClick={onClose}>
+                            取消
+                        </Button>
+                        <Button size="sm" type="submit">
+                            <Check className="mr-1 h-3.5 w-3.5" />
+                            加入资产库
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }

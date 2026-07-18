@@ -20,6 +20,7 @@ export interface ModelFormData {
   apiEndpoint: string;
   apiMethod: "POST" | "GET";
   apiStatusEndpoint: string;
+  proxyURL: string;
   // 能力标签
   capabilities: ModelCapabilities;
   // 参数（聊天模型）
@@ -93,6 +94,7 @@ const EMPTY_FORM: ModelFormData = {
   apiEndpoint: "",
   apiMethod: "POST",
   apiStatusEndpoint: "",
+  proxyURL: "",
   capabilities: {},
   maxContext: "4096",
   maxTokens: "2000",
@@ -134,6 +136,7 @@ function modelToForm(model: ModelInfo): ModelFormData {
     apiEndpoint: model.api_config?.endpoint ?? "",
     apiMethod: model.api_config?.method ?? "POST",
     apiStatusEndpoint: model.api_config?.statusEndpoint ?? "",
+    proxyURL: model.api_config?.proxyURL ?? "",
     capabilities: { ...caps },
     maxContext: String(params.maxContext ?? ""),
     maxTokens: String(params.maxTokens ?? ""),
@@ -375,6 +378,19 @@ export function ModelFormDialog({
                   />
                 </div>
               )}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-[#888] mb-1.5">
+                  代理服务器URL
+                </label>
+                <Input
+                  value={form.proxyURL}
+                  onChange={(e) => handleChange("proxyURL", e.target.value)}
+                  placeholder="http://127.0.0.1:7897（如不需要代理请留空）"
+                />
+                <p className="text-xs text-[#666] mt-1">
+                  配置代理服务器地址用于访问该模型API，如 Bitz Net 代理
+                </p>
+              </div>
             </div>
           </section>
 

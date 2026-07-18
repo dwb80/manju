@@ -1,7 +1,19 @@
+/**
+ * @file data-router.ts
+ * @description 数据中心路由模块
+ *
+ * 提供数据统计和分析相关的 API 端点：
+ * - 数据概览指标（AI 成本、任务数、响应时间、生产效率）
+ * - AI 成本统计（分类成本、趋势、预算、优化建议）
+ * - 生产效率分析（各阶段效率、瓶颈分析）
+ *
+ * 支持的时间范围：today / week / month / all
+ */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AppContext } from "../services/app.js";
 import type { ImageTask, VideoTask, Message, ProjectScript, ProjectStoryboard, ProjectReview } from "../types.js";
 import { rootLogger } from "../logger.js";
+import { getRawDatabase } from "../storage/sqlite.js";
 
 /**
  * 时间范围类型定义
@@ -108,7 +120,9 @@ export interface ProductionEfficiencyResponse {
 }
 
 /**
- * 计算时间范围的起始时间
+ * getTimeRangeStart - 计算时间范围的起始时间
+ * @param {TimeRange} timeRange - 时间范围类型
+ * @returns {Date} 起始时间
  */
 function getTimeRangeStart(timeRange: TimeRange): Date {
   const now = new Date();
@@ -127,8 +141,10 @@ function getTimeRangeStart(timeRange: TimeRange): Date {
 }
 
 /**
- * 图片生成成本计算
- * 基于模型和分辨率估算成本
+ * calculateImageCost - 计算图片生成成本
+ * @param {ImageTask} task - 图片任务对象
+ * @returns {number} 成本（单位：元）
+ * @description 基于模型和分辨率估算成本，基础成本 0.05 元/张
  */
 function calculateImageCost(task: ImageTask): number {
   // 基础成本: 0.05元/张
@@ -155,8 +171,10 @@ function calculateImageCost(task: ImageTask): number {
 }
 
 /**
- * 视频生成成本计算
- * 基于模型、时长和分辨率估算成本
+ * calculateVideoCost - 计算视频生成成本
+ * @param {VideoTask} task - 视频任务对象
+ * @returns {number} 成本（单位：元）
+ * @description 基于模型、时长和分辨率估算成本，基础成本 0.5 元/秒
  */
 function calculateVideoCost(task: VideoTask): number {
   // 基础成本: 0.5元/秒
@@ -188,8 +206,10 @@ function calculateVideoCost(task: VideoTask): number {
 }
 
 /**
- * 聊天成本计算
- * 基于token消耗估算成本
+ * calculateChatCost - 计算聊天成本
+ * @param {Message} message - 消息对象
+ * @returns {number} 成本（单位：元）
+ * @description 基于 token 消耗估算成本，基础成本 0.001 元/千 token
  */
 function calculateChatCost(message: Message): number {
   // 基础成本: 0.001元/千token
@@ -200,7 +220,10 @@ function calculateChatCost(message: Message): number {
 }
 
 /**
- * 获取数据概览指标
+ * getDataMetrics - 获取数据概览指标
+ * @param {AppContext} ctx - 应用上下文
+ * @param {TimeRange} timeRange - 时间范围
+ * @returns {Promise<DataMetricsResponse>} 数据概览指标响应
  */
 async function getDataMetrics(ctx: AppContext, timeRange: TimeRange): Promise<DataMetricsResponse> {
   const startTime = getTimeRangeStart(timeRange);
@@ -256,7 +279,10 @@ async function getDataMetrics(ctx: AppContext, timeRange: TimeRange): Promise<Da
 }
 
 /**
- * 获取AI成本统计数据
+ * getAICost - 获取 AI 成本统计数据
+ * @param {AppContext} ctx - 应用上下文
+ * @param {TimeRange} timeRange - 时间范围
+ * @returns {Promise<AICostResponse>} AI 成本统计响应
  */
 async function getAICost(ctx: AppContext, timeRange: TimeRange): Promise<AICostResponse> {
   const startTime = getTimeRangeStart(timeRange);
@@ -354,7 +380,10 @@ async function getAICost(ctx: AppContext, timeRange: TimeRange): Promise<AICostR
 }
 
 /**
- * 获取生产效率数据
+ * getProductionEfficiency - 获取生产效率数据
+ * @param {AppContext} ctx - 应用上下文
+ * @param {TimeRange} timeRange - 时间范围
+ * @returns {Promise<ProductionEfficiencyResponse>} 生产效率响应
  */
 async function getProductionEfficiency(ctx: AppContext, timeRange: TimeRange): Promise<ProductionEfficiencyResponse> {
   const startTime = getTimeRangeStart(timeRange);
@@ -470,7 +499,10 @@ async function getProductionEfficiency(ctx: AppContext, timeRange: TimeRange): P
 }
 
 /**
- * 计算各阶段平均完成时间(单位:小时)
+ * calculateStageAvgTime - 计算各阶段平均完成时间
+ * @param {any[]} items - 阶段任务列表
+ * @param {string} stage - 阶段名称
+ * @returns {number} 平均完成时间（单位：小时）
  */
 function calculateStageAvgTime(items: any[], stage: string): number {
   if (items.length === 0) return 0;
@@ -488,7 +520,10 @@ function calculateStageAvgTime(items: any[], stage: string): number {
 }
 
 /**
- * 计算各阶段成功率
+ * calculateStageSuccessRate - 计算各阶段成功率
+ * @param {any[]} items - 阶段任务列表
+ * @param {string} stage - 阶段名称
+ * @returns {number} 成功率（0-1）
  */
 function calculateStageSuccessRate(items: any[], stage: string): number {
   if (items.length === 0) return 1;
@@ -523,7 +558,9 @@ function calculateStageSuccessRate(items: any[], stage: string): number {
 }
 
 /**
- * 识别瓶颈阶段
+ * identifyBottleneck - 识别瓶颈阶段
+ * @param {any} stageEfficiency - 各阶段效率数据
+ * @returns {Object} 瓶颈分析结果（阶段、耗时、问题、建议）
  */
 function identifyBottleneck(stageEfficiency: any): {
   stage: string;
@@ -567,7 +604,9 @@ function identifyBottleneck(stageEfficiency: any): {
 }
 
 /**
- * 解析查询参数中的时间范围
+ * parseTimeRange - 解析查询参数中的时间范围
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @returns {TimeRange} 时间范围类型
  */
 function parseTimeRange(req: IncomingMessage): TimeRange {
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -581,17 +620,11 @@ function parseTimeRange(req: IncomingMessage): TimeRange {
 }
 
 /**
- * 读取JSON请求体
- */
-async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.from(chunk));
-  const text = Buffer.concat(chunks).toString("utf8");
-  return text ? JSON.parse(text) as Record<string, unknown> : {};
-}
-
-/**
- * 发送JSON响应
+ * sendJsonResponse - 发送 JSON 响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {T} data - 响应数据
+ * @param {number} status - HTTP 状态码，默认 200
+ * @returns {void}
  */
 function sendJsonResponse<T>(res: ServerResponse, data: T, status = 200): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -599,7 +632,38 @@ function sendJsonResponse<T>(res: ServerResponse, data: T, status = 200): void {
 }
 
 /**
- * 发送错误响应
+ * getProjectOverview - 单项目数据中心 3 视图合并数据。
+ *  - 优先查 view_project_costs / view_project_quality / view_project_capacity（启动时建好）
+ *  - view 不存在时降级返回空对象，调用方按字段是否齐全渲染
+ */
+async function getProjectOverview(_ctx: AppContext, projectId: string): Promise<{
+  projectId: string;
+  costs: Record<string, unknown> | null;
+  quality: Record<string, unknown> | null;
+  capacity: Record<string, unknown> | null;
+  generatedAt: string;
+}> {
+  const databaseFile = process.env.AGNES_DB_FILE ?? "data/sqlite.db";
+  let costs: Record<string, unknown> | null = null;
+  let quality: Record<string, unknown> | null = null;
+  let capacity: Record<string, unknown> | null = null;
+  try {
+    const db = getRawDatabase(databaseFile);
+    costs = (db.prepare("SELECT * FROM view_project_costs WHERE project_id = ?").get(projectId) as Record<string, unknown> | undefined) ?? null;
+    quality = (db.prepare("SELECT * FROM view_project_quality WHERE project_id = ?").get(projectId) as Record<string, unknown> | undefined) ?? null;
+    capacity = (db.prepare("SELECT * FROM view_project_capacity WHERE project_id = ?").get(projectId) as Record<string, unknown> | undefined) ?? null;
+  } catch (err) {
+    rootLogger.warn({ event: "data.project_overview_failed", projectId, err: String(err) }, "项目 overview 查询失败，可能视图未建");
+  }
+  return { projectId, costs, quality, capacity, generatedAt: new Date().toISOString() };
+}
+
+/**
+ * sendErrorResponse - 发送错误响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {unknown} error - 错误对象
+ * @param {number} status - HTTP 状态码，默认 400
+ * @returns {void}
  */
 function sendErrorResponse(res: ServerResponse, error: unknown, status = 400): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -611,7 +675,11 @@ function sendErrorResponse(res: ServerResponse, error: unknown, status = 400): v
 }
 
 /**
- * 处理数据中心相关的HTTP请求
+ * handleDataRouter - 处理数据中心相关的 HTTP 请求
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
  */
 export async function handleDataRouter(
   ctx: AppContext,
@@ -643,6 +711,18 @@ export async function handleDataRouter(
     if (method === "GET" && pathname === "/api/data/production-efficiency") {
       const timeRange = parseTimeRange(req);
       const result = await getProductionEfficiency(ctx, timeRange);
+      sendJsonResponse(res, result);
+      return;
+    }
+
+    // GET /api/data/project-overview?projectId= - 项目维度数据中心（spec 4.3）
+    if (method === "GET" && pathname === "/api/data/project-overview") {
+      const projectId = url.searchParams.get("projectId");
+      if (!projectId) {
+        sendErrorResponse(res, new Error("projectId required"), 400);
+        return;
+      }
+      const result = await getProjectOverview(ctx, projectId);
       sendJsonResponse(res, result);
       return;
     }

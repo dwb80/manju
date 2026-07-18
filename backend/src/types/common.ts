@@ -1,9 +1,49 @@
-export type Role = "system" | "user" | "assistant";
-export type TaskStatus = "pending" | "processing" | "success" | "failed";
-export type FavoriteType = "chat" | "image" | "video";
+/**
+ * @file common.ts
+ * @description 通用类型定义，包括角色、任务状态、收藏、用户设置、API响应等基础类型
+ */
 
-/** 三厂共性：通用资产版本类型（任务12：统一版本管理）。 */
+/**
+ * 消息角色类型
+ * @property system - 系统消息
+ * @property user - 用户消息
+ * @property assistant - 助手消息
+ */
+export type Role = "system" | "user" | "assistant";
+
+/**
+ * 任务状态类型
+ * @property pending - 等待中
+ * @property processing - 处理中
+ * @property success - 成功
+ * @property failed - 失败
+ */
+export type TaskStatus = "pending" | "processing" | "success" | "failed";
+
+/**
+ * 收藏类型
+ * @property chat - 聊天收藏
+ * @property image - 图片收藏
+ * @property video - 视频收藏
+ * @property conversation - 会话收藏
+ * @property message - 消息收藏
+ */
+export type FavoriteType = "chat" | "image" | "video" | "conversation" | "message";
+
+/**
+ * 通用资产实体类型（三厂共性）
+ * @property character - 角色
+ * @property scene - 场景
+ * @property prop - 道具
+ */
 export type AssetEntityType = "character" | "scene" | "prop";
+
+/**
+ * 资产版本变更类型
+ * @property create - 创建
+ * @property update - 更新
+ * @property restore - 恢复
+ */
 export type AssetVersionChangeType = "create" | "update" | "restore";
 
 /**
@@ -69,6 +109,19 @@ export interface ApiResponse<T> {
  *   app_logs 用于业务侧审计，语义不同。
  * - entity_type + entity_id 指向被审计的业务实体。
  */
+/**
+ * 应用审计日志实体类型
+ * @property video_task - 视频任务
+ * @property image_task - 图片任务
+ * @property audio_task - 音频任务
+ * @property character - 角色
+ * @property scene - 场景
+ * @property prop - 道具
+ * @property storyboard - 分镜
+ * @property clip - 剪辑片段
+ * @property script - 剧本
+ * @property project - 项目
+ */
 export type AppLogEntityType =
   | "video_task"
   | "image_task"
@@ -81,6 +134,23 @@ export type AppLogEntityType =
   | "script"
   | "project";
 
+/**
+ * 应用审计日志动作类型
+ * @property video.status_changed - 视频状态变更
+ * @property video.created - 视频创建
+ * @property image.status_changed - 图片状态变更
+ * @property audio.status_changed - 音频状态变更
+ * @property asset.copied - 资产复制
+ * @property asset.soft_deleted - 资产软删除
+ * @property asset.restored - 资产恢复
+ * @property script.imported - 剧本导入
+ * @property script.exported - 剧本导出
+ * @property script.soft_deleted - 剧本软删除
+ * @property script.restored - 剧本恢复
+ * @property script.purged - 剧本清除
+ * @property client.error - 客户端错误
+ * @property client.warn - 客户端警告
+ */
 export type AppLogAction =
   | "video.status_changed"
   | "video.created"

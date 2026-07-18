@@ -1,3 +1,7 @@
+/**
+ * @file ScriptSidebar.tsx
+ * @description 剧本侧边栏组件，展示剧集和场景的树形导航结构
+ */
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
@@ -66,6 +70,18 @@ type MenuItem =
   | { kind: 'episode'; episode: Episode }
   | { kind: 'scene'; scene: Scene; episodeId: string }
 
+/**
+ * ScriptSidebar - 剧本侧边栏组件
+ * @param {ScriptSidebarProps} props - 组件属性
+ * @param {Episode[]} props.episodes - 剧集列表数据
+ * @param {string | null} props.selectedEpisode - 当前选中的剧集ID
+ * @param {string | null} props.selectedScene - 当前选中的场景ID
+ * @param {Function} props.onSelectEpisode - 选中剧集回调
+ * @param {Function} props.onSelectScene - 选中场景回调
+ * @param {Function} props.onAddEpisode - 添加剧集回调
+ * @param {Function} props.onAddScene - 添加场景回调
+ * @returns {JSX.Element} 渲染的侧边栏界面
+ */
 export function ScriptSidebar({
   episodes,
   selectedEpisode,
@@ -227,11 +243,10 @@ export function ScriptSidebar({
                 return (
                   <div key={node.id} className="rounded-lg overflow-hidden">
                     <div
-                      className={`flex items-center gap-1 p-2 rounded cursor-pointer transition-colors ${
-                        selectedEpisode === node.id
+                      className={`flex items-center gap-1 p-2 rounded cursor-pointer transition-colors ${selectedEpisode === node.id
                           ? 'bg-emerald-500/20 text-emerald-400'
                           : 'hover:bg-white/5 text-gray-300'
-                      }`}
+                        }`}
                       onClick={() => {
                         // 单击：选中 + 跳转
                         onSelectEpisode(node.id)
@@ -275,11 +290,10 @@ export function ScriptSidebar({
                         {childScenes.map((scene) => (
                           <div
                             key={scene.id}
-                            className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors ${
-                              selectedScene === scene.id
+                            className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors ${selectedScene === scene.id
                                 ? 'bg-emerald-500/20 text-emerald-400'
                                 : 'hover:bg-white/5 text-gray-400'
-                            }`}
+                              }`}
                             onClick={() => {
                               onSelectScene(scene.id)
                               onJumpToScene?.(toJumpTarget(scene))
@@ -300,11 +314,10 @@ export function ScriptSidebar({
                 return (
                   <div
                     key={node.id}
-                    className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors ${
-                      selectedScene === node.id
+                    className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors ${selectedScene === node.id
                         ? 'bg-emerald-500/20 text-emerald-400'
                         : 'hover:bg-white/5 text-gray-300'
-                    }`}
+                      }`}
                     onClick={() => {
                       onSelectScene(node.id)
                       onJumpToScene?.(toJumpTarget(node))
@@ -370,11 +383,10 @@ export function ScriptSidebar({
                     setDraggedId(null)
                     setDragOverId(null)
                   }}
-                  className={`flex items-center gap-1 p-2 rounded cursor-pointer transition-colors group ${
-                    selectedEpisode === episode.id
+                  className={`flex items-center gap-1 p-2 rounded cursor-pointer transition-colors group ${selectedEpisode === episode.id
                       ? 'bg-emerald-500/20 text-emerald-400'
                       : 'hover:bg-white/5 text-gray-300'
-                  }`}
+                    }`}
                   onClick={() => {
                     // 单击：选中 + 跳转到正文中该剧集对应位置
                     // 之前是双击才跳，体验割裂；现在和 treeData 模式行为一致
@@ -442,11 +454,10 @@ export function ScriptSidebar({
                       episode.scenes.map((scene) => (
                         <div
                           key={scene.id}
-                          className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors ${
-                            selectedScene === scene.id
+                          className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors ${selectedScene === scene.id
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : 'hover:bg-white/5 text-gray-400'
-                          }`}
+                            }`}
                           onClick={() => {
                             // 单击：选中 + 跳转到正文中该场景对应位置
                             onSelectScene(scene.id)

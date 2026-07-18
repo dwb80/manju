@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file ClassificationView.tsx
+ * @description 剧本分类视图组件，支持按类型、状态、进度对剧本进行分类展示和筛选
+ */
+
 import { useState } from 'react'
 import {
   FolderOpen,
@@ -54,6 +59,14 @@ const PROGRESS_TYPES = [
   { value: 'completed', label: '已完成', range: [100, 100] },
 ]
 
+/**
+ * ClassificationView - 剧本分类视图组件
+ * @param {ClassificationViewProps} props - 组件属性
+ * @param {ScriptItem[]} props.scripts - 剧本列表
+ * @param {Function} [props.onScriptSelect] - 选择剧本回调
+ * @param {Function} [props.onFilterChange] - 筛选条件变更回调
+ * @returns {JSX.Element} 渲染的分类视图界面
+ */
 export function ClassificationView({
   scripts,
   onScriptSelect,
@@ -178,12 +191,11 @@ export function ClassificationView({
     return (
       <div
         key={category.value}
-        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
-          isActive ? 'bg-blue-500/10 border border-blue-500/20' : 'hover:bg-white/5'
-        }`}
+        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${isActive ? 'bg-blue-500/10 border border-blue-500/20' : 'hover:bg-white/5'
+          }`}
         onClick={() => {
           const filterType = expandedCategories.has('genre') ? 'type' :
-                            expandedCategories.has('status') ? 'status' : 'progress'
+            expandedCategories.has('status') ? 'status' : 'progress'
           toggleFilter(filterType, category.value)
         }}
       >

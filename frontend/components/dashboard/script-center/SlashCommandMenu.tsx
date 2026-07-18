@@ -133,9 +133,8 @@ const COMMANDS: SlashCommand[] = [
             content: [
               {
                 type: 'text',
-                text: `分镜 ${idx + 1}: ${
-                  typeof sb === 'string' ? sb : sb.description || sb.summary || JSON.stringify(sb)
-                }`,
+                text: `分镜 ${idx + 1}: ${typeof sb === 'string' ? sb : sb.description || sb.summary || JSON.stringify(sb)
+                  }`,
               },
             ],
           }))
@@ -239,6 +238,12 @@ const COMMANDS: SlashCommand[] = [
   },
 ]
 
+/**
+ * SlashCommandMenu - 斜杠命令菜单组件
+ * @param {SlashCommandMenuProps} props - 组件属性
+ * @param {Editor | null} props.editor - TipTap 编辑器实例
+ * @returns {JSX.Element | null} 渲染的命令菜单界面
+ */
 export function SlashCommandMenu({ editor }: SlashCommandMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')

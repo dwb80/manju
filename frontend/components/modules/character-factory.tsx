@@ -64,10 +64,25 @@ const characterAITypeField: AITypeFieldConfig = {
   ],
 };
 
-/** AI 生成对话框：额外字段（描述 / 性格特点） */
+/** AI 生成对话框：额外字段（与新建角色表单 characterFields 对齐） */
 const characterAIExtraFields = [
   { name: "description", label: "描述（可留空）", placeholder: "可填写：性格、背景、特征…" },
   { name: "traits", label: "性格特点（可留空，逗号分隔）", placeholder: "如：勇敢, 机智, 善良" },
+  { name: "identity", label: "身份（可留空）", placeholder: "如：剑客、公主、侦探" },
+  { name: "face", label: "面部特征（可留空）", placeholder: "脸型、五官、肤色、瞳色" },
+  { name: "hair", label: "发型（可留空）", placeholder: "发型、发色、长度、特殊造型" },
+  { name: "body", label: "身材（可留空）", placeholder: "身高、胖瘦、体态特征" },
+  { name: "temperament", label: "气质（可留空）", placeholder: "如：优雅、粗犷、冷峻、活泼" },
+  { name: "costume_name", label: "服装名称（可留空）", placeholder: "如：夜行衣、校服、铠甲" },
+  { name: "costume_description", label: "服装描述（可留空）", placeholder: "服装详细描述" },
+  { name: "costume_color", label: "服装颜色（可留空）", placeholder: "如：玄黑色、月白色、藏青色" },
+  { name: "costume_material", label: "服装材质（可留空）", placeholder: "如：丝绸、皮革、金属、棉布" },
+  { name: "costume_style", label: "服装风格（可留空）", placeholder: "如：古风、现代、民族风" },
+  { name: "accessories", label: "配饰（可留空，逗号分隔）", placeholder: "如：玉佩、耳环、腰带、护腕" },
+  { name: "first_appearance", label: "首次出现（可留空）", placeholder: "如：EP01-Scene01" },
+  { name: "dialogue_count", label: "对白数量（可留空）", placeholder: "0" },
+  { name: "generation_prompt", label: "生图提示词（可留空）", placeholder: "用于 AI 生图的标准化提示词" },
+  { name: "confidence", label: "可信度（可留空）", placeholder: "confirmed 或 inferred" },
 ];
 
 /** 角色表单字段配置 */
@@ -97,6 +112,24 @@ const characterFields: FormFieldConfig[] = [
     ],
   },
   { name: "age", label: "年龄", type: "number", placeholder: "0", min: 0 },
+  { name: "identity", label: "身份", type: "text", placeholder: "如：剑客、公主、侦探" },
+  { name: "face", label: "面部特征", type: "textarea", placeholder: "脸型、五官、肤色、瞳色、表情习惯", rows: 2 },
+  { name: "hair", label: "发型", type: "text", placeholder: "发型、发色、长度、特殊造型" },
+  { name: "body", label: "身材", type: "text", placeholder: "身高、胖瘦、体态特征" },
+  { name: "temperament", label: "气质", type: "text", placeholder: "如：优雅、粗犷、冷峻、活泼" },
+  { name: "costume_name", label: "服装名称", type: "text", placeholder: "如：夜行衣、校服、铠甲" },
+  { name: "costume_description", label: "服装描述", type: "textarea", placeholder: "服装详细描述", rows: 2 },
+  { name: "costume_color", label: "服装颜色", type: "text", placeholder: "如：玄黑色、月白色、藏青色" },
+  { name: "costume_material", label: "服装材质", type: "text", placeholder: "如：丝绸、皮革、金属、棉布" },
+  { name: "costume_style", label: "服装风格", type: "text", placeholder: "如：古风、现代、民族风" },
+  { name: "accessories", label: "配饰 (逗号分隔)", type: "text", placeholder: "如：玉佩、耳环、腰带、护腕" },
+  { name: "emotion_states", label: "情绪状态 (JSON)", type: "textarea", placeholder: '[{"emotion":"愤怒","trigger":"被背叛时","visual_expression":"眉头紧锁"}]', rows: 2 },
+  { name: "action_assets", label: "动作资产 (JSON)", type: "textarea", placeholder: '[{"action":"拔剑","description":"拔剑姿态"}]', rows: 2 },
+  { name: "relationships", label: "人物关系 (JSON)", type: "textarea", placeholder: '[{"target":"张三","relation":"父子"}]', rows: 2 },
+  { name: "first_appearance", label: "首次出现", type: "text", placeholder: "如：EP01-Scene01" },
+  { name: "dialogue_count", label: "对白数量", type: "number", placeholder: "0", min: 0 },
+  { name: "generation_prompt", label: "生图提示词", type: "textarea", placeholder: "用于 AI 生图的标准化提示词", rows: 3 },
+  { name: "confidence", label: "可信度", type: "select", options: [{ value: "confirmed", label: "confirmed" }, { value: "inferred", label: "inferred" }] },
   { name: "description", label: "角色描述", type: "textarea", placeholder: "请输入角色描述", rows: 3 },
   { name: "traits", label: "性格特点 (逗号分隔)", type: "text", placeholder: "如：勇敢, 机智, 善良" },
 ];
@@ -140,6 +173,7 @@ function CharacterCard({
         image: character.image,
         tags: character.tags,
         type: "character",
+        asset_id: character.id,
         project_id: selectedProjectId,
       });
       toast.success("已插入分镜", `「${character.name}」 → 新分镜「${created.title || created.description || "未命名"}」`);
@@ -208,6 +242,38 @@ function CharacterCard({
           </span>
         )}
       </div>
+
+      {/* 身份 + 年龄 + 性别 */}
+      <div className="flex flex-wrap gap-1 mb-2">
+        {character.identity && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300">{character.identity}</span>
+        )}
+        {character.gender && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300">
+            {character.gender === "male" ? "男" : character.gender === "female" ? "女" : "其他"}
+          </span>
+        )}
+        {character.age !== undefined && character.age > 0 && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300">{character.age}岁</span>
+        )}
+        {character.dialogue_count !== undefined && character.dialogue_count > 0 && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/10 text-gray-400">{character.dialogue_count}句对白</span>
+        )}
+      </div>
+
+      {/* 外貌概览 */}
+      {(character.face || character.hair || character.body || character.temperament) && (
+        <p className="text-[10px] text-[#666] mb-2 line-clamp-2">
+          {[character.face, character.hair, character.body, character.temperament].filter(Boolean).join(" / ")}
+        </p>
+      )}
+
+      {/* 服装概览 */}
+      {(character.costume_name || character.costume_color || character.costume_style) && (
+        <p className="text-[10px] text-[#666] mb-2 line-clamp-1">
+          {[character.costume_name, character.costume_color, character.costume_style].filter(Boolean).join(" / ")}
+        </p>
+      )}
 
       {character.description && (
         <p className="text-xs text-[#888] mb-2 line-clamp-2">{character.description}</p>
@@ -291,6 +357,24 @@ const config: FactoryCRUDPageProps<Character> = {
     role: c.role,
     gender: c.gender || "",
     age: c.age ?? 0,
+    identity: c.identity || "",
+    face: c.face || "",
+    hair: c.hair || "",
+    body: c.body || "",
+    temperament: c.temperament || "",
+    costume_name: c.costume_name || "",
+    costume_description: c.costume_description || "",
+    costume_color: c.costume_color || "",
+    costume_material: c.costume_material || "",
+    costume_style: c.costume_style || "",
+    accessories: Array.isArray(c.accessories) ? c.accessories.join(", ") : "",
+    emotion_states: c.emotion_states || "",
+    action_assets: c.action_assets || "",
+    relationships: c.relationships || "",
+    first_appearance: c.first_appearance || "",
+    dialogue_count: c.dialogue_count ?? 0,
+    generation_prompt: c.generation_prompt || "",
+    confidence: c.confidence || "",
     description: c.description || "",
     traits: Array.isArray(c.traits) ? c.traits.join(", ") : "",
   }),
@@ -299,6 +383,13 @@ const config: FactoryCRUDPageProps<Character> = {
     if (typeof payload.traits === "string") {
       payload.traits = (payload.traits as string).split(",").map((t) => t.trim()).filter(Boolean);
     }
+    if (typeof payload.accessories === "string") {
+      payload.accessories = (payload.accessories as string).split(",").map((t) => t.trim()).filter(Boolean);
+    }
+    // 空字符串转 undefined，避免写入数据库
+    ["emotion_states", "action_assets", "relationships", "confidence", "generation_prompt"].forEach((k) => {
+      if (payload[k] === "") payload[k] = undefined;
+    });
     return payload;
   },
 
@@ -331,6 +422,8 @@ const config: FactoryCRUDPageProps<Character> = {
     { label: "配角", value: list.filter((c) => c.role === "supporting").length, color: "purple" },
     { label: "反派", value: list.filter((c) => c.role === "antagonist").length, color: "orange" },
   ],
+  // 角色工厂：不展示顶部统计卡片
+  showStats: false,
 
   fetchUsage: getCharacterUsage as unknown as (id: string) => Promise<{ total?: number; usage_count?: number }>,
   usageImpact: "删除可能影响剧本/分镜/对白中的引用。",
@@ -365,9 +458,17 @@ const config: FactoryCRUDPageProps<Character> = {
       const traits = traitsRaw
         ? traitsRaw.split(",").map((t) => t.trim()).filter(Boolean)
         : [];
+      const accessoriesRaw = (payload.extra.accessories ?? "").trim();
+      const accessories = accessoriesRaw
+        ? accessoriesRaw.split(",").map((t) => t.trim()).filter(Boolean)
+        : [];
       const description = (payload.extra.description ?? "").trim();
       const tags = ["AI生成"];
       if (payload.style) tags.push(`风格:${payload.style}`);
+
+      // 从 extra 提取所有 AI 分析扩展字段（与 characterFields 对齐）
+      const extra = payload.extra;
+      const dialogueCount = extra.dialogue_count ? parseInt(extra.dialogue_count, 10) || undefined : undefined;
 
       await createCharacter({
         name: payload.name,
@@ -376,6 +477,22 @@ const config: FactoryCRUDPageProps<Character> = {
         description: description || payload.prompt,
         traits,
         tags,
+        // === AI 剧本分析扩展字段 ===
+        identity: extra.identity || undefined,
+        face: extra.face || undefined,
+        hair: extra.hair || undefined,
+        body: extra.body || undefined,
+        temperament: extra.temperament || undefined,
+        costume_name: extra.costume_name || undefined,
+        costume_description: extra.costume_description || undefined,
+        costume_color: extra.costume_color || undefined,
+        costume_material: extra.costume_material || undefined,
+        costume_style: extra.costume_style || undefined,
+        accessories: accessories.length > 0 ? accessories : undefined,
+        first_appearance: extra.first_appearance || undefined,
+        dialogue_count: dialogueCount,
+        generation_prompt: extra.generation_prompt || undefined,
+        confidence: extra.confidence || undefined,
       } as any);
     },
   },
@@ -393,6 +510,8 @@ const config: FactoryCRUDPageProps<Character> = {
       image: (entity as { image?: string }).image,
       tags: (entity as { tags?: string[] }).tags,
       type: "character",
+      asset_id: entity.id,
+      project_id: (entity as { project_id?: string }).project_id,
     });
   },
 };

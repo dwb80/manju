@@ -1,7 +1,21 @@
+/**
+ * @file ai-tasks-router.ts
+ * @description AI 任务统一管理路由模块
+ *
+ * 提供跨项目的 AI 任务统一查询和管理能力：
+ * - 任务列表查询（支持搜索、筛选、分页）
+ * - 任务详情获取
+ * - 批量取消任务
+ * - 批量重试失败任务
+ * - 单个任务删除
+ *
+ * 统一 ImageTask 和 VideoTask 为 AITask 格式，便于前端展示
+ */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AppContext } from "../services/app.js";
 import type { ImageTask, VideoTask, TaskStatus } from "../types.js";
 import { rootLogger } from "../logger.js";
+import { readJsonBody } from "./http-utils.js";
 
 /** 统一的AI任务类型，合并ImageTask和VideoTask */
 export type AITaskType = "image" | "video";
@@ -70,7 +84,10 @@ export interface BatchOperationResponse {
 }
 
 /**
- * 将ImageTask转换为统一的AITask格式
+ * convertImageTask - 将 ImageTask 转换为统一的 AITask 格式
+ * @param {ImageTask} task - 图片任务对象
+ * @param {string} projectId - 项目ID
+ * @returns {AITask} 统一的 AI 任务格式
  */
 function convertImageTask(task: ImageTask, projectId: string): AITask {
   return {
@@ -90,7 +107,10 @@ function convertImageTask(task: ImageTask, projectId: string): AITask {
 }
 
 /**
- * 将VideoTask转换为统一的AITask格式
+ * convertVideoTask - 将 VideoTask 转换为统一的 AITask 格式
+ * @param {VideoTask} task - 视频任务对象
+ * @param {string} projectId - 项目ID
+ * @returns {AITask} 统一的 AI 任务格式
  */
 function convertVideoTask(task: VideoTask, projectId: string): AITask {
   const duration = task.seconds ? parseFloat(task.seconds) : null;
@@ -114,7 +134,10 @@ function convertVideoTask(task: VideoTask, projectId: string): AITask {
 }
 
 /**
- * 根据会话ID获取项目ID
+ * getProjectIdByConversationId - 根据会话 ID 获取项目 ID
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} conversationId - 会话ID
+ * @returns {Promise<string>} 项目ID
  */
 async function getProjectIdByConversationId(ctx: AppContext, conversationId: string): Promise<string> {
   if (!conversationId) return "";
@@ -123,8 +146,11 @@ async function getProjectIdByConversationId(ctx: AppContext, conversationId: str
 }
 
 /**
- * 获取所有AI任务列表
- * 支持跨项目、跨会话查询，支持搜索、筛选和分页
+ * listAITasks - 获取所有 AI 任务列表
+ * @param {AppContext} ctx - 应用上下文
+ * @param {AITaskQueryParams} params - 查询参数
+ * @returns {Promise<AITaskListResponse>} 任务列表响应
+ * @description 支持跨项目、跨会话查询，支持搜索、筛选和分页
  */
 export async function listAITasks(
   ctx: AppContext,
@@ -221,7 +247,10 @@ export async function listAITasks(
 }
 
 /**
- * 根据时间查找会话ID（处理旧数据）
+ * findConversationIdByTime - 根据时间查找会话 ID
+ * @param {string} createdAt - 创建时间
+ * @param {Array} conversations - 会话列表
+ * @returns {string} 会话ID（简化实现，可能返回空字符串）
  */
 function findConversationIdByTime(createdAt: string, conversations: Array<{ id: string; created_at: string; updated_at: string }>): string {
   // 这是一个简化的实现，实际可能需要更复杂的逻辑
@@ -229,7 +258,10 @@ function findConversationIdByTime(createdAt: string, conversations: Array<{ id: 
 }
 
 /**
- * 获取单个AI任务详情
+ * getAITaskById - 获取单个 AI 任务详情
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} taskId - 任务ID
+ * @returns {Promise<AITask | null>} 任务详情，不存在则返回 null
  */
 export async function getAITaskById(ctx: AppContext, taskId: string): Promise<AITask | null> {
   // 尝试查找图片任务
@@ -252,8 +284,11 @@ export async function getAITaskById(ctx: AppContext, taskId: string): Promise<AI
 }
 
 /**
- * 批量取消任务
- * 注意：由于ImageTask和VideoTask没有"cancelled"状态，这里将任务标记为"failed"
+ * cancelAITasks - 批量取消任务
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string[]} taskIds - 任务ID列表
+ * @returns {Promise<BatchOperationResponse>} 操作结果
+ * @description 将任务状态标记为 failed（无 cancelled 状态）
  */
 export async function cancelAITasks(
   ctx: AppContext,
@@ -307,8 +342,11 @@ export async function cancelAITasks(
 }
 
 /**
- * 批量重试失败任务
- * 注意：这个实现只是重置任务状态，实际重新生成需要前端重新发起请求
+ * retryAITasks - 批量重试失败任务
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string[]} taskIds - 任务ID列表
+ * @returns {Promise<BatchOperationResponse>} 操作结果
+ * @description 只重置任务状态，实际重新生成需要前端重新发起请求
  */
 export async function retryAITasks(
   ctx: AppContext,
@@ -364,7 +402,10 @@ export async function retryAITasks(
 }
 
 /**
- * 删除单个AI任务
+ * deleteAITask - 删除单个 AI 任务
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} taskId - 任务ID
+ * @returns {Promise<boolean>} 是否删除成功
  */
 export async function deleteAITask(ctx: AppContext, taskId: string): Promise<boolean> {
   // 尝试删除图片任务
@@ -385,7 +426,9 @@ export async function deleteAITask(ctx: AppContext, taskId: string): Promise<boo
 }
 
 /**
- * 解析查询参数
+ * parseQueryParams - 解析查询参数
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @returns {AITaskQueryParams} 查询参数对象
  */
 function parseQueryParams(req: IncomingMessage): AITaskQueryParams {
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -405,17 +448,11 @@ function parseQueryParams(req: IncomingMessage): AITaskQueryParams {
 }
 
 /**
- * 读取JSON请求体
- */
-async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.from(chunk));
-  const text = Buffer.concat(chunks).toString("utf8");
-  return text ? JSON.parse(text) as Record<string, unknown> : {};
-}
-
-/**
- * 发送JSON响应
+ * sendJsonResponse - 发送 JSON 响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {T} data - 响应数据
+ * @param {number} status - HTTP 状态码，默认 200
+ * @returns {void}
  */
 function sendJsonResponse<T>(res: ServerResponse, data: T, status = 200): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -423,7 +460,11 @@ function sendJsonResponse<T>(res: ServerResponse, data: T, status = 200): void {
 }
 
 /**
- * 发送错误响应
+ * sendErrorResponse - 发送错误响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {unknown} error - 错误对象
+ * @param {number} status - HTTP 状态码，默认 400
+ * @returns {void}
  */
 function sendErrorResponse(res: ServerResponse, error: unknown, status = 400): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -435,7 +476,11 @@ function sendErrorResponse(res: ServerResponse, error: unknown, status = 400): v
 }
 
 /**
- * 处理AI任务相关的HTTP请求
+ * handleAITasksRouter - 处理 AI 任务相关的 HTTP 请求
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
  */
 export async function handleAITasksRouter(
   ctx: AppContext,

@@ -1,3 +1,15 @@
+/**
+ * @file pipeline-router.ts
+ * @description 流水线路由模块
+ *
+ * 提供 8 阶段工作流的状态管理和查询能力：
+ * - 阶段定义和依赖关系（DAG）
+ * - 状态机转换规则
+ * - 项目流水线状态推断
+ * - 整体进度计算
+ *
+ * 8 个阶段：剧本 → 分镜 → 角色 → 场景 → 图片 → 视频 → 剪辑 → 发布
+ */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AppContext } from "../services/app.js";
 import { rootLogger } from "../logger.js";
@@ -45,7 +57,13 @@ export const STAGE_TRANSITIONS: Record<StageState, StageState[]> = {
   skipped: ["running"],
 };
 
-/** 判断阶段是否可以启动（所有依赖已完成或跳过） */
+/**
+ * canStartStage - 判断阶段是否可以启动
+ * @param {PipelineStageName} stageName - 阶段名称
+ * @param {Record<PipelineStageName, StageState>} stageStates - 各阶段状态
+ * @returns {boolean} 是否可以启动
+ * @description 所有依赖已完成或跳过时才可启动
+ */
 export function canStartStage(
   stageName: PipelineStageName,
   stageStates: Record<PipelineStageName, StageState>
@@ -57,7 +75,11 @@ export function canStartStage(
   );
 }
 
-/** 获取当前可运行的阶段列表 */
+/**
+ * getRunnableStages - 获取当前可运行的阶段列表
+ * @param {Record<PipelineStageName, StageState>} stageStates - 各阶段状态
+ * @returns {PipelineStageName[]} 可运行的阶段名称列表
+ */
 export function getRunnableStages(
   stageStates: Record<PipelineStageName, StageState>
 ): PipelineStageName[] {
@@ -66,7 +88,11 @@ export function getRunnableStages(
   ).map((s) => s.name);
 }
 
-/** 计算整体进度百分比 */
+/**
+ * calculateOverallProgress - 计算整体进度百分比
+ * @param {Record<PipelineStageName, StageState>} stageStates - 各阶段状态
+ * @returns {number} 进度百分比（0-100）
+ */
 export function calculateOverallProgress(
   stageStates: Record<PipelineStageName, StageState>
 ): number {
@@ -78,8 +104,11 @@ export function calculateOverallProgress(
 }
 
 /**
- * 基于项目现有资产推断流水线阶段状态
- * 不新增数据库表，利用已有仓储数据
+ * inferPipelineState - 基于项目现有资产推断流水线阶段状态
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<Record<PipelineStageName, StageState>>} 各阶段状态映射
+ * @description 不新增数据库表，利用已有仓储数据推断
  */
 export async function inferPipelineState(
   ctx: AppContext,
@@ -136,7 +165,7 @@ export async function inferPipelineState(
     );
     if (publishedPlans.length > 0) state.publish = "completed";
   } catch (err) {
-    rootLogger.warn({ event: "pipeline.infer.error", projectId, error: (err as Error).message });
+    rootLogger.warn({ event: "pipeline.infer.error", projectId, error: (err as Error).message }, `流水线状态推断失败：${(err as Error).message}`);
   }
 
   // 根据依赖关系推导 waiting → running
@@ -150,16 +179,35 @@ export async function inferPipelineState(
   return state;
 }
 
+/**
+ * sendJson - 发送统一格式的成功 JSON 响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {T} data - 响应数据
+ * @param {number} status - HTTP 状态码，默认 200
+ * @returns {void}
+ */
 function sendJson<T>(res: ServerResponse, data: T, status = 200): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify({ code: 0, message: "ok", data }));
 }
 
+/**
+ * sendError - 发送统一格式的错误 JSON 响应
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @param {unknown} error - 错误对象
+ * @param {number} status - HTTP 状态码，默认 400
+ * @returns {void}
+ */
 function sendError(res: ServerResponse, error: unknown, status = 400): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify({ code: errorCodeForStatus(status), message: (error as Error).message ?? "error", data: null }));
 }
 
+/**
+ * errorCodeForStatus - 将 HTTP 状态码映射到业务错误码
+ * @param {number} status - HTTP 状态码
+ * @returns {number} 业务错误码
+ */
 function errorCodeForStatus(status: number): number {
   if (status === 400) return 1002;
   if (status === 401 || status === 403) return 1003;
@@ -169,7 +217,11 @@ function errorCodeForStatus(status: number): number {
 }
 
 /**
- * 处理流水线相关的HTTP请求
+ * handlePipelineRouter - 处理流水线相关的 HTTP 请求
+ * @param {AppContext} ctx - 应用上下文
+ * @param {IncomingMessage} req - HTTP 请求对象
+ * @param {ServerResponse} res - HTTP 响应对象
+ * @returns {Promise<void>}
  */
 export async function handlePipelineRouter(
   ctx: AppContext,
@@ -208,7 +260,7 @@ export async function handlePipelineRouter(
 
     sendError(res, new Error("not found"), 404);
   } catch (err) {
-    rootLogger.error({ event: "pipeline.router.error", error: (err as Error).message });
+    rootLogger.error({ event: "pipeline.router.error", error: (err as Error).message }, `流水线路由错误：${(err as Error).message}`);
     sendError(res, err, 500);
   }
 }

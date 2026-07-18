@@ -1,3 +1,8 @@
+/**
+ * @file chat-view.tsx
+ * @description 聊天视图组件，渲染聊天消息列表和控制按钮
+ */
+
 "use client";
 
 import { ChatPanel } from "@/components/layout/workspace-panels";

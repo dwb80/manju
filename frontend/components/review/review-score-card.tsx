@@ -1,3 +1,8 @@
+/**
+ * @file review-score-card.tsx
+ * @description 审核评分卡组件，提供评分和审核反馈功能
+ */
+
 "use client";
 
 import { useState, useMemo, useCallback } from "react";

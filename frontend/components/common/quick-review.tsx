@@ -1,3 +1,8 @@
+/**
+ * @file quick-review.tsx
+ * @description 快捷审核组件，提供一键通过/拒绝、快捷短语模板和快速评分功能
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -28,6 +33,11 @@ const quickComments = [
   { label: "细节需要优化", type: "pending" as const },
 ];
 
+/**
+ * QuickReview - 快捷审核组件
+ * @param {QuickReviewProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的快捷审核元素
+ */
 export function QuickReview({ contentId, onApprove, onReject, onPending }: QuickReviewProps) {
   const [selectedComment, setSelectedComment] = useState<string | null>(null);
   const [customComment, setCustomComment] = useState("");

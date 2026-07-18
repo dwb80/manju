@@ -26,6 +26,7 @@ import {
   BarChart3,
   Inbox,
   CheckSquare,
+  Bot,
 } from "lucide-react";
 
 /**
@@ -99,7 +100,7 @@ const MENU_GROUPS: MenuGroup[] = [
     items: [
       { id: "projects", name: "项目中心", icon: FolderOpen, href: "/projects" },
       { id: "review", name: "审核中心", icon: CheckCircle, href: "/review" },
-      { id: "publish", name: "发布中心", icon: Rocket, href: "/publish" },
+      { id: "publish", name: "发布准备", icon: Rocket, href: "/publish" },
     ],
   },
 ];
@@ -108,6 +109,11 @@ interface AppSidebarProps {
   currentPath?: string;
 }
 
+/**
+ * AppSidebar - 主应用侧边栏导航
+ * @param {AppSidebarProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的侧边栏元素
+ */
 export function AppSidebar({ currentPath }: AppSidebarProps) {
   const router = useRouter();
   // 内部使用 usePathname 获取真实当前路径，避免 layout 传入空字符串导致菜单不高亮
@@ -174,6 +180,19 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           >
             <CheckSquare className={`h-4 w-4 ${activePath.startsWith("/todos") ? "text-emerald-400" : "text-[#888]"}`} />
             <span className="flex-1 text-left">我的待办</span>
+          </button>
+
+          {/* 智能助手：AI 交互中心 */}
+          <button
+            onClick={() => router.push("/assistant")}
+            className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${activePath.startsWith("/assistant")
+                ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500"
+                : "text-[#ccc] hover:bg-white/5 hover:text-white"
+              }`}
+            aria-current={activePath.startsWith("/assistant") ? "page" : "false"}
+          >
+            <Bot className={`h-4 w-4 ${activePath.startsWith("/assistant") ? "text-emerald-400" : "text-[#888]"}`} />
+            <span className="flex-1 text-left">智能助手</span>
           </button>
         </div>
 

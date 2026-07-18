@@ -9,7 +9,10 @@ import type { ReactNode } from "react";
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import type { AITypeFieldConfig, AIConfirmPayload } from "@/components/shared/ai-generate-dialog";
 
-/** 工厂实体类型（用于卡片图标 / 资产类型分发）。 */
+/**
+ * 工厂实体类型
+ * @description 用于卡片图标和资产类型分发，支持角色、场景、道具、分镜、视频、音频、剪辑等类型
+ */
 export type FactoryEntityType = "character" | "scene" | "prop" | "storyboard" | "video" | "audio" | "clip";
 
 /**
@@ -33,7 +36,13 @@ export interface FactoryEntity {
   deleted_at?: string;
 }
 
-/** 统一取实体显示名：name > title > description > "未命名"。 */
+/**
+ * 统一取实体显示名
+ * @description 按优先级返回：name > title > description > fallback
+ * @param {Object} entity - 实体对象，包含 name、title、description 等字段
+ * @param {string} [fallback="未命名"] - 当所有字段都为空时的默认返回值
+ * @returns {string} 实体的显示名称
+ */
 export function getEntityLabel(entity: { name?: string; title?: string; description?: string }, fallback = "未命名"): string {
   return (entity.name && entity.name.trim()) || (entity.title && entity.title.trim()) || (entity.description && entity.description.trim().slice(0, 40)) || fallback;
 }
@@ -191,6 +200,8 @@ export interface FactoryCRUDPageProps<TEntity extends FactoryEntity> {
 
   // ===== 统计卡 =====
   stats: (items: TEntity[]) => StatCardConfig[];
+  /** 是否展示统计卡（默认 true；某些页面如角色工厂可关闭以节省空间）。 */
+  showStats?: boolean;
 
   // ===== AI 生成（可选） =====
   aiConfig?: FactoryAIConfig;

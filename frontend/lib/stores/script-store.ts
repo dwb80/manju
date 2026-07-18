@@ -52,6 +52,57 @@ interface ScriptCharacter {
   image?: string
   role?: string
   gender?: string
+  /** AI 解析：年龄（数字） */
+  age?: number
+  /** AI 解析：外貌描述（仅 AI analyze 阶段返回，落库前） */
+  appearance?: string
+  /** AI 解析：性格描述（仅 AI analyze 阶段返回，落库前） */
+  personality?: string
+  /** AI 解析：性格标签数组（已落库到工厂） */
+  traits?: string[]
+  /** 工厂字段：标签 */
+  tags?: string[]
+  // === v3 扩展字段（与后端 Character 对齐） ===
+  /** 角色身份，如 剑客、公主、侦探 */
+  identity?: string
+  /** 面部特征 */
+  face?: string
+  /** 发型、发色、长度 */
+  hair?: string
+  /** 身材体型 */
+  body?: string
+  /** 气质，如 优雅、粗犷、冷峻 */
+  temperament?: string
+  /** 服装名称 */
+  costume_name?: string
+  /** 服装详细描述 */
+  costume_description?: string
+  /** 服装主色调 */
+  costume_color?: string
+  /** 服装材质 */
+  costume_material?: string
+  /** 服装风格 */
+  costume_style?: string
+  /** 配饰列表，如 玉佩、耳环、腰带 */
+  accessories?: string[]
+  /** 情绪状态 JSON 数组字符串 */
+  emotion_states?: string
+  /** 动作资产 JSON 数组字符串 */
+  action_assets?: string
+  /** 人物关系 JSON 数组字符串 */
+  relationships?: string
+  /** 首次出现场次，如 EP01-Scene01 */
+  first_appearance?: string
+  /** 对白数量 */
+  dialogue_count?: number
+  /** AI 生图标准化提示词 */
+  generation_prompt?: string
+  /** 推断可信度：confirmed / inferred */
+  confidence?: string
+  /** 引用次数（来自工厂 usage_count 缓存字段） */
+  usage_count?: number
+  /** 工厂版本号 */
+  version?: number
 }
 
 interface ScriptProp {
@@ -60,9 +111,23 @@ interface ScriptProp {
   assetId?: string
   description?: string
   category?: string
-  color?: string
   thumbnail?: string
   image?: string
+  // === v3 扩展字段（与后端 Prop 对齐） ===
+  /** 外观描述 */
+  appearance?: string
+  /** 材质 */
+  material?: string
+  /** 尺寸 */
+  size?: string
+  /** 主色调 */
+  color?: string
+  /** 标签 */
+  tags?: string[]
+  /** 引用次数 */
+  usage_count?: number
+  /** 工厂版本号 */
+  version?: number
 }
 
 /** 场景工厂资产（与 ScriptScene 区分：这是可复用的工厂场景，不是剧本内的场景） */
@@ -74,6 +139,22 @@ interface ScriptSceneAsset {
   location?: string
   time?: string
   thumbnail?: string
+  image?: string
+  // === v3 扩展字段（与后端 Scene 对齐） ===
+  /** 场景类型：indoor / outdoor / virtual */
+  type?: string
+  /** 光照 */
+  lighting?: string
+  /** 时段：day / night / dawn / dusk */
+  time_of_day?: string
+  /** 天气 */
+  weather?: string
+  /** 标签 */
+  tags?: string[]
+  /** 引用次数 */
+  usage_count?: number
+  /** 工厂版本号 */
+  version?: number
 }
 
 interface ScriptVersion {
@@ -159,6 +240,9 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
   error: null,
 
   // 加载剧本文档
+  // 方案 A：ScriptDocument 现在自带 title/author/status/genre/words/chapters。
+  // 简化路径：直接 GET /script-documents/{id}，拿完整元数据。
+  // 兼容老数据：若 doc 不存在但 Path A `scripts` 表有同名记录，从 moduleScript 拿 title/author/status 回填创建。
   loadDocument: async (docId: string) => {
     set({ isLoading: true, error: null })
     // 进度回调（页面上展示"正在加载中，请耐心等待"）
@@ -170,60 +254,145 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
     }
     setProgress('正在加载剧本…')
     try {
-      // 后端统一响应格式为 { code, message, data }，需要解包
-      // 1. 先获取所有模块 Script 列表，用于查找元数据（title 等）
-      setProgress('正在查询剧本元数据…')
-      const scriptResponse = await fetch(`${API_BASE}/scripts`)
-      const scriptPayload = scriptResponse.ok ? await scriptResponse.json() : null
-      const scripts: any[] = scriptPayload?.data ?? []
-      const moduleScript = scripts.find((s: any) => s.id === docId) || null
-
-      // 2. 优先按 docId 直接尝试加载 ScriptDocument（兼容旧数据：文档 ID = 剧本 ID）
-      let doc: any = null
+      // 1. 直接查 ScriptDocument（Path B，自带元数据）
+      setProgress('正在查询剧本文档…')
       const directDocResponse = await fetch(`${API_BASE}/script-documents/${docId}`)
-      if (directDocResponse.ok) {
-        const directPayload = await directDocResponse.json()
-        doc = directPayload?.data ?? null
-      }
+      const directDocJson = await directDocResponse.clone().json().catch(() => null)
+      // 调试日志：直接查 doc 的结果
+      // eslint-disable-next-line no-console
+      console.log('[DEBUG][loadDocument] direct doc fetch', {
+        docId,
+        url: `${API_BASE}/script-documents/${docId}`,
+        status: directDocResponse.status,
+        ok: directDocResponse.ok,
+        hasData: !!directDocJson?.data,
+        dataId: directDocJson?.data?.id,
+        dataKeys: directDocJson?.data ? Object.keys(directDocJson.data) : null,
+        responseCode: directDocJson?.code,
+        responseMessage: directDocJson?.message,
+      })
+      let doc: any = directDocResponse.ok
+        ? (directDocJson?.data ?? null)
+        : null
+      let moduleScript: any = null
+      let projectId = ''
 
-      // 3. 若直接查找失败且已知项目，按项目列出所有 ScriptDocument，
-      //    选取与本剧本标题最匹配（或最新一条）的文档。
-      //    导入流程会在 POST scripts 后再 POST script-documents，两次返回的 id 不同，
-      //    所以需要按"项目内最新文档"回退匹配。
-      if (!doc && moduleScript?.project_id) {
+      if (doc) {
+        projectId = doc.project_id || ''
+        // eslint-disable-next-line no-console
+        console.log('[DEBUG][loadDocument] direct doc hit, skip fallback', { projectId, docId: doc.id })
+      } else {
+        // eslint-disable-next-line no-console
+        console.log('[DEBUG][loadDocument] direct doc MISS, entering fallback path', { docId })
+        // 2. 兼容：Path A 老数据可能只存在于 `scripts` 表。
+        //    按 docId 匹配 moduleScript，必要时再按 project 列表模糊匹配。
+        setProgress('正在查询剧本元数据…')
         try {
-          const listResp = await fetch(`${API_BASE}/script-documents?projectId=${encodeURIComponent(moduleScript.project_id)}`)
-          if (listResp.ok) {
-            const listPayload = await listResp.json()
-            const documents: any[] = listPayload?.data ?? []
-            // 优先按"标题一致"匹配；否则取最新一条
-            const matched = documents.find((d) => d.title && moduleScript.title && d.title === moduleScript.title)
-            doc = matched || (documents.length > 0 ? documents[0] : null)
+          const scriptResponse = await fetch(`${API_BASE}/scripts`)
+          if (scriptResponse.ok) {
+            const scriptPayload = await scriptResponse.json()
+            const scripts: any[] = scriptPayload?.data ?? []
+            moduleScript = scripts.find((s: any) => s.id === docId) || null
+            // eslint-disable-next-line no-console
+            console.log('[DEBUG][loadDocument] moduleScript lookup', {
+              totalScripts: scripts.length,
+              moduleScriptFound: !!moduleScript,
+              moduleScriptId: moduleScript?.id,
+            })
+            if (moduleScript) projectId = moduleScript.project_id || ''
+          } else {
+            // eslint-disable-next-line no-console
+            console.warn('[DEBUG][loadDocument] /api/scripts not ok', { status: scriptResponse.status })
           }
-        } catch {
-          // 列表查询失败时忽略，继续走"按需创建"逻辑
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn('[DEBUG][loadDocument] /api/scripts fetch error', err)
         }
-      }
 
-      // 4. ScriptDocument 仍不存在但有模块 Script → 创建对应的 ScriptDocument
-      if (!doc && moduleScript) {
-        const createResponse = await fetch(`${API_BASE}/script-documents`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: moduleScript.id,
-            project_id: moduleScript.project_id,
-            editor_json: JSON.stringify({
-              type: 'doc',
-              content: [{ type: 'paragraph', content: moduleScript.description ? [{ type: 'text', text: moduleScript.description }] : [] }],
-            }),
-            version: 1,
-          }),
-        })
-        if (createResponse.ok) {
-          const createPayload = await createResponse.json()
-          doc = createPayload?.data ?? null
+        if (!doc && moduleScript?.project_id) {
+          try {
+            const listResp = await fetch(`${API_BASE}/script-documents?projectId=${encodeURIComponent(moduleScript.project_id)}`)
+            if (listResp.ok) {
+              const listPayload = await listResp.json()
+              const documents: any[] = listPayload?.data ?? []
+              const matched = documents.find((d) => d.title && moduleScript.title && d.title === moduleScript.title)
+              doc = matched || (documents.length > 0 ? documents[0] : null)
+              if (doc) projectId = doc.project_id || moduleScript.project_id || ''
+              // eslint-disable-next-line no-console
+              console.log('[DEBUG][loadDocument] projectId list match', {
+                projectIdTried: moduleScript.project_id,
+                documentsCount: documents.length,
+                docFound: !!doc,
+                docId: doc?.id,
+              })
+            }
+          } catch { /* ignore */ }
         }
+
+        // 2.5 兜底：list 接口能找到但 findById 找不到时（数据库索引异常等），
+        //      用全量列表重新按 id 匹配一次。
+        if (!doc) {
+          try {
+            const allListResp = await fetch(`${API_BASE}/script-documents`)
+            if (allListResp.ok) {
+              const allListPayload = await allListResp.json()
+              const allDocs: any[] = allListPayload?.data ?? []
+              const matched = allDocs.find((d) => d.id === docId)
+              if (matched) {
+                doc = matched
+                projectId = matched.project_id || projectId
+              }
+              // eslint-disable-next-line no-console
+              console.log('[DEBUG][loadDocument] full list fallback', {
+                allDocsCount: allDocs.length,
+                matched: !!matched,
+                matchedId: matched?.id,
+                lookingFor: docId,
+              })
+            }
+          } catch { /* ignore */ }
+        }
+
+        // 3. 仍不存在 → 从 moduleScript 兜底创建 ScriptDocument（Path A → Path B 桥接）
+        if (!doc && moduleScript) {
+          const createResponse = await fetch(`${API_BASE}/script-documents`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: moduleScript.id,
+              project_id: moduleScript.project_id,
+              // 方案 A：元数据并入 document（从 moduleScript 桥接）
+              title: moduleScript.title,
+              author: moduleScript.author,
+              status: moduleScript.status,
+              words: moduleScript.words,
+              chapters: moduleScript.chapters,
+              editor_json: JSON.stringify({
+                type: 'doc',
+                content: [{ type: 'paragraph', content: moduleScript.description ? [{ type: 'text', text: moduleScript.description }] : [] }],
+              }),
+              version: 1,
+            }),
+          })
+          if (createResponse.ok) {
+            const createPayload = await createResponse.json()
+            doc = createPayload?.data ?? null
+          }
+          // eslint-disable-next-line no-console
+          console.log('[DEBUG][loadDocument] bridge create attempt', {
+            createStatus: createResponse.status,
+            createOk: createResponse.ok,
+            docAfter: !!doc,
+          })
+        }
+
+        // 调试日志：所有 fallback 跑完，最终结果
+        // eslint-disable-next-line no-console
+        console.log('[DEBUG][loadDocument] fallback done', {
+          docFound: !!doc,
+          moduleScriptFound: !!moduleScript,
+          projectId,
+        })
       }
 
       if (doc) {
@@ -237,36 +406,23 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
             editorJson = { type: 'doc', content: [{ type: 'paragraph' }] }
           }
         }
-        const projectId = moduleScript?.project_id || doc.project_id || ''
         const documentId = doc.id as string
-        // 加载该剧本对应的剧集列表（优先按 documentId 过滤，避免拉到项目下的其他剧本剧集）
+        // 加载该剧本对应的剧集列表（按 documentId 严格过滤，避免拉到同项目下其他剧本的剧集或孤儿剧集）
         let loadedEpisodes: ScriptEpisode[] = []
         try {
           const epResponse = await fetch(`${API_BASE}/script-episodes?documentId=${encodeURIComponent(documentId)}`)
           if (epResponse.ok) {
             const epPayload = await epResponse.json()
             const rawEpisodes: any[] = epPayload?.data ?? []
-            loadedEpisodes = rawEpisodes.map((ep) => ({
-              ...ep,
-              episodeNo: ep.episode_no,
-              documentId: ep.document_id,
-              scenes: [],
-            }))
-          } else {
-            // 后端缺少 documentId 过滤时回退到 projectId
-            const fallback = await fetch(`${API_BASE}/script-episodes?projectId=${encodeURIComponent(projectId)}`)
-            if (fallback.ok) {
-              const fbPayload = await fallback.json()
-              const rawEpisodes: any[] = fbPayload?.data ?? []
-              loadedEpisodes = rawEpisodes
-                .filter((ep) => !ep.document_id || ep.document_id === documentId)
-                .map((ep) => ({
-                  ...ep,
-                  episodeNo: ep.episode_no,
-                  documentId: ep.document_id,
-                  scenes: [],
-                }))
-            }
+            // 防御：后端若返回了不属于当前 document 的剧集（兼容老接口），前端再过滤一次
+            loadedEpisodes = rawEpisodes
+              .filter((ep) => ep.document_id === documentId)
+              .map((ep) => ({
+                ...ep,
+                episodeNo: ep.episode_no,
+                documentId: ep.document_id,
+                scenes: [],
+              }))
           }
         } catch {
           // 剧集加载失败不阻塞编辑器
@@ -314,6 +470,9 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
                 image: c.image,
                 role: c.role,
                 gender: c.gender,
+                age: typeof c.age === 'number' ? c.age : undefined,
+                traits: Array.isArray(c.traits) ? c.traits : undefined,
+                tags: Array.isArray(c.tags) ? c.tags : undefined,
               }))
             }
           } catch {
@@ -357,6 +516,23 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
           }
         }
 
+        // 调试日志：set 之前，确认字段映射和 editor_json 解析结果
+        // eslint-disable-next-line no-console
+        console.log('[DEBUG][loadDocument] before set()', {
+          hasModuleScript: !!moduleScript,
+          moduleScriptKeys: moduleScript ? Object.keys(moduleScript) : null,
+          docKeys: doc ? Object.keys(doc) : null,
+          editorJsonType: typeof editorJson,
+          editorJsonKeys: typeof editorJson === 'object' && editorJson ? Object.keys(editorJson) : null,
+          documentId,
+          projectId,
+          episodesCount: loadedEpisodes.length,
+          scenesCount: loadedScenes.length,
+          charactersCount: loadedCharacters.length,
+          propsCount: loadedProps.length,
+          sceneAssetsCount: loadedSceneAssets.length,
+        })
+
         set({
           currentDocument: {
             ...moduleScript,
@@ -370,6 +546,20 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
           props: loadedProps,
           sceneAssets: loadedSceneAssets,
           isLoading: false,
+        })
+
+        // 调试日志：set 之后，验证 store 中 currentDocument 实际值
+        // eslint-disable-next-line no-console
+        const verify = get()
+        console.log('[DEBUG][loadDocument] after set()', {
+          currentDocumentExists: !!verify.currentDocument,
+          currentDocumentId: verify.currentDocument?.id,
+          currentDocumentTitle: verify.currentDocument?.title,
+          currentDocumentProjectId: verify.currentDocument?.project_id,
+          currentDocumentHasEditorJson: !!verify.currentDocument?.editor_json,
+          editorJsonType: typeof verify.currentDocument?.editor_json,
+          isLoading: verify.isLoading,
+          error: verify.error,
         })
         return
       }
@@ -388,6 +578,8 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
   },
 
   // 保存剧本文档
+  // 方案 A：把可编辑元数据（title/author/status/genre）一起写回 script_documents。
+  // words/chapters 留给后端从 editor_json / script_episodes 自动计算。
   saveDocument: async () => {
     const { currentDocument } = get()
     if (!currentDocument) return
@@ -402,6 +594,12 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
           editor_json: typeof currentDocument.editor_json === 'string'
             ? currentDocument.editor_json
             : JSON.stringify(currentDocument.editor_json),
+          // 方案 A：元数据并入 document
+          title: currentDocument.title,
+          author: currentDocument.author,
+          status: currentDocument.status,
+          // genre 在 ScriptDocumentInput 中保留（Path B 已支持），便于未来扩展
+          ...(currentDocument as any).genre !== undefined ? { genre: (currentDocument as any).genre } : {},
           version: currentDocument.version,
         }),
       })
@@ -703,7 +901,11 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
     set(patch as any)
   },
 
-  /** 把一条新建的工厂资产追加到 store（去重） */
+  /** 把一条新建的工厂资产追加到 store（去重）
+   *
+   * v3：透传所有扩展字段（identity, costume_*, accessories, lighting, weather 等），
+   * 让右侧面板能直接渲染工厂返回的完整数据，避免字段丢失。
+   */
   appendFactoryAsset: (kind, asset) => {
     if (!asset || !asset.id) return
     if (kind === 'character') {
@@ -721,6 +923,32 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
             image: asset.image,
             role: asset.role,
             gender: asset.gender,
+            age: typeof asset.age === 'number' ? asset.age : undefined,
+            appearance: asset.appearance,
+            personality: asset.personality,
+            traits: Array.isArray(asset.traits) ? asset.traits : undefined,
+            tags: Array.isArray(asset.tags) ? asset.tags : undefined,
+            // v3 扩展字段
+            identity: asset.identity,
+            face: asset.face,
+            hair: asset.hair,
+            body: asset.body,
+            temperament: asset.temperament,
+            costume_name: asset.costume_name,
+            costume_description: asset.costume_description,
+            costume_color: asset.costume_color,
+            costume_material: asset.costume_material,
+            costume_style: asset.costume_style,
+            accessories: Array.isArray(asset.accessories) ? asset.accessories : undefined,
+            emotion_states: asset.emotion_states,
+            action_assets: asset.action_assets,
+            relationships: asset.relationships,
+            first_appearance: asset.first_appearance,
+            dialogue_count: typeof asset.dialogue_count === 'number' ? asset.dialogue_count : undefined,
+            generation_prompt: asset.generation_prompt,
+            confidence: asset.confidence,
+            usage_count: typeof asset.usage_count === 'number' ? asset.usage_count : undefined,
+            version: typeof asset.version === 'number' ? asset.version : undefined,
           },
         ],
       })
@@ -737,6 +965,14 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
             category: asset.category,
             assetId: asset.id,
             image: asset.image,
+            // v3 扩展字段
+            appearance: asset.appearance,
+            material: asset.material,
+            size: asset.size,
+            color: asset.color,
+            tags: Array.isArray(asset.tags) ? asset.tags : undefined,
+            usage_count: typeof asset.usage_count === 'number' ? asset.usage_count : undefined,
+            version: typeof asset.version === 'number' ? asset.version : undefined,
           },
         ],
       })
@@ -754,6 +990,15 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
             time: asset.time_of_day,
             assetId: asset.id,
             thumbnail: asset.image,
+            image: asset.image,
+            // v3 扩展字段
+            type: asset.type,
+            lighting: asset.lighting,
+            time_of_day: asset.time_of_day,
+            weather: asset.weather,
+            tags: Array.isArray(asset.tags) ? asset.tags : undefined,
+            usage_count: typeof asset.usage_count === 'number' ? asset.usage_count : undefined,
+            version: typeof asset.version === 'number' ? asset.version : undefined,
           },
         ],
       })

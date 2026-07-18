@@ -16,7 +16,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Plus,
   Sparkles,
   Trash2,
   LayoutGrid,
@@ -37,16 +36,19 @@ import {
   Pagination,
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { Tip } from "@/components/ui/tip";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { useProjectStore } from "@/lib/stores/project-store";
 import {
-  listScripts,
-  createScript,
-  updateScript,
-  deleteScript as deleteScriptApi,
-  restoreScript as restoreScriptApi,
-  purgeScript as purgeScriptApi,
-  listDeletedScripts as listDeletedScriptsApi,
   createCharacter,
   createScene,
   createProp,
@@ -58,15 +60,16 @@ import {
 import { clearApiCache } from "@/lib/api-client";
 import { scriptCenterService } from "@/services/script-center.service";
 import { ClassificationView } from "@/components/dashboard/script-center";
+import { notify } from "@/lib/notify";
 import type { Script } from "@/lib/module-types";
 
-import { ScriptFormDialog } from "./ScriptFormDialog";
+// import { ScriptFormDialog } from "./ScriptFormDialog"; // 已移除：不再需要新建剧本功能
 import { AIGenerateDialog } from "./AIGenerateDialog";
 import { ScriptImportDialog } from "./ScriptImportDialog";
 import { TemplateLibraryDialog } from "./TemplateLibraryDialog";
 import { ScriptAnalysisPanel } from "./ScriptAnalysisPanel";
 import { ApprovalWorkflowDialog } from "./ApprovalWorkflowDialog";
-import { analyzeScriptContent, generateLocalScriptOutline, textToEditorJson } from "./utils";
+import { analyzeScriptContent, textToEditorJson } from "./utils";
 import type { ViewMode, ExtractedAsset } from "./types";
 
 // 子组件 / 工具函数（来自 ./parts）
@@ -93,9 +96,9 @@ export function ScriptsCenterPage({
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   // 对话框状态
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingScript, setEditingScript] = useState<Script | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  // const [isFormOpen, setIsFormOpen] = useState(false); // 已移除：不再需要新建剧本功能
+  // const [editingScript, setEditingScript] = useState<Script | null>(null);
+  // const [isSaving, setIsSaving] = useState(false);
 
   // 删除确认状态（统一改为软删语义：移到回收站）
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
@@ -131,6 +134,7 @@ export function ScriptsCenterPage({
   const selectedProjectId = initialProjectId || storeProjectId;
 
   // 根据 selectedProjectId 加载剧本数据
+  // 方案 A：列表数据源改用 Path B（script_documents 表），与"继续编辑"页面共享同一份数据
   const [scripts, setScripts] = useState<Script[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -141,8 +145,9 @@ export function ScriptsCenterPage({
     }
     setIsLoading(true);
     try {
-      const data = await listScripts(selectedProjectId);
-      setScripts(data as unknown as Script[]);
+      // 方案 A：从 /api/script-documents?projectId=... 拉剧本列表（自带 title/author/status/genre/words/chapters）
+      const docs = await scriptCenterService.getDocuments(selectedProjectId);
+      setScripts(docs as unknown as Script[]);
     } catch (err) {
       console.error("Failed to load scripts:", err);
     } finally {
@@ -207,75 +212,25 @@ export function ScriptsCenterPage({
     }));
   }, [filteredScripts]);
 
-  // 打开新建对话框
-  const handleCreate = () => {
-    setEditingScript(null);
-    setIsFormOpen(true);
-  };
-
-  const handleEdit = (script: Script) => {
-    setEditingScript(script);
-    setIsFormOpen(true);
-  };
-
   // 打开剧本编辑器（新标签页）
   const handleOpenEditor = (scriptId: string) => {
     window.open(`/scripts/${scriptId}`, '_blank');
   };
 
-  // 保存剧本（新建或编辑）
-  const handleSave = async (values: Record<string, string | number | string[]>) => {
-    setIsSaving(true);
-    try {
-      const payload = { ...values, project_id: selectedProjectId } as any;
-      if (editingScript) {
-        await updateScript(selectedProjectId, editingScript.id, payload);
-        try {
-          await scriptCenterService.updateDocument(editingScript.id, {
-            title: String(values.title ?? editingScript.title),
-            project_id: selectedProjectId,
-          } as any);
-        } catch (docErr) {
-          console.warn("同步更新剧本文档标题失败:", docErr);
-        }
-      } else {
-        // 新建剧本：先创建 scripts 记录，再把 description 同步写入 ScriptDocument.editor_json
-        const created = await createScript(selectedProjectId, payload);
-        const description = String(values.description ?? "").trim();
-        if (description) {
-          try {
-            const editorJson = textToEditorJson(description);
-            await scriptCenterService.createDocument({
-              id: created.id,
-              project_id: created.project_id,
-              editor_json: editorJson,
-              version: 1,
-            });
-          } catch (docErr) {
-            // 同步失败不阻塞主流程：编辑器的 loadDocument 仍会兜底创建
-            console.error("同步创建剧本文档失败:", docErr);
-          }
-        }
-      }
-      setIsFormOpen(false);
-      setEditingScript(null);
-      clearApiCache();
-      await reloadScripts();
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // 保存剧本功能已移除：不再需要新建/编辑剧本对话框
+  // 剧本应通过导入、AI生成或模板库创建
+  // const handleSave = async (...) => { ... };
 
   // 软删剧本：移到回收站
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
     const target = deleteConfirm;
     try {
-      const result = await deleteScriptApi(selectedProjectId, target.id);
+      await scriptCenterService.deleteDocument(target.id);
       setDeleteConfirm(null);
       clearApiCache();
       setScripts((prev) => prev.filter((script) => script.id !== target.id));
-      console.log(`剧本已移到回收站：${result.deleted_at}`);
+      console.log("剧本已移到回收站");
     } catch (err) {
       console.error("剧本删除失败:", err);
       alert("剧本删除失败，请重试");
@@ -288,7 +243,7 @@ export function ScriptsCenterPage({
     if (!selectedProjectId) return;
     setIsRecycleBinLoading(true);
     try {
-      const data = await listDeletedScriptsApi(selectedProjectId);
+      const data = await scriptCenterService.listDeletedDocuments(selectedProjectId);
       setDeletedScripts(data as unknown as Script[]);
     } catch (err) {
       console.error("加载回收站失败:", err);
@@ -301,7 +256,7 @@ export function ScriptsCenterPage({
   // 回收站：恢复剧本
   const handleRestoreScript = async (script: Script) => {
     try {
-      await restoreScriptApi(selectedProjectId, script.id);
+      await scriptCenterService.restoreDocument(script.id);
       // 从回收站移除 + 重新加载主列表
       setDeletedScripts((prev) => prev.filter((s) => s.id !== script.id));
       clearApiCache();
@@ -315,7 +270,7 @@ export function ScriptsCenterPage({
   // 回收站：彻底删除剧本
   const handlePurgeScript = async (script: Script) => {
     try {
-      const result = await purgeScriptApi(selectedProjectId, script.id);
+      const result = await scriptCenterService.purgeDocument(script.id);
       setDeletedScripts((prev) => prev.filter((s) => s.id !== script.id));
       const total = Object.values(result.cascade ?? {}).reduce((sum, count) => sum + count, 0);
       console.log(`剧本已彻底删除（联动删除 ${total} 条记录）`);
@@ -346,15 +301,21 @@ export function ScriptsCenterPage({
       const style = values.style as string;
       const genre = values.genre as string;
 
-      // 本地生成剧本大纲（AI服务的后备方案）
-      const content = generateLocalScriptOutline(prompt, style, genre, targetLength);
+      // 调用真实 AI 生成剧本（POST /api/ai/script-generate）
+      // 不传 project_id，避免后端自动创建剧本文档；由前端统一创建带完整元数据的剧本。
+      const { content } = await scriptCenterService.generateScript({
+        prompt,
+        style: style || undefined,
+        genre: genre || undefined,
+        length: targetLength,
+      });
 
-      await createScript(selectedProjectId, {
+      await scriptCenterService.createDocument({
+        project_id: selectedProjectId,
         title: `AI生成剧本 - ${prompt.slice(0, 20)}...`,
         author: "AI助手",
         status: "draft",
-        description: content,
-        project_id: selectedProjectId,
+        editor_json: JSON.stringify(textToEditorJson(content)),
         words: content.replace(/\s/g, "").length,
         chapters: 1,
         tags: ["AI生成", style ? `风格:${style}` : "", genre ? `类型:${genre}` : ""].filter(Boolean),
@@ -383,12 +344,12 @@ export function ScriptsCenterPage({
         ? `${templateDesc}\n\n剧本结构：\n${templateStructure.map((s: string, i: number) => `${i + 1}. ${s}`).join("\n")}`
         : templateDesc;
 
-      await createScript(selectedProjectId, {
+      await scriptCenterService.createDocument({
+        project_id: selectedProjectId,
         title: `${templateName} - ${new Date().toLocaleDateString()}`,
         author: "当前用户",
         status: "draft",
-        description,
-        project_id: selectedProjectId,
+        editor_json: JSON.stringify(textToEditorJson(description)),
         words: description.replace(/\s/g, "").length,
         chapters: templateStructure?.length ?? 1,
         tags: templateTags ?? [],
@@ -409,10 +370,100 @@ export function ScriptsCenterPage({
   };
 
   // 打开剧本分析
-  const handleOpenAnalysis = (script: Script) => {
+  const handleOpenAnalysis = async (script: Script) => {
     setSelectedScript(script);
-    setExtractedAssets([]);
     setShowAnalysis(true);
+    // 尝试加载已保存的分析资产
+    try {
+      const assets = await scriptCenterService.getAnalyzedAssets(script.id);
+      const mapped: ExtractedAsset[] = [
+        ...assets.characters.map((c) => ({
+          id: c.id,
+          type: "character" as const,
+          name: c.name,
+          description: c.description,
+          confirmed: c.status === "confirmed" || c.status === "transferred",
+          role: c.role,
+          gender: c.gender,
+          age: parseInt(c.age, 10) || 0,
+          appearance: c.appearance,
+          personality: c.personality,
+          traits: c.traits,
+          // === AI 剧本分析扩展字段 ===
+          identity: c.identity,
+          face: c.face,
+          hair: c.hair,
+          body: c.body,
+          temperament: c.temperament,
+          costumeName: c.costume_name,
+          costumeDescription: c.costume_description,
+          costumeColor: c.costume_color,
+          costumeMaterial: c.costume_material,
+          costumeStyle: c.costume_style,
+          accessories: c.accessories,
+          emotionStates: c.emotion_states,
+          actionAssets: c.action_assets,
+          relationships: c.relationships,
+          firstAppearance: c.first_appearance,
+          dialogueCount: c.dialogue_count,
+          generationPrompt: c.generation_prompt,
+          confidence: c.confidence,
+        })),
+        ...assets.scenes.map((s) => ({
+          id: s.id,
+          type: "scene" as const,
+          name: s.name,
+          description: s.description,
+          confirmed: s.status === "confirmed" || s.status === "transferred",
+          sceneType: s.scene_type,
+          lighting: s.lighting,
+          timeOfDay: s.time_of_day,
+          weather: s.weather,
+          // === AI 剧本分析扩展字段 ===
+          sceneCategory: s.category,
+          indoorOutdoor: s.indoor_outdoor,
+          location: s.location,
+          architecture: s.architecture,
+          terrain: s.terrain,
+          plants: s.plants,
+          objects: s.objects,
+          period: s.period,
+          tone: s.tone,
+          visualStyle: s.visual_style,
+          atmosphereEmotion: s.atmosphere_emotion,
+          suitableShots: s.suitable_shots,
+          reusableElements: s.reusable_elements,
+          generationPrompt: s.generation_prompt,
+          firstAppearance: s.first_appearance,
+          confidence: s.confidence,
+        })),
+        ...assets.props.map((p) => ({
+          id: p.id,
+          type: "prop" as const,
+          name: p.name,
+          description: p.description,
+          confirmed: p.status === "confirmed" || p.status === "transferred",
+          category: p.category,
+          material: p.material,
+          color: p.color,
+          // === AI 剧本分析扩展字段 ===
+          importanceLevel: p.importance_level,
+          owner: p.owner,
+          shape: p.shape,
+          texture: p.texture,
+          storyFunction: p.story_function,
+          visualFeatures: p.visual_features,
+          cameraUsage: p.camera_usage,
+          generationPrompt: p.generation_prompt,
+          firstAppearance: p.first_appearance,
+          confidence: p.confidence,
+        })),
+      ];
+      setExtractedAssets(mapped);
+    } catch {
+      // 无已保存资产则清空
+      setExtractedAssets([]);
+    }
   };
 
   // 打开审批工作流
@@ -461,12 +512,25 @@ export function ScriptsCenterPage({
         throw new Error("剧本文档内容为空，请先在编辑器中保存正文后再分析");
       }
       let assets: ExtractedAsset[] = [];
+      // 实际使用的模型 id（后端回填，用于展示"使用 xxx 解析成功"）
+      // 必须在 try/catch 外层声明，因为 catch (本地兜底) 分支也要在外层 toast 中读取
+      let usedModel = "";
       try {
-        const response = await fetch("/api/ai/script-analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: selectedScript.title, content, format: "txt" }),
-        });
+        // 180s 默认：与 AI_TIMEOUTS.analyzeScript 一致；可通过 env AGNES_TIMEOUT_ANALYZE_SCRIPT_MS 覆盖
+        const timeoutMs = 180_000;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        let response: Response;
+        try {
+          response = await fetch("/api/ai/script-analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: selectedScript.title, content, format: "txt", timeoutMs }),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timer);
+        }
         const payload = await response.json().catch(() => null);
         if (!response.ok) {
           throw new Error(payload?.message || `AI 分析失败（HTTP ${response.status}）`);
@@ -477,6 +541,8 @@ export function ScriptsCenterPage({
         }
         // 后端 sendJson 会包一层 data，AI 分析服务内部也有 data 字段：这里必须解两层。
         const data = result?.data ?? result;
+        // 实际使用的模型 id（后端回填，用于展示"使用 xxx 解析成功"）
+        usedModel = String(data?.model || "").trim();
         const charList: any[] = Array.isArray(data.characters) ? data.characters : [];
         const sceneList: any[] = Array.isArray(data.scenes) ? data.scenes : [];
         const propList: any[] = Array.isArray(data.props) ? data.props : [];
@@ -485,7 +551,7 @@ export function ScriptsCenterPage({
           id: `character-${idx + 1}-${Date.now()}`,
           type: "character",
           name: a.name || "",
-          description: a.description ?? "",
+          description: a.description ?? a.generation_prompt ?? "",
           confirmed: true,
           role: a.role,
           gender: a.gender,
@@ -493,27 +559,74 @@ export function ScriptsCenterPage({
           appearance: a.appearance,
           personality: a.personality,
           traits: Array.isArray(a.traits) ? a.traits : [],
+          // === AI 剧本分析扩展字段 ===
+          identity: a.basic?.identity ?? a.identity,
+          face: a.appearance?.face ?? a.face,
+          hair: a.appearance?.hair ?? a.hair,
+          body: a.appearance?.body ?? a.body,
+          temperament: a.appearance?.temperament ?? a.temperament,
+          costumeName: a.costume?.name ?? a.costume_name,
+          costumeDescription: a.costume?.description ?? a.costume_description,
+          costumeColor: a.costume?.color ?? a.costume_color,
+          costumeMaterial: a.costume?.material ?? a.costume_material,
+          costumeStyle: a.costume?.style ?? a.costume_style,
+          accessories: Array.isArray(a.accessories) ? a.accessories : [],
+          emotionStates: JSON.stringify(a.emotion_states || []),
+          actionAssets: JSON.stringify(a.action_assets || []),
+          relationships: JSON.stringify(a.relationships || []),
+          firstAppearance: a.first_appearance,
+          dialogueCount: a.dialogue_count,
+          generationPrompt: a.generation_prompt,
+          confidence: a.confidence,
         });
         const mapScene = (a: any, idx: number): ExtractedAsset => ({
           id: `scene-${idx + 1}-${Date.now()}`,
           type: "scene",
-          name: a.location_name || a.name || "",
-          description: a.description ?? "",
+          name: a.scene_name || a.location_name || a.name || "",
+          description: a.description ?? a.generation_prompt ?? "",
           confirmed: true,
-          sceneType: a.sceneType,
-          lighting: a.lighting,
-          timeOfDay: a.time_of_day ?? a.timeOfDay,
-          weather: a.weather,
+          sceneType: a.indoor_outdoor ?? a.sceneType,
+          lighting: a.time?.lighting ?? a.lighting,
+          timeOfDay: a.time?.period ?? a.time_of_day ?? a.timeOfDay,
+          weather: a.time?.weather ?? a.weather,
+          // === AI 剧本分析扩展字段 ===
+          sceneCategory: a.category,
+          indoorOutdoor: a.indoor_outdoor,
+          location: a.environment?.location ?? a.location,
+          architecture: a.environment?.architecture ?? a.architecture,
+          terrain: a.environment?.terrain ?? a.terrain,
+          plants: a.environment?.plants ?? a.plants,
+          objects: a.environment?.objects ?? a.objects,
+          period: a.time?.period ?? a.period,
+          tone: a.atmosphere?.tone ?? a.tone,
+          visualStyle: a.atmosphere?.visual_style ?? a.visual_style,
+          atmosphereEmotion: a.atmosphere?.emotion ?? a.atmosphere_emotion,
+          suitableShots: JSON.stringify(a.camera_reference?.suitable_shots || []),
+          reusableElements: JSON.stringify(a.reusable_elements || []),
+          generationPrompt: a.generation_prompt,
+          firstAppearance: a.first_appearance,
+          confidence: a.confidence,
         });
         const mapProp = (a: any, idx: number): ExtractedAsset => ({
           id: `prop-${idx + 1}-${Date.now()}`,
           type: "prop",
           name: a.name || "",
-          description: a.description ?? "",
+          description: a.description ?? a.generation_prompt ?? a.story_function ?? "",
           confirmed: true,
-          category: a.category,
-          material: a.material,
-          color: a.color,
+          category: a.importance_level ?? a.category,
+          material: a.appearance?.material ?? a.material,
+          color: a.appearance?.color ?? a.color,
+          // === AI 剧本分析扩展字段 ===
+          importanceLevel: a.importance_level,
+          owner: a.owner,
+          shape: a.appearance?.shape ?? a.shape,
+          texture: a.appearance?.texture ?? a.texture,
+          storyFunction: a.story_function,
+          visualFeatures: JSON.stringify(a.visual_features || []),
+          cameraUsage: JSON.stringify(a.camera_usage || []),
+          generationPrompt: a.generation_prompt,
+          firstAppearance: a.first_appearance,
+          confidence: a.confidence,
         });
 
         assets = [
@@ -529,6 +642,113 @@ export function ScriptsCenterPage({
         if (assets.length === 0) throw err;
       }
       setExtractedAssets(assets);
+      // 解析成功 toast：把"使用了哪个大模型"明确告诉用户（"使用 agnes-2.0-flash 解析成功"）
+      // AI 走通时 usedModel 必有值；走本地规则兜底时 usedModel 为空
+      if (usedModel) {
+        notify.success("解析成功", `使用 ${usedModel} 完成`);
+      } else {
+        notify.info("解析完成", "已使用本地规则提取资产");
+      }
+      // 保存分析结果到后端关联表
+      if (selectedScript && selectedProjectId) {
+        try {
+          await scriptCenterService.saveAnalyzedAssets(
+            selectedScript.id,
+            selectedProjectId,
+            {
+              characters: assets
+                .filter((a) => a.type === "character")
+                .map((a) => ({
+                  name: a.name,
+                  role: a.role || "minor",
+                  gender: a.gender || "other",
+                  age: String(a.age || ""),
+                  description: a.description || "",
+                  appearance: a.appearance || "",
+                  personality: a.personality || "",
+                  traits: a.traits || [],
+                  tags: a.tags || [],
+                  status: a.confirmed ? "confirmed" : "extracted",
+                  // === AI 剧本分析扩展字段 ===
+                  identity: a.identity,
+                  face: a.face,
+                  hair: a.hair,
+                  body: a.body,
+                  temperament: a.temperament,
+                  costume_name: a.costumeName,
+                  costume_description: a.costumeDescription,
+                  costume_color: a.costumeColor,
+                  costume_material: a.costumeMaterial,
+                  costume_style: a.costumeStyle,
+                  accessories: a.accessories,
+                  emotion_states: a.emotionStates,
+                  action_assets: a.actionAssets,
+                  relationships: a.relationships,
+                  first_appearance: a.firstAppearance,
+                  dialogue_count: a.dialogueCount,
+                  generation_prompt: a.generationPrompt,
+                  confidence: a.confidence,
+                })),
+              scenes: assets
+                .filter((a) => a.type === "scene")
+                .map((a) => ({
+                  name: a.name,
+                  type: a.sceneType || "indoor",
+                  scene_type: a.sceneType || "indoor",
+                  description: a.description || "",
+                  lighting: a.lighting || "",
+                  time_of_day: a.timeOfDay || "",
+                  weather: a.weather || "",
+                  tags: a.tags || [],
+                  status: a.confirmed ? "confirmed" : "extracted",
+                  // === AI 剧本分析扩展字段 ===
+                  category: a.sceneCategory,
+                  indoor_outdoor: a.indoorOutdoor,
+                  location: a.location,
+                  architecture: a.architecture,
+                  terrain: a.terrain,
+                  plants: a.plants,
+                  objects: a.objects,
+                  period: a.period,
+                  tone: a.tone,
+                  visual_style: a.visualStyle,
+                  atmosphere_emotion: a.atmosphereEmotion,
+                  suitable_shots: a.suitableShots,
+                  reusable_elements: a.reusableElements,
+                  generation_prompt: a.generationPrompt,
+                  first_appearance: a.firstAppearance,
+                  confidence: a.confidence,
+                })),
+              props: assets
+                .filter((a) => a.type === "prop")
+                .map((a) => ({
+                  name: a.name,
+                  category: a.category || "other",
+                  description: a.description || "",
+                  appearance: a.appearance || "",
+                  material: a.material || "",
+                  size: a.size || "",
+                  color: a.color || "",
+                  tags: a.tags || [],
+                  status: a.confirmed ? "confirmed" : "extracted",
+                  // === AI 剧本分析扩展字段 ===
+                  importance_level: a.importanceLevel,
+                  owner: a.owner,
+                  shape: a.shape,
+                  texture: a.texture,
+                  story_function: a.storyFunction,
+                  visual_features: a.visualFeatures,
+                  camera_usage: a.cameraUsage,
+                  generation_prompt: a.generationPrompt,
+                  first_appearance: a.firstAppearance,
+                  confidence: a.confidence,
+                })),
+            }
+          );
+        } catch (saveErr) {
+          console.warn("保存分析资产到后端失败:", saveErr);
+        }
+      }
     } catch (err) {
       console.error("分析失败:", err);
       const message = (err as Error)?.message || "请重试";
@@ -605,6 +825,25 @@ export function ScriptsCenterPage({
               description: asset.description,
               project_id: selectedProjectId,
               tags: ["剧本分析提取"],
+              // === AI 剧本分析扩展字段 ===
+              identity: asset.identity,
+              face: asset.face,
+              hair: asset.hair,
+              body: asset.body,
+              temperament: asset.temperament,
+              costume_name: asset.costumeName,
+              costume_description: asset.costumeDescription,
+              costume_color: asset.costumeColor,
+              costume_material: asset.costumeMaterial,
+              costume_style: asset.costumeStyle,
+              accessories: asset.accessories,
+              emotion_states: asset.emotionStates,
+              action_assets: asset.actionAssets,
+              relationships: asset.relationships,
+              first_appearance: asset.firstAppearance,
+              dialogue_count: asset.dialogueCount,
+              generation_prompt: asset.generationPrompt,
+              confidence: asset.confidence,
             } as any);
           } else if (type === "scene") {
             await createScene({
@@ -616,6 +855,9 @@ export function ScriptsCenterPage({
               weather: asset.weather || "",
               project_id: selectedProjectId,
               tags: ["剧本分析提取"],
+              // === AI 剧本分析扩展字段 ===
+              generation_prompt: asset.generationPrompt,
+              confidence: asset.confidence,
             } as any);
           } else if (type === "prop") {
             await createProp({
@@ -626,6 +868,10 @@ export function ScriptsCenterPage({
               color: asset.color || "",
               project_id: selectedProjectId,
               tags: ["剧本分析提取"],
+              // === AI 剧本分析扩展字段 ===
+              appearance: `${asset.shape || ""} ${asset.texture || ""}`.trim() || undefined,
+              generation_prompt: asset.generationPrompt,
+              confidence: asset.confidence,
             } as any);
           }
           successCount++;
@@ -636,13 +882,32 @@ export function ScriptsCenterPage({
       const skipMsg = skipCount > 0 ? `\n（跳过 ${skipCount} 个已存在资产）` : "";
       alert(`成功流转 ${successCount} 个资产到${factoryName}！${skipMsg}`);
       // 标记已流转的资产（包括跳过的，因为它们已存在于工厂）
+      const transferredIds: string[] = [];
       setExtractedAssets((prev) =>
-        prev.map((a) =>
-          a.type === type && a.confirmed && !a.id.startsWith("transferred-")
-            ? { ...a, confirmed: false, id: `transferred-${a.id}` }
-            : a
-        )
+        prev.map((a) => {
+          if (a.type === type && a.confirmed && !a.id.startsWith("transferred-")) {
+            transferredIds.push(a.id);
+            return { ...a, confirmed: false, id: `transferred-${a.id}` };
+          }
+          return a;
+        })
       );
+      // 同步更新后端关联表状态为 transferred
+      for (const assetId of transferredIds) {
+        if (!assetId.startsWith("character-") && !assetId.startsWith("scene-") && !assetId.startsWith("prop-")) {
+          try {
+            if (type === "character") {
+              await scriptCenterService.updateAnalyzedCharacter(assetId, { status: "transferred" });
+            } else if (type === "scene") {
+              await scriptCenterService.updateAnalyzedScene(assetId, { status: "transferred" });
+            } else if (type === "prop") {
+              await scriptCenterService.updateAnalyzedProp(assetId, { status: "transferred" });
+            }
+          } catch (err) {
+            console.warn(`更新后端分析资产状态失败 (${assetId}):`, err);
+          }
+        }
+      }
     } finally {
       setIsTransferring(false);
     }
@@ -770,9 +1035,8 @@ export function ScriptsCenterPage({
             {/* 视图切换 */}
             <div className="flex items-center gap-1 p-1 rounded-lg bg-[#252525] border border-white/10">
               <button
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
-                  viewMode === "list" ? "bg-emerald-500/20 text-emerald-400" : "text-[#888] hover:text-white"
-                }`}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === "list" ? "bg-emerald-500/20 text-emerald-400" : "text-[#888] hover:text-white"
+                  }`}
                 onClick={() => setViewMode("list")}
                 title="列表视图"
               >
@@ -780,9 +1044,8 @@ export function ScriptsCenterPage({
                 列表
               </button>
               <button
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
-                  viewMode === "classification" ? "bg-emerald-500/20 text-emerald-400" : "text-[#888] hover:text-white"
-                }`}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === "classification" ? "bg-emerald-500/20 text-emerald-400" : "text-[#888] hover:text-white"
+                  }`}
                 onClick={() => setViewMode("classification")}
                 title="分类视图"
               >
@@ -810,10 +1073,6 @@ export function ScriptsCenterPage({
               <Sparkles className="mr-2 h-4 w-4" />
               AI生成
             </Button>
-            <Button size="sm" onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              新建剧本
-            </Button>
           </>
         }
       />
@@ -835,40 +1094,38 @@ export function ScriptsCenterPage({
             <EmptyState
               type="no-results"
               title="未找到剧本"
-              description={searchQuery || statusFilter ? "尝试调整搜索条件" : "点击上方按钮创建新剧本"}
-              action={{ label: "新建剧本", onClick: handleCreate }}
+              description={searchQuery || statusFilter ? "尝试调整搜索条件" : "点击上方按钮导入剧本"}
             />
           )
         ) : filteredScripts.length > 0 ? (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">剧本标题</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">作者</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888]">状态</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden sm:table-cell">字数</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden lg:table-cell">章节</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#888] hidden md:table-cell">更新时间</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-[#888]">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="rounded-md border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>剧本标题</TableHead>
+                    <TableHead className="hidden md:table-cell">作者</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead className="hidden sm:table-cell">字数</TableHead>
+                    <TableHead className="hidden lg:table-cell">章节</TableHead>
+                    <TableHead className="hidden md:table-cell">更新时间</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {paginatedScripts.map((script) => (
                     <ScriptRow
                       key={script.id}
                       script={script}
                       onOpenEditor={() => handleOpenEditor(script.id)}
-                      onEdit={() => handleEdit(script)}
                       onDelete={() => setDeleteConfirm({ id: script.id, title: script.title })}
                       onTagManager={() => handleOpenTagManager(script)}
                       onAnalysis={() => handleOpenAnalysis(script)}
                       onApproval={() => handleOpenApproval(script)}
                     />
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
 
             {/* 分页 */}
@@ -889,23 +1146,12 @@ export function ScriptsCenterPage({
           <EmptyState
             type="no-results"
             title="未找到剧本"
-            description={searchQuery || statusFilter ? "尝试调整搜索条件" : "点击上方按钮创建新剧本"}
-            action={{ label: "新建剧本", onClick: handleCreate }}
+            description={searchQuery || statusFilter ? "尝试调整搜索条件" : "点击上方按钮导入剧本"}
           />
         )}
       </PageCard>
 
-      {/* 新建/编辑对话框 */}
-      <ScriptFormDialog
-        editingScript={editingScript}
-        isOpen={isFormOpen}
-        onClose={() => {
-          setIsFormOpen(false);
-          setEditingScript(null);
-        }}
-        onSave={handleSave}
-        isSaving={isSaving}
-      />
+      {/* 新建/编辑对话框已移除 */}
 
       {/* AI生成剧本对话框 */}
       <AIGenerateDialog
@@ -947,38 +1193,36 @@ export function ScriptsCenterPage({
                 回收站是空的
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-white/10 text-[#888]">
-                      <th className="px-3 py-2 text-left">标题</th>
-                      <th className="px-3 py-2 text-left">作者</th>
-                      <th className="px-3 py-2 text-left">删除时间</th>
-                      <th className="px-3 py-2 text-left">剩余天数</th>
-                      <th className="px-3 py-2 text-right">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="rounded-md border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>标题</TableHead>
+                      <TableHead>作者</TableHead>
+                      <TableHead>删除时间</TableHead>
+                      <TableHead>剩余天数</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {deletedScripts.map((script) => {
                       const remaining = scriptRemainingDays(script.deleted_at);
                       const canPurge = remaining <= 0;
                       return (
-                        <tr key={script.id} className="border-b border-white/5">
-                          <td className="px-3 py-2 text-white">{script.title}</td>
-                          <td className="px-3 py-2 text-[#888]">{script.author}</td>
-                          <td className="px-3 py-2 text-[#888]">
+                        <TableRow key={script.id}>
+                          <TableCell className="text-foreground">{script.title}</TableCell>
+                          <TableCell className="text-muted-foreground">{script.author}</TableCell>
+                          <TableCell className="text-muted-foreground">
                             {script.deleted_at ? new Date(script.deleted_at).toLocaleString() : "—"}
-                          </td>
-                          <td className="px-3 py-2">
+                          </TableCell>
+                          <TableCell>
                             {canPurge ? (
-                              <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-400">
-                                可清理
-                              </span>
+                              <Badge variant="success">可清理</Badge>
                             ) : (
-                              <span className="text-[#888]">{remaining} 天后自动清理</span>
+                              <span className="text-muted-foreground text-xs">{remaining} 天后自动清理</span>
                             )}
-                          </td>
-                          <td className="px-3 py-2 text-right">
+                          </TableCell>
+                          <TableCell className="text-right">
                             <div className="inline-flex items-center gap-2">
                               <Button
                                 variant="secondary"
@@ -988,23 +1232,27 @@ export function ScriptsCenterPage({
                                 <RotateCcw className="mr-1 h-3 w-3" />
                                 恢复
                               </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                disabled={!canPurge}
-                                title={canPurge ? "彻底删除（级联清理所有关联数据）" : `需软删满 30 天才能彻底删除（还剩 ${remaining} 天）`}
-                                onClick={() => setRecycleBinAction({ type: "purge", script })}
+                              <Tip
+                                label={canPurge ? "彻底删除（级联清理所有关联数据）" : `需软删满 30 天才能彻底删除（还剩 ${remaining} 天）`}
+                                side="top"
                               >
-                                <Trash2 className="mr-1 h-3 w-3" />
-                                彻底删除
-                              </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  disabled={!canPurge}
+                                  onClick={() => setRecycleBinAction({ type: "purge", script })}
+                                >
+                                  <Trash2 className="mr-1 h-3 w-3" />
+                                  彻底删除
+                                </Button>
+                              </Tip>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
@@ -1064,13 +1312,9 @@ export function ScriptsCenterPage({
             script={selectedScript}
             extractedAssets={extractedAssets}
             isAnalyzing={isAnalyzing}
-            isTransferring={isTransferring}
             analyzeStatus={analyzeStatus}
             onAnalyze={handleAnalyzeScript}
-            onToggleAsset={toggleAssetConfirmed}
-            onConfirmAll={confirmAllAssets}
-            onTransfer={handleTransferAssets}
-            onTransferByType={transferAssetsByType}
+            onOpenEditor={() => handleOpenEditor(selectedScript.id)}
             onUpdateAsset={updateAsset}
           />
         </DialogOverlay>
@@ -1092,6 +1336,9 @@ export function ScriptsCenterPage({
         onImported={async () => {
           clearApiCache();
           await reloadScripts();
+          // 导入成功后自动关闭导入弹框（修复：之前只重置内部预览层，
+          // 外层 ScriptImportDialog 一直保留，挡住了剧本列表）
+          setShowImport(false);
         }}
       />
     </PageContainer>

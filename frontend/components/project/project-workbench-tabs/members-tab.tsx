@@ -2,6 +2,7 @@
 
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import { ManagementTable as ProjectManagementTable } from "@/components/project/project-workbench";
 import type { ProjectMember } from "@/lib/app-types";
 

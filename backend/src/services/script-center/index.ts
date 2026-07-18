@@ -29,6 +29,9 @@ export {
   createScriptDocument,
   updateScriptDocument,
   deleteScriptDocument,
+  listDeletedScriptDocuments,
+  restoreScriptDocument,
+  purgeScriptDocument,
 } from "./document-service.js";
 
 // 剧集 CRUD
@@ -119,6 +122,28 @@ export {
   updateScriptComment,
   deleteScriptComment,
 } from "./comment-service.js";
+
+// 剧本分析提取资产 CRUD
+export {
+  listScriptAnalyzedCharacters,
+  createScriptAnalyzedCharacter,
+  updateScriptAnalyzedCharacter,
+  deleteScriptAnalyzedCharacter,
+  replaceScriptAnalyzedCharacters,
+  listScriptAnalyzedScenes,
+  createScriptAnalyzedScene,
+  updateScriptAnalyzedScene,
+  deleteScriptAnalyzedScene,
+  replaceScriptAnalyzedScenes,
+  listScriptAnalyzedProps,
+  createScriptAnalyzedProp,
+  updateScriptAnalyzedProp,
+  deleteScriptAnalyzedProp,
+  replaceScriptAnalyzedProps,
+  listScriptAnalyzedAssets,
+  replaceScriptAnalyzedAssets,
+  deleteScriptAnalyzedAssetsByDocument,
+} from "./analyzed-asset-service.js";
 
 // 解析/统计/连续性检查/版本
 export {

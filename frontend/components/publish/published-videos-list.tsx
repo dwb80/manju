@@ -1,5 +1,19 @@
+/**
+ * @file published-videos-list.tsx
+ * @description 已发布视频列表组件，显示已发布的视频记录
+ */
+
 "use client";
 
+import { ShadcnSelect } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Combobox } from "@/components/ui/combobox";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { LayoutGrid, Table as TableIcon } from "lucide-react";
 import { useState } from "react";
 import {
   Video,
@@ -15,6 +29,16 @@ import {
   CheckCircle,
   Package,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 /**
  * 发布平台枚举
@@ -263,59 +287,56 @@ export function PublishedVideosList({
         {/* 筛选和视图控制 */}
         <div className="flex items-center gap-2">
           {/* 项目筛选 */}
-          <select
+          <ShadcnSelect
+            options={[
+              { value: "", label: "所有项目" },
+              ...projects.map((p) => ({ value: p.id, label: p.name })),
+            ]}
             value={filter.projectId || ""}
-            onChange={(e) =>
+            onChange={(value) =>
               setFilter((prev) => ({
                 ...prev,
-                projectId: e.target.value || undefined,
+                projectId: value || undefined,
               }))
             }
-            className="rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:border-white/20 focus:outline-none"
-          >
-            <option value="">所有项目</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
+            className="h-9 text-sm min-w-[160px]"
+          />
 
           {/* 发布状态筛选 */}
-          <select
+          <ShadcnSelect
+            options={[
+              { value: "all", label: "全部状态" },
+              { value: "pending", label: "待发布" },
+              { value: "published", label: "已发布" },
+              { value: "failed", label: "失败" },
+            ]}
             value={filter.publishStatus || "all"}
-            onChange={(e) =>
+            onChange={(value) =>
               setFilter((prev) => ({
                 ...prev,
-                publishStatus: e.target.value as PublishStatus | "all",
+                publishStatus: value as PublishStatus | "all",
               }))
             }
-            className="rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:border-white/20 focus:outline-none"
-          >
-            <option value="all">全部状态</option>
-            <option value="pending">待发布</option>
-            <option value="published">已发布</option>
-          </select>
+            className="h-9 text-sm min-w-[140px]"
+          />
 
           {/* 视图切换 */}
           <div className="flex rounded-lg border border-white/10 bg-[#1a1a1a] p-1">
             <button
               onClick={() => setViewMode("table")}
-              className={`rounded px-3 py-1 text-sm ${
-                viewMode === "table"
-                  ? "bg-white/10 text-white"
-                  : "text-[#888] hover:text-white"
-              }`}
+              className={`rounded px-3 py-1 text-sm ${viewMode === "table"
+                ? "bg-white/10 text-white"
+                : "text-[#888] hover:text-white"
+                }`}
             >
               表格
             </button>
             <button
               onClick={() => setViewMode("card")}
-              className={`rounded px-3 py-1 text-sm ${
-                viewMode === "card"
-                  ? "bg-white/10 text-white"
-                  : "text-[#888] hover:text-white"
-              }`}
+              className={`rounded px-3 py-1 text-sm ${viewMode === "card"
+                ? "bg-white/10 text-white"
+                : "text-[#888] hover:text-white"
+                }`}
             >
               卡片
             </button>
@@ -339,138 +360,138 @@ export function PublishedVideosList({
 
       {/* 表格视图 */}
       {viewMode === "table" && (
-        <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#1a1a1a]">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-white/10 bg-[#202020]">
-              <tr>
-                <th className="px-4 py-3 font-medium text-[#888]">成片名称</th>
-                <th className="px-4 py-3 font-medium text-[#888]">所属项目</th>
-                <th className="px-4 py-3 font-medium text-[#888]">时长</th>
-                <th className="px-4 py-3 font-medium text-[#888]">创建时间</th>
-                <th className="px-4 py-3 font-medium text-[#888]">发布状态</th>
-                <th className="px-4 py-3 font-medium text-[#888]">发布平台</th>
-                <th className="px-4 py-3 font-medium text-[#888]">发布时间</th>
-                <th className="px-4 py-3 font-medium text-[#888]">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
+        <div className="rounded-md border border-border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>成片名称</TableHead>
+                <TableHead>所属项目</TableHead>
+                <TableHead>时长</TableHead>
+                <TableHead>创建时间</TableHead>
+                <TableHead>发布状态</TableHead>
+                <TableHead>发布平台</TableHead>
+                <TableHead>发布时间</TableHead>
+                <TableHead>操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredVideos.map((video) => (
-                <tr
-                  key={video.id}
-                  className="transition-colors hover:bg-white/5"
-                >
-                  <td className="px-4 py-3">
+                <TableRow key={video.id}>
+                  <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-500/10">
                         <Video className="h-4 w-4 text-blue-400" />
                       </div>
-                      <span className="font-medium text-white">{video.name}</span>
+                      <span className="font-medium text-foreground">{video.name}</span>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-[#888]">{video.projectName}</td>
-                  <td className="px-4 py-3 text-[#888]">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{video.projectName}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
                       {formatDuration(video.duration)}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-[#888]">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" />
                       {formatDate(video.createdAt)}
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                        video.publishStatus === "published"
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-orange-500/10 text-orange-400"
-                      }`}
-                    >
-                      {video.publishStatus === "published" ? (
-                        <>
-                          <CheckCircle className="h-3 w-3" />
-                          已发布
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="h-3 w-3" />
-                          待发布
-                        </>
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {video.publishedPlatform ? (
-                      <span className="rounded-md bg-white/5 px-2 py-1 text-xs text-[#888]">
-                        {getPlatformName(video.publishedPlatform)}
-                      </span>
+                  </TableCell>
+                  <TableCell>
+                    {video.publishStatus === "published" ? (
+                      <Badge variant="success" className="gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        已发布
+                      </Badge>
                     ) : (
-                      <span className="text-[#666]">-</span>
+                      <Badge variant="warning" className="gap-1">
+                        <Clock className="h-3 w-3" />
+                        待发布
+                      </Badge>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-[#888]">
+                  </TableCell>
+                  <TableCell>
+                    {video.publishedPlatform ? (
+                      <Badge variant="outline">
+                        {getPlatformName(video.publishedPlatform)}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {video.publishedAt ? formatDate(video.publishedAt) : "-"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onPreviewVideo?.(video)}
-                        className="rounded border border-white/10 bg-[#202020] px-2.5 py-1 text-xs text-white transition-colors hover:border-white/20"
                         title="预览"
+                        aria-label="预览"
                       >
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
-                      <button
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onDownloadVideo?.(video)}
-                        className="rounded border border-white/10 bg-[#202020] px-2.5 py-1 text-xs text-white transition-colors hover:border-white/20"
                         title="下载"
+                        aria-label="下载"
                       >
-                        <Download className="h-3.5 w-3.5" />
-                      </button>
+                        <Download className="h-4 w-4" />
+                      </Button>
                       {onPackageVideo && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onPackageVideo(video)}
-                          className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2.5 py-1 text-xs text-amber-300 transition-colors hover:bg-amber-500/20"
                           title="一键打包"
+                          aria-label="一键打包"
+                          className="text-amber-400 hover:text-amber-300"
                         >
-                          <Package className="h-3.5 w-3.5" />
-                          打包
-                        </button>
+                          <Package className="h-4 w-4" />
+                        </Button>
                       )}
                       <div className="relative">
-                        <button
-                          onClick={() =>
-                            setShowPlatformSelector(
-                              showPlatformSelector === video.id ? null : video.id
-                            )
+                        <Popover
+                          open={showPlatformSelector === video.id}
+                          onOpenChange={(open) =>
+                            setShowPlatformSelector(open ? video.id : null)
                           }
-                          className="rounded bg-blue-500/10 px-2.5 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-500/20"
-                          title="标记发布"
                         >
-                          <Upload className="h-3.5 w-3.5" />
-                        </button>
-                        {showPlatformSelector === video.id && (
-                          <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-white/10 bg-[#1a1a1a] p-2 shadow-lg">
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="标记发布"
+                              aria-label="标记发布"
+                              className="text-blue-400 hover:text-blue-300"
+                            >
+                              <Upload className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" className="w-40 p-1">
                             {platformOptions.map((platform) => (
                               <button
                                 key={platform}
                                 onClick={() => handlePlatformSelect(video, platform)}
-                                className="w-full rounded px-3 py-2 text-left text-sm text-white transition-colors hover:bg-white/5"
+                                className="w-full rounded px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-white/10"
                               >
                                 {getPlatformName(platform)}
                               </button>
                             ))}
-                          </div>
-                        )}
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {filteredVideos.length === 0 && (
             <div className="py-12 text-center">
               <Video className="mx-auto h-12 w-12 text-[#666]" />
@@ -518,11 +539,10 @@ export function PublishedVideosList({
                 {/* 状态标签 */}
                 <div className="absolute top-2 left-2">
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium backdrop-blur-sm ${
-                      video.publishStatus === "published"
-                        ? "bg-emerald-500/80 text-white"
-                        : "bg-orange-500/80 text-white"
-                    }`}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium backdrop-blur-sm ${video.publishStatus === "published"
+                      ? "bg-emerald-500/80 text-white"
+                      : "bg-orange-500/80 text-white"
+                      }`}
                   >
                     {video.publishStatus === "published" ? "已发布" : "待发布"}
                   </span>

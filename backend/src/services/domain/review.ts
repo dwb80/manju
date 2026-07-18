@@ -1,3 +1,8 @@
+/**
+ * @file review.ts
+ * @description 审核服务模块 - 管理项目审核意见的创建、更新和删除，用于制作流程中的质量控制
+ */
+
 import type { AppContext } from "../app.js";
 import type { ProjectReview, ProjectReviewStatus } from "../../types.js";
 import { id, nowIso, requireString } from "../../utils.js";
@@ -17,7 +22,14 @@ function normalizeProjectReviewStatus(status: unknown): ProjectReviewStatus {
   return projectReviewStatuses.includes(status as ProjectReviewStatus) ? status as ProjectReviewStatus : "open";
 }
 
-/** 列出项目审核意见，可按目标类型和目标 ID 过滤。 */
+/**
+ * listProjectReviews - 列出项目审核意见
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {Object} filters - 筛选条件
+ * @returns {Promise<ProjectReview[]>} 审核意见列表
+ * @description 可按目标类型和目标ID过滤
+ */
 export async function listProjectReviews(ctx: AppContext, projectId: string, filters: { target_type?: string | null; target_id?: string | null } = {}): Promise<ProjectReview[]> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const filter: Partial<ProjectReview> = { project_id: projectId };
@@ -26,7 +38,14 @@ export async function listProjectReviews(ctx: AppContext, projectId: string, fil
   return ctx.projectReviews.findMany(filter, { sort: "asc" });
 }
 
-/** 新增一条审核意见，通常绑定到某条分镜。 */
+/**
+ * createProjectReview - 新增审核意见
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectReviewInput} input - 审核意见输入参数
+ * @returns {Promise<ProjectReview>} 创建的审核意见
+ * @description 通常绑定到某条分镜
+ */
 export async function createProjectReview(ctx: AppContext, projectId: string, input: ProjectReviewInput): Promise<ProjectReview> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const now = nowIso();
@@ -47,7 +66,15 @@ export async function createProjectReview(ctx: AppContext, projectId: string, in
   return review;
 }
 
-/** 更新审核意见状态、审核人或内容。 */
+/**
+ * updateProjectReview - 更新审核意见
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} reviewId - 审核意见ID
+ * @param {ProjectReviewInput} patch - 更新字段
+ * @returns {Promise<ProjectReview>} 更新后的审核意见
+ * @description 更新审核意见状态、审核人或内容
+ */
 export async function updateProjectReview(ctx: AppContext, projectId: string, reviewId: string, patch: ProjectReviewInput): Promise<ProjectReview> {
   const existing = await ctx.projectReviews.findById(reviewId);
   if (!existing || existing.project_id !== projectId) throw new Error("project review not found");
@@ -59,7 +86,13 @@ export async function updateProjectReview(ctx: AppContext, projectId: string, re
   return (await ctx.projectReviews.findById(reviewId)) as ProjectReview;
 }
 
-/** 删除审核意见。 */
+/**
+ * deleteProjectReview - 删除审核意见
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} reviewId - 审核意见ID
+ * @returns {Promise<void>}
+ */
 export async function deleteProjectReview(ctx: AppContext, projectId: string, reviewId: string): Promise<void> {
   const existing = await ctx.projectReviews.findById(reviewId);
   if (!existing || existing.project_id !== projectId) throw new Error("project review not found");

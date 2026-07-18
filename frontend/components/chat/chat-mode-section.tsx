@@ -1,3 +1,8 @@
+/**
+ * @file chat-mode-section.tsx
+ * @description 聊天模式区块组件，整合聊天相关功能
+ */
+
 "use client";
 
 import type { RefObject } from "react";

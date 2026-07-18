@@ -698,7 +698,7 @@ async function main(): Promise<void> {
   console.log("  基于 7 个进行中项目，为 AI 生产中心各模块生成真实数据");
   console.log("=".repeat(60));
 
-  const ctx = createAppContext(process.cwd());
+  const ctx = await createAppContext(process.cwd());
 
   try {
     const shouldClean = process.argv.includes("--clean");

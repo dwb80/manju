@@ -1,8 +1,11 @@
 /**
- * 该文件汇总 types.ts 等位置缺失的占位类型，目的是让 legacy 模块在 `strict` 模式下通过编译。
- * 字段保留最简形式，仅保证不报错，不影响运行时。
+ * @file extra.ts
+ * @description 附加类型定义，汇总 types.ts 等位置缺失的占位类型，用于让 legacy 模块在 strict 模式下通过编译
  */
 
+/**
+ * AI任务监控类型（占位类型，用于 dashboard）
+ */
 export type AITaskMonitor = {
   id: string;
   type: 'image' | 'video' | 'voiceover' | 'audio' | 'script';
@@ -59,6 +62,7 @@ export type DashboardKPI = {
   runningAITasks: number;
   pendingReviews: number;
   gpuUtilization: number;
+  resourceTelemetryAvailable?: boolean;
   todayCost: number;
   successRate: number;
   label?: string;
@@ -118,6 +122,7 @@ export type ResourceMonitorData = {
   cpuUsage: number;
   queueLength: number;
   workerCount: number;
+  telemetryAvailable?: boolean;
   cpu?: number;
   memory?: number;
   gpu?: number;

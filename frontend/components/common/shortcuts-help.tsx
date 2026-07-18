@@ -11,10 +11,8 @@ type ShortcutItem = {
 };
 
 /**
- * 快捷键帮助组件：为用户提供快捷键使用指南。
- *
- * @example
- * <ShortcutsHelp />
+ * ShortcutsHelp - 快捷键帮助组件
+ * @returns {JSX.Element} 渲染的快捷键帮助元素
  */
 export function ShortcutsHelp() {
   const [isOpen, setIsOpen] = useState(false);

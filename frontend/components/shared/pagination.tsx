@@ -48,7 +48,9 @@ export interface PaginationProps {
 }
 
 /**
- * 分页组件
+ * Pagination - 分页组件
+ * @param {PaginationProps} props - 组件属性
+ * @returns {JSX.Element | null} 渲染的分页元素，总页数小于等于1时不显示
  */
 export function Pagination({
   currentPage,
@@ -241,11 +243,10 @@ export function Pagination({
               <button
                 key={page}
                 onClick={() => onPageChange(page)}
-                className={`min-w-[28px] rounded border px-1.5 py-0.5 text-xs transition-colors whitespace-nowrap ${
-                  currentPage === page
+                className={`min-w-[28px] rounded border px-1.5 py-0.5 text-xs transition-colors whitespace-nowrap ${currentPage === page
                     ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-400 font-medium"
                     : "border-white/10 bg-[#1a1a1a] text-[#888] hover:bg-white/10"
-                }`}
+                  }`}
                 aria-label={`第${page}页`}
                 aria-current={currentPage === page ? "page" : undefined}
               >

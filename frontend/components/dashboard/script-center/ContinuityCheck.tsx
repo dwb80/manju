@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @file ContinuityCheck.tsx
+ * @description 连续性检查组件，检测剧本中角色、场景、时间线、道具的连续性问题
+ */
+
 import { useState, useEffect } from 'react'
 import {
   AlertCircle,
@@ -26,6 +31,13 @@ interface ContinuityCheckProps {
   onFixIssue?: (issue: Issue) => void
 }
 
+/**
+ * ContinuityCheck - 连续性检查组件
+ * @param {ContinuityCheckProps} props - 组件属性
+ * @param {string} props.scriptId - 剧本ID
+ * @param {Function} [props.onFixIssue] - 修复问题回调
+ * @returns {JSX.Element} 渲染的连续性检查界面
+ */
 export function ContinuityCheck({ scriptId, onFixIssue }: ContinuityCheckProps) {
   const [issues, setIssues] = useState<Issue[]>([])
   const [loading, setLoading] = useState(true)
@@ -172,9 +184,8 @@ export function ContinuityCheck({ scriptId, onFixIssue }: ContinuityCheckProps) 
                     {typeIssues.map((issue, index) => (
                       <div
                         key={index}
-                        className={`p-3 ${
-                          issue.severity === 'error' ? 'bg-red-500/5' : 'bg-yellow-500/5'
-                        }`}
+                        className={`p-3 ${issue.severity === 'error' ? 'bg-red-500/5' : 'bg-yellow-500/5'
+                          }`}
                       >
                         <div className="flex items-start gap-2">
                           {issue.severity === 'error' ? (

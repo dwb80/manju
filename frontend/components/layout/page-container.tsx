@@ -1,8 +1,14 @@
+/**
+ * @file page-container.tsx
+ * @description 页面容器框架组件，提供统一的页面布局结构，包括页面标题、描述区域和顶部操作栏
+ */
+
 "use client";
 
 import { ReactNode } from "react";
 import { ArrowLeft, Bell, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { openCommandPalette } from "@/components/layout/command-palette";
 
 /**
  * 页面容器框架组件
@@ -60,13 +66,7 @@ export function PageContainer({
   };
 
   const handleSearch = () => {
-    // 触发全局搜索
-    const event = new KeyboardEvent("keydown", {
-      key: "k",
-      ctrlKey: true,
-      bubbles: true,
-    });
-    window.dispatchEvent(event);
+    openCommandPalette();
   };
 
   return (
@@ -107,7 +107,7 @@ export function PageContainer({
                     <Search className="h-5 w-5" />
                   </button>
                 )}
-                
+
                 {showNotificationButton && (
                   <button
                     className="relative rounded-lg p-2 text-[#888] hover:bg-white/10 hover:text-white transition-colors"
@@ -179,9 +179,8 @@ export function PageCard({
 }: PageCardProps) {
   return (
     <div
-      className={`rounded-xl ${
-        showBorder ? "border border-white/10" : ""
-      } bg-[#202020] p-6 ${className}`}
+      className={`rounded-xl ${showBorder ? "border border-white/10" : ""
+        } bg-[#202020] p-6 ${className}`}
     >
       {title && (
         <div className="mb-4">
@@ -207,6 +206,11 @@ interface PageDividerProps {
   title?: string;
 }
 
+/**
+ * PageDivider - 页面分隔组件
+ * @param {PageDividerProps} props - 组件属性
+ * @returns {JSX.Element} 渲染的分隔线元素
+ */
 export function PageDivider({ title }: PageDividerProps) {
   return (
     <div className="my-6">

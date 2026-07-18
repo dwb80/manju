@@ -1,5 +1,6 @@
 /**
- * 场景工厂 API
+ * @file scene.service.ts
+ * @description 场景工厂 API，提供场景的 CRUD、软删除、引用统计、批量操作、跨项目复制等接口
  *
  * 与 character.service.ts 同构，模式与契约完全一致。
  * AssetUsage / CopyToProjectsResult 类型在 character.service 中已定义，
@@ -19,6 +20,15 @@ export async function listScenes(projectId?: string): Promise<Scene[]> {
   return api<Scene[]>(`/api/scenes${query}`);
 }
 
+export async function getScene(id: string): Promise<Scene | null> {
+  try {
+    return await api<Scene>(`/api/scenes/${encodeURIComponent(id)}`);
+  } catch (err) {
+    if (err instanceof Error && /404/.test(err.message)) return null;
+    throw err;
+  }
+}
+
 export async function createScene(data: {
   name: string;
   type?: string;
@@ -28,6 +38,23 @@ export async function createScene(data: {
   lighting?: string;
   time_of_day?: string;
   weather?: string;
+  // === AI 剧本分析扩展字段 ===
+  category?: string;
+  indoor_outdoor?: string;
+  location?: string;
+  architecture?: string;
+  terrain?: string;
+  plants?: string;
+  objects?: string;
+  period?: string;
+  tone?: string;
+  visual_style?: string;
+  atmosphere_emotion?: string;
+  suitable_shots?: string;
+  reusable_elements?: string;
+  generation_prompt?: string;
+  first_appearance?: string;
+  confidence?: string;
 }): Promise<Scene> {
   return api<Scene>("/api/scenes", {
     method: "POST",
@@ -44,6 +71,23 @@ export async function updateScene(id: string, data: Partial<{
   lighting: string;
   time_of_day: string;
   weather: string;
+  // === AI 剧本分析扩展字段 ===
+  category: string;
+  indoor_outdoor: string;
+  location: string;
+  architecture: string;
+  terrain: string;
+  plants: string;
+  objects: string;
+  period: string;
+  tone: string;
+  visual_style: string;
+  atmosphere_emotion: string;
+  suitable_shots: string;
+  reusable_elements: string;
+  generation_prompt: string;
+  first_appearance: string;
+  confidence: string;
 }>): Promise<Scene> {
   return api<Scene>(`/api/scenes/${id}`, {
     method: "PUT",

@@ -18,6 +18,16 @@ export interface UsageDialogProps {
   episodes?: number[];
 }
 
+/**
+ * UsageDialog - 引用来源列表弹窗组件
+ * @description 展示资产在剧本/分镜/对白/视频中被引用的所有位置，由 FactoryCRUDPage 在用户点击 UsageBadge 时弹出
+ * @param {boolean} isOpen - 是否打开弹窗
+ * @param {() => void} onClose - 关闭回调
+ * @param {string} entityName - 实体名称
+ * @param {{id: string; title: string}[]} references - 引用列表
+ * @param {number[]} [episodes] - 唯一出场集数（已排序）
+ * @returns {JSX.Element | null} 渲染的引用弹窗
+ */
 export function UsageDialog({ isOpen, onClose, entityName, references, episodes }: UsageDialogProps) {
   if (!isOpen) return null;
   return (

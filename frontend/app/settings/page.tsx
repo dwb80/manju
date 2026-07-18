@@ -30,6 +30,7 @@ import {
   StandalonePageHeader,
   Alert,
 } from "@/components/layout";
+import { AdminPanels } from "@/components/admin/admin-panels";
 import { createLogger } from "@/lib/logger";
 import { notify } from "@/lib/notify";
 
@@ -45,6 +46,8 @@ interface Settings {
   defaultImageSize?: string;
   defaultVideoRatio?: string;
   apiKey?: string;
+  apiKeyConfigured?: boolean;
+  clearApiKey?: boolean;
   apiProvider?: "openai" | "agnes" | "claude" | "custom";
   apiBaseUrl?: string;
   userName?: string;
@@ -109,7 +112,7 @@ export default function SettingsPage() {
         log.info("save settings success");
         notify.success("设置已保存", "个性化配置已生效");
         if (data.data) {
-          setSettings({ ...DEFAULT_SETTINGS, ...data.data });
+          setSettings({ ...DEFAULT_SETTINGS, ...data.data, apiKey: "", clearApiKey: false });
         }
       } else {
         throw new Error(data?.message ?? "save failed");
@@ -130,9 +133,11 @@ export default function SettingsPage() {
   }
 
   function handleClearApiKey() {
-    if (!settings.apiKey) return;
+    if (!settings.apiKey && !settings.apiKeyConfigured) return;
     if (!confirm("确定清除 API Key？清除后需要重新配置。")) return;
     update("apiKey", "");
+    update("apiKeyConfigured", false);
+    update("clearApiKey", true);
     log.debug("clear api key requested");
     notify.warn("API Key 已清空（请保存以生效）");
   }
@@ -229,12 +234,12 @@ export default function SettingsPage() {
             </div>
             <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
               <CheckCircle2 className="mr-1 inline h-3 w-3" />
-              本地加密保存
+              {settings.apiKeyConfigured ? "已配置（不回显）" : "未配置"}
             </span>
           </div>
 
           <Alert tone="warn" title="安全提示">
-            API Key 仅保存在本地配置文件中，不会上传至任何第三方服务。请妥善保管。
+            API Key 仅由本机后端保存，读取接口不会回显。当前版本未接入操作系统密钥库，请保护本机数据目录和系统账号。
           </Alert>
 
           <div className="mt-4 space-y-3">
@@ -276,7 +281,10 @@ export default function SettingsPage() {
                   <input
                     type={showApiKey ? "text" : "password"}
                     value={settings.apiKey ?? ""}
-                    onChange={(e) => update("apiKey", e.target.value)}
+                    onChange={(e) => {
+                      update("apiKey", e.target.value);
+                      update("clearApiKey", false);
+                    }}
                     placeholder="sk-..."
                     className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 pr-10 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
                   />
@@ -301,7 +309,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={handleClearApiKey}
-                  disabled={!settings.apiKey}
+                  disabled={!settings.apiKey && !settings.apiKeyConfigured}
                   className="inline-flex items-center gap-1 rounded-md border border-red-500/30 bg-red-500/5 px-3 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-40"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -410,8 +418,14 @@ export default function SettingsPage() {
           </div>
           <p className="mt-2 leading-relaxed">
             偏好设置在保存后会在下次启动项目时生效。
-            API Key 不会上传到任何远程服务，请放心配置。
+            API Key 只会在调用所选 AI Provider 时作为认证信息发送；页面和普通设置接口不会回显已保存密钥。
           </p>
+        </div>
+
+        {/* === spec 4.4 系统管理 4 折叠面板（敏感词/平台模板/审计/项目权限） === */}
+        <div className="space-y-3">
+          <h2 className="px-1 text-xs font-medium uppercase tracking-wider text-[#888]">spec 4.4 · 系统管理面板</h2>
+          <AdminPanels />
         </div>
       </div>
     </main>

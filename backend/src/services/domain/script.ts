@@ -1,6 +1,12 @@
+/**
+ * @file script.ts
+ * @description 剧本服务模块 - 管理项目剧本和剧集的创建、更新、删除以及剧本拆分分镜
+ */
+
 import type { AppContext } from "../app.js";
 import type { ProjectAsset, ProjectEpisode, ProjectScript } from "../../types.js";
-import { DEFAULT_MODEL, clampNumber, id, nowIso, requireString } from "../../utils.js";
+import { DEFAULT_MODEL, clampNumber, id, nowIso, requireString, safeAICall } from "../../utils.js";
+import { rootLogger } from "../../logger.js";
 import { createProjectStoryboard, normalizeStringList, type ProjectStoryboardInput } from "./storyboard.js";
 
 type ProjectEpisodeInput = {
@@ -63,14 +69,34 @@ function fallbackScriptShots(script: string): ProjectStoryboardInput[] {
   }));
 }
 
-/** 列出项目剧本，按集数和创建时间排序。 */
+/**
+ * listProjectScripts - 列出项目剧本
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ProjectScript[]>} 剧本列表
+ * @description 按集数和创建时间排序
+ */
 export async function listProjectScripts(ctx: AppContext, projectId: string): Promise<ProjectScript[]> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const scripts = await ctx.projectScripts.findMany({ project_id: projectId } as Partial<ProjectScript>, { sort: "asc" });
-  return scripts.sort((left: ProjectScript, right: ProjectScript) => left.episode - right.episode || left.created_at.localeCompare(right.created_at));
+  return scripts.filter((script) => !script.deleted_at).sort((left: ProjectScript, right: ProjectScript) => left.episode - right.episode || left.created_at.localeCompare(right.created_at));
 }
 
-/** 在项目下保存一份剧本文档。 */
+/** 查询项目剧本回收站。 */
+export async function listDeletedProjectScripts(ctx: AppContext, projectId: string): Promise<ProjectScript[]> {
+  if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
+  const scripts = await ctx.projectScripts.findMany({ project_id: projectId } as Partial<ProjectScript>, { sort: "desc" });
+  return scripts.filter((script) => Boolean(script.deleted_at));
+}
+
+/**
+ * createProjectScript - 创建剧本文档
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectScriptInput} input - 剧本输入参数
+ * @returns {Promise<ProjectScript>} 创建的剧本
+ * @description 在项目下保存一份剧本文档
+ */
 export async function createProjectScript(ctx: AppContext, projectId: string, input: ProjectScriptInput): Promise<ProjectScript> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const now = nowIso();
@@ -89,7 +115,15 @@ export async function createProjectScript(ctx: AppContext, projectId: string, in
   return script;
 }
 
-/** 更新剧本文档的标题、正文、状态或备注。 */
+/**
+ * updateProjectScript - 更新剧本文档
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} scriptId - 剧本ID
+ * @param {ProjectScriptInput} patch - 更新字段
+ * @returns {Promise<ProjectScript>} 更新后的剧本
+ * @description 更新剧本文档的标题、正文、状态或备注
+ */
 export async function updateProjectScript(ctx: AppContext, projectId: string, scriptId: string, patch: ProjectScriptInput): Promise<ProjectScript> {
   const existing = await ctx.projectScripts.findById(scriptId);
   if (!existing || existing.project_id !== projectId) throw new Error("project script not found");
@@ -104,20 +138,52 @@ export async function updateProjectScript(ctx: AppContext, projectId: string, sc
 }
 
 /** 删除项目剧本文档。 */
-export async function deleteProjectScript(ctx: AppContext, projectId: string, scriptId: string): Promise<void> {
+export async function deleteProjectScript(ctx: AppContext, projectId: string, scriptId: string): Promise<{ deleted_at: string }> {
   const existing = await ctx.projectScripts.findById(scriptId);
   if (!existing || existing.project_id !== projectId) throw new Error("project script not found");
-  await ctx.projectScripts.delete(scriptId);
+  const deletedAt = nowIso();
+  await ctx.projectScripts.update(scriptId, { deleted_at: deletedAt, updated_at: deletedAt } as Partial<ProjectScript>);
+  return { deleted_at: deletedAt };
 }
 
-/** 列出项目剧集，按集数排序。 */
+/** 从回收站恢复项目剧本。 */
+export async function restoreProjectScript(ctx: AppContext, projectId: string, scriptId: string): Promise<ProjectScript> {
+  const existing = await ctx.projectScripts.findById(scriptId);
+  if (!existing || existing.project_id !== projectId || !existing.deleted_at) throw new Error("deleted project script not found");
+  await ctx.projectScripts.update(scriptId, { deleted_at: "", updated_at: nowIso() } as Partial<ProjectScript>);
+  return (await ctx.projectScripts.findById(scriptId)) as ProjectScript;
+}
+
+/** 永久删除回收站剧本；必须满足 30 天保留期。 */
+export async function purgeProjectScript(ctx: AppContext, projectId: string, scriptId: string): Promise<{ script_id: string; cascade: Record<string, number> }> {
+  const existing = await ctx.projectScripts.findById(scriptId);
+  if (!existing || existing.project_id !== projectId || !existing.deleted_at) throw new Error("deleted project script not found");
+  const retainedMs = Date.now() - new Date(existing.deleted_at).getTime();
+  if (!Number.isFinite(retainedMs) || retainedMs < 30 * 24 * 60 * 60 * 1000) throw new Error("剧本删除未满 30 天，暂不能彻底删除");
+  await ctx.projectScripts.delete(scriptId);
+  return { script_id: scriptId, cascade: {} };
+}
+
+/**
+ * listProjectEpisodes - 列出项目剧集
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<ProjectEpisode[]>} 剧集列表
+ * @description 按集数排序
+ */
 export async function listProjectEpisodes(ctx: AppContext, projectId: string): Promise<ProjectEpisode[]> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   const episodes = await ctx.projectEpisodes.findMany({ project_id: projectId } as Partial<ProjectEpisode>, { sort: "asc" });
   return episodes.sort((left, right) => left.episode - right.episode || left.created_at.localeCompare(right.created_at));
 }
 
-/** 新增一个剧集规划条目。 */
+/**
+ * createProjectEpisode - 创建剧集规划
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ProjectEpisodeInput} input - 剧集输入参数
+ * @returns {Promise<ProjectEpisode>} 创建的剧集
+ */
 export async function createProjectEpisode(ctx: AppContext, projectId: string, input: ProjectEpisodeInput): Promise<ProjectEpisode> {
   if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
   const now = nowIso();
@@ -138,7 +204,15 @@ export async function createProjectEpisode(ctx: AppContext, projectId: string, i
   return episode;
 }
 
-/** 更新剧集标题、状态、简介、截止日期和备注。 */
+/**
+ * updateProjectEpisode - 更新剧集规划
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} episodeId - 剧集ID
+ * @param {ProjectEpisodeInput} patch - 更新字段
+ * @returns {Promise<ProjectEpisode>} 更新后的剧集
+ * @description 更新剧集标题、状态、简介、截止日期和备注
+ */
 export async function updateProjectEpisode(ctx: AppContext, projectId: string, episodeId: string, patch: ProjectEpisodeInput): Promise<ProjectEpisode> {
   const existing = await ctx.projectEpisodes.findById(episodeId);
   if (!existing || existing.project_id !== projectId) throw new Error("project episode not found");
@@ -153,14 +227,28 @@ export async function updateProjectEpisode(ctx: AppContext, projectId: string, e
   return (await ctx.projectEpisodes.findById(episodeId)) as ProjectEpisode;
 }
 
-/** 删除剧集规划条目，不删除该集已经创建的剧本、分镜或剪辑。 */
+/**
+ * deleteProjectEpisode - 删除剧集规划
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {string} episodeId - 剧集ID
+ * @returns {Promise<void>}
+ * @description 不删除该集已经创建的剧本、分镜或剪辑
+ */
 export async function deleteProjectEpisode(ctx: AppContext, projectId: string, episodeId: string): Promise<void> {
   const existing = await ctx.projectEpisodes.findById(episodeId);
   if (!existing || existing.project_id !== projectId) throw new Error("project episode not found");
   await ctx.projectEpisodes.delete(episodeId);
 }
 
-/** 把剧本文本拆成分镜，并尽量按角色/场景名称自动绑定项目资产。 */
+/**
+ * breakdownProjectScript - 拆分剧本生成分镜
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @param {ScriptBreakdownInput} input - 拆分输入参数
+ * @returns {Promise<ProjectStoryboard[]>} 创建的分镜列表
+ * @description 把剧本文本拆成分镜，并尽量按角色/场景名称自动绑定项目资产
+ */
 export async function breakdownProjectScript(ctx: AppContext, projectId: string, input: ScriptBreakdownInput): Promise<import("../../types.js").ProjectStoryboard[]> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const savedScript = input.script_id ? await ctx.projectScripts.findById(input.script_id) : null;
@@ -178,11 +266,23 @@ export async function breakdownProjectScript(ctx: AppContext, projectId: string,
   ].join("\n");
 
   let text = "";
+  // safeAICall 兜底：AI 调用失败时不静默吞错，而是记录 warn 日志后走 fallback
+  // （parseJsonArray(fallbackScriptShots) 依然可以返回合理的分镜草稿）
   try {
-    for await (const chunk of ctx.ai.chat({ conversationId: "", message: instruction, model: DEFAULT_MODEL })) {
-      text += chunk.content;
-    }
-  } catch {
+    text = await safeAICall("breakdownProjectScript.chat", async () => {
+      let buf = "";
+      for await (const chunk of ctx.ai.chat({ conversationId: "", message: instruction, model: DEFAULT_MODEL })) {
+        buf += chunk.content;
+      }
+      return buf;
+    });
+  } catch (err) {
+    // AI 调用失败不属于用户业务错误，**不能**把异常往上抛让用户看到 500
+    // fallbackScriptShots 会基于剧本正则匹配生成基础分镜草稿
+    rootLogger.warn(
+      { event: "script.breakdown.ai_failed", projectId, err },
+      `剧本拆分为分镜的 AI 调用失败，已回退到本地规则生成草稿：${err instanceof Error ? err.message : String(err)}`,
+    );
     text = "";
   }
 
@@ -219,7 +319,13 @@ export async function breakdownProjectScript(ctx: AppContext, projectId: string,
   return created;
 }
 
-/** 导出项目剧本文档，按集数合并为纯文本。 */
+/**
+ * exportProjectScriptsText - 导出剧本文本
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<string>} 剧本文本
+ * @description 导出项目剧本文档，按集数合并为纯文本
+ */
 export async function exportProjectScriptsText(ctx: AppContext, projectId: string): Promise<string> {
   const scripts = await listProjectScripts(ctx, projectId);
   return scripts.map((script) => [

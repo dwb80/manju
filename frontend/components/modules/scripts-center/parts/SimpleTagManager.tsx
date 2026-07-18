@@ -15,7 +15,7 @@ import { Plus, X, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { clearApiCache } from "@/lib/api-client";
-import { updateScript } from "@/services/module.service";
+import { scriptCenterService } from "@/services/script-center.service";
 import type { Script } from "@/lib/module-types";
 
 export function SimpleTagManager({
@@ -44,7 +44,7 @@ export function SimpleTagManager({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateScript(selectedProjectId, script.id, { tags } as any);
+      await scriptCenterService.updateDocument(script.id, { tags } as any);
       onTagsUpdated({ ...script, tags });
       clearApiCache();
     } catch (err) {

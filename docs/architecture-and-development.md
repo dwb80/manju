@@ -104,7 +104,7 @@ flowchart LR
 
 | 技术 | 用途 |
 |------|------|
-| Node.js 20 LTS | 运行时 |
+| Node.js 24.3.x | 运行时（项目使用 `node:sqlite`，由 `.nvmrc` 与 `engines` 锁定） |
 | TypeScript | 类型安全 |
 | node:sqlite (Node 24 内置) | SQLite 数据库（WAL 模式、参数化语句、软删除） |
 | Swagger | API文档 |

@@ -2,6 +2,7 @@
 
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShadcnSelect } from "@/components/ui/select";
 import { ManagementTable as ProjectManagementTable } from "@/components/project/project-workbench";
 import type { ProjectMilestone, ProjectMilestoneStatus, ProjectMember } from "@/lib/app-types";
 
@@ -76,19 +77,29 @@ export function MilestonesTab(props: MilestonesTabProps) {
                     </label>
                     <label className="space-y-1.5">
                         <span className="block text-sm font-medium text-[#d8d8d8]">状态</span>
-                        <select className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" value={props.milestoneDraft.status ?? "planned"} onChange={(event) => props.setMilestoneDraft((draft) => ({ ...draft, status: event.target.value as ProjectMilestoneStatus }))}>
-                            <option value="planned">计划中</option>
-                            <option value="doing">进行中</option>
-                            <option value="done">已完成</option>
-                            <option value="delayed">延期</option>
-                        </select>
+                        <ShadcnSelect
+                            options={[
+                                { value: "planned", label: "计划中" },
+                                { value: "doing", label: "进行中" },
+                                { value: "done", label: "已完成" },
+                                { value: "delayed", label: "延期" },
+                            ]}
+                            value={props.milestoneDraft.status ?? "planned"}
+                            onChange={(value) => props.setMilestoneDraft((draft) => ({ ...draft, status: value as ProjectMilestoneStatus }))}
+                            className="h-11 w-full text-sm"
+                        />
                     </label>
                     <label className="space-y-1.5">
                         <span className="block text-sm font-medium text-[#d8d8d8]">负责人</span>
-                        <select className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" value={props.milestoneDraft.owner ?? ""} onChange={(event) => props.setMilestoneDraft((draft) => ({ ...draft, owner: event.target.value }))}>
-                            <option value="">负责人</option>
-                            {props.projectMembers.map((member) => <option key={member.id} value={member.name}>{member.name} · {member.role}</option>)}
-                        </select>
+                        <ShadcnSelect
+                            options={[
+                                { value: "", label: "负责人" },
+                                ...props.projectMembers.map((member) => ({ value: member.name, label: `${member.name} · ${member.role}` })),
+                            ]}
+                            value={props.milestoneDraft.owner ?? ""}
+                            onChange={(value) => props.setMilestoneDraft((draft) => ({ ...draft, owner: value }))}
+                            className="h-11 w-full text-sm"
+                        />
                     </label>
                     <label className="space-y-1.5">
                         <span className="block text-sm font-medium text-[#d8d8d8]">截止日期</span>

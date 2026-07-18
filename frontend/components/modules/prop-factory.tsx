@@ -72,12 +72,19 @@ const propAITypeField: AITypeFieldConfig = {
   ],
 };
 
-/** AI 生成对话框：额外字段（外观 / 材质 / 尺寸 / 颜色） */
+/** AI 生成对话框：额外字段（与新建道具表单 propFields 对齐） */
 const propAIExtraFields = [
   { name: "appearance", label: "外观（可留空）", placeholder: "可填写：造型、纹饰、风格…" },
   { name: "material", label: "材质（可留空）", placeholder: "如：金属、木质、水晶" },
   { name: "size", label: "尺寸（可留空）", placeholder: "如：长30cm、高1.5m" },
   { name: "color", label: "颜色（可留空）", placeholder: "如：金色、暗红色" },
+  { name: "importance_level", label: "重要性（可留空）", placeholder: "核心道具 / 普通道具 / 背景道具" },
+  { name: "owner", label: "所属角色（可留空）", placeholder: "如：主角、反派A" },
+  { name: "shape", label: "形状（可留空）", placeholder: "如：圆形、长条形、不规则" },
+  { name: "texture", label: "纹理（可留空）", placeholder: "如：光滑、粗糙、鳞片状" },
+  { name: "story_function", label: "故事功能（可留空）", placeholder: "如：信物、武器、线索" },
+  { name: "visual_features", label: "视觉特征（可留空，逗号分隔）", placeholder: "如：发光, 磨损, 镶嵌宝石" },
+  { name: "camera_usage", label: "镜头使用（可留空，逗号分隔）", placeholder: "如：特写, 手持镜头" },
 ];
 
 /** 道具表单字段配置 */
@@ -105,6 +112,17 @@ const propFields: FormFieldConfig[] = [
   { name: "material", label: "材质", type: "text", placeholder: "如：金属、木质、水晶" },
   { name: "size", label: "尺寸", type: "text", placeholder: "如：长30cm、高1.5m" },
   { name: "color", label: "颜色", type: "text", placeholder: "如：金色、暗红色" },
+  // === AI 剧本分析扩展字段 ===
+  { name: "importance_level", label: "重要性级别", type: "text", placeholder: "核心道具 / 普通道具 / 背景道具" },
+  { name: "owner", label: "所属角色", type: "text", placeholder: "如：主角、反派A" },
+  { name: "shape", label: "形状", type: "text", placeholder: "如：圆形、长条形、不规则" },
+  { name: "texture", label: "纹理", type: "text", placeholder: "如：光滑、粗糙、鳞片状" },
+  { name: "story_function", label: "故事功能", type: "text", placeholder: "如：信物、武器、线索" },
+  { name: "visual_features", label: "视觉特征", type: "text", placeholder: "如：发光, 磨损, 镶嵌宝石" },
+  { name: "camera_usage", label: "镜头使用", type: "text", placeholder: "如：特写, 手持镜头" },
+  { name: "generation_prompt", label: "生成提示词", type: "textarea", placeholder: "AI 生图标准化提示词", rows: 2 },
+  { name: "first_appearance", label: "首次出现", type: "text", placeholder: "如：EP01-Scene01" },
+  { name: "confidence", label: "可信度", type: "text", placeholder: "confirmed / inferred" },
 ];
 
 /** 道具类别颜色映射 */
@@ -143,6 +161,7 @@ function PropCard({
         image: prop.image,
         tags: prop.tags,
         type: "prop",
+        asset_id: prop.id,
         project_id: selectedProjectId,
       });
       clearApiCache();
@@ -165,6 +184,15 @@ function PropCard({
     } else {
       router.push(`/storyboards?focus=usage:${ref.id}`);
     }
+  };
+
+  // 打开道具编辑页（新标签页）—— 全屏生图界面
+  const handleEdit = () => {
+    window.open(
+      `/props/${encodeURIComponent(prop.id)}/edit`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   return (
@@ -239,7 +267,7 @@ function PropCard({
           </div>
         )}
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={actions.onEdit}>
+          <Button variant="ghost" size="sm" onClick={handleEdit} title="在新标签页打开道具编辑页（配生图）">
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
@@ -307,6 +335,17 @@ const config: FactoryCRUDPageProps<Prop> = {
     material: p.material || "",
     size: p.size || "",
     color: p.color || "",
+    // === AI 剧本分析扩展字段 ===
+    importance_level: p.importance_level || "",
+    owner: p.owner || "",
+    shape: p.shape || "",
+    texture: p.texture || "",
+    story_function: p.story_function || "",
+    visual_features: p.visual_features || "",
+    camera_usage: p.camera_usage || "",
+    generation_prompt: p.generation_prompt || "",
+    first_appearance: p.first_appearance || "",
+    confidence: p.confidence || "",
   }),
   transformFormValues: (values, projectId) => ({ ...values, project_id: projectId }),
 
@@ -394,6 +433,15 @@ const config: FactoryCRUDPageProps<Prop> = {
         material: (payload.extra.material ?? "").trim(),
         size: (payload.extra.size ?? "").trim(),
         color: (payload.extra.color ?? "").trim(),
+        // === AI 剧本分析扩展字段 ===
+        importance_level: (payload.extra.importance_level ?? "").trim(),
+        owner: (payload.extra.owner ?? "").trim(),
+        shape: (payload.extra.shape ?? "").trim(),
+        texture: (payload.extra.texture ?? "").trim(),
+        story_function: (payload.extra.story_function ?? "").trim(),
+        visual_features: (payload.extra.visual_features ?? "").trim(),
+        camera_usage: (payload.extra.camera_usage ?? "").trim(),
+        generation_prompt: payload.prompt,
         tags,
       } as any);
     },
@@ -412,6 +460,8 @@ const config: FactoryCRUDPageProps<Prop> = {
       image: (entity as { image?: string }).image,
       tags: (entity as { tags?: string[] }).tags,
       type: "prop",
+      asset_id: entity.id,
+      project_id: (entity as { project_id?: string }).project_id,
     });
   },
 };
@@ -422,6 +472,7 @@ export function PropFactoryPage() {
       {...config}
       // 任务12：统一版本管理 - 启用版本历史入口
       fetchVersions={{ entityType: "prop" }}
+      showStats={false}
     />
   );
 }

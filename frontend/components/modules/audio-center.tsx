@@ -15,6 +15,14 @@
 import { useState, useRef, useEffect } from "react";
 import { Music, Pencil, Trash2, CheckSquare, Wand2, Volume2, Mic, X, Loader2, Link as LinkIcon, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { FactoryCRUDPage, type FactoryCRUDPageProps, getEntityLabel } from "@/components/factory";
 import { EntityPicker } from "@/components/shared";
 import { toast } from "@/components/common/toast";
@@ -105,22 +113,17 @@ function AssociateStoryboardDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-lg overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a] shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-          <div className="flex items-center gap-2">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="border-border">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <LinkIcon className="h-4 w-4 text-emerald-400" />
-            <h2 className="text-sm font-medium text-white">关联分镜 · {audio.name}</h2>
-          </div>
-          <button type="button" onClick={onClose} className="text-[#888] hover:text-white" aria-label="关闭">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+            关联分镜 · {audio.name}
+          </DialogTitle>
+          <DialogDescription>将这条音频绑定到指定分镜，或解除关联</DialogDescription>
+        </DialogHeader>
 
-        <div className="space-y-3 p-5">
+        <div className="space-y-3 px-6">
           <EntityPicker<Storyboard>
             name="audio-storyboard"
             label="关联分镜（这条音频用在哪个镜头）"
@@ -135,14 +138,14 @@ function AssociateStoryboardDialog({
           />
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-white/10 px-5 py-3">
+        <DialogFooter className="gap-2">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>取消</Button>
           <Button variant="secondary" size="sm" onClick={handleSubmit} disabled={busy}>
             {busy ? <><Loader2 className="mr-1 h-3 w-3 animate-spin" />保存中...</> : "保存关联"}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -217,34 +220,24 @@ function TTSDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-lg overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a] shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-          <div className="flex items-center gap-2">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="border-border">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-emerald-400" />
-            <h2 className="text-sm font-medium text-white">AI 配音 · {audio.name}</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[#888] hover:text-white"
-            aria-label="关闭"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+            AI 配音 · {audio.name}
+          </DialogTitle>
+          <DialogDescription>输入配音文本并选择角色与语速，生成新的音频文件</DialogDescription>
+        </DialogHeader>
 
-        <div className="space-y-3 p-5">
+        <div className="space-y-3 px-6">
           <div>
-            <label className="mb-1 block text-xs text-[#888]">配音文本</label>
+            <label className="mb-1 block text-xs text-muted-foreground">配音文本</label>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={5}
-              className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
+              className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/40"
               placeholder="请输入要配音的文本..."
             />
           </div>
@@ -263,7 +256,7 @@ function TTSDialog({
           />
 
           <div>
-            <label className="mb-1 block text-xs text-[#888]">
+            <label className="mb-1 block text-xs text-muted-foreground">
               语速：<span className="text-emerald-300">{speed.toFixed(1)}x</span>
             </label>
             <input
@@ -278,7 +271,7 @@ function TTSDialog({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-white/10 px-5 py-3">
+        <DialogFooter className="gap-2">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>
             取消
           </Button>
@@ -295,9 +288,9 @@ function TTSDialog({
               </>
             )}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -321,11 +314,10 @@ function AudioCard({
   const display = getEntityLabel(a, "未命名音频");
   return (
     <div
-      className={`group relative rounded-lg border bg-[#202020] p-3 transition-colors ${
-        actions.selected
-          ? "border-emerald-500 ring-1 ring-emerald-500/40"
-          : "border-white/10 hover:border-emerald-500/50"
-      }`}
+      className={`group relative rounded-lg border bg-[#202020] p-3 transition-colors ${actions.selected
+        ? "border-emerald-500 ring-1 ring-emerald-500/40"
+        : "border-white/10 hover:border-emerald-500/50"
+        }`}
     >
       <div className="flex items-center gap-3">
         <button
@@ -334,11 +326,10 @@ function AudioCard({
             e.stopPropagation();
             actions.onToggleSelect();
           }}
-          className={`grid h-5 w-5 shrink-0 place-items-center rounded border transition-opacity ${
-            actions.selected
-              ? "border-emerald-500 bg-emerald-500 opacity-100"
-              : "border-white/40 bg-black/30 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
-          }`}
+          className={`grid h-5 w-5 shrink-0 place-items-center rounded border transition-opacity ${actions.selected
+            ? "border-emerald-500 bg-emerald-500 opacity-100"
+            : "border-white/40 bg-black/30 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
+            }`}
           aria-label={actions.selected ? "取消选择" : "选择"}
         >
           {actions.selected && <CheckSquare className="h-3 w-3 text-white" />}
@@ -477,6 +468,8 @@ const config: FactoryCRUDPageProps<AudioItem> = {
     { label: "背景音乐", value: list.filter((a) => a.type === "bgm").length, color: "purple" },
     { label: "音效", value: list.filter((a) => a.type === "sfx").length, color: "orange" },
   ],
+  // 音频中心：不展示顶部统计卡片
+  showStats: false,
 };
 
 export function AudioCenterPage() {

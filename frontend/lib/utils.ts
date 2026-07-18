@@ -1,7 +1,16 @@
+/**
+ * @file utils.ts
+ * @description 通用工具函数，提供 className 合并、防抖等基础能力
+ */
+
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-/** 合并 Tailwind className，并自动处理冲突的样式类。 */
+/**
+ * cn - 合并 Tailwind className，并自动处理冲突的样式类
+ * @param {...ClassValue[]} inputs - 样式类名列表
+ * @returns {string} 合并后的类名字符串
+ */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

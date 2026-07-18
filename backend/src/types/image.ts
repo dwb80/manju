@@ -1,6 +1,13 @@
+/**
+ * @file image.ts
+ * @description 图片生成相关类型定义，包括图片参数、图片任务等
+ */
+
 import type { TaskStatus } from "./common.js";
 
-/** Agnes Image 模型选项。 */
+/**
+ * Agnes Image 模型类型
+ */
 export type ImageModel = "agnes-image-2.1-flash";
 
 /** 图片生成入参，images 支持多张参考图；model 允许调用方显式指定模型（默认 agnes-image-2.1-flash）。 */

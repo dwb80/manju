@@ -105,7 +105,13 @@ const GenerationItem = memo(function GenerationItem({
   );
 });
 
-/** 最近生成组件 */
+/**
+ * RecentGenerations - 最近生成组件
+ * @param {RecentGenerationsProps} props - 组件属性
+ * @param {RecentGenerationData[]} props.items - 生成项列表
+ * @param {Function} props.onItemClick - 点击项回调
+ * @returns {JSX.Element} 渲染的最近生成列表界面
+ */
 export const RecentGenerations = memo(function RecentGenerations({
   items,
   onItemClick,

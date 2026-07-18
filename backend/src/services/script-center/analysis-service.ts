@@ -17,6 +17,12 @@ import type { ParsedDialogue } from "./types.js";
  * 解析剧本文档，提取场景、对白等结构化信息。
  * 仅用于预览/分析：返回的对象 id 为空字符串，需要 persistAnalyzedAssets 才能落库。
  */
+/**
+ * parseScriptDocument - 解析剧本文档，提取场景、对白等结构化信息
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} documentId - 文档ID
+ * @returns {Promise<{scenes: ScriptScene[]; dialogues: ScriptDialogue[]}>} 返回场景和对白列表
+ */
 export async function parseScriptDocument(ctx: AppContext, documentId: string): Promise<{
   scenes: ScriptScene[];
   dialogues: ScriptDialogue[];
@@ -63,6 +69,14 @@ export async function parseScriptDocument(ctx: AppContext, documentId: string): 
 }
 
 /** 把 parser 出的 ParsedDialogue 收敛成 ScriptDialogue 形状 */
+/**
+ * mapParsedDialogue - 把parser出的ParsedDialogue收敛成ScriptDialogue形状
+ * @param {ParsedDialogue} pd - 解析后的对白
+ * @param {string} projectId - 项目ID
+ * @param {string} sceneId - 场景ID
+ * @param {number} order - 顺序
+ * @returns {ScriptDialogue} 返回ScriptDialogue对象
+ */
 function mapParsedDialogue(
   pd: ParsedDialogue,
   projectId: string,
@@ -83,6 +97,12 @@ function mapParsedDialogue(
   };
 }
 
+/**
+ * getScriptStatistics - 获取剧本统计信息
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} documentId - 文档ID
+ * @returns {Promise<object>} 返回统计信息（字数、场景数、角色频率等）
+ */
 export async function getScriptStatistics(ctx: AppContext, documentId: string): Promise<{
   totalWords: number;
   totalScenes: number;
@@ -145,6 +165,12 @@ export async function getScriptStatistics(ctx: AppContext, documentId: string): 
  * 用对白密度代理场景情绪张力。再加描述长度修正（描述长 → 节奏慢）。
  * 最多返回前 20 场。
  */
+/**
+ * computePacingData - 计算节奏强度数据
+ * @param {ScriptScene[]} scenes - 场景列表
+ * @param {ScriptDialogue[]} dialogues - 对白列表
+ * @returns {Array<{position: number; intensity: number}>} 返回节奏数据
+ */
 function computePacingData(
   scenes: ScriptScene[],
   dialogues: ScriptDialogue[]
@@ -173,6 +199,12 @@ function computePacingData(
   });
 }
 
+/**
+ * checkScriptContinuity - 检查剧本连续性
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} documentId - 文档ID
+ * @returns {Promise<{issues: Array}>} 返回问题列表
+ */
 export async function checkScriptContinuity(ctx: AppContext, documentId: string): Promise<{
   issues: Array<{
     type: "character" | "scene" | "timeline" | "prop";
@@ -238,6 +270,12 @@ export async function checkScriptContinuity(ctx: AppContext, documentId: string)
   return { issues };
 }
 
+/**
+ * getDocumentVersions - 获取文档当前版本和历史
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} documentId - 文档ID
+ * @returns {Promise<{current: ScriptDocument | null; history: ScriptBackup[]}>} 返回当前文档和历史版本
+ */
 export async function getDocumentVersions(ctx: AppContext, documentId: string): Promise<{
   current: ScriptDocument | null;
   history: ScriptBackup[];
