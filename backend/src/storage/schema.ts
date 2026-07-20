@@ -23,6 +23,7 @@ import type { FieldSpec } from "./repository.js";
 
 export const conversationFields: FieldSpec<Conversation>[] = [
   { key: "id", type: "string" },
+  { key: "user_id", type: "string" },
   { key: "title", type: "string" },
   { key: "model", type: "string" },
   { key: "mode", type: "string" },
@@ -65,6 +66,7 @@ export const messageFields: FieldSpec<Message>[] = [
 
 export const imageTaskFields: FieldSpec<ImageTask>[] = [
   { key: "id", type: "string" },
+  { key: "user_id", type: "string" },
   { key: "prompt", type: "string" },
   { key: "negative", type: "string" },
   { key: "params", type: "json" },
@@ -77,6 +79,7 @@ export const imageTaskFields: FieldSpec<ImageTask>[] = [
 
 export const videoTaskFields: FieldSpec<VideoTask>[] = [
   { key: "id", type: "string" },
+  { key: "user_id", type: "string" },
   { key: "prompt", type: "string" },
   { key: "image_url", type: "string" },
   { key: "params", type: "json" },
@@ -91,6 +94,7 @@ export const videoTaskFields: FieldSpec<VideoTask>[] = [
 
 export const favoriteFields: FieldSpec<Favorite>[] = [
   { key: "id", type: "string" },
+  { key: "user_id", type: "string" },
   { key: "type", type: "string" },
   { key: "ref_id", type: "string" },
   { key: "created_at", type: "string" },
@@ -273,7 +277,7 @@ export const projectMemberFields: FieldSpec<ProjectMember>[] = [
 ];
 
 export const publishPlanFields: FieldSpec<PublishPlan>[] = [
-  { key: "id", type: "string" }, { key: "name", type: "string" },
+  { key: "id", type: "string" }, { key: "project_id", type: "string" }, { key: "name", type: "string" },
   { key: "status", type: "string" }, { key: "plannedDate", type: "string" },
   { key: "publishedDate", type: "string" }, { key: "videos", type: "json" },
   { key: "platforms", type: "json" }, { key: "assignee", type: "string" },

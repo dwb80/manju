@@ -37,6 +37,7 @@ export interface ImageParams {
 /** 图片生成任务，保存提示词、参数、结果图 URL 和执行状态。 */
 export interface ImageTask {
   id: string;
+  user_id?: string;
   conversation_id: string;
   prompt: string;
   negative: string;

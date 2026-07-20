@@ -32,6 +32,15 @@ import { Textarea } from "@/components/ui/textarea";
 
 type Mode = "chat" | "image" | "video" | "favorites";
 type Status = "pending" | "processing" | "success" | "failed";
+type DraftStatus = "idle" | "restored" | "saving" | "saved" | "unavailable";
+
+const STUDIO_DRAFT_PREFIX = "manju:studio-draft:v1";
+
+/** 草稿按会话和创作类型隔离，避免切换聊天/图片/视频时提示词串台。 */
+function studioDraftKey(conversationId: string, mode: Mode): string {
+  if (!conversationId || mode === "favorites") return "";
+  return `${STUDIO_DRAFT_PREFIX}:${conversationId}:${mode}`;
+}
 
 interface Conversation {
   id: string;
@@ -131,13 +140,14 @@ function apiUrl(path: string): string {
 /** 生成接口候选地址，兼容前端代理和直连后端两种开发方式。 */
 function apiCandidates(path: string): string[] {
   if (/^https?:\/\//.test(path)) return [path];
-  return Array.from(new Set([apiUrl(path), path]));
+  return [path];
 }
 
 /** 调用普通 JSON API，并把后端统一响应解包成 data。 */
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const requestInit = {
     headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+    credentials: "include" as const,
     ...init,
   };
   let response: Response | null = null;
@@ -326,14 +336,21 @@ export default function Home() {
   const [projectActionMenuId, setProjectActionMenuId] = useState("");
   const [submittingConversationIds, setSubmittingConversationIds] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef("");
   const noticeTimerRef = useRef<number | null>(null);
+  const promptRef = useRef("");
+  const previousDraftKeyRef = useRef("");
+  const skipNextDraftSaveRef = useRef(false);
+  const activeDraftKeyRef = useRef("");
 
   const selectedProject = projects.find((project) => project.id === projectScope);
   const projectScopeLabel = projectScope === "all" ? "全部项目" : projectScope === "" ? "不使用项目" : selectedProject?.name ?? "项目";
   const currentConversationSubmitting = submittingConversationIds.includes(conversationId);
+  const activeDraftKey = studioDraftKey(conversationId, mode);
+  activeDraftKeyRef.current = activeDraftKey;
 
   /** 显示顶部临时提示，并在短时间后自动清空。 */
   function showNotice(message: string) {
@@ -508,6 +525,93 @@ export default function Home() {
     return () => window.clearInterval(timer);
   }, [runningVideoConversationIds]);
 
+  useEffect(() => {
+    promptRef.current = prompt;
+  }, [prompt]);
+
+  /** 切换会话或创作类型时先保存旧稿，再无打扰地恢复对应草稿。 */
+  useEffect(() => {
+    const previousKey = previousDraftKeyRef.current;
+    if (previousKey && previousKey !== activeDraftKey) {
+      try {
+        const previousPrompt = promptRef.current.trim();
+        if (previousPrompt) window.localStorage.setItem(previousKey, promptRef.current);
+        else window.localStorage.removeItem(previousKey);
+      } catch {
+        // 隐私模式或存储被禁用时仍允许正常创作。
+      }
+    }
+
+    previousDraftKeyRef.current = activeDraftKey;
+    if (!activeDraftKey) return;
+
+    try {
+      const restored = window.localStorage.getItem(activeDraftKey) ?? "";
+      skipNextDraftSaveRef.current = true;
+      promptRef.current = restored;
+      setPrompt(restored);
+      setDraftStatus(restored.trim() ? "restored" : "idle");
+    } catch {
+      setDraftStatus("unavailable");
+    }
+  }, [activeDraftKey]);
+
+  /** 输入停顿后保存，减少写入频率，同时给用户明确但低调的安心反馈。 */
+  useEffect(() => {
+    if (!activeDraftKey) return;
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false;
+      return;
+    }
+    setDraftStatus(prompt.trim() ? "saving" : "idle");
+    const timer = window.setTimeout(() => {
+      try {
+        if (prompt.trim()) {
+          window.localStorage.setItem(activeDraftKey, prompt);
+          setDraftStatus("saved");
+        } else {
+          window.localStorage.removeItem(activeDraftKey);
+          setDraftStatus("idle");
+        }
+      } catch {
+        setDraftStatus("unavailable");
+      }
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [activeDraftKey, prompt]);
+
+  /** 主动清空当前文字与本地草稿，避免用户需要逐字删除。 */
+  function clearCurrentDraft() {
+    setPrompt("");
+    promptRef.current = "";
+    if (activeDraftKey) {
+      try {
+        window.localStorage.removeItem(activeDraftKey);
+      } catch {
+        // 清空输入本身不应被存储异常阻断。
+      }
+    }
+    setDraftStatus("idle");
+  }
+
+  /** 请求失败时把文字与附件交还给仍停留在原编辑器的用户，并始终保留文字草稿。 */
+  function restoreFailedSubmission(text: string, draftKey: string, attachmentSnapshot: Attachment[]) {
+    let stored = false;
+    if (draftKey) {
+      try {
+        window.localStorage.setItem(draftKey, text);
+        stored = true;
+      } catch {
+        // 页面内恢复仍然可用。
+      }
+    }
+    if (activeDraftKeyRef.current !== draftKey) return;
+    setPrompt(text);
+    promptRef.current = text;
+    setAttachments(attachmentSnapshot);
+    setDraftStatus(stored ? "saved" : "unavailable");
+  }
+
   /** 校验并上传图片附件，然后在输入框上方显示预览。 */
   async function addFiles(files: FileList | File[]) {
     const validFiles: File[] = [];
@@ -626,6 +730,7 @@ export default function Home() {
     const text = prompt.trim();
     if (!text) return;
     const targetConversationId = conversationId;
+    const targetDraftKey = activeDraftKey;
     if (!targetConversationId) return;
     if (submittingConversationIds.includes(targetConversationId)) return;
     const attachmentSnapshot = attachments;
@@ -639,6 +744,15 @@ export default function Home() {
       return;
     }
     setPrompt("");
+    promptRef.current = "";
+    if (activeDraftKey) {
+      try {
+        window.localStorage.removeItem(activeDraftKey);
+      } catch {
+        // 发送成功路径不依赖本地存储。
+      }
+    }
+    setDraftStatus("idle");
     setSubmittingConversationIds((items) => items.includes(targetConversationId) ? items : [...items, targetConversationId]);
     setNotice("");
     try {
@@ -685,6 +799,7 @@ export default function Home() {
           setNotice("图片已生成");
         } catch (error) {
           setImageRequests((items) => items.map((item) => item.id === requestId ? { ...item, status: "failed", error: (error as Error).message || "图片生成失败" } : item));
+          restoreFailedSubmission(text, targetDraftKey, attachmentSnapshot);
           setNotice((error as Error).message || "图片生成失败");
         }
       }
@@ -699,6 +814,9 @@ export default function Home() {
         await loadVideos();
         setNotice("视频任务已提交");
       }
+    } catch (error) {
+      restoreFailedSubmission(text, targetDraftKey, attachmentSnapshot);
+      setNotice((error as Error).message || "提交失败，请稍后重试");
     } finally {
       setSubmittingConversationIds((items) => items.filter((id) => id !== targetConversationId));
       await loadConversations("", projectScope);
@@ -1444,6 +1562,28 @@ export default function Home() {
                 }
               }}
             />
+            <div className="flex min-h-5 items-center justify-between gap-3 px-2 text-[11px] text-[#9b9b9b]" aria-live="polite">
+              <span className="flex min-w-0 items-center gap-1.5">
+                {draftStatus === "saving" && <Loader2 className="h-3 w-3 shrink-0 animate-spin" />}
+                {(draftStatus === "saved" || draftStatus === "restored") && <Check className="h-3 w-3 shrink-0 text-emerald-400" />}
+                <span className="truncate">
+                  {draftStatus === "saving" && "正在保存草稿…"}
+                  {draftStatus === "saved" && "草稿已保存到本机"}
+                  {draftStatus === "restored" && "已恢复上次未发送的草稿"}
+                  {draftStatus === "unavailable" && "当前浏览器无法保存草稿"}
+                </span>
+              </span>
+              {prompt.trim() && (
+                <button
+                  type="button"
+                  className="shrink-0 rounded px-1.5 py-0.5 text-[#b4b4b4] transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500"
+                  onClick={clearCurrentDraft}
+                  aria-label="清空当前草稿"
+                >
+                  清空
+                </button>
+              )}
+            </div>
             <div className="mt-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <input

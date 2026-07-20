@@ -83,6 +83,27 @@ export interface BatchOperationResponse {
   failed: Array<{ id: string; error: string }>;
 }
 
+/** 当前用户对 AI 任务及其所属项目的访问上下文。 */
+export interface AITaskAccessContext {
+  userId: string;
+  isAdmin: boolean;
+  canAccessProject: (projectId: string) => Promise<boolean>;
+}
+
+function ownsTask(task: ImageTask | VideoTask, access: AITaskAccessContext): boolean {
+  return task.user_id === access.userId || (!task.user_id && access.isAdmin);
+}
+
+async function canUseTask(
+  ctx: AppContext,
+  task: ImageTask | VideoTask,
+  access: AITaskAccessContext,
+): Promise<boolean> {
+  if (!ownsTask(task, access)) return false;
+  const projectId = await getProjectIdByConversationId(ctx, task.conversation_id);
+  return !projectId || access.canAccessProject(projectId);
+}
+
 /**
  * convertImageTask - 将 ImageTask 转换为统一的 AITask 格式
  * @param {ImageTask} task - 图片任务对象
@@ -154,7 +175,8 @@ async function getProjectIdByConversationId(ctx: AppContext, conversationId: str
  */
 export async function listAITasks(
   ctx: AppContext,
-  params: AITaskQueryParams
+  params: AITaskQueryParams,
+  access: AITaskAccessContext,
 ): Promise<AITaskListResponse> {
   // 获取所有图片任务
   const imageTasks = await ctx.images.findMany({}, { sort: "desc" });
@@ -168,6 +190,7 @@ export async function listAITasks(
 
   // 处理图片任务
   for (const task of imageTasks) {
+    if (!(await canUseTask(ctx, task, access))) continue;
     const conversationId = task.conversation_id || findConversationIdByTime(task.created_at, conversations);
     const projectId = await getProjectIdByConversationId(ctx, conversationId);
     allTasks.push(convertImageTask(task, projectId));
@@ -175,6 +198,7 @@ export async function listAITasks(
 
   // 处理视频任务
   for (const task of videoTasks) {
+    if (!(await canUseTask(ctx, task, access))) continue;
     const conversationId = task.conversation_id || findConversationIdByTime(task.created_at, conversations);
     const projectId = await getProjectIdByConversationId(ctx, conversationId);
     allTasks.push(convertVideoTask(task, projectId));
@@ -263,10 +287,10 @@ function findConversationIdByTime(createdAt: string, conversations: Array<{ id: 
  * @param {string} taskId - 任务ID
  * @returns {Promise<AITask | null>} 任务详情，不存在则返回 null
  */
-export async function getAITaskById(ctx: AppContext, taskId: string): Promise<AITask | null> {
+export async function getAITaskById(ctx: AppContext, taskId: string, access: AITaskAccessContext): Promise<AITask | null> {
   // 尝试查找图片任务
   const imageTask = await ctx.images.findById(taskId);
-  if (imageTask) {
+  if (imageTask && await canUseTask(ctx, imageTask, access)) {
     const conversationId = imageTask.conversation_id;
     const projectId = await getProjectIdByConversationId(ctx, conversationId);
     return convertImageTask(imageTask, projectId);
@@ -274,7 +298,7 @@ export async function getAITaskById(ctx: AppContext, taskId: string): Promise<AI
 
   // 尝试查找视频任务
   const videoTask = await ctx.videos.findById(taskId);
-  if (videoTask) {
+  if (videoTask && await canUseTask(ctx, videoTask, access)) {
     const conversationId = videoTask.conversation_id;
     const projectId = await getProjectIdByConversationId(ctx, conversationId);
     return convertVideoTask(videoTask, projectId);
@@ -292,7 +316,8 @@ export async function getAITaskById(ctx: AppContext, taskId: string): Promise<AI
  */
 export async function cancelAITasks(
   ctx: AppContext,
-  taskIds: string[]
+  taskIds: string[],
+  access: AITaskAccessContext,
 ): Promise<BatchOperationResponse> {
   const success: string[] = [];
   const failed: Array<{ id: string; error: string }> = [];
@@ -302,6 +327,10 @@ export async function cancelAITasks(
       // 尝试查找并取消图片任务
       const imageTask = await ctx.images.findById(taskId);
       if (imageTask) {
+        if (!(await canUseTask(ctx, imageTask, access))) {
+          failed.push({ id: taskId, error: "任务不存在" });
+          continue;
+        }
         if (imageTask.status === "pending" || imageTask.status === "processing") {
           await ctx.images.update(taskId, {
             status: "failed" as TaskStatus,
@@ -317,6 +346,10 @@ export async function cancelAITasks(
       // 尝试查找并取消视频任务
       const videoTask = await ctx.videos.findById(taskId);
       if (videoTask) {
+        if (!(await canUseTask(ctx, videoTask, access))) {
+          failed.push({ id: taskId, error: "任务不存在" });
+          continue;
+        }
         if (videoTask.status === "pending" || videoTask.status === "processing") {
           await ctx.videos.update(taskId, {
             status: "failed" as TaskStatus,
@@ -350,7 +383,8 @@ export async function cancelAITasks(
  */
 export async function retryAITasks(
   ctx: AppContext,
-  taskIds: string[]
+  taskIds: string[],
+  access: AITaskAccessContext,
 ): Promise<BatchOperationResponse> {
   const success: string[] = [];
   const failed: Array<{ id: string; error: string }> = [];
@@ -360,6 +394,10 @@ export async function retryAITasks(
       // 尝试查找并重试图片任务
       const imageTask = await ctx.images.findById(taskId);
       if (imageTask) {
+        if (!(await canUseTask(ctx, imageTask, access))) {
+          failed.push({ id: taskId, error: "任务不存在" });
+          continue;
+        }
         if (imageTask.status === "failed") {
           // 这里只是标记为pending，实际重新生成需要前端重新调用generateImage API
           await ctx.images.update(taskId, {
@@ -376,6 +414,10 @@ export async function retryAITasks(
       // 尝试查找并重试视频任务
       const videoTask = await ctx.videos.findById(taskId);
       if (videoTask) {
+        if (!(await canUseTask(ctx, videoTask, access))) {
+          failed.push({ id: taskId, error: "任务不存在" });
+          continue;
+        }
         if (videoTask.status === "failed") {
           // 这里只是标记为pending，实际重新生成需要前端重新调用generateVideo API
           await ctx.videos.update(taskId, {
@@ -407,17 +449,17 @@ export async function retryAITasks(
  * @param {string} taskId - 任务ID
  * @returns {Promise<boolean>} 是否删除成功
  */
-export async function deleteAITask(ctx: AppContext, taskId: string): Promise<boolean> {
+export async function deleteAITask(ctx: AppContext, taskId: string, access: AITaskAccessContext): Promise<boolean> {
   // 尝试删除图片任务
   const imageTask = await ctx.images.findById(taskId);
-  if (imageTask) {
+  if (imageTask && await canUseTask(ctx, imageTask, access)) {
     await ctx.images.delete(taskId);
     return true;
   }
 
   // 尝试删除视频任务
   const videoTask = await ctx.videos.findById(taskId);
-  if (videoTask) {
+  if (videoTask && await canUseTask(ctx, videoTask, access)) {
     await ctx.videos.delete(taskId);
     return true;
   }
@@ -485,7 +527,8 @@ function sendErrorResponse(res: ServerResponse, error: unknown, status = 400): v
 export async function handleAITasksRouter(
   ctx: AppContext,
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
+  access: AITaskAccessContext,
 ): Promise<void> {
   const method = req.method ?? "GET";
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -495,7 +538,7 @@ export async function handleAITasksRouter(
     // GET /api/ai/tasks - 获取所有AI任务列表
     if (method === "GET" && pathname === "/api/ai/tasks") {
       const params = parseQueryParams(req);
-      const result = await listAITasks(ctx, params);
+      const result = await listAITasks(ctx, params, access);
       sendJsonResponse(res, result);
       return;
     }
@@ -503,7 +546,7 @@ export async function handleAITasksRouter(
     // GET /api/ai/tasks/:id - 获取单个AI任务详情
     if (method === "GET" && pathname.startsWith("/api/ai/tasks/") && pathname !== "/api/ai/tasks/cancel" && pathname !== "/api/ai/tasks/retry") {
       const taskId = pathname.replace("/api/ai/tasks/", "");
-      const task = await getAITaskById(ctx, taskId);
+      const task = await getAITaskById(ctx, taskId, access);
       if (!task) {
         sendErrorResponse(res, new Error("任务不存在"), 404);
         return;
@@ -524,7 +567,7 @@ export async function handleAITasksRouter(
         return;
       }
 
-      const result = await cancelAITasks(ctx, taskIds);
+      const result = await cancelAITasks(ctx, taskIds, access);
       sendJsonResponse(res, result);
       return;
     }
@@ -541,7 +584,7 @@ export async function handleAITasksRouter(
         return;
       }
 
-      const result = await retryAITasks(ctx, taskIds);
+      const result = await retryAITasks(ctx, taskIds, access);
       sendJsonResponse(res, result);
       return;
     }
@@ -549,7 +592,7 @@ export async function handleAITasksRouter(
     // DELETE /api/ai/tasks/:id - 删除单个任务
     if (method === "DELETE" && pathname.startsWith("/api/ai/tasks/") && pathname !== "/api/ai/tasks/cancel" && pathname !== "/api/ai/tasks/retry") {
       const taskId = pathname.replace("/api/ai/tasks/", "");
-      const deleted = await deleteAITask(ctx, taskId);
+      const deleted = await deleteAITask(ctx, taskId, access);
       if (!deleted) {
         sendErrorResponse(res, new Error("任务不存在"), 404);
         return;

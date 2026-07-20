@@ -75,6 +75,14 @@ import type { ReviewItem, ReviewStatus, ReviewTargetType, RejectionReasonCode } 
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
 const requestPrincipals = new WeakMap<IncomingMessage, AuthPrincipal>();
+const TODO_STATUSES = new Set<unknown>(["pending", "doing", "done"]);
+const TODO_PRIORITIES = new Set<unknown>(["low", "medium", "high"]);
+
+function requireRequestPrincipal(req: IncomingMessage): AuthPrincipal {
+  const principal = requestPrincipals.get(req);
+  if (!principal) throw new Error("无法识别当前登录用户");
+  return principal;
+}
 
 const mediaTypes: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -241,6 +249,7 @@ function applyCors(req: IncomingMessage, res: ServerResponse): boolean {
   if (typeof origin === "string" && !allowed.has(origin)) return false;
   if (typeof origin === "string") {
     res.setHeader("access-control-allow-origin", origin);
+    res.setHeader("access-control-allow-credentials", "true");
     res.setHeader("vary", "Origin");
   }
   res.setHeader("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
@@ -252,7 +261,35 @@ function applyCors(req: IncomingMessage, res: ServerResponse): boolean {
 function requestProjectId(req: IncomingMessage): string | null {
   const url = new URL(req.url ?? "/", "http://localhost");
   const pathMatch = url.pathname.match(/^\/api\/projects\/([^/]+)/);
-  return pathMatch?.[1] ?? url.searchParams.get("projectId");
+  const pipelineMatch = url.pathname.match(/^\/api\/pipeline\/([^/]+)\/state$/);
+  const projectMediaMatch = url.pathname.match(/^\/project-media\/([^/]+)/);
+  return pathMatch?.[1] ?? pipelineMatch?.[1] ?? projectMediaMatch?.[1] ?? url.searchParams.get("projectId");
+}
+
+async function requestResourceProjectId(ctx: AppContext, req: IncomingMessage): Promise<string | null> {
+  const parts = routeParts(req);
+  if (parts[0] !== "api" || !parts[1] || !parts[2]) return null;
+  const resourceId = parts[2];
+  const repositories = {
+    characters: ctx.characters,
+    scenes: ctx.scenes,
+    props: ctx.props,
+    storyboards: ctx.storyboards,
+    audios: ctx.audios,
+    "module-videos": ctx.moduleVideos,
+    "character-images": ctx.characterImages,
+    "scene-images": ctx.sceneImages,
+    "prop-images": ctx.propImages,
+    "character-image-history": ctx.characterImageHistory,
+    "scene-image-history": ctx.sceneImageHistory,
+    "prop-image-history": ctx.propImageHistory,
+  } as const;
+  const repository = repositories[parts[1] as keyof typeof repositories];
+  if (!repository) return null;
+  const reserved = new Set(["deleted", "permanent", "copy", "batch", "clear"]);
+  if (reserved.has(resourceId)) return null;
+  const record = await repository.findById(resourceId) as { project_id?: string } | null;
+  return record?.project_id ?? null;
 }
 
 async function canAccessProject(ctx: AppContext, principal: AuthPrincipal, projectId: string): Promise<boolean> {
@@ -268,6 +305,28 @@ async function canAccessProject(ctx: AppContext, principal: AuthPrincipal, proje
   }
 }
 
+async function requireProjectAccess(
+  ctx: AppContext,
+  req: IncomingMessage,
+  res: ServerResponse,
+  projectId: string | undefined,
+): Promise<boolean> {
+  if (!projectId || !(await canAccessProject(ctx, requireRequestPrincipal(req), projectId))) {
+    sendError(res, new Error("无权访问该项目"), 403);
+    return false;
+  }
+  return true;
+}
+
+function ownsPersonalRecord(record: { user_id?: string }, principal: AuthPrincipal): boolean {
+  return record.user_id === principal.userId || (!record.user_id && principal.role === "admin");
+}
+
+async function requireOwnedConversation(ctx: AppContext, conversationId: string, principal: AuthPrincipal): Promise<Conversation | null> {
+  const conversation = await ctx.conversations.findById(conversationId);
+  return conversation && ownsPersonalRecord(conversation, principal) ? conversation : null;
+}
+
 async function enforceAuthorization(ctx: AppContext, auth: AuthService, req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   const principal = auth.authenticate(req);
   if (!principal) {
@@ -280,7 +339,8 @@ async function enforceAuthorization(ctx: AppContext, auth: AuthService, req: Inc
     return false;
   }
   const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
-  const adminOnly = pathname.startsWith("/api/admin/") || pathname === "/api/settings" || pathname === "/api/logs";
+  const modelMutation = pathname.startsWith("/api/models") && !["GET", "HEAD", "OPTIONS"].includes(req.method ?? "GET");
+  const adminOnly = pathname.startsWith("/api/admin/") || pathname === "/api/settings" || pathname === "/api/logs" || modelMutation;
   if (adminOnly && principal.role !== "admin") {
     sendError(res, new Error("仅管理员可访问系统管理接口"), 403);
     return false;
@@ -290,7 +350,7 @@ async function enforceAuthorization(ctx: AppContext, auth: AuthService, req: Inc
     sendError(res, new Error("只读用户不能执行写操作"), 403);
     return false;
   }
-  const projectId = requestProjectId(req);
+  const projectId = requestProjectId(req) ?? await requestResourceProjectId(ctx, req);
   if (projectId && !(await canAccessProject(ctx, principal, projectId))) {
     sendError(res, new Error("无权访问该项目"), 403);
     return false;
@@ -350,6 +410,35 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse): Promise<v
   }
 }
 
+function isPathWithin(root: string, target: string): boolean {
+  const relative = path.relative(path.resolve(root), path.resolve(target));
+  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+}
+
+async function canAccessGlobalMedia(ctx: AppContext, pathname: string, principal: AuthPrincipal): Promise<boolean> {
+  let segments: string[];
+  try {
+    segments = pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  } catch {
+    return false;
+  }
+  if (segments[1] === "uploads") {
+    const ownerId = segments[2] ?? "";
+    if (ownerId.startsWith("usr-")) return ownerId === principal.userId;
+    return principal.role === "admin";
+  }
+
+  const [images, videos] = await Promise.all([
+    ctx.images.findMany({}, { sort: "desc" }),
+    ctx.videos.findMany({}, { sort: "desc" }),
+  ]);
+  const imageTask = images.find((task) => task.image_urls.includes(pathname));
+  if (imageTask) return ownsPersonalRecord(imageTask, principal);
+  const videoTask = videos.find((task) => task.video_url === pathname || task.image_url === pathname);
+  if (videoTask) return ownsPersonalRecord(videoTask, principal);
+  return principal.role === "admin";
+}
+
 /**
  * serveMedia - 提供全局 data/media 下的图片、视频和上传文件
  * @param {AppContext} ctx - 应用上下文
@@ -359,10 +448,14 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse): Promise<v
  */
 async function serveMedia(ctx: AppContext, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", "http://localhost");
+  if (!(await canAccessGlobalMedia(ctx, url.pathname, requireRequestPrincipal(req)))) {
+    sendError(res, new Error("not found"), 404);
+    return;
+  }
   const requested = decodeURIComponent(url.pathname.replace(/^\/media\/?/, ""));
   const target = path.normalize(path.join(ctx.mediaRoot, requested));
   // 静态媒体必须限制在 mediaRoot 内，避免 /media/../../ 读取任意文件。
-  if (!target.startsWith(path.resolve(ctx.mediaRoot))) {
+  if (!isPathWithin(ctx.mediaRoot, target)) {
     sendError(res, new Error("not found"), 404);
     return;
   }
@@ -396,7 +489,7 @@ async function serveProjectMedia(ctx: AppContext, req: IncomingMessage, res: Ser
   const mediaRoot = path.resolve(storageRoot, ...project.storage_path.split("/"), "media");
   const target = path.normalize(path.join(mediaRoot, ...rest.map(decodeURIComponent)));
   // 项目媒体需要先根据 projectId 找到 storage_path，再限制在该项目 media 目录内。
-  if (!mediaRoot.startsWith(storageRoot) || !target.startsWith(mediaRoot)) {
+  if (!isPathWithin(storageRoot, mediaRoot) || !isPathWithin(mediaRoot, target)) {
     sendError(res, new Error("not found"), 404);
     return;
   }
@@ -510,7 +603,8 @@ async function handleUpload(ctx: AppContext, req: IncomingMessage, res: ServerRe
   const uploads = parseMultipartImages(req, body);
   if (uploads.length === 0) throw new Error("missing image file");
   const stored = [];
-  for (const upload of uploads) stored.push(await saveUploadedImage(ctx, upload));
+  const principal = requireRequestPrincipal(req);
+  for (const upload of uploads) stored.push(await saveUploadedImage(ctx, upload, principal.userId));
   sendJson(res, stored);
 }
 
@@ -522,9 +616,12 @@ async function handleUpload(ctx: AppContext, req: IncomingMessage, res: ServerRe
  * @returns {Promise<void>}
  * @description 使用 Server-Sent Events 实现流式聊天响应
  */
-async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResponse, principal: AuthPrincipal): Promise<void> {
   const body = await readJson(req);
   const conversationId = requireString(body.conversationId, "conversationId");
+  if (!(await requireOwnedConversation(ctx, conversationId, principal))) {
+    return sendError(res, new Error("conversation not found"), 404);
+  }
   const userText = requireString(body.message, "message");
   const model = typeof body.model === "string" && body.model.trim()
     ? body.model.trim().slice(0, 120)
@@ -811,48 +908,86 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     // 剧本富文本结构（剧集/场景/对白）—— 给剧本导入用，POST 单条写入
     if (method === "POST" && parts.join("/") === "api/script-documents") {
-      return sendJson(res, await createScriptDocument(ctx, await readJson(req) as any));
+      const body = await readJson(req);
+      const projectId = requireString(body.project_id, "project_id");
+      if (!(await requireProjectAccess(ctx, req, res, projectId))) return;
+      return sendJson(res, await createScriptDocument(ctx, body as any));
     }
     if (method === "GET" && parts.join("/") === "api/script-documents") {
       const url = new URL(req.url ?? "/", "http://localhost");
       const projectId = url.searchParams.get("projectId") ?? undefined;
       const deleted = url.searchParams.get("deleted");
-      if (deleted === "1") {
-        return sendJson(res, await listDeletedScriptDocuments(ctx, projectId));
+      const documents = deleted === "1"
+        ? await listDeletedScriptDocuments(ctx, projectId)
+        : await listScriptDocuments(ctx, projectId);
+      const principal = requireRequestPrincipal(req);
+      if (principal.role === "admin" || projectId) return sendJson(res, documents);
+      const visible = [];
+      for (const document of documents) {
+        if (await canAccessProject(ctx, principal, document.project_id)) visible.push(document);
       }
-      return sendJson(res, await listScriptDocuments(ctx, projectId));
+      return sendJson(res, visible);
     }
     if (method === "GET" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && !parts[3]) {
       const doc = await getScriptDocument(ctx, parts[2]);
       if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
       return sendJson(res, doc);
     }
     if (method === "PUT" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && !parts[3]) {
-      return sendJson(res, await updateScriptDocument(ctx, parts[2], await readJson(req) as any));
+      const doc = await getScriptDocument(ctx, parts[2]);
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
+      const body = await readJson(req);
+      return sendJson(res, await updateScriptDocument(ctx, parts[2], { ...body, project_id: doc.project_id } as any));
     }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && !parts[3]) {
+      const doc = await getScriptDocument(ctx, parts[2]);
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
       await deleteScriptDocument(ctx, parts[2]);
       return sendJson(res, { deleted: true });
     }
     if (method === "POST" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && parts[3] === "restore") {
+      const doc = await getScriptDocument(ctx, parts[2]);
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
       return sendJson(res, await restoreScriptDocument(ctx, parts[2]));
     }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && parts[3] === "purge") {
+      const doc = await getScriptDocument(ctx, parts[2]);
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
       return sendJson(res, await purgeScriptDocument(ctx, parts[2]));
     }
     if (method === "POST" && parts.join("/") === "api/script-episodes") {
-      return sendJson(res, await createScriptEpisode(ctx, await readJson(req) as any));
+      const body = await readJson(req);
+      const projectId = requireString(body.project_id, "project_id");
+      if (!(await requireProjectAccess(ctx, req, res, projectId))) return;
+      const doc = await getScriptDocument(ctx, requireString(body.document_id, "document_id"));
+      if (!doc || doc.project_id !== projectId) return sendError(res, new Error("剧本文档不属于该项目"), 400);
+      return sendJson(res, await createScriptEpisode(ctx, body as any));
     }
     if (method === "GET" && parts.join("/") === "api/script-episodes") {
       const url = new URL(req.url ?? "/", "http://localhost");
       const projectId = url.searchParams.get("projectId") ?? "";
       const documentId = url.searchParams.get("documentId") ?? undefined;
+      if (documentId) {
+        const doc = await getScriptDocument(ctx, documentId);
+        if (!doc) throw new Error("剧本文档不存在");
+        if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
+      }
       // 若提供 documentId：按 document 严格过滤（避免拉到同项目下其他剧本/孤儿剧集）
       // 否则按 project 过滤（已自动排除孤儿剧集）
       return sendJson(res, await listScriptEpisodes(ctx, projectId, documentId));
     }
     if (method === "POST" && parts.join("/") === "api/script-scenes") {
-      return sendJson(res, await createScriptScene(ctx, await readJson(req) as any));
+      const body = await readJson(req);
+      const projectId = requireString(body.project_id, "project_id");
+      if (!(await requireProjectAccess(ctx, req, res, projectId))) return;
+      const episode = await ctx.scriptEpisodes.findById(requireString(body.episode_id, "episode_id"));
+      if (!episode || episode.project_id !== projectId) return sendError(res, new Error("剧集不属于该项目"), 400);
+      return sendJson(res, await createScriptScene(ctx, body as any));
     }
     if (method === "GET" && parts.join("/") === "api/script-scenes") {
       const url = new URL(req.url ?? "/", "http://localhost");
@@ -870,6 +1005,8 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       // 若提供 documentId，则过滤出该 doc 的所有剧集下场景
       if (documentId) {
         const doc = await getScriptDocument(ctx, documentId);
+        if (!doc) throw new Error("剧本文档不存在");
+        if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
         const docProjectId = doc?.project_id ?? projectId ?? "";
         if (!docProjectId) {
           return sendJson(res, []);
@@ -882,25 +1019,60 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
         );
         return sendJson(res, scenesArrays.flat());
       }
+      if (episodeId && !projectId) {
+        const episode = await ctx.scriptEpisodes.findById(episodeId);
+        if (!episode) throw new Error("剧集不存在");
+        if (!(await requireProjectAccess(ctx, req, res, episode.project_id))) return;
+      }
       return sendJson(res, await listScriptScenes(ctx, episodeId, projectId));
     }
     if (method === "POST" && parts.join("/") === "api/script-dialogues") {
-      return sendJson(res, await createScriptDialogue(ctx, await readJson(req) as any));
+      const body = await readJson(req);
+      const projectId = requireString(body.project_id, "project_id");
+      if (!(await requireProjectAccess(ctx, req, res, projectId))) return;
+      const scene = await ctx.scriptScenes.findById(requireString(body.scene_id, "scene_id"));
+      if (!scene || scene.project_id !== projectId) return sendError(res, new Error("场景不属于该项目"), 400);
+      return sendJson(res, await createScriptDialogue(ctx, body as any));
     }
     if (method === "GET" && parts.join("/") === "api/conversations") {
+      const principal = requireRequestPrincipal(req);
       const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId");
-      return sendJson(res, await listConversations(ctx, projectId));
+      return sendJson(res, await listConversations(ctx, projectId, principal.userId, principal.role === "admin"));
     }
-    if (method === "POST" && parts.join("/") === "api/conversations") return sendJson(res, await createConversation(ctx, await readJson(req)));
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "conversations" && parts[2]) return sendJson(res, await updateConversation(ctx, parts[2], await readJson(req) as Partial<Conversation>));
+    if (method === "POST" && parts.join("/") === "api/conversations") {
+      const principal = requireRequestPrincipal(req);
+      const body = await readJson(req);
+      const projectId = typeof body.project_id === "string" ? body.project_id : typeof body.projectId === "string" ? body.projectId : "";
+      if (projectId && !(await canAccessProject(ctx, principal, projectId))) return sendError(res, new Error("无权访问该项目"), 403);
+      return sendJson(res, await createConversation(ctx, { ...body, user_id: principal.userId }));
+    }
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "conversations" && parts[2]) {
+      const principal = requireRequestPrincipal(req);
+      if (!(await requireOwnedConversation(ctx, parts[2], principal))) return sendError(res, new Error("conversation not found"), 404);
+      const body = await readJson(req);
+      if (typeof body.project_id === "string" && body.project_id && !(await canAccessProject(ctx, principal, body.project_id))) {
+        return sendError(res, new Error("无权访问该项目"), 403);
+      }
+      const patch: Partial<Pick<Conversation, "title" | "is_pinned" | "model" | "project_id">> = {};
+      if (typeof body.title === "string") patch.title = body.title;
+      if (typeof body.is_pinned === "boolean") patch.is_pinned = body.is_pinned;
+      if (typeof body.model === "string") patch.model = body.model;
+      if (typeof body.project_id === "string") patch.project_id = body.project_id;
+      return sendJson(res, await updateConversation(ctx, parts[2], patch));
+    }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "conversations" && parts[2]) {
+      const principal = requireRequestPrincipal(req);
+      if (!(await requireOwnedConversation(ctx, parts[2], principal))) return sendError(res, new Error("conversation not found"), 404);
       await deleteConversation(ctx, parts[2]);
       return sendJson(res, { deleted: true });
     }
     if (method === "GET" && parts[0] === "api" && parts[1] === "conversations" && parts[3] === "messages") {
+      const principal = requireRequestPrincipal(req);
+      const conversation = await ctx.conversations.findById(parts[2]);
+      if (conversation && !ownsPersonalRecord(conversation, principal)) return sendError(res, new Error("conversation not found"), 404);
       return sendJson(res, await ctx.messages.findMany({ conversation_id: parts[2] } as Partial<Message>, { sort: "asc" }));
     }
-    if (method === "POST" && parts.join("/") === "api/chat") return handleChat(ctx, req, res);
+    if (method === "POST" && parts.join("/") === "api/chat") return handleChat(ctx, req, res, requireRequestPrincipal(req));
     if (method === "POST" && parts.join("/") === "api/ai/script-analyze") {
       const body = (await readJson(req)) as { content?: string; format?: string; useLocal?: boolean; timeoutMs?: number; model?: string };
       return sendJson(res, await analyzeScriptWithAI(ctx, {
@@ -917,35 +1089,59 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     // 剧本分析提取资产 CRUD
     if (method === "GET" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && parts[3] === "analyzed-assets") {
+      const doc = await getScriptDocument(ctx, parts[2]);
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
       return sendJson(res, await listScriptAnalyzedAssets(ctx, parts[2]));
     }
     if (method === "PUT" && parts[0] === "api" && parts[1] === "script-documents" && parts[2] && parts[3] === "analyzed-assets") {
       const body = await readJson(req) as any;
-      return sendJson(res, await replaceScriptAnalyzedAssets(ctx, parts[2], body.project_id, {
+      const doc = await getScriptDocument(ctx, parts[2]);
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
+      return sendJson(res, await replaceScriptAnalyzedAssets(ctx, parts[2], doc.project_id, {
         characters: body.characters || [],
         scenes: body.scenes || [],
         props: body.props || [],
       }));
     }
     if (method === "PATCH" && parts[0] === "api" && parts[1] === "analyzed-characters" && parts[2]) {
+      const item = await ctx.scriptAnalyzedCharacters.findById(parts[2]);
+      if (!item) throw new Error("分析角色不存在");
+      if (!(await requireProjectAccess(ctx, req, res, item.project_id))) return;
       return sendJson(res, await updateScriptAnalyzedCharacter(ctx, parts[2], await readJson(req) as any));
     }
     if (method === "PATCH" && parts[0] === "api" && parts[1] === "analyzed-scenes" && parts[2]) {
+      const item = await ctx.scriptAnalyzedScenes.findById(parts[2]);
+      if (!item) throw new Error("分析场景不存在");
+      if (!(await requireProjectAccess(ctx, req, res, item.project_id))) return;
       return sendJson(res, await updateScriptAnalyzedScene(ctx, parts[2], await readJson(req) as any));
     }
     if (method === "PATCH" && parts[0] === "api" && parts[1] === "analyzed-props" && parts[2]) {
+      const item = await ctx.scriptAnalyzedProps.findById(parts[2]);
+      if (!item) throw new Error("分析道具不存在");
+      if (!(await requireProjectAccess(ctx, req, res, item.project_id))) return;
       return sendJson(res, await updateScriptAnalyzedProp(ctx, parts[2], await readJson(req) as any));
     }
     // 删除单条剧本中心分析资产（硬删：仅从当前剧本的视图移除，工厂资源不受影响）
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "analyzed-characters" && parts[2]) {
+      const item = await ctx.scriptAnalyzedCharacters.findById(parts[2]);
+      if (!item) throw new Error("分析角色不存在");
+      if (!(await requireProjectAccess(ctx, req, res, item.project_id))) return;
       await deleteScriptAnalyzedCharacter(ctx, parts[2]);
       return sendJson(res, { deleted: true });
     }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "analyzed-scenes" && parts[2]) {
+      const item = await ctx.scriptAnalyzedScenes.findById(parts[2]);
+      if (!item) throw new Error("分析场景不存在");
+      if (!(await requireProjectAccess(ctx, req, res, item.project_id))) return;
       await deleteScriptAnalyzedScene(ctx, parts[2]);
       return sendJson(res, { deleted: true });
     }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "analyzed-props" && parts[2]) {
+      const item = await ctx.scriptAnalyzedProps.findById(parts[2]);
+      if (!item) throw new Error("分析道具不存在");
+      if (!(await requireProjectAccess(ctx, req, res, item.project_id))) return;
       await deleteScriptAnalyzedProp(ctx, parts[2]);
       return sendJson(res, { deleted: true });
     }
@@ -955,6 +1151,11 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const scriptId = typeof body.script_id === "string" ? body.script_id : undefined;
       if (!content.trim() && !scriptId) {
         return sendError(res, new Error("content 或 script_id 不能为空"), 400);
+      }
+      if (scriptId) {
+        const doc = await getScriptDocument(ctx, scriptId);
+        if (!doc) throw new Error("剧本文档不存在");
+        if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
       }
       return sendJson(res, await optimizeScriptWithAI(ctx, "local-user", body as any));
     }
@@ -970,6 +1171,7 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       if (!prompt) {
         return sendError(res, new Error("prompt 不能为空"), 400);
       }
+      if (body.project_id && !(await requireProjectAccess(ctx, req, res, body.project_id))) return;
       return sendJson(res, await generateScriptWithAI(ctx, "local-user", {
         prompt,
         style: body.style,
@@ -981,12 +1183,15 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     if (method === "POST" && parts.join("/") === "api/uploads") return handleUpload(ctx, req, res);
     if (method === "POST" && parts.join("/") === "api/chat/stop") {
       const body = await readJson(req);
-      ctx.aborts.get(requireString(body.conversationId, "conversationId"))?.abort();
+      const conversationId = requireString(body.conversationId, "conversationId");
+      if (!(await requireOwnedConversation(ctx, conversationId, requireRequestPrincipal(req)))) return sendError(res, new Error("conversation not found"), 404);
+      ctx.aborts.get(conversationId)?.abort();
       return sendJson(res, { stopped: true });
     }
     if (method === "POST" && parts.join("/") === "api/chat/regenerate") {
       const body = await readJson(req);
       const conversationId = requireString(body.conversationId, "conversationId");
+      if (!(await requireOwnedConversation(ctx, conversationId, requireRequestPrincipal(req)))) return sendError(res, new Error("conversation not found"), 404);
       const messages = await ctx.messages.findMany({ conversation_id: conversationId } as Partial<Message>, { sort: "desc" });
       const lastAssistant = messages.find((message) => message.role === "assistant");
       if (lastAssistant) await ctx.messages.delete(lastAssistant.id);
@@ -1024,7 +1229,13 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       }
       return sendJson(res, { received });
     }
-    if (method === "POST" && parts.join("/") === "api/images/generate") return sendJson(res, await generateImage(ctx, await readJson(req)));
+    if (method === "POST" && parts.join("/") === "api/images/generate") {
+      const principal = requireRequestPrincipal(req);
+      const body = await readJson(req);
+      const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
+      if (conversationId && !(await requireOwnedConversation(ctx, conversationId, principal))) return sendError(res, new Error("conversation not found"), 404);
+      return sendJson(res, await generateImage(ctx, { ...body, user_id: principal.userId }));
+    }
     // ===== 提示词强化 =====
     // 角色图片生成器右侧「强化提示词」按钮使用。
     // 输入：{ prompt: string, mode?: "image" | "video" }；输出：{ prompt, enhanced, mode }。
@@ -1033,29 +1244,68 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const body = (await readJson(req)) as { prompt?: string; mode?: string };
       return sendJson(res, await enhancePrompt(ctx, { prompt: body.prompt, mode: body.mode }));
     }
-    if (method === "POST" && parts.join("/") === "api/images/local") return sendJson(res, await createLocalImageTask(ctx, await readJson(req)));
-    if (method === "GET" && parts.join("/") === "api/images") {
-      const conversationId = new URL(req.url ?? "/", "http://localhost").searchParams.get("conversationId");
-      return sendJson(res, await listImages(ctx, conversationId ?? undefined));
+    if (method === "POST" && parts.join("/") === "api/images/local") {
+      const principal = requireRequestPrincipal(req);
+      const body = await readJson(req);
+      const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
+      if (conversationId && !(await requireOwnedConversation(ctx, conversationId, principal))) return sendError(res, new Error("conversation not found"), 404);
+      return sendJson(res, await createLocalImageTask(ctx, { ...body, user_id: principal.userId }));
     }
-    if (method === "GET" && parts[0] === "api" && parts[1] === "images" && parts[2]) return sendJson(res, await queryImage(ctx, parts[2]));
+    if (method === "GET" && parts.join("/") === "api/images") {
+      const principal = requireRequestPrincipal(req);
+      const conversationId = new URL(req.url ?? "/", "http://localhost").searchParams.get("conversationId");
+      const conversation = conversationId ? await ctx.conversations.findById(conversationId) : null;
+      if (conversation && !ownsPersonalRecord(conversation, principal)) return sendError(res, new Error("conversation not found"), 404);
+      return sendJson(res, await listImages(ctx, conversationId ?? undefined, principal.userId, principal.role === "admin"));
+    }
+    if (method === "GET" && parts[0] === "api" && parts[1] === "images" && parts[2]) {
+      const task = await ctx.images.findById(parts[2]);
+      if (!task || !ownsPersonalRecord(task, requireRequestPrincipal(req))) return sendError(res, new Error("image not found"), 404);
+      return sendJson(res, await queryImage(ctx, parts[2]));
+    }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "images" && parts[2]) {
+      const task = await ctx.images.findById(parts[2]);
+      if (!task || !ownsPersonalRecord(task, requireRequestPrincipal(req))) return sendError(res, new Error("image not found"), 404);
       await ctx.images.delete(parts[2]);
       return sendJson(res, { deleted: true });
     }
-    if (method === "POST" && parts.join("/") === "api/videos/generate") return sendJson(res, await generateVideo(ctx, await readJson(req)));
-    if (method === "GET" && parts.join("/") === "api/videos") {
-      const conversationId = new URL(req.url ?? "/", "http://localhost").searchParams.get("conversationId");
-      return sendJson(res, await listVideos(ctx, conversationId ?? undefined));
+    if (method === "POST" && parts.join("/") === "api/videos/generate") {
+      const principal = requireRequestPrincipal(req);
+      const body = await readJson(req);
+      const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
+      if (conversationId && !(await requireOwnedConversation(ctx, conversationId, principal))) return sendError(res, new Error("conversation not found"), 404);
+      return sendJson(res, await generateVideo(ctx, { ...body, user_id: principal.userId }));
     }
-    if (method === "GET" && parts[0] === "api" && parts[1] === "videos" && parts[2]) return sendJson(res, await queryVideo(ctx, parts[2]));
+    if (method === "GET" && parts.join("/") === "api/videos") {
+      const principal = requireRequestPrincipal(req);
+      const conversationId = new URL(req.url ?? "/", "http://localhost").searchParams.get("conversationId");
+      const conversation = conversationId ? await ctx.conversations.findById(conversationId) : null;
+      if (conversation && !ownsPersonalRecord(conversation, principal)) return sendError(res, new Error("conversation not found"), 404);
+      return sendJson(res, await listVideos(ctx, conversationId ?? undefined, principal.userId, principal.role === "admin"));
+    }
+    if (method === "GET" && parts[0] === "api" && parts[1] === "videos" && parts[2]) {
+      const task = await ctx.videos.findById(parts[2]);
+      if (!task || !ownsPersonalRecord(task, requireRequestPrincipal(req))) return sendError(res, new Error("video not found"), 404);
+      return sendJson(res, await queryVideo(ctx, parts[2]));
+    }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "videos" && parts[2]) {
+      const task = await ctx.videos.findById(parts[2]);
+      if (!task || !ownsPersonalRecord(task, requireRequestPrincipal(req))) return sendError(res, new Error("video not found"), 404);
       await ctx.videos.delete(parts[2]);
       return sendJson(res, { deleted: true });
     }
-    if (method === "GET" && parts.join("/") === "api/favorites") return sendJson(res, await ctx.favorites.findMany({}, { sort: "desc" }));
-    if (method === "POST" && parts.join("/") === "api/favorites") return sendJson(res, await addFavorite(ctx, await readJson(req)));
+    if (method === "GET" && parts.join("/") === "api/favorites") {
+      const principal = requireRequestPrincipal(req);
+      const favorites = await ctx.favorites.findMany({}, { sort: "desc" });
+      return sendJson(res, favorites.filter((favorite) => ownsPersonalRecord(favorite, principal)));
+    }
+    if (method === "POST" && parts.join("/") === "api/favorites") {
+      const principal = requireRequestPrincipal(req);
+      return sendJson(res, await addFavorite(ctx, await readJson(req), principal.userId));
+    }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "favorites" && parts[2]) {
+      const favorite = await ctx.favorites.findById(parts[2]);
+      if (!favorite || !ownsPersonalRecord(favorite, requireRequestPrincipal(req))) return sendError(res, new Error("favorite not found"), 404);
       await ctx.favorites.delete(parts[2]);
       return sendJson(res, { deleted: true });
     }
@@ -1089,6 +1339,7 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       readJson,
       sendJson,
       sendError,
+      canAccessProject: (projectId) => canAccessProject(ctx, requireRequestPrincipal(req), projectId),
     })) return;
     // ============ 剪辑模块（工业化 P0-3） ============
     // 顶层 CRUD：与分镜/视频/音频对齐，使用 ?projectId= 查询参数
@@ -1100,53 +1351,91 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     if (method === "POST" && parts.join("/") === "api/clips") {
       const body = await readJson(req);
       const projectId = requireString(body.project_id, "project_id");
+      if (!(await requireProjectAccess(ctx, req, res, projectId))) return;
       return sendJson(res, await createProjectClip(ctx, projectId, body as any));
     }
     if (method === "PUT" && parts[0] === "api" && parts[1] === "clips" && parts[2]) {
       const existing = await ctx.projectClips.findById(parts[2]);
       if (!existing) throw new Error("clip not found");
+      if (!(await requireProjectAccess(ctx, req, res, existing.project_id))) return;
       const body = await readJson(req);
       return sendJson(res, await updateProjectClip(ctx, (existing as any).project_id, parts[2], body as any));
     }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "clips" && parts[2]) {
       const existing = await ctx.projectClips.findById(parts[2]);
       if (!existing) throw new Error("clip not found");
+      if (!(await requireProjectAccess(ctx, req, res, existing.project_id))) return;
       await softDeleteProjectClip(ctx, (existing as any).project_id, parts[2]);
       return sendJson(res, { deleted: true });
     }
     if (method === "POST" && parts[0] === "api" && parts[1] === "clips" && parts[2] === "sync") {
       const body = await readJson(req);
       const projectId = requireString(body.project_id, "project_id");
+      if (!(await requireProjectAccess(ctx, req, res, projectId))) return;
       return sendJson(res, await syncProjectClipsFromStoryboards(ctx, projectId));
     }
     // 回收站（与三厂对齐：?projectId=）
     if (method === "GET" && parts[0] === "api" && parts[1] === "clips" && parts[2] === "deleted") {
       const projectId = new URL(req.url ?? "/", "http://localhost").searchParams.get("projectId") ?? undefined;
+      if (!projectId) throw new Error("projectId 必填");
       return sendJson(res, await listDeletedClips(ctx, projectId));
     }
     if (method === "POST" && parts[0] === "api" && parts[1] === "clips" && parts[2] && parts[3] === "restore") {
+      const existing = await ctx.projectClips.findById(parts[2]);
+      if (!existing) throw new Error("clip not found");
+      if (!(await requireProjectAccess(ctx, req, res, existing.project_id))) return;
       await restoreClip(ctx, parts[2]);
       return sendJson(res, { restored: true });
     }
     if (method === "POST" && parts[0] === "api" && parts[1] === "clips" && parts[2] === "permanent") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      for (const clipId of ids) {
+        const existing = await ctx.projectClips.findById(clipId);
+        if (!existing) throw new Error("clip not found");
+        if (!(await requireProjectAccess(ctx, req, res, existing.project_id))) return;
+      }
       for (const id of ids) await permanentDeleteClip(ctx, id);
       return sendJson(res, { deleted: ids.length });
     }
     if (method === "POST" && parts[0] === "api" && parts[1] === "clips" && parts[2] && parts[3] === "copy") {
       const body = await readJson(req);
       const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
+      const existing = await ctx.projectClips.findById(parts[2]);
+      if (!existing) throw new Error("clip not found");
+      if (!(await requireProjectAccess(ctx, req, res, existing.project_id))) return;
+      if (!(await requireProjectAccess(ctx, req, res, targetProjectId))) return;
       return sendJson(res, await copyClipToProject(ctx, parts[2], targetProjectId));
     }
     // 剧本评论（任务8：评论持久化）
     if (method === "GET" && parts.join("/") === "api/script-comments") {
       const scriptId = new URL(req.url ?? "/", "http://localhost").searchParams.get("scriptId") ?? "";
+      const doc = await getScriptDocument(ctx, scriptId);
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
       return sendJson(res, await listScriptComments(ctx, scriptId));
     }
-    if (method === "POST" && parts.join("/") === "api/script-comments") return sendJson(res, await createScriptComment(ctx, await readJson(req) as any));
-    if (method === "PUT" && parts[0] === "api" && parts[1] === "script-comments" && parts[2]) return sendJson(res, await updateScriptComment(ctx, parts[2], await readJson(req) as any));
+    if (method === "POST" && parts.join("/") === "api/script-comments") {
+      const body = await readJson(req);
+      const doc = await getScriptDocument(ctx, requireString(body.script_id, "script_id"));
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
+      return sendJson(res, await createScriptComment(ctx, body as any));
+    }
+    if (method === "PUT" && parts[0] === "api" && parts[1] === "script-comments" && parts[2]) {
+      const comment = await ctx.scriptComments.findById(parts[2]);
+      if (!comment) throw new Error("评论不存在");
+      const doc = await getScriptDocument(ctx, comment.script_id);
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
+      return sendJson(res, await updateScriptComment(ctx, parts[2], await readJson(req) as any));
+    }
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "script-comments" && parts[2]) {
+      const comment = await ctx.scriptComments.findById(parts[2]);
+      if (!comment) throw new Error("评论不存在");
+      const doc = await getScriptDocument(ctx, comment.script_id);
+      if (!doc) throw new Error("剧本文档不存在");
+      if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
       await deleteScriptComment(ctx, parts[2]);
       return sendJson(res, { deleted: true });
     }
@@ -1170,13 +1459,14 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       return sendJson(res, restored);
     }
     // === 我的待办（/api/todos） ===
-    // GET /api/todos?owner=&status=&includeDeleted=true
+    // GET /api/todos?status=&includeDeleted=true
     if (method === "GET" && parts[0] === "api" && parts[1] === "todos" && !parts[2]) {
+      const principal = requireRequestPrincipal(req);
       const url = new URL(req.url ?? "/", "http://localhost");
-      const owner = url.searchParams.get("owner") ?? undefined;
       const status = url.searchParams.get("status") as TodoStatus | null;
+      if (status && !TODO_STATUSES.has(status)) throw new Error("无效的待办状态");
       const includeDeleted = url.searchParams.get("includeDeleted") === "true";
-      const all = await ctx.todos.findMany(owner ? { owner } : {}, { sort: "desc" });
+      const all = await ctx.todos.findMany({ owner: principal.userId }, { sort: "desc" });
       const filtered = all.filter((t) => {
         if (!includeDeleted && t.deleted_at) return false;
         if (status && t.status !== status) return false;
@@ -1186,15 +1476,20 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     // POST /api/todos
     if (method === "POST" && parts[0] === "api" && parts[1] === "todos" && !parts[2]) {
+      const principal = requireRequestPrincipal(req);
       const body = await readJson(req);
+      const status = body.status === undefined ? "pending" : body.status;
+      const priority = body.priority === undefined ? "medium" : body.priority;
+      if (!TODO_STATUSES.has(status)) throw new Error("无效的待办状态");
+      if (!TODO_PRIORITIES.has(priority)) throw new Error("无效的待办优先级");
       const now = nowIso();
       const todo: Todo = {
         id: id("todo"),
-        owner: requireString(body.owner, "owner"),
+        owner: principal.userId,
         title: requireString(body.title, "title"),
         description: typeof body.description === "string" ? body.description : "",
-        status: (body.status as TodoStatus) || "pending",
-        priority: (body.priority as TodoPriority) || "medium",
+        status: status as TodoStatus,
+        priority: priority as TodoPriority,
         due_date: typeof body.due_date === "string" ? body.due_date : "",
         link_type: typeof body.link_type === "string" ? body.link_type : "",
         link_id: typeof body.link_id === "string" ? body.link_id : "",
@@ -1208,18 +1503,31 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     // PUT /api/todos/:id
     if (method === "PUT" && parts[0] === "api" && parts[1] === "todos" && parts[2]) {
+      const principal = requireRequestPrincipal(req);
       const existing = await ctx.todos.findById(parts[2]);
-      if (!existing) throw new Error("todo not found");
+      if (!existing || existing.owner !== principal.userId) return sendError(res, new Error("todo not found"), 404);
       const body = await readJson(req);
-      const { id: _id, created_at: _created, ...rest } = body as Record<string, unknown>;
-      await ctx.todos.update(parts[2], { ...rest, updated_at: nowIso() } as Partial<Todo>);
+      if (body.status !== undefined && !TODO_STATUSES.has(body.status)) throw new Error("无效的待办状态");
+      if (body.priority !== undefined && !TODO_PRIORITIES.has(body.priority)) throw new Error("无效的待办优先级");
+      const patch: Partial<Todo> = { updated_at: nowIso() };
+      if (body.title !== undefined) patch.title = requireString(body.title, "title");
+      for (const field of ["description", "due_date", "link_type", "link_id", "link_url"] as const) {
+        if (body[field] !== undefined) {
+          if (typeof body[field] !== "string") throw new Error(`${field} 必须是字符串`);
+          patch[field] = body[field];
+        }
+      }
+      if (body.status !== undefined) patch.status = body.status as TodoStatus;
+      if (body.priority !== undefined) patch.priority = body.priority as TodoPriority;
+      await ctx.todos.update(parts[2], patch);
       const updated = await ctx.todos.findById(parts[2]);
       return sendJson(res, updated);
     }
     // DELETE /api/todos/:id?hard=true
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "todos" && parts[2]) {
+      const principal = requireRequestPrincipal(req);
       const existing = await ctx.todos.findById(parts[2]);
-      if (!existing) throw new Error("todo not found");
+      if (!existing || existing.owner !== principal.userId) return sendError(res, new Error("todo not found"), 404);
       const hard = new URL(req.url ?? "/", "http://localhost").searchParams.get("hard") === "true";
       if (hard) {
         await ctx.todos.delete(parts[2]);
@@ -1230,8 +1538,9 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     // POST /api/todos/:id/restore
     if (method === "POST" && parts[0] === "api" && parts[1] === "todos" && parts[2] && parts[3] === "restore") {
+      const principal = requireRequestPrincipal(req);
       const existing = await ctx.todos.findById(parts[2]);
-      if (!existing) throw new Error("todo not found");
+      if (!existing || existing.owner !== principal.userId) return sendError(res, new Error("todo not found"), 404);
       await ctx.todos.update(parts[2], { deleted_at: "", updated_at: nowIso() });
       return sendJson(res, { restored: true });
     }
@@ -1257,47 +1566,75 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     // POST /api/reviews  → 提交审核（生产模块调用）
     if (method === "POST" && parts[0] === "api" && parts[1] === "reviews" && !parts[2]) {
       const body = await readJson(req);
+      const principal = requireRequestPrincipal(req);
+      const projectId = requireString(body.projectId, "projectId");
+      if (!(await canAccessProject(ctx, principal, projectId))) {
+        return sendError(res, new Error("无权访问该项目"), 403);
+      }
       const item = await ctx.reviewService.submit({
         targetType: requireString(body.targetType, "targetType") as ReviewTargetType,
         targetId: requireString(body.targetId, "targetId"),
-        projectId: requireString(body.projectId, "projectId"),
-        submittedBy: requireString(body.submittedBy, "submittedBy"),
+        projectId,
+        submittedBy: principal.userId,
       });
       return sendJson(res, item);
     }
     // POST /api/reviews/:id/approve  → 通过
     if (method === "POST" && parts[0] === "api" && parts[1] === "reviews" && parts[2] && parts[3] === "approve") {
-      const body = await readJson(req);
-      const reviewerId = requireString(body.reviewerId, "reviewerId");
-      const item = await ctx.reviewService.approve(parts[2], reviewerId);
+      const principal = requireRequestPrincipal(req);
+      const review = await ctx.reviewItems.findById(parts[2]);
+      if (review && !(await canAccessProject(ctx, principal, review.project_id))) {
+        return sendError(res, new Error("无权访问该项目"), 403);
+      }
+      const item = await ctx.reviewService.approve(parts[2], principal.userId);
       return sendJson(res, item);
     }
     // POST /api/reviews/:id/reject  → 打回
     if (method === "POST" && parts[0] === "api" && parts[1] === "reviews" && parts[2] && parts[3] === "reject") {
       const body = await readJson(req);
-      const reviewerId = requireString(body.reviewerId, "reviewerId");
+      const principal = requireRequestPrincipal(req);
+      const review = await ctx.reviewItems.findById(parts[2]);
+      if (review && !(await canAccessProject(ctx, principal, review.project_id))) {
+        return sendError(res, new Error("无权访问该项目"), 403);
+      }
       const reasonCode = requireString(body.reasonCode, "reasonCode") as RejectionReasonCode;
-      const item = await ctx.reviewService.reject(parts[2], reviewerId, reasonCode);
+      const item = await ctx.reviewService.reject(parts[2], principal.userId, reasonCode);
       return sendJson(res, item);
     }
     // 委托到独立路由模块（ai-tasks / data / models / publish）
     if (parts[0] === "api" && parts[1] === "ai" && parts[2] === "tasks") {
-      return handleAITasksRouter(ctx, req, res);
+      const principal = requireRequestPrincipal(req);
+      return handleAITasksRouter(ctx, req, res, {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId) => canAccessProject(ctx, principal, projectId),
+      });
     }
     if (parts[0] === "api" && parts[1] === "data") {
-      return handleDataRouter(ctx, req, res);
+      const principal = requireRequestPrincipal(req);
+      return handleDataRouter(ctx, req, res, {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId) => canAccessProject(ctx, principal, projectId),
+      });
     }
     if (parts[0] === "api" && parts[1] === "models") {
       return handleModelsRouter(ctx, req, res);
     }
     if (parts[0] === "api" && parts[1] === "publish") {
-      return handlePublishRouter(ctx, req, res);
+      const principal = requireRequestPrincipal(req);
+      return handlePublishRouter(ctx, req, res, {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId) => canAccessProject(ctx, principal, projectId),
+      });
     }
     if (parts[0] === "api" && parts[1] === "pipeline") {
       return handlePipelineRouter(ctx, req, res);
     }
     if (parts[0] === "api" && parts[1] === "assistant") {
-      return handleAssistantRouter(ctx, req, res);
+      const principal = requireRequestPrincipal(req);
+      return handleAssistantRouter(ctx, req, res, principal, (projectId) => canAccessProject(ctx, principal, projectId));
     }
     if (parts[0] === "api" && parts[1] === "admin") {
       return handleAdminRouter(ctx, req, res);

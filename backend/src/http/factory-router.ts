@@ -133,6 +133,31 @@ export interface FactoryRouteHelpers {
   readJson: (req: IncomingMessage) => Promise<Record<string, unknown>>;
   sendJson: <T>(res: ServerResponse, data: T, status?: number) => void;
   sendError: (res: ServerResponse, error: unknown, status?: number) => void;
+  canAccessProject: (projectId: string) => Promise<boolean>;
+}
+
+async function requireProjectAccess(
+  res: ServerResponse,
+  h: FactoryRouteHelpers,
+  ...projectIds: Array<string | undefined>
+): Promise<boolean> {
+  const uniqueIds = [...new Set(projectIds.filter((value): value is string => Boolean(value)))];
+  if (uniqueIds.length === 0 || !(await Promise.all(uniqueIds.map((projectId) => h.canAccessProject(projectId)))).every(Boolean)) {
+    h.sendError(res, new Error("无权访问该项目"), 403);
+    return false;
+  }
+  return true;
+}
+
+async function filterAccessibleProjects<T extends { project_id: string }>(
+  items: T[],
+  h: FactoryRouteHelpers,
+): Promise<T[]> {
+  const access = new Map<string, boolean>();
+  for (const projectId of new Set(items.map((item) => item.project_id))) {
+    access.set(projectId, await h.canAccessProject(projectId));
+  }
+  return items.filter((item) => access.get(item.project_id) === true);
 }
 
 /**
@@ -170,15 +195,19 @@ export async function matchFactoryRoute(
   // ===== 角色 =====
   if (seg0 === "api" && seg1 === "characters") {
     if (method === "GET" && parts.join("/") === "api/characters") {
-      sendJson(res, await listCharacters(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listCharacters(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/characters") {
-      sendJson(res, await createCharacter(ctx, (await readJson(req)) as any));
+      const body = await readJson(req);
+      if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
+      sendJson(res, await createCharacter(ctx, body as any));
       return true;
     }
     if (method === "PUT" && seg2) {
-      sendJson(res, await updateCharacter(ctx, seg2, (await readJson(req)) as any));
+      const existing = await ctx.characters.findById(seg2);
+      if (!existing) throw new Error("角色不存在");
+      sendJson(res, await updateCharacter(ctx, seg2, { ...(await readJson(req)), project_id: existing.project_id } as any));
       return true;
     }
     if (method === "DELETE" && seg2) {
@@ -198,6 +227,9 @@ export async function matchFactoryRoute(
     if (method === "POST" && parts.join("/") === "api/characters/batch") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.characters.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("角色不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
       if (body.action === "delete") {
         await batchDeleteCharacters(ctx, ids);
         sendJson(res, { deleted: ids.length });
@@ -211,12 +243,15 @@ export async function matchFactoryRoute(
       throw new Error("unknown batch action");
     }
     if (method === "GET" && seg2 === "deleted") {
-      sendJson(res, await listDeletedCharacters(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listDeletedCharacters(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && seg2 === "permanent") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.characters.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("角色不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
       await permanentDeleteCharacters(ctx, ids);
       sendJson(res, { deleted: ids.length });
       return true;
@@ -228,6 +263,9 @@ export async function matchFactoryRoute(
         ? (body.targetProjectIds as string[]).filter(Boolean)
         : [];
       if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
+      const source = await ctx.characters.findById(sourceId);
+      if (!source) throw new Error("角色不存在");
+      if (!(await requireProjectAccess(res, h, source.project_id, ...targetProjectIds))) return true;
       sendJson(res, await copyCharactersToProjects(ctx, sourceId, targetProjectIds));
       return true;
     }
@@ -251,10 +289,12 @@ export async function matchFactoryRoute(
     if (method === "POST" && seg3 === "images") {
       const body = (await readJson(req)) as Record<string, unknown>;
       const characterId = requireString(seg2, "id");
+      const character = await ctx.characters.findById(characterId);
+      if (!character) throw new Error("角色不存在");
       const url = requireString(body.url, "url");
       const record = await createCharacterImage(ctx, {
         character_id: characterId,
-        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        project_id: character.project_id,
         script_id: typeof body.script_id === "string" ? body.script_id : undefined,
         url,
         prompt: typeof body.prompt === "string" ? body.prompt : undefined,
@@ -270,15 +310,19 @@ export async function matchFactoryRoute(
   // ===== 场景 =====
   if (seg0 === "api" && seg1 === "scenes") {
     if (method === "GET" && parts.join("/") === "api/scenes") {
-      sendJson(res, await listScenes(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listScenes(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/scenes") {
-      sendJson(res, await createScene(ctx, (await readJson(req)) as any));
+      const body = await readJson(req);
+      if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
+      sendJson(res, await createScene(ctx, body as any));
       return true;
     }
     if (method === "PUT" && seg2) {
-      sendJson(res, await updateScene(ctx, seg2, (await readJson(req)) as any));
+      const existing = await ctx.scenes.findById(seg2);
+      if (!existing) throw new Error("场景不存在");
+      sendJson(res, await updateScene(ctx, seg2, { ...(await readJson(req)), project_id: existing.project_id } as any));
       return true;
     }
     if (method === "DELETE" && seg2) {
@@ -298,6 +342,9 @@ export async function matchFactoryRoute(
     if (method === "POST" && parts.join("/") === "api/scenes/batch") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.scenes.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("场景不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
       if (body.action === "delete") {
         await batchDeleteScenes(ctx, ids);
         sendJson(res, { deleted: ids.length });
@@ -311,12 +358,15 @@ export async function matchFactoryRoute(
       throw new Error("unknown batch action");
     }
     if (method === "GET" && seg2 === "deleted") {
-      sendJson(res, await listDeletedScenes(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listDeletedScenes(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && seg2 === "permanent") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.scenes.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("场景不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
       await permanentDeleteScenes(ctx, ids);
       sendJson(res, { deleted: ids.length });
       return true;
@@ -328,6 +378,9 @@ export async function matchFactoryRoute(
         ? (body.targetProjectIds as string[]).filter(Boolean)
         : [];
       if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
+      const source = await ctx.scenes.findById(sourceId);
+      if (!source) throw new Error("场景不存在");
+      if (!(await requireProjectAccess(res, h, source.project_id, ...targetProjectIds))) return true;
       sendJson(res, await copyScenesToProjects(ctx, sourceId, targetProjectIds));
       return true;
     }
@@ -340,10 +393,12 @@ export async function matchFactoryRoute(
     if (method === "POST" && seg3 === "images") {
       const body = (await readJson(req)) as Record<string, unknown>;
       const sceneId = requireString(seg2, "id");
+      const scene = await ctx.scenes.findById(sceneId);
+      if (!scene) throw new Error("场景不存在");
       const url = requireString(body.url, "url");
       const record = await createSceneImage(ctx, {
         scene_id: sceneId,
-        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        project_id: scene.project_id,
         script_id: typeof body.script_id === "string" ? body.script_id : undefined,
         url,
         prompt: typeof body.prompt === "string" ? body.prompt : undefined,
@@ -359,15 +414,19 @@ export async function matchFactoryRoute(
   // ===== 道具 =====
   if (seg0 === "api" && seg1 === "props") {
     if (method === "GET" && parts.join("/") === "api/props") {
-      sendJson(res, await listProps(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listProps(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/props") {
-      sendJson(res, await createProp(ctx, (await readJson(req)) as any));
+      const body = await readJson(req);
+      if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
+      sendJson(res, await createProp(ctx, body as any));
       return true;
     }
     if (method === "PUT" && seg2) {
-      sendJson(res, await updateProp(ctx, seg2, (await readJson(req)) as any));
+      const existing = await ctx.props.findById(seg2);
+      if (!existing) throw new Error("道具不存在");
+      sendJson(res, await updateProp(ctx, seg2, { ...(await readJson(req)), project_id: existing.project_id } as any));
       return true;
     }
     if (method === "DELETE" && seg2) {
@@ -387,6 +446,9 @@ export async function matchFactoryRoute(
     if (method === "POST" && parts.join("/") === "api/props/batch") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.props.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("道具不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
       if (body.action === "delete") {
         await batchDeleteProps(ctx, ids);
         sendJson(res, { deleted: ids.length });
@@ -400,12 +462,15 @@ export async function matchFactoryRoute(
       throw new Error("unknown batch action");
     }
     if (method === "GET" && seg2 === "deleted") {
-      sendJson(res, await listDeletedProps(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listDeletedProps(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && seg2 === "permanent") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.props.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("道具不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
       await permanentDeleteProps(ctx, ids);
       sendJson(res, { deleted: ids.length });
       return true;
@@ -417,6 +482,9 @@ export async function matchFactoryRoute(
         ? (body.targetProjectIds as string[]).filter(Boolean)
         : [];
       if (targetProjectIds.length === 0) throw new Error("targetProjectIds 不能为空");
+      const source = await ctx.props.findById(sourceId);
+      if (!source) throw new Error("道具不存在");
+      if (!(await requireProjectAccess(res, h, source.project_id, ...targetProjectIds))) return true;
       sendJson(res, await copyPropsToProjects(ctx, sourceId, targetProjectIds));
       return true;
     }
@@ -429,10 +497,12 @@ export async function matchFactoryRoute(
     if (method === "POST" && seg3 === "images") {
       const body = (await readJson(req)) as Record<string, unknown>;
       const propId = requireString(seg2, "id");
+      const prop = await ctx.props.findById(propId);
+      if (!prop) throw new Error("道具不存在");
       const url = requireString(body.url, "url");
       const record = await createPropImage(ctx, {
         prop_id: propId,
-        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        project_id: prop.project_id,
         script_id: typeof body.script_id === "string" ? body.script_id : undefined,
         url,
         prompt: typeof body.prompt === "string" ? body.prompt : undefined,
@@ -448,15 +518,19 @@ export async function matchFactoryRoute(
   // ===== 分镜 =====
   if (seg0 === "api" && seg1 === "storyboards") {
     if (method === "GET" && parts.join("/") === "api/storyboards") {
-      sendJson(res, await listStoryboards(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listStoryboards(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/storyboards") {
-      sendJson(res, await createStoryboard(ctx, (await readJson(req)) as any));
+      const body = await readJson(req);
+      if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
+      sendJson(res, await createStoryboard(ctx, body as any));
       return true;
     }
     if (method === "PUT" && seg2) {
-      sendJson(res, await updateStoryboard(ctx, seg2, (await readJson(req)) as any));
+      const existing = await ctx.storyboards.findById(seg2);
+      if (!existing) throw new Error("分镜不存在");
+      sendJson(res, await updateStoryboard(ctx, seg2, { ...(await readJson(req)), project_id: existing.project_id } as any));
       return true;
     }
     if (method === "DELETE" && seg2) {
@@ -470,12 +544,15 @@ export async function matchFactoryRoute(
       return true;
     }
     if (method === "GET" && seg2 === "deleted") {
-      sendJson(res, await listDeletedStoryboards(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listDeletedStoryboards(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && seg2 === "permanent") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.storyboards.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("分镜不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
       for (const id of ids) await permanentDeleteStoryboard(ctx, id);
       sendJson(res, { deleted: ids.length });
       return true;
@@ -488,6 +565,7 @@ export async function matchFactoryRoute(
     if (method === "POST" && seg2 && seg3 === "copy") {
       const body = await readJson(req);
       const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
+      if (!(await requireProjectAccess(res, h, targetProjectId))) return true;
       sendJson(res, await copyStoryboardToProject(ctx, seg2, targetProjectId));
       return true;
     }
@@ -497,15 +575,19 @@ export async function matchFactoryRoute(
   // ===== 音频 =====
   if (seg0 === "api" && seg1 === "audios") {
     if (method === "GET" && parts.join("/") === "api/audios") {
-      sendJson(res, await listAudios(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listAudios(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/audios") {
-      sendJson(res, await createAudio(ctx, (await readJson(req)) as any));
+      const body = await readJson(req);
+      if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
+      sendJson(res, await createAudio(ctx, body as any));
       return true;
     }
     if (method === "PUT" && seg2) {
-      sendJson(res, await updateAudio(ctx, seg2, (await readJson(req)) as any));
+      const existing = await ctx.audios.findById(seg2);
+      if (!existing) throw new Error("音频不存在");
+      sendJson(res, await updateAudio(ctx, seg2, { ...(await readJson(req)), project_id: existing.project_id } as any));
       return true;
     }
     if (method === "DELETE" && seg2) {
@@ -519,12 +601,15 @@ export async function matchFactoryRoute(
       return true;
     }
     if (method === "GET" && seg2 === "deleted") {
-      sendJson(res, await listDeletedAudios(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listDeletedAudios(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && seg2 === "permanent") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.audios.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("音频不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
       for (const id of ids) await permanentDeleteAudio(ctx, id);
       sendJson(res, { deleted: ids.length });
       return true;
@@ -532,6 +617,7 @@ export async function matchFactoryRoute(
     if (method === "POST" && seg2 && seg3 === "copy") {
       const body = await readJson(req);
       const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
+      if (!(await requireProjectAccess(res, h, targetProjectId))) return true;
       sendJson(res, await copyAudioToProject(ctx, seg2, targetProjectId));
       return true;
     }
@@ -541,7 +627,9 @@ export async function matchFactoryRoute(
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/tts/generate") {
-      sendJson(res, await generateTTS(ctx, (await readJson(req)) as any));
+      const body = await readJson(req);
+      if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
+      sendJson(res, await generateTTS(ctx, body as any));
       return true;
     }
     return false;
@@ -550,15 +638,19 @@ export async function matchFactoryRoute(
   // ===== 模块视频任务 =====
   if (seg0 === "api" && seg1 === "module-videos") {
     if (method === "GET" && parts.join("/") === "api/module-videos") {
-      sendJson(res, await listModuleVideoTasks(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listModuleVideoTasks(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/module-videos") {
-      sendJson(res, await createModuleVideoTask(ctx, (await readJson(req)) as any));
+      const body = await readJson(req);
+      if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
+      sendJson(res, await createModuleVideoTask(ctx, body as any));
       return true;
     }
     if (method === "PUT" && seg2) {
-      sendJson(res, await updateModuleVideoTask(ctx, seg2, (await readJson(req)) as any));
+      const existing = await ctx.moduleVideos.findById(seg2);
+      if (!existing) throw new Error("视频任务不存在");
+      sendJson(res, await updateModuleVideoTask(ctx, seg2, { ...(await readJson(req)), project_id: existing.project_id } as any));
       return true;
     }
     if (method === "DELETE" && seg2) {
@@ -572,12 +664,15 @@ export async function matchFactoryRoute(
       return true;
     }
     if (method === "GET" && seg2 === "deleted") {
-      sendJson(res, await listDeletedVideos(ctx, queryParam(req, "projectId")));
+      sendJson(res, await filterAccessibleProjects(await listDeletedVideos(ctx, queryParam(req, "projectId")), h));
       return true;
     }
     if (method === "POST" && seg2 === "permanent") {
       const body = await readJson(req);
       const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.moduleVideos.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("视频任务不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
       for (const id of ids) await permanentDeleteVideo(ctx, id);
       sendJson(res, { deleted: ids.length });
       return true;
@@ -585,6 +680,7 @@ export async function matchFactoryRoute(
     if (method === "POST" && seg2 && seg3 === "copy") {
       const body = await readJson(req);
       const targetProjectId = requireString(body.targetProjectId, "targetProjectId");
+      if (!(await requireProjectAccess(res, h, targetProjectId))) return true;
       sendJson(res, await copyVideoToProject(ctx, seg2, targetProjectId));
       return true;
     }
@@ -627,16 +723,22 @@ export async function matchFactoryRoute(
   if (seg0 === "api" && seg1 === "character-image-history") {
     if (method === "GET" && parts.join("/") === "api/character-image-history") {
       const characterId = requireString(queryParam(req, "characterId"), "characterId");
+      const character = await ctx.characters.findById(characterId);
+      if (!character) throw new Error("角色不存在");
+      if (!(await requireProjectAccess(res, h, character.project_id))) return true;
       sendJson(res, await listImageHistory(ctx, characterId));
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/character-image-history") {
       const body = (await readJson(req)) as Record<string, unknown>;
       const characterId = requireString(body.character_id, "character_id");
+      const character = await ctx.characters.findById(characterId);
+      if (!character) throw new Error("角色不存在");
+      if (!(await requireProjectAccess(res, h, character.project_id))) return true;
       const url = requireString(body.url, "url");
       const record = await appendImageHistory(ctx, {
         character_id: characterId,
-        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        project_id: character.project_id,
         url,
         ratio: typeof body.ratio === "string" ? body.ratio : "1:1",
         model: typeof body.model === "string" ? body.model : "",
@@ -666,6 +768,9 @@ export async function matchFactoryRoute(
     if (method === "POST" && parts.join("/") === "api/character-image-history/clear") {
       const body = (await readJson(req)) as Record<string, unknown>;
       const characterId = requireString(body.character_id, "character_id");
+      const character = await ctx.characters.findById(characterId);
+      if (!character) throw new Error("角色不存在");
+      if (!(await requireProjectAccess(res, h, character.project_id))) return true;
       const count = await clearImageHistory(ctx, characterId);
       sendJson(res, { deleted: count });
       return true;
@@ -759,16 +864,22 @@ export async function matchFactoryRoute(
   if (seg0 === "api" && seg1 === "prop-image-history") {
     if (method === "GET" && parts.join("/") === "api/prop-image-history") {
       const propId = requireString(queryParam(req, "propId"), "propId");
+      const prop = await ctx.props.findById(propId);
+      if (!prop) throw new Error("道具不存在");
+      if (!(await requireProjectAccess(res, h, prop.project_id))) return true;
       sendJson(res, await listPropImageHistory(ctx, propId));
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/prop-image-history") {
       const body = (await readJson(req)) as Record<string, unknown>;
       const propId = requireString(body.prop_id, "prop_id");
+      const prop = await ctx.props.findById(propId);
+      if (!prop) throw new Error("道具不存在");
+      if (!(await requireProjectAccess(res, h, prop.project_id))) return true;
       const url = requireString(body.url, "url");
       const record = await appendPropImageHistory(ctx, {
         prop_id: propId,
-        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        project_id: prop.project_id,
         url,
         ratio: typeof body.ratio === "string" ? body.ratio : "1:1",
         model: typeof body.model === "string" ? body.model : "",
@@ -803,6 +914,9 @@ export async function matchFactoryRoute(
     if (method === "POST" && parts.join("/") === "api/prop-image-history/clear") {
       const body = (await readJson(req)) as Record<string, unknown>;
       const propId = requireString(body.prop_id, "prop_id");
+      const prop = await ctx.props.findById(propId);
+      if (!prop) throw new Error("道具不存在");
+      if (!(await requireProjectAccess(res, h, prop.project_id))) return true;
       const count = await clearPropImageHistory(ctx, propId);
       sendJson(res, { deleted: count });
       return true;
@@ -821,16 +935,22 @@ export async function matchFactoryRoute(
   if (seg0 === "api" && seg1 === "scene-image-history") {
     if (method === "GET" && parts.join("/") === "api/scene-image-history") {
       const sceneId = requireString(queryParam(req, "sceneId"), "sceneId");
+      const scene = await ctx.scenes.findById(sceneId);
+      if (!scene) throw new Error("场景不存在");
+      if (!(await requireProjectAccess(res, h, scene.project_id))) return true;
       sendJson(res, await listSceneImageHistory(ctx, sceneId));
       return true;
     }
     if (method === "POST" && parts.join("/") === "api/scene-image-history") {
       const body = (await readJson(req)) as Record<string, unknown>;
       const sceneId = requireString(body.scene_id, "scene_id");
+      const scene = await ctx.scenes.findById(sceneId);
+      if (!scene) throw new Error("场景不存在");
+      if (!(await requireProjectAccess(res, h, scene.project_id))) return true;
       const url = requireString(body.url, "url");
       const record = await appendSceneImageHistory(ctx, {
         scene_id: sceneId,
-        project_id: typeof body.project_id === "string" ? body.project_id : "",
+        project_id: scene.project_id,
         url,
         ratio: typeof body.ratio === "string" ? body.ratio : "1:1",
         model: typeof body.model === "string" ? body.model : "",
@@ -865,6 +985,9 @@ export async function matchFactoryRoute(
     if (method === "POST" && parts.join("/") === "api/scene-image-history/clear") {
       const body = (await readJson(req)) as Record<string, unknown>;
       const sceneId = requireString(body.scene_id, "scene_id");
+      const scene = await ctx.scenes.findById(sceneId);
+      if (!scene) throw new Error("场景不存在");
+      if (!(await requireProjectAccess(res, h, scene.project_id))) return true;
       const count = await clearSceneImageHistory(ctx, sceneId);
       sendJson(res, { deleted: count });
       return true;

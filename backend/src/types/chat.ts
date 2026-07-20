@@ -16,6 +16,8 @@ export type ConversationMode = "chat" | "image" | "video";
 /** 一个历史会话，可以归属到某个项目，也可以放在"不使用项目"下。 */
 export interface Conversation {
   id: string;
+  /** 登录用户归属；旧数据为空时仅管理员可接管。 */
+  user_id?: string;
   title: string;
   model: string;
   /** 会话模式：chat / image / video */

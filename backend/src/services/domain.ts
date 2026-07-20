@@ -139,11 +139,12 @@ export async function deleteProject(ctx: AppContext, projectId: string): Promise
 }
 
 /** 创建新的聊天或创作会话，并记录项目归属。 */
-export async function createConversation(ctx: AppContext, input: { title?: string; model?: string; project_id?: string; projectId?: string }): Promise<Conversation> {
+export async function createConversation(ctx: AppContext, input: { title?: string; model?: string; project_id?: string; projectId?: string; user_id?: string }): Promise<Conversation> {
   const now = nowIso();
   const projectId = input.project_id ?? input.projectId ?? "";
   const conversation: Conversation = {
     id: id("c"),
+    user_id: input.user_id ?? "",
     title: input.title?.trim() || "新的创作会话",
     model: input.model || DEFAULT_MODEL,
     mode: "chat",
@@ -158,14 +159,17 @@ export async function createConversation(ctx: AppContext, input: { title?: strin
 }
 
 /** 按项目筛选并返回会话列表，同时用首条用户消息补齐默认标题。 */
-export async function listConversations(ctx: AppContext, projectId?: string | null): Promise<Conversation[]> {
+export async function listConversations(ctx: AppContext, projectId?: string | null, userId?: string, includeLegacy = false): Promise<Conversation[]> {
   const conversations = await ctx.conversations.findMany({}, { sort: "desc" });
   const messages = await ctx.messages.findMany({}, { sort: "asc" });
   const projects = await ctx.projects.findMany({}, { sort: "asc" });
   const archivedProjectIds = new Set(projects.filter((project) => project.archived_at).map((project) => project.id));
+  const owned = userId
+    ? conversations.filter((conversation) => conversation.user_id === userId || (includeLegacy && !conversation.user_id))
+    : conversations;
   const filtered = projectId === undefined || projectId === null || projectId === "all"
-    ? conversations.filter((conversation) => !archivedProjectIds.has(conversation.project_id))
-    : conversations.filter((conversation) => (conversation.project_id ?? "") === projectId);
+    ? owned.filter((conversation) => !archivedProjectIds.has(conversation.project_id))
+    : owned.filter((conversation) => (conversation.project_id ?? "") === projectId);
 
   return filtered.map((conversation) => {
     if (!isDefaultTitle(conversation.title)) return conversation;
@@ -239,10 +243,11 @@ function legacyOwnerByTime(createdAt: string, conversations: Conversation[]): st
 }
 
 /** 获取图片任务列表，并按会话过滤和触发本地缓存。 */
-export async function listImages(ctx: AppContext, conversationId?: string): Promise<ImageTask[]> {
+export async function listImages(ctx: AppContext, conversationId?: string, userId?: string, includeLegacy = false): Promise<ImageTask[]> {
   const tasks = await ctx.images.findMany({}, { sort: "desc" });
   const conversations = await ctx.conversations.findMany({}, { sort: "asc" });
-  const filtered = conversationId ? tasks.filter((task) => (task.conversation_id || legacyOwnerByTime(task.created_at, conversations)) === conversationId) : tasks;
+  const owned = userId ? tasks.filter((task) => task.user_id === userId || (includeLegacy && !task.user_id)) : tasks;
+  const filtered = conversationId ? owned.filter((task) => (task.conversation_id || legacyOwnerByTime(task.created_at, conversations)) === conversationId) : owned;
   for (const task of filtered) scheduleImageTaskCache(ctx, task);
   return filtered;
 }
@@ -256,10 +261,11 @@ export async function queryImage(ctx: AppContext, idValue: string): Promise<Imag
 }
 
 /** 获取视频任务列表，并按会话过滤和触发本地缓存。 */
-export async function listVideos(ctx: AppContext, conversationId?: string): Promise<VideoTask[]> {
+export async function listVideos(ctx: AppContext, conversationId?: string, userId?: string, includeLegacy = false): Promise<VideoTask[]> {
   const tasks = await ctx.videos.findMany({}, { sort: "desc" });
   const conversations = await ctx.conversations.findMany({}, { sort: "asc" });
-  const filtered = conversationId ? tasks.filter((task) => (task.conversation_id || legacyOwnerByTime(task.created_at, conversations)) === conversationId) : tasks;
+  const owned = userId ? tasks.filter((task) => task.user_id === userId || (includeLegacy && !task.user_id)) : tasks;
+  const filtered = conversationId ? owned.filter((task) => (task.conversation_id || legacyOwnerByTime(task.created_at, conversations)) === conversationId) : owned;
   for (const task of filtered) scheduleVideoTaskCache(ctx, task);
   return filtered;
 }
@@ -362,6 +368,7 @@ export async function createLocalImageTask(ctx: AppContext, body: Record<string,
   if (imageUrls.length === 0) throw new Error("image_urls is required");
   const task: ImageTask = {
     id: id("img"),
+    user_id: typeof body.user_id === "string" ? body.user_id : "",
     conversation_id: conversationId,
     prompt,
     negative: "",
@@ -465,11 +472,12 @@ export async function queryVideo(ctx: AppContext, idValue: string): Promise<Vide
 }
 
 /** 新增收藏记录，用于收藏图片或视频任务。 */
-export async function addFavorite(ctx: AppContext, body: Record<string, unknown>): Promise<Favorite> {
+export async function addFavorite(ctx: AppContext, body: Record<string, unknown>, userId = ""): Promise<Favorite> {
   const type = requireString(body.type, "type") as FavoriteType;
   if (!["chat", "image", "video"].includes(type)) throw new Error("invalid favorite type");
   const favorite: Favorite = {
     id: id("fav"),
+    user_id: userId,
     type,
     ref_id: requireString(body.ref_id, "ref_id"),
     created_at: nowIso(),

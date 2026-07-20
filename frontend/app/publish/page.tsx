@@ -68,6 +68,7 @@ interface PublishedVideoResponse {
  */
 interface PublishPlanResponse {
   id: string;
+  project_id?: string;
   name: string;
   status: "draft" | "scheduled" | "publishing" | "published" | "failed" | "cancelled";
   plannedDate: string;
@@ -223,10 +224,13 @@ export default function PublishCenterPage() {
   const toApiPlatform = (platform: string) => platform === "other" ? "custom" : platform;
 
   async function createPlan(form: PublishPlanForm) {
+    const selectedProjectId = recentVideos.find((video) => form.videoIds.includes(video.id))?.projectId
+      || recentVideos[0]?.projectId;
+    if (!selectedProjectId) return notify.error("当前没有可用于创建计划的项目成片");
     const response = await fetch("/api/publish/plans", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: form.name, status: toApiStatus(form.status), plannedDate: form.date, videos: form.videoIds, platforms: form.platforms.map(toApiPlatform), assignee: form.owner }),
+      body: JSON.stringify({ projectId: selectedProjectId, name: form.name, status: toApiStatus(form.status), plannedDate: form.date, videos: form.videoIds, platforms: form.platforms.map(toApiPlatform), assignee: form.owner }),
     });
     const result: ApiResponse<PublishPlanResponse> = await response.json();
     if (result.code !== 0) return notify.error(result.message || "创建发布计划失败");

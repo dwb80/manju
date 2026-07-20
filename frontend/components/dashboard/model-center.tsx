@@ -94,6 +94,7 @@ export interface ModelInfo {
 interface ModelCenterProps {
   models: ModelInfo[];
   isLoading?: boolean;
+  canManage?: boolean;
   onRefresh: () => void;
   onCreate: () => void;
   onEdit: (model: ModelInfo) => void;
@@ -120,6 +121,7 @@ interface ModelCenterProps {
 export const ModelCenter = memo(function ModelCenter({
   models,
   isLoading = false,
+  canManage = true,
   onRefresh,
   onCreate,
   onEdit,
@@ -238,10 +240,12 @@ export const ModelCenter = memo(function ModelCenter({
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               刷新
             </Button>
-            <Button size="sm" onClick={onCreate} className="gap-2">
-              <Plus className="h-4 w-4" />
-              添加模型
-            </Button>
+            {canManage && (
+              <Button size="sm" onClick={onCreate} className="gap-2">
+                <Plus className="h-4 w-4" />
+                添加模型
+              </Button>
+            )}
           </div>
         </div>
 
@@ -335,30 +339,34 @@ export const ModelCenter = memo(function ModelCenter({
                         <Eye className="h-4 w-4" />
                       </button>
                     )}
-                    <button
-                      onClick={() => onEdit(model)}
-                      className="rounded p-2 text-[#888] hover:bg-white/10 hover:text-white"
-                      title="编辑"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <Tip label={model.is_enabled ? "禁用" : "启用"}>
-                      <button
-                        onClick={() => onToggleEnabled(model.id, !model.is_enabled)}
-                        className={`rounded p-2 hover:bg-white/10 ${model.is_enabled ? "text-emerald-400 hover:text-emerald-300" : "text-[#666] hover:text-white"
-                          }`}
-                      >
-                        <Power className="h-4 w-4" />
-                      </button>
-                    </Tip>
-                    <Tip label="删除">
-                      <button
-                        onClick={() => onDelete(model)}
-                        className="rounded p-2 text-[#888] hover:bg-red-500/10 hover:text-red-400"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </Tip>
+                    {canManage && (
+                      <>
+                        <button
+                          onClick={() => onEdit(model)}
+                          className="rounded p-2 text-[#888] hover:bg-white/10 hover:text-white"
+                          title="编辑"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <Tip label={model.is_enabled ? "禁用" : "启用"}>
+                          <button
+                            onClick={() => onToggleEnabled(model.id, !model.is_enabled)}
+                            className={`rounded p-2 hover:bg-white/10 ${model.is_enabled ? "text-emerald-400 hover:text-emerald-300" : "text-[#666] hover:text-white"
+                              }`}
+                          >
+                            <Power className="h-4 w-4" />
+                          </button>
+                        </Tip>
+                        <Tip label="删除">
+                          <button
+                            onClick={() => onDelete(model)}
+                            className="rounded p-2 text-[#888] hover:bg-red-500/10 hover:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </Tip>
+                      </>
+                    )}
                   </div>
                 </div>
 

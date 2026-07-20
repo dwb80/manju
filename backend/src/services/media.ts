@@ -72,6 +72,11 @@ function safeName(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 96);
 }
 
+function isPathWithin(root: string, target: string): boolean {
+  const relative = path.relative(path.resolve(root), path.resolve(target));
+  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+}
+
 /** 从原始文件名中提取可用扩展名。 */
 function extensionFromName(name: string): string {
   const ext = path.extname(name).toLowerCase();
@@ -101,7 +106,7 @@ async function localMediaPath(ctx: AppContext, url: string): Promise<string | nu
   if (url.startsWith("/media/")) {
     const requested = decodeURIComponent(url.replace(/^\/media\/?/, ""));
     const target = path.normalize(path.join(ctx.mediaRoot, requested));
-    return target.startsWith(path.resolve(ctx.mediaRoot)) ? target : null;
+    return isPathWithin(ctx.mediaRoot, target) ? target : null;
   }
   if (url.startsWith("/project-media/")) {
     const [, projectId, ...rest] = url.replace(/^\/project-media\/?/, "").split("/");
@@ -109,7 +114,7 @@ async function localMediaPath(ctx: AppContext, url: string): Promise<string | nu
     const mediaTarget = await projectMediaTarget(ctx, decodeURIComponent(projectId));
     if (!mediaTarget) return null;
     const target = path.normalize(path.join(mediaTarget.root, ...rest.map(decodeURIComponent)));
-    return target.startsWith(path.resolve(mediaTarget.root)) ? target : null;
+    return isPathWithin(mediaTarget.root, target) ? target : null;
   }
   return null;
 }
@@ -190,17 +195,18 @@ export interface StoredUpload {
  * @param {UploadInput} upload - 上传文件信息（文件名、类型、字节数据）
  * @returns {Promise<StoredUpload>} 存储结果（URL、名称、大小、类型）
  */
-export async function saveUploadedImage(ctx: AppContext, upload: UploadInput): Promise<StoredUpload> {
+export async function saveUploadedImage(ctx: AppContext, upload: UploadInput, userId = ""): Promise<StoredUpload> {
   const type = upload.contentType.split(";")[0].trim().toLowerCase();
   if (!type.startsWith("image/")) throw new Error("only image uploads are supported");
   const ext = contentTypeExtensions[type] ?? (extensionFromName(upload.filename) || ".png");
   const created = new Date().toISOString().slice(0, 10);
-  const directory = path.join(ctx.mediaRoot, "uploads", created);
+  const owner = safeName(userId) || "legacy";
+  const directory = path.join(ctx.mediaRoot, "uploads", owner, created);
   const filename = `${safeName(path.basename(upload.filename, path.extname(upload.filename)) || "image")}-${randomUUID()}${ext}`;
   await mkdir(directory, { recursive: true });
   await writeFile(path.join(directory, filename), upload.bytes);
   return {
-    url: `/media/uploads/${created}/${filename}`,
+    url: `/media/uploads/${owner}/${created}/${filename}`,
     name: upload.filename,
     size: upload.bytes.length,
     type: type || contentTypeFromExtension(ext),

@@ -77,6 +77,8 @@ export type ConversationMode = "chat" | "image" | "video";
 
 export interface Conversation {
   id: string;
+  /** 登录用户归属；旧数据为空时仅管理员可接管。 */
+  user_id?: string;
   title: string;
   model: string;
   /** 会话模式：chat / image / video */
@@ -123,6 +125,7 @@ export interface Message {
 
 export interface VideoTask {
   id: string;
+  user_id?: string;
   task_id: string;
   video_id: string;
   conversation_id: string;
@@ -146,6 +149,7 @@ export interface VideoTask {
 
 export interface Favorite {
   id: string;
+  user_id?: string;
   type: FavoriteType;
   ref_id: string;
   created_at: string;

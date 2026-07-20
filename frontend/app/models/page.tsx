@@ -19,7 +19,7 @@
  * @module models/page
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { MessageCircle, Image as ImageIcon, Video, Settings2 } from "lucide-react";
 import {
   ModelCenter,
@@ -132,6 +132,20 @@ export default function ModelsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<ModelInfo | null>(null);
   const [saving, setSaving] = useState(false);
+  const [canManage, setCanManage] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result) => {
+        if (active) setCanManage(result?.data?.user?.role === "admin");
+      })
+      .catch(() => {
+        if (active) setCanManage(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   // 删除确认状态
   const [deleteTarget, setDeleteTarget] = useState<ModelInfo | null>(null);
@@ -243,7 +257,7 @@ export default function ModelsPage() {
       {/* === 统一页面头 === */}
       <StandalonePageHeader
         title="模型中心"
-        description="管理AI模型配置、API接口、能力标签和价格信息，支持模型注册、编辑、删除和启用/禁用"
+        description={canManage ? "管理AI模型配置、API接口、能力标签和价格信息" : "查看当前可用模型、能力标签和价格信息；配置变更仅限管理员"}
         breadcrumbs={["首页", "模型中心"]}
         extraRight={
           <>
@@ -261,6 +275,11 @@ export default function ModelsPage() {
         {error && (
           <Alert tone="error" className="mb-4">
             {error}
+          </Alert>
+        )}
+        {!canManage && (
+          <Alert tone="info" className="mb-4">
+            当前为只读模式。新增、编辑、启停、设为默认及删除模型需要管理员权限。
           </Alert>
         )}
 
@@ -297,6 +316,7 @@ export default function ModelsPage() {
         <ModelCenter
           models={models}
           isLoading={isLoading}
+          canManage={canManage}
           onRefresh={handleRefresh}
           onCreate={handleCreate}
           onEdit={handleEdit}

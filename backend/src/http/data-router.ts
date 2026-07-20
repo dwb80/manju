@@ -20,6 +20,64 @@ import { getRawDatabase } from "../storage/sqlite.js";
  */
 export type TimeRange = "today" | "week" | "month" | "all";
 
+/** 当前用户的数据与项目访问边界。 */
+export interface DataAccessContext {
+  userId: string;
+  isAdmin: boolean;
+  canAccessProject: (projectId: string) => Promise<boolean>;
+}
+
+function ownsPersonalRecord(record: { user_id?: string }, access: DataAccessContext): boolean {
+  return record.user_id === access.userId || (!record.user_id && access.isAdmin);
+}
+
+async function canAccessConversationProject(
+  conversation: { project_id?: string },
+  access: DataAccessContext,
+): Promise<boolean> {
+  return !conversation.project_id || access.canAccessProject(conversation.project_id);
+}
+
+async function getVisibleAIRecords(ctx: AppContext, access: DataAccessContext): Promise<{
+  imageTasks: ImageTask[];
+  videoTasks: VideoTask[];
+  messages: Message[];
+}> {
+  const conversations = await ctx.conversations.findMany({}, { sort: "desc" });
+  const visibleConversationIds = new Set<string>();
+  for (const conversation of conversations) {
+    if (!ownsPersonalRecord(conversation, access)) continue;
+    if (await canAccessConversationProject(conversation, access)) visibleConversationIds.add(conversation.id);
+  }
+  const [allImages, allVideos, allMessages] = await Promise.all([
+    ctx.images.findMany({}, { sort: "desc" }),
+    ctx.videos.findMany({}, { sort: "desc" }),
+    ctx.messages.findMany({}, { sort: "desc" }),
+  ]);
+  return {
+    imageTasks: allImages.filter((task) => ownsPersonalRecord(task, access) && (!task.conversation_id || visibleConversationIds.has(task.conversation_id))),
+    videoTasks: allVideos.filter((task) => ownsPersonalRecord(task, access) && (!task.conversation_id || visibleConversationIds.has(task.conversation_id))),
+    messages: allMessages.filter((message) => visibleConversationIds.has(message.conversation_id)),
+  };
+}
+
+async function filterVisibleProjects<T extends { project_id: string }>(
+  records: T[],
+  access: DataAccessContext,
+): Promise<T[]> {
+  const visible: T[] = [];
+  const decisions = new Map<string, boolean>();
+  for (const record of records) {
+    let allowed = decisions.get(record.project_id);
+    if (allowed === undefined) {
+      allowed = await access.canAccessProject(record.project_id);
+      decisions.set(record.project_id, allowed);
+    }
+    if (allowed) visible.push(record);
+  }
+  return visible;
+}
+
 /**
  * 数据概览指标响应格式
  */
@@ -225,20 +283,18 @@ function calculateChatCost(message: Message): number {
  * @param {TimeRange} timeRange - 时间范围
  * @returns {Promise<DataMetricsResponse>} 数据概览指标响应
  */
-async function getDataMetrics(ctx: AppContext, timeRange: TimeRange): Promise<DataMetricsResponse> {
+async function getDataMetrics(ctx: AppContext, timeRange: TimeRange, access: DataAccessContext): Promise<DataMetricsResponse> {
   const startTime = getTimeRangeStart(timeRange);
   const startTimeStr = startTime.toISOString();
 
   // 获取图片任务
-  const imageTasks = await ctx.images.findMany({}, { sort: "desc" });
+  const { imageTasks, videoTasks, messages } = await getVisibleAIRecords(ctx, access);
   const filteredImageTasks = imageTasks.filter(task => task.created_at >= startTimeStr);
 
   // 获取视频任务
-  const videoTasks = await ctx.videos.findMany({}, { sort: "desc" });
   const filteredVideoTasks = videoTasks.filter(task => task.created_at >= startTimeStr);
 
   // 获取消息(用于聊天成本统计)
-  const messages = await ctx.messages.findMany({}, { sort: "desc" });
   const filteredMessages = messages.filter(msg => msg.created_at >= startTimeStr);
 
   // 计算AI成本
@@ -284,14 +340,12 @@ async function getDataMetrics(ctx: AppContext, timeRange: TimeRange): Promise<Da
  * @param {TimeRange} timeRange - 时间范围
  * @returns {Promise<AICostResponse>} AI 成本统计响应
  */
-async function getAICost(ctx: AppContext, timeRange: TimeRange): Promise<AICostResponse> {
+async function getAICost(ctx: AppContext, timeRange: TimeRange, access: DataAccessContext): Promise<AICostResponse> {
   const startTime = getTimeRangeStart(timeRange);
   const startTimeStr = startTime.toISOString();
 
   // 获取所有任务和消息
-  const imageTasks = await ctx.images.findMany({}, { sort: "desc" });
-  const videoTasks = await ctx.videos.findMany({}, { sort: "desc" });
-  const messages = await ctx.messages.findMany({}, { sort: "desc" });
+  const { imageTasks, videoTasks, messages } = await getVisibleAIRecords(ctx, access);
 
   // 按时间范围筛选
   const filteredImageTasks = imageTasks.filter(task => task.created_at >= startTimeStr);
@@ -385,28 +439,27 @@ async function getAICost(ctx: AppContext, timeRange: TimeRange): Promise<AICostR
  * @param {TimeRange} timeRange - 时间范围
  * @returns {Promise<ProductionEfficiencyResponse>} 生产效率响应
  */
-async function getProductionEfficiency(ctx: AppContext, timeRange: TimeRange): Promise<ProductionEfficiencyResponse> {
+async function getProductionEfficiency(ctx: AppContext, timeRange: TimeRange, access: DataAccessContext): Promise<ProductionEfficiencyResponse> {
   const startTime = getTimeRangeStart(timeRange);
   const startTimeStr = startTime.toISOString();
 
   // 获取剧本数据
-  const scripts = await ctx.projectScripts.findMany({}, { sort: "desc" });
+  const scripts = await filterVisibleProjects(await ctx.projectScripts.findMany({}, { sort: "desc" }), access);
   const filteredScripts = scripts.filter((script: ProjectScript) => script.created_at >= startTimeStr);
 
   // 获取分镜数据
-  const storyboards = await ctx.projectStoryboards.findMany({}, { sort: "desc" });
+  const storyboards = await filterVisibleProjects(await ctx.projectStoryboards.findMany({}, { sort: "desc" }), access);
   const filteredStoryboards = storyboards.filter(storyboard => storyboard.created_at >= startTimeStr);
 
   // 获取图片任务
-  const imageTasks = await ctx.images.findMany({}, { sort: "desc" });
+  const { imageTasks, videoTasks } = await getVisibleAIRecords(ctx, access);
   const filteredImageTasks = imageTasks.filter(task => task.created_at >= startTimeStr);
 
   // 获取视频任务
-  const videoTasks = await ctx.videos.findMany({}, { sort: "desc" });
   const filteredVideoTasks = videoTasks.filter(task => task.created_at >= startTimeStr);
 
   // 获取审核数据
-  const reviews = await ctx.projectReviews.findMany({}, { sort: "desc" });
+  const reviews = await filterVisibleProjects(await ctx.projectReviews.findMany({}, { sort: "desc" }), access);
   const filteredReviews = reviews.filter((review: ProjectReview) => review.created_at >= startTimeStr);
 
   // 计算各阶段效率
@@ -636,19 +689,18 @@ function sendJsonResponse<T>(res: ServerResponse, data: T, status = 200): void {
  *  - 优先查 view_project_costs / view_project_quality / view_project_capacity（启动时建好）
  *  - view 不存在时降级返回空对象，调用方按字段是否齐全渲染
  */
-async function getProjectOverview(_ctx: AppContext, projectId: string): Promise<{
+async function getProjectOverview(ctx: AppContext, projectId: string): Promise<{
   projectId: string;
   costs: Record<string, unknown> | null;
   quality: Record<string, unknown> | null;
   capacity: Record<string, unknown> | null;
   generatedAt: string;
 }> {
-  const databaseFile = process.env.AGNES_DB_FILE ?? "data/sqlite.db";
   let costs: Record<string, unknown> | null = null;
   let quality: Record<string, unknown> | null = null;
   let capacity: Record<string, unknown> | null = null;
   try {
-    const db = getRawDatabase(databaseFile);
+    const db = getRawDatabase(ctx.databaseFile);
     costs = (db.prepare("SELECT * FROM view_project_costs WHERE project_id = ?").get(projectId) as Record<string, unknown> | undefined) ?? null;
     quality = (db.prepare("SELECT * FROM view_project_quality WHERE project_id = ?").get(projectId) as Record<string, unknown> | undefined) ?? null;
     capacity = (db.prepare("SELECT * FROM view_project_capacity WHERE project_id = ?").get(projectId) as Record<string, unknown> | undefined) ?? null;
@@ -684,7 +736,8 @@ function sendErrorResponse(res: ServerResponse, error: unknown, status = 400): v
 export async function handleDataRouter(
   ctx: AppContext,
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
+  access: DataAccessContext,
 ): Promise<void> {
   const method = req.method ?? "GET";
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -694,7 +747,7 @@ export async function handleDataRouter(
     // GET /api/data/metrics - 获取数据概览指标
     if (method === "GET" && pathname === "/api/data/metrics") {
       const timeRange = parseTimeRange(req);
-      const result = await getDataMetrics(ctx, timeRange);
+      const result = await getDataMetrics(ctx, timeRange, access);
       sendJsonResponse(res, result);
       return;
     }
@@ -702,7 +755,7 @@ export async function handleDataRouter(
     // GET /api/data/ai-cost - 获取AI成本统计数据
     if (method === "GET" && pathname === "/api/data/ai-cost") {
       const timeRange = parseTimeRange(req);
-      const result = await getAICost(ctx, timeRange);
+      const result = await getAICost(ctx, timeRange, access);
       sendJsonResponse(res, result);
       return;
     }
@@ -710,7 +763,7 @@ export async function handleDataRouter(
     // GET /api/data/production-efficiency - 获取生产效率数据
     if (method === "GET" && pathname === "/api/data/production-efficiency") {
       const timeRange = parseTimeRange(req);
-      const result = await getProductionEfficiency(ctx, timeRange);
+      const result = await getProductionEfficiency(ctx, timeRange, access);
       sendJsonResponse(res, result);
       return;
     }

@@ -173,11 +173,47 @@ test("upload endpoint stores image files under media uploads", async () => {
     const payload = await response.json();
     assert.equal(payload.code, 0, payload.message);
     assert.equal(payload.data.length, 1);
-    assert.match(payload.data[0].url, /^\/media\/uploads\/\d{4}-\d{2}-\d{2}\/sample-[\w-]+\.png$/);
+    assert.match(payload.data[0].url, /^\/media\/uploads\/local-admin\/\d{4}-\d{2}-\d{2}\/sample-[\w-]+\.png$/);
 
     const stored = await fetch(`${base}${payload.data[0].url}`);
     assert.equal(stored.status, 200);
     assert.equal(stored.headers.get("content-type"), "image/png");
+  });
+});
+
+test("assistant feedback is persisted, replaceable and removable", async () => {
+  await withServer(async (base) => {
+    const conversation = await json(base, "/api/assistant/conversations", {
+      method: "POST",
+      body: JSON.stringify({ title: "反馈测试" }),
+    });
+    const message = await json(base, `/api/assistant/conversations/${conversation.id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ role: "assistant", content: "请评价这条回答", meta: { model: "fake" } }),
+    });
+
+    const liked = await json(base, `/api/assistant/messages/${message.id}/feedback`, {
+      method: "PATCH",
+      body: JSON.stringify({ feedback: "up" }),
+    });
+    assert.equal(liked.meta.feedback, "up");
+    assert.ok(liked.meta.feedback_at);
+
+    const disliked = await json(base, `/api/assistant/messages/${message.id}/feedback`, {
+      method: "PATCH",
+      body: JSON.stringify({ feedback: "down" }),
+    });
+    assert.equal(disliked.meta.feedback, "down");
+
+    const cleared = await json(base, `/api/assistant/messages/${message.id}/feedback`, {
+      method: "PATCH",
+      body: JSON.stringify({ feedback: null }),
+    });
+    assert.equal("feedback" in cleared.meta, false);
+    assert.equal(cleared.meta.model, "fake");
+
+    const messages = await json(base, `/api/assistant/conversations/${conversation.id}/messages`);
+    assert.equal("feedback" in messages[0].meta, false);
   });
 });
 
@@ -263,11 +299,15 @@ test("settings never echo API keys and preserve or clear the stored secret expli
 
 test("publish plans persist and validate referenced videos", async () => {
   await withServer(async (base) => {
-    const conversation = await json(base, "/api/conversations", { method: "POST", body: JSON.stringify({ title: "发布测试" }) });
+    const project = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "发布测试项目" }) });
+    const projectOverview = await json(base, `/api/data/project-overview?projectId=${project.id}`);
+    assert.equal(projectOverview.projectId, project.id);
+    assert.equal(projectOverview.capacity.project_id, project.id);
+    const conversation = await json(base, "/api/conversations", { method: "POST", body: JSON.stringify({ title: "发布测试", project_id: project.id }) });
     const video = await json(base, "/api/videos/generate", { method: "POST", body: JSON.stringify({ conversationId: conversation.id, prompt: "发布成片" }) });
     await json(base, `/api/videos/${video.id}`);
 
-    const plan = await json(base, "/api/publish/plans", { method: "POST", body: JSON.stringify({ name: "周五发布", status: "scheduled", videos: [video.id], platforms: ["douyin"], assignee: "运营" }) });
+    const plan = await json(base, "/api/publish/plans", { method: "POST", body: JSON.stringify({ projectId: project.id, name: "周五发布", status: "scheduled", videos: [video.id], platforms: ["douyin"], assignee: "运营" }) });
     assert.equal(plan.name, "周五发布");
     assert.deepEqual(plan.videos, [video.id]);
     assert.deepEqual(plan.platforms, ["douyin"]);

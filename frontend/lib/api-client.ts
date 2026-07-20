@@ -7,20 +7,37 @@ import type { UploadedFile } from "@/lib/app-types";
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_AGNES_BACKEND_URL ?? "").replace(/\/+$/, "");
 const CSRF_STORAGE_KEY = "manju:csrf-token";
+let csrfMemoryToken = "";
 
 /** 读取当前登录会话的 CSRF Token，供 SSE / 文件上传等原生 fetch 请求复用。 */
 export function getCsrfToken(): string {
-  return typeof window !== "undefined"
-    ? window.sessionStorage.getItem(CSRF_STORAGE_KEY) ?? ""
-    : "";
+  if (typeof window === "undefined") return csrfMemoryToken;
+  try {
+    return window.sessionStorage.getItem(CSRF_STORAGE_KEY) ?? csrfMemoryToken;
+  } catch {
+    // 隐私模式、嵌入式浏览器或禁用站点存储时，仍维持当前页面的登录态。
+    return csrfMemoryToken;
+  }
 }
 
 export function storeCsrfToken(token: string): void {
-  if (typeof window !== "undefined") window.sessionStorage.setItem(CSRF_STORAGE_KEY, token);
+  csrfMemoryToken = token;
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(CSRF_STORAGE_KEY, token);
+  } catch {
+    // 内存副本已经写入；存储不可用不应阻断登录后的页面跳转。
+  }
 }
 
 export function clearCsrfToken(): void {
-  if (typeof window !== "undefined") window.sessionStorage.removeItem(CSRF_STORAGE_KEY);
+  csrfMemoryToken = "";
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(CSRF_STORAGE_KEY);
+  } catch {
+    // ignore unavailable browser storage
+  }
 }
 
 /** Agnes API 错误翻译：将英文技术错误转换为友好中文提示 */
@@ -35,6 +52,9 @@ function translateAgnesError(raw: string): string {
     "timeout": "请求超时，请稍后重试",
     "network error": "网络异常，请检查网络连接",
     "fetch failed": "AI 服务网络连接失败，请检查后端网络、代理或防火墙后重试",
+    "service busy": "AI 生图服务当前繁忙，请稍后重试",
+    "serviceunavailableerror": "AI 生图服务当前繁忙，请稍后重试",
+    "agnes api 503": "AI 生图服务当前繁忙，请稍后重试",
     // Agnes 上游偶尔会返回 HTML 错误页 / 空 body / 纯文本，
     // 后端 readJsonSafe 会包装成 "Agnes xxx 返回结果不是有效 JSON（status=...）：..."，
     // 这里给出友好提示并隐藏后端啰嗦细节。
@@ -71,7 +91,18 @@ export function apiUrl(path: string): string {
  */
 export function apiCandidates(path: string): string[] {
   if (/^https?:\/\//.test(path)) return [path];
-  return Array.from(new Set([apiUrl(path), path]));
+
+  // 普通 API 必须走前端同源代理，确保登录 Cookie 始终随请求发送。
+  // 仅流式聊天和生成任务需要绕过 Next.js 开发代理的长请求超时；直连时
+  // 使用页面当前 hostname，避免 localhost 与 127.0.0.1 混用导致 Cookie 丢失。
+  const isLongRunning = path === "/api/chat"
+    || path === "/api/images/generate"
+    || path === "/api/videos/generate";
+  if (isLongRunning && typeof window !== "undefined" && window.location.port === "3001") {
+    const directBackend = `${window.location.protocol}//${window.location.hostname}:3000${path}`;
+    return [directBackend, path];
+  }
+  return [path];
 }
 
 /**
@@ -207,7 +238,6 @@ export async function submitReview(input: {
   targetType: ReviewTargetType;
   targetId: string;
   projectId: string;
-  submittedBy: string;
 }): Promise<ReviewItem> {
   return api<ReviewItem>("/api/reviews", {
     method: "POST",
@@ -228,22 +258,21 @@ export async function fetchReviews(projectId: string, status?: ReviewStatus): Pr
 }
 
 /** 通过 */
-export async function approveReview(reviewId: string, reviewerId: string): Promise<ReviewItem> {
+export async function approveReview(reviewId: string): Promise<ReviewItem> {
   return api<ReviewItem>(`/api/reviews/${reviewId}/approve`, {
     method: "POST",
-    body: JSON.stringify({ reviewerId }),
+    body: JSON.stringify({}),
   });
 }
 
 /** 打回 */
 export async function rejectReview(
   reviewId: string,
-  reviewerId: string,
   reasonCode: RejectionReasonCode,
 ): Promise<ReviewItem> {
   return api<ReviewItem>(`/api/reviews/${reviewId}/reject`, {
     method: "POST",
-    body: JSON.stringify({ reviewerId, reasonCode }),
+    body: JSON.stringify({ reasonCode }),
   });
 }
 

@@ -195,6 +195,7 @@ export async function generateImage(ctx: AppContext, body: Record<string, unknow
     const taskId = id("img");
     const task: ImageTask = {
       id: taskId,
+      user_id: typeof body.user_id === "string" ? body.user_id : "",
       conversation_id: conversationId,
       prompt,
       negative: params.negative_prompt ?? "",
@@ -253,6 +254,7 @@ export async function createLocalImageTask(ctx: AppContext, body: Record<string,
   if (imageUrls.length === 0) throw new Error("image_urls is required");
   const task: ImageTask = {
     id: id("img"),
+    user_id: typeof body.user_id === "string" ? body.user_id : "",
     conversation_id: conversationId,
     prompt,
     negative: "",

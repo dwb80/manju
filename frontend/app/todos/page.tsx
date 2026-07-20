@@ -45,13 +45,6 @@ import {
 // 模块级 logger
 const log = createLogger("todos-page");
 
-// 当前用户标识：MVP 阶段用 localStorage 持久化（后续接入账号系统）
-const OWNER_KEY = "todos.owner";
-function getOwner(): string {
-  if (typeof window === "undefined") return "default";
-  return localStorage.getItem(OWNER_KEY) ?? "default";
-}
-
 const STATUS_LABEL: Record<TodoStatus, string> = {
   pending: "待处理",
   doing: "进行中",
@@ -88,7 +81,6 @@ export default function TodosPage() {
     setLoading(true);
     try {
       const data = await listTodos({
-        owner: getOwner(),
         includeDeleted: showRecycle,
       });
       setTodos(data);
@@ -137,7 +129,7 @@ export default function TodosPage() {
         log.info("update todo", { id: editing.id });
         notify.success("已更新", input.title);
       } else {
-        await createTodo({ owner: getOwner(), ...input });
+        await createTodo(input);
         log.info("create todo", { title: input.title });
         notify.success("已添加", input.title);
       }

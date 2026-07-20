@@ -36,7 +36,6 @@ import type { ProjectWorkbenchTabsProps } from "./types";
 
 interface AuditCenterSectionProps {
   projectId: string | undefined;
-  currentUser: string;
 }
 
 const STATUS_CHIPS: Array<{ key: ReviewStatus | "all"; label: string }> = [
@@ -46,7 +45,7 @@ const STATUS_CHIPS: Array<{ key: ReviewStatus | "all"; label: string }> = [
   { key: "rejected", label: "已打回" },
 ];
 
-function AuditCenterSection({ projectId, currentUser }: AuditCenterSectionProps) {
+function AuditCenterSection({ projectId }: AuditCenterSectionProps) {
   const [status, setStatus] = useState<ReviewStatus | "all">("pending");
   const [stats, setStats] = useState<ReviewStats | null>(null);
   const [items, setItems] = useState<ReviewItem[]>([]);
@@ -92,7 +91,7 @@ function AuditCenterSection({ projectId, currentUser }: AuditCenterSectionProps)
   async function handleApprove(item: ReviewItem) {
     setSubmitting(true);
     try {
-      await approveReview(item.id, currentUser);
+      await approveReview(item.id);
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -105,7 +104,7 @@ function AuditCenterSection({ projectId, currentUser }: AuditCenterSectionProps)
     if (!rejecting) return;
     setSubmitting(true);
     try {
-      await rejectReview(rejecting.id, currentUser, reasonCode);
+      await rejectReview(rejecting.id, reasonCode);
       setRejecting(null);
       await reload();
     } catch (e) {
@@ -317,12 +316,9 @@ export function ReviewsTab(props: Pick<
   const { filteredProjectReviews, pagedProjectReviews, reviewTargetLabel, updateProjectReviewItem, deleteProjectReviewItem, projectReviews } = props;
   // projectId 上下文：老 ProjectReview 与新审核中心共享项目
   const projectId = projectReviews[0]?.project_id;
-  // V1 默认审核人占位（spec 4.1.3 要求 reviewerId；待接入用户体系后改为当前登录用户）
-  const currentUser = "current_user";
-
   return (
     <div className="space-y-4">
-      <AuditCenterSection projectId={projectId} currentUser={currentUser} />
+      <AuditCenterSection projectId={projectId} />
 
       <div className="rounded-2xl border border-white/10 bg-[#202020]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">

@@ -2,7 +2,7 @@
  * 我的待办 API（评审优化 P1）
  *
  * 对应后端 /api/todos：
- * - listTodos(owner, status, includeDeleted)
+ * - listTodos(status, includeDeleted)，owner 始终来自服务端登录会话
  * - createTodo / updateTodo / deleteTodo(soft) / restoreTodo
  * - permanentDeleteTodo(hard)
  */
@@ -27,7 +27,6 @@ export interface Todo {
 }
 
 export interface TodoInput {
-  owner: string;
   title: string;
   description?: string;
   status?: TodoStatus;
@@ -41,12 +40,10 @@ export interface TodoInput {
 const BASE = "/api/todos";
 
 export async function listTodos(params?: {
-  owner?: string;
   status?: TodoStatus;
   includeDeleted?: boolean;
 }): Promise<Todo[]> {
   const search = new URLSearchParams();
-  if (params?.owner) search.set("owner", params.owner);
   if (params?.status) search.set("status", params.status);
   if (params?.includeDeleted) search.set("includeDeleted", "true");
   const q = search.toString();

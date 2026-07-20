@@ -69,6 +69,7 @@ export interface AssetVersion {
 /** 收藏引用，ref_id 指向被收藏的会话、图片或视频任务。 */
 export interface Favorite {
   id: string;
+  user_id?: string;
   type: FavoriteType;
   ref_id: string;
   created_at: string;

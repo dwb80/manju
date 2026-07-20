@@ -194,6 +194,8 @@ export type PublishPlatform = "youtube" | "bilibili" | "douyin" | "tiktok" | "ku
 export interface PublishPlan {
   /** 计划唯一标识 */
   id: string;
+  /** 所属项目ID；历史数据可能为空 */
+  project_id?: string;
   /** 计划名称 */
   name: string;
   /** 计划状态 */

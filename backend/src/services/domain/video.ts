@@ -221,6 +221,7 @@ export async function generateVideo(ctx: AppContext, body: Record<string, unknow
     const assistantMsgId = id("m");
     const task: VideoTask = {
       id: result.taskId,
+      user_id: typeof body.user_id === "string" ? body.user_id : "",
       task_id: result.taskId,
       video_id: result.taskId,
       conversation_id: conversationId,

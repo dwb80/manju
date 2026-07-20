@@ -22,6 +22,17 @@ const publishPlanStatuses: PublishPlanStatus[] = ["draft", "scheduled", "publish
 /** 发布平台列表 */
 const publishPlatforms: PublishPlatform[] = ["youtube", "bilibili", "douyin", "tiktok", "kuaishou", "xiaohongshu", "weibo", "wechat", "custom"];
 
+/** 当前用户对个人任务及项目资源的访问上下文。 */
+export interface PublishAccessContext {
+  userId: string;
+  isAdmin: boolean;
+  canAccessProject: (projectId: string) => Promise<boolean>;
+}
+
+function ownsVideoTask(task: VideoTask, access: PublishAccessContext): boolean {
+  return task.user_id === access.userId || (!task.user_id && access.isAdmin);
+}
+
 /**
  * normalizePublishPlanStatus - 规范化发布计划状态
  * @param {unknown} status - 状态值
@@ -67,6 +78,35 @@ async function getProjectIdByConversationId(ctx: AppContext, conversationId: str
   return conversation?.project_id ?? "";
 }
 
+async function getPublishPlanProjectId(ctx: AppContext, plan: PublishPlan): Promise<string> {
+  if (plan.project_id) return plan.project_id;
+  for (const videoId of plan.videos) {
+    const task = await ctx.videos.findById(videoId);
+    if (task) return getProjectIdByConversationId(ctx, task.conversation_id);
+  }
+  return "";
+}
+
+async function canAccessPlan(ctx: AppContext, plan: PublishPlan, access: PublishAccessContext): Promise<boolean> {
+  const projectId = await getPublishPlanProjectId(ctx, plan);
+  return projectId ? access.canAccessProject(projectId) : access.isAdmin;
+}
+
+async function validatePlanVideos(
+  ctx: AppContext,
+  videoIds: string[],
+  projectId: string,
+  access: PublishAccessContext,
+): Promise<void> {
+  for (const videoId of videoIds) {
+    const task = await ctx.videos.findById(videoId);
+    if (!task || !ownsVideoTask(task, access)) throw new Error(`视频任务 ${videoId} 不存在`);
+    if (task.status !== "success") throw new Error(`视频任务 ${videoId} 未完成，无法添加到发布计划`);
+    const videoProjectId = await getProjectIdByConversationId(ctx, task.conversation_id);
+    if (!videoProjectId || videoProjectId !== projectId) throw new Error(`视频任务 ${videoId} 不属于该项目`);
+  }
+}
+
 /**
  * listPublishedVideos - 获取成片列表
  * @param {AppContext} ctx - 应用上下文
@@ -79,13 +119,14 @@ export async function listPublishedVideos(
   filters: {
     projectId?: string;
     publishStatus?: "unpublished" | "scheduled" | "published";
-  } = {}
+  } = {},
+  access: PublishAccessContext,
 ): Promise<PublishedVideo[]> {
   // 获取所有已完成的视频任务
   const videoTasks = await ctx.videos.findMany({ status: "success" } as Partial<VideoTask>, { sort: "desc" });
 
   // 获取所有发布计划，用于判断视频的发布状态
-  const publishPlans = await ctx.publishPlans.findMany({}, { sort: "desc" });
+  const publishPlans = await listPublishPlans(ctx, {}, access);
 
   // 构建视频ID到发布计划的映射
   const videoPlanMap = new Map<string, PublishPlan>();
@@ -101,9 +142,11 @@ export async function listPublishedVideos(
   // 转换为成片信息
   const videos: PublishedVideo[] = [];
   for (const task of videoTasks) {
+    if (!ownsVideoTask(task, access)) continue;
     // 获取项目ID
     const conversationId = task.conversation_id;
     const projectId = await getProjectIdByConversationId(ctx, conversationId);
+    if (!projectId || !(await access.canAccessProject(projectId))) continue;
 
     // 确定发布状态
     const plan = videoPlanMap.get(task.id);
@@ -165,9 +208,20 @@ export async function listPublishPlans(
   ctx: AppContext,
   filters: {
     status?: PublishPlanStatus;
-  } = {}
+    projectId?: string;
+  } = {},
+  access: PublishAccessContext,
 ): Promise<PublishPlan[]> {
   let plans = await ctx.publishPlans.findMany({}, { sort: "desc" });
+
+  const visiblePlans: PublishPlan[] = [];
+  for (const plan of plans) {
+    if (!(await canAccessPlan(ctx, plan, access))) continue;
+    const projectId = await getPublishPlanProjectId(ctx, plan);
+    if (filters.projectId && projectId !== filters.projectId) continue;
+    visiblePlans.push(plan.project_id || !projectId ? plan : { ...plan, project_id: projectId });
+  }
+  plans = visiblePlans;
 
   // 状态筛选
   if (filters.status) {
@@ -186,6 +240,7 @@ export async function listPublishPlans(
 export async function createPublishPlan(
   ctx: AppContext,
   input: {
+    projectId?: string;
     name?: string;
     status?: string;
     plannedDate?: string;
@@ -193,27 +248,22 @@ export async function createPublishPlan(
     platforms?: unknown;
     assignee?: string;
     notes?: string;
-  }
+  },
+  access: PublishAccessContext,
 ): Promise<PublishPlan> {
   const now = nowIso();
 
   // 规范化输入
   const videoIds = normalizeVideoIds(input.videos);
   const platforms = normalizePublishPlatforms(input.platforms);
+  const projectId = input.projectId?.trim() || "";
+  if (!projectId || !(await access.canAccessProject(projectId))) throw new Error("无权访问该项目");
 
-  // 验证视频是否存在且已完成
-  for (const videoId of videoIds) {
-    const task = await ctx.videos.findById(videoId);
-    if (!task) {
-      throw new Error(`视频任务 ${videoId} 不存在`);
-    }
-    if (task.status !== "success") {
-      throw new Error(`视频任务 ${videoId} 未完成，无法添加到发布计划`);
-    }
-  }
+  await validatePlanVideos(ctx, videoIds, projectId, access);
 
   const plan: PublishPlan = {
     id: id("pub"),
+    project_id: projectId,
     name: input.name?.trim() || "新发布计划",
     status: normalizePublishPlanStatus(input.status),
     plannedDate: input.plannedDate?.trim() || "",
@@ -248,12 +298,15 @@ export async function updatePublishPlan(
     platforms?: unknown;
     assignee?: string;
     notes?: string;
-  }
+  },
+  access: PublishAccessContext,
 ): Promise<PublishPlan> {
   const existing = await ctx.publishPlans.findById(planId);
-  if (!existing) {
+  if (!existing || !(await canAccessPlan(ctx, existing, access))) {
     throw new Error("发布计划不存在");
   }
+  const projectId = await getPublishPlanProjectId(ctx, existing);
+  if (!projectId) throw new Error("历史发布计划缺少项目归属，请重新创建");
 
   const now = nowIso();
   const next: Partial<PublishPlan> = { updated_at: now };
@@ -274,16 +327,7 @@ export async function updatePublishPlan(
   }
   if (input.videos !== undefined) {
     const videoIds = normalizeVideoIds(input.videos);
-    // 验证视频是否存在且已完成
-    for (const videoId of videoIds) {
-      const task = await ctx.videos.findById(videoId);
-      if (!task) {
-        throw new Error(`视频任务 ${videoId} 不存在`);
-      }
-      if (task.status !== "success") {
-        throw new Error(`视频任务 ${videoId} 未完成，无法添加到发布计划`);
-      }
-    }
+    await validatePlanVideos(ctx, videoIds, projectId, access);
     next.videos = videoIds;
   }
   if (input.platforms !== undefined) {
@@ -306,9 +350,9 @@ export async function updatePublishPlan(
  * @param {string} planId - 计划ID
  * @returns {Promise<void>}
  */
-export async function deletePublishPlan(ctx: AppContext, planId: string): Promise<void> {
+export async function deletePublishPlan(ctx: AppContext, planId: string, access: PublishAccessContext): Promise<void> {
   const existing = await ctx.publishPlans.findById(planId);
-  if (!existing) {
+  if (!existing || !(await canAccessPlan(ctx, existing, access))) {
     throw new Error("发布计划不存在");
   }
   await ctx.publishPlans.delete(planId);
@@ -336,7 +380,7 @@ function sendJsonResponse<T>(res: ServerResponse, data: T, status = 200): void {
 function sendErrorResponse(res: ServerResponse, error: unknown, status = 400): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify({
-    code: status === 404 ? 1004 : 1001,
+    code: status === 404 ? 1004 : status === 403 ? 1003 : 1001,
     message: (error as Error).message ?? "error",
     data: null,
   }));
@@ -372,6 +416,7 @@ function parseVideoQueryParams(req: IncomingMessage): {
  */
 function parsePlanQueryParams(req: IncomingMessage): {
   status?: PublishPlanStatus;
+  projectId?: string;
 } {
   const url = new URL(req.url ?? "/", "http://localhost");
   const searchParams = url.searchParams;
@@ -379,6 +424,7 @@ function parsePlanQueryParams(req: IncomingMessage): {
   const statusValue = searchParams.get("status");
 
   return {
+    projectId: searchParams.get("projectId") ?? undefined,
     status: statusValue && publishPlanStatuses.includes(statusValue as PublishPlanStatus)
       ? statusValue as PublishPlanStatus
       : undefined,
@@ -395,7 +441,8 @@ function parsePlanQueryParams(req: IncomingMessage): {
 export async function handlePublishRouter(
   ctx: AppContext,
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
+  access: PublishAccessContext,
 ): Promise<void> {
   const method = req.method ?? "GET";
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -405,7 +452,7 @@ export async function handlePublishRouter(
     // GET /api/publish/videos - 获取成片列表
     if (method === "GET" && pathname === "/api/publish/videos") {
       const params = parseVideoQueryParams(req);
-      const videos = await listPublishedVideos(ctx, params);
+      const videos = await listPublishedVideos(ctx, params, access);
       sendJsonResponse(res, videos);
       return;
     }
@@ -413,7 +460,7 @@ export async function handlePublishRouter(
     // GET /api/publish/plans - 获取发布计划列表
     if (method === "GET" && pathname === "/api/publish/plans") {
       const params = parsePlanQueryParams(req);
-      const plans = await listPublishPlans(ctx, params);
+      const plans = await listPublishPlans(ctx, params, access);
       sendJsonResponse(res, plans);
       return;
     }
@@ -422,6 +469,7 @@ export async function handlePublishRouter(
     if (method === "POST" && pathname === "/api/publish/plans") {
       const body = await readJsonBody(req);
       const plan = await createPublishPlan(ctx, {
+        projectId: body.projectId as string,
         name: body.name as string,
         status: body.status as string,
         plannedDate: body.plannedDate as string,
@@ -429,7 +477,7 @@ export async function handlePublishRouter(
         platforms: body.platforms,
         assignee: body.assignee as string,
         notes: body.notes as string,
-      });
+      }, access);
       sendJsonResponse(res, plan);
       return;
     }
@@ -450,7 +498,7 @@ export async function handlePublishRouter(
         platforms: body.platforms,
         assignee: body.assignee as string,
         notes: body.notes as string,
-      });
+      }, access);
       sendJsonResponse(res, plan);
       return;
     }
@@ -462,7 +510,7 @@ export async function handlePublishRouter(
         sendErrorResponse(res, new Error("计划ID不能为空"));
         return;
       }
-      await deletePublishPlan(ctx, planId);
+      await deletePublishPlan(ctx, planId, access);
       sendJsonResponse(res, { deleted: true });
       return;
     }
@@ -471,6 +519,8 @@ export async function handlePublishRouter(
     sendErrorResponse(res, new Error("未找到发布中心路由"), 404);
   } catch (error) {
     rootLogger.error({ event: "router.error", route: "publish", err: error }, `发布中心路由错误`);
-    sendErrorResponse(res, error);
+    const message = (error as Error).message ?? "";
+    const status = message === "无权访问该项目" ? 403 : message === "发布计划不存在" ? 404 : 400;
+    sendErrorResponse(res, error, status);
   }
 }
