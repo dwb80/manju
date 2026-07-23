@@ -9,28 +9,92 @@
 
 import type { FilterOption } from "@/components/factory";
 
-/** 分镜状态。 */
-export type StoryboardStatus = "draft" | "approved" | "production" | "completed";
+/** 分镜状态（8 状态机）。 */
+export type StoryboardStatus =
+  | "draft"
+  | "generating"
+  | "ready"
+  | "in_review"
+  | "approved"
+  | "needs_fix"
+  | "rejected"
+  | "archived";
 
 export const STORYBOARD_STATUS_LABELS: Record<StoryboardStatus, string> = {
   draft: "草稿",
-  approved: "已批准",
-  production: "制作中",
-  completed: "已完成",
+  generating: "生成中",
+  ready: "就绪",
+  in_review: "审核中",
+  approved: "已通过",
+  needs_fix: "需修复",
+  rejected: "已驳回",
+  archived: "已归档",
 };
 
 export const STORYBOARD_STATUS_COLORS: Record<StoryboardStatus, string> = {
   draft: "bg-gray-500/20 text-gray-400",
-  approved: "bg-emerald-500/20 text-emerald-400",
-  production: "bg-yellow-500/20 text-yellow-400",
-  completed: "bg-purple-500/20 text-purple-400",
+  generating: "bg-blue-500/20 text-blue-400",
+  ready: "bg-emerald-500/20 text-emerald-400",
+  in_review: "bg-yellow-500/20 text-yellow-400",
+  approved: "bg-green-500/20 text-green-400",
+  needs_fix: "bg-orange-500/20 text-orange-400",
+  rejected: "bg-red-500/20 text-red-400",
+  archived: "bg-purple-500/20 text-purple-400",
 };
 
 export const STORYBOARD_STATUS_OPTIONS: FilterOption[] = [
   { value: "draft", label: "草稿" },
-  { value: "approved", label: "已批准" },
-  { value: "production", label: "制作中" },
-  { value: "completed", label: "已完成" },
+  { value: "generating", label: "生成中" },
+  { value: "ready", label: "就绪" },
+  { value: "in_review", label: "审核中" },
+  { value: "approved", label: "已通过" },
+  { value: "needs_fix", label: "需修复" },
+  { value: "rejected", label: "已驳回" },
+  { value: "archived", label: "已归档" },
+];
+
+/** 镜头状态（8 状态机，与分镜对齐但独立）。 */
+export type ShotStatus =
+  | "draft"
+  | "generating"
+  | "ready"
+  | "in_review"
+  | "approved"
+  | "needs_fix"
+  | "rejected"
+  | "archived";
+
+export const SHOT_STATUS_LABELS: Record<ShotStatus, string> = {
+  draft: "草稿",
+  generating: "生成中",
+  ready: "就绪",
+  in_review: "审核中",
+  approved: "已通过",
+  needs_fix: "需修复",
+  rejected: "已驳回",
+  archived: "已归档",
+};
+
+export const SHOT_STATUS_COLORS: Record<ShotStatus, string> = {
+  draft: "bg-gray-500/20 text-gray-400",
+  generating: "bg-blue-500/20 text-blue-400",
+  ready: "bg-emerald-500/20 text-emerald-400",
+  in_review: "bg-yellow-500/20 text-yellow-400",
+  approved: "bg-green-500/20 text-green-400",
+  needs_fix: "bg-orange-500/20 text-orange-400",
+  rejected: "bg-red-500/20 text-red-400",
+  archived: "bg-purple-500/20 text-purple-400",
+};
+
+export const SHOT_STATUS_OPTIONS: FilterOption[] = [
+  { value: "draft", label: "草稿" },
+  { value: "generating", label: "生成中" },
+  { value: "ready", label: "就绪" },
+  { value: "in_review", label: "审核中" },
+  { value: "approved", label: "已通过" },
+  { value: "needs_fix", label: "需修复" },
+  { value: "rejected", label: "已驳回" },
+  { value: "archived", label: "已归档" },
 ];
 
 /** 视频任务状态。 */

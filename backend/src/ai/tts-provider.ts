@@ -169,3 +169,82 @@ export function createEdgeTTSProvider(): EdgeTTSProvider {
   );
   return new EdgeTTSProvider();
 }
+
+/* ============================================================== */
+/* V2 W12 P0 REQ-AUDIO-F01：TTS 能力公开 API                       */
+/* ============================================================== */
+
+/** TTS 能力描述。 */
+export interface TtsCapability {
+  model: string;
+  provider: TTSProviderType;
+  displayName: string;
+  /** 支持的音色列表（id 列表）。 */
+  voices: string[];
+  /** 估算单价（元/千字），未启用计费时返 null。 */
+  pricePerThousandChars: number | null;
+  /** 单次最大文本长度。 */
+  maxTextLength: number;
+}
+
+/** Edge-TTS 默认能力（基于 CHINESE_VOICES 列表）。 */
+const EDGE_TTS_DEFAULT_CAPABILITY: TtsCapability = {
+  model: "edge-tts",
+  provider: "edge",
+  displayName: "Edge TTS（微软公共服务）",
+  voices: Object.values(CHINESE_VOICES),
+  pricePerThousandChars: 0.5, // 与 PRICE_TABLE.agnes-tts-v1 对齐
+  maxTextLength: 10000,
+};
+
+/** Agnes-TTS 模型（PRICE_TABLE 已声明）。 */
+const AGNES_TTS_CAPABILITY: TtsCapability = {
+  model: "agnes-tts-v1",
+  provider: "agnes",
+  displayName: "Agnes TTS v1",
+  voices: ["default", "xiaoxiao", "yunxi", "yunyang", "xiaoyi"],
+  pricePerThousandChars: 0.5,
+  maxTextLength: 20000,
+};
+
+/** 支持的 TTS 模型白名单。 */
+const SUPPORTED_TTS_MODELS: ReadonlySet<string> = new Set([
+  "edge-tts",
+  "agnes-tts-v1",
+  ...Object.keys(CHINESE_VOICES),
+]);
+
+/**
+ * 判断 model 是否为 TTS 支持的模型（含别名 + 直接 ID）。
+ * - 空字符串 / null / undefined 全部 false。
+ * - 不存在的 model 返 false，调用方可以 fallback 到 "edge-tts"。
+ */
+export function isTtsSupported(model: string | null | undefined): boolean {
+  if (!model) return false;
+  const normalized = model.toLowerCase().trim();
+  if (SUPPORTED_TTS_MODELS.has(normalized)) return true;
+  // 允许 zh-CN-XiaoxiaoNeural 等原始 ID
+  if (Object.values(CHINESE_VOICES).includes(normalized)) return true;
+  // 允许 agnes-tts-* 前缀
+  if (/^agnes[-_]tts[-_]/.test(normalized)) return true;
+  return false;
+}
+
+/**
+ * 获取 TTS 模型能力描述。未知 model 返 null（调用方应 fallback）。
+ */
+export function getTtsCapability(model: string | null | undefined): TtsCapability | null {
+  if (!model) return null;
+  const normalized = model.toLowerCase().trim();
+  if (normalized === "edge-tts") return EDGE_TTS_DEFAULT_CAPABILITY;
+  if (normalized === "agnes-tts-v1") return AGNES_TTS_CAPABILITY;
+  if (/^agnes[-_]tts[-_]/.test(normalized)) return AGNES_TTS_CAPABILITY;
+  if (Object.values(CHINESE_VOICES).includes(normalized)) return EDGE_TTS_DEFAULT_CAPABILITY;
+  if (CHINESE_VOICES[normalized]) return EDGE_TTS_DEFAULT_CAPABILITY;
+  return null;
+}
+
+/** 列出所有 TTS 模型能力。供前端 /api/tts/models 端点使用。 */
+export function listTtsCapabilities(): TtsCapability[] {
+  return [EDGE_TTS_DEFAULT_CAPABILITY, AGNES_TTS_CAPABILITY];
+}

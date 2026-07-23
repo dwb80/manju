@@ -5,6 +5,11 @@
 
 /**
  * AI 漫剧项目的主档案，负责串起剧本、分镜、资产、剪辑和交付物
+ *
+ * V2 增量字段（REQ-PROJ-001, 2026-07-22）：
+ * - `type`：4 枚举项目分类（PROJ-001-001/002）
+ * - `deleted_at`：软删除时间戳，空串表示未删（PROJ-001-009）
+ *   注意：旧数据经 `ensureColumns` 自动迁移后此字段为 NULL，业务代码用 `!p.deleted_at` 同时兼容 NULL 与 ''
  */
 export interface Project {
   id: string;
@@ -22,7 +27,21 @@ export interface Project {
   storage_path: string;
   storage_mode: string;
   archived_at: string;
+  /** 项目分类（V2, PROJ-001-001/002）。4 枚举：短剧/MV/广告/电影。 */
+  type?: ProjectType;
+  /** 软删除时间戳（V2, PROJ-001-009）。空串或缺失表示未删。 */
+  deleted_at: string;
 }
+
+/**
+ * 项目分类枚举（V2, PROJ-001-002）。
+ * - `short_drama` → 短剧
+ * - `mv` → MV
+ * - `ad` → 广告
+ * - `film` → 电影
+ * 严格大小写匹配，禁止兼容。
+ */
+export type ProjectType = "short_drama" | "mv" | "ad" | "film";
 
 /**
  * 项目任务状态类型（制作流程中的状态）
@@ -59,6 +78,37 @@ export interface ProjectMember {
   notes: string;
   created_at: string;
   updated_at: string;
+  /** 兼容字段：user_id（接受邀请时填入）。 */
+  user_id?: string;
+  /** 兼容字段：加入时间。 */
+  joined_at?: string;
+  /** 兼容字段：最后活跃时间。 */
+  last_active_at?: string;
+  /** 软删除时间戳，未删除时为空字符串。 */
+  deleted_at?: string;
+}
+
+/** 项目成员角色（V2 权限模型）。 */
+export type ProjectMemberRole = "owner" | "editor" | "reviewer" | "commenter" | "viewer";
+
+/** 项目成员邀请状态。 */
+export type ProjectInvitationStatus = "pending" | "accepted" | "rejected" | "cancelled" | "expired";
+
+/** 项目成员邀请。 */
+export interface ProjectInvitation {
+  id: string;
+  project_id: string;
+  email: string;
+  role: ProjectMemberRole;
+  /** 邀请 token（接受 / 拒绝 时使用）。 */
+  token: string;
+  status: ProjectInvitationStatus;
+  invited_by: string;
+  /** ISO 时间戳，过期后自动转 expired。 */
+  expires_at: string;
+  created_at: string;
+  /** ISO 时间戳，pending 时为空字符串。 */
+  responded_at: string;
 }
 
 /** 剧集计划，用来管理每一集的进度、概要和交付时间。 */

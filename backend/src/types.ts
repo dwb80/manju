@@ -111,6 +111,14 @@ export interface Project {
   episode_count?: number;
   owner?: string;
   due_date?: string;
+  /** 项目分类（V2, REQ-PROJ-001, PROJ-001-001/002）。4 枚举：短剧/MV/广告/电影。 */
+  type?: "short_drama" | "mv" | "ad" | "film";
+  /**
+   * 软删除时间戳（V2, REQ-PROJ-001, PROJ-001-009）。
+   * 空串或缺失表示未删；非空为删除时间 ISO 字符串。
+   * 注意：旧数据经 ensureColumns() 自动迁移后此字段为 NULL，业务代码用 `!p.deleted_at` 同时兼容 NULL 与 ''。
+   */
+  deleted_at?: string;
 }
 
 export interface Message {

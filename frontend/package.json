@@ -7,6 +7,10 @@
     "npm": ">=10 <12"
   },
   "packageManager": "npm@11.4.2",
+  "browserslist": {
+    "production": ["Chrome >= 109", "Edge >= 109", "Firefox >= 115", "Safari >= 16", "not dead"],
+    "development": ["last 1 Chrome version", "last 1 Firefox version", "last 1 Safari version"]
+  },
   "scripts": {
     "dev": "node ../scripts/clean-next-cache.mjs && next dev -p 3001",
     "dev:turbopack": "node ../scripts/clean-next-cache.mjs && next dev --turbopack -p 3001",
@@ -14,6 +18,7 @@
     "start": "next start -p 3001",
     "lint": "tsc --noEmit",
     "test:e2e": "node scripts/run-smoke-e2e.mjs",
+    "test:e2e:prepared": "node scripts/run-smoke-e2e.mjs --skip-build",
     "test:e2e:legacy": "playwright test --reporter=line"
   },
   "dependencies": {

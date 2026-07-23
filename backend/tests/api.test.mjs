@@ -18,7 +18,7 @@ async function withServer(fn) {
     await fn(base, root);
   } finally {
     await new Promise(resolve => server.close(resolve));
-    ctx.close();
+    await ctx.close();
     for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
         await rm(root, { recursive: true, force: true });
@@ -110,7 +110,7 @@ test("projects group conversations by project id and storage folder", async () =
     const projects = await json(base, "/api/projects");
     assert.ok(projects.some(item => item.name === "manju"));
 
-    const project = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "短剧项目", storage_mode: "existing", storage_path: "client-a/short-video" }) });
+    const project = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "短剧项目", owner: "local-admin", storage_mode: "existing", storage_path: "client-a/short-video" }) });
     assert.equal(project.storage_mode, "existing");
     assert.equal(project.storage_path, "client-a/short-video");
     // 评审 P0-H14 修复：createProject 会自动建约定的项目目录树
@@ -159,7 +159,7 @@ test("media endpoint serves local files and rejects path traversal", async () =>
     assert.equal(blocked.status, 404);
   } finally {
     await new Promise(resolve => server.close(resolve));
-    ctx.close();
+    await ctx.close();
     await rm(root, { recursive: true, force: true });
   }
 });
@@ -167,13 +167,13 @@ test("media endpoint serves local files and rejects path traversal", async () =>
 test("upload endpoint stores image files under media uploads", async () => {
   await withServer(async (base) => {
     const form = new FormData();
-    form.append("files", new Blob([Buffer.from([137, 80, 78, 71])], { type: "image/png" }), "sample.png");
+    form.append("files", new Blob([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0])], { type: "image/png" }), "sample.png");
 
     const response = await fetch(`${base}/api/uploads`, { method: "POST", body: form });
     const payload = await response.json();
     assert.equal(payload.code, 0, payload.message);
     assert.equal(payload.data.length, 1);
-    assert.match(payload.data[0].url, /^\/media\/uploads\/local-admin\/\d{4}-\d{2}-\d{2}\/sample-[\w-]+\.png$/);
+    assert.match(payload.data[0].url, /^\/media\/uploads\/local-admin\/\d{4}-\d{2}-\d{2}\/[0-9a-f-]{36}\.png$/);
 
     const stored = await fetch(`${base}${payload.data[0].url}`);
     assert.equal(stored.status, 200);
@@ -219,8 +219,8 @@ test("assistant feedback is persisted, replaceable and removable", async () => {
 
 test("project workbench routes support nested resources, summary and exports", async () => {
   await withServer(async (base) => {
-    const project = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "工作台回归项目" }) });
-    const other = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "隔离项目" }) });
+    const project = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "工作台回归项目", owner: "local-admin" }) });
+    const other = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "隔离项目", owner: "local-admin" }) });
 
     const member = await json(base, `/api/projects/${project.id}/members`, { method: "POST", body: JSON.stringify({ name: "导演", role: "负责人" }) });
     const episode = await json(base, `/api/projects/${project.id}/episodes`, { method: "POST", body: JSON.stringify({ episode: 1, title: "第一集" }) });
@@ -299,7 +299,7 @@ test("settings never echo API keys and preserve or clear the stored secret expli
 
 test("publish plans persist and validate referenced videos", async () => {
   await withServer(async (base) => {
-    const project = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "发布测试项目" }) });
+    const project = await json(base, "/api/projects", { method: "POST", body: JSON.stringify({ name: "发布测试项目", owner: "local-admin" }) });
     const projectOverview = await json(base, `/api/data/project-overview?projectId=${project.id}`);
     assert.equal(projectOverview.projectId, project.id);
     assert.equal(projectOverview.capacity.project_id, project.id);

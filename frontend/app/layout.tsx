@@ -1,27 +1,33 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { BrowserCompatibilityBanner } from "@/components/layout/browser-compatibility-banner";
 import { LayoutShell } from "@/components/layout/layout-shell";
 import { ErrorBoundary } from "@/components/layout/error-boundary";
 import { ToastContainer } from "@/components/common/toast";
-import { AuthGate } from "@/components/auth/auth-gate";
 
+/**
+ * 根布局：完整 V2 layout 链。
+ *
+ * - BrowserCompatibilityBanner：不支持浏览器时顶部提示
+ * - skip-to-content：无障碍跳转链接
+ * - ErrorBoundary：捕获子组件渲染错误并显示降级 UI
+ * - LayoutShell：渲染侧边栏 + 顶部导航栏 + 命令面板，根据 pathname 切换
+ *   独占式编辑页（剧本/角色/道具编辑）只保留顶部导航
+ * - ToastContainer：全局消息提示
+ */
 export const metadata: Metadata = {
   title: "AI 漫剧工业化生产平台",
   description: "一站式 AI 漫剧工业化生成平台",
 };
 
-/**
- * 根布局：唯一包含 <html>/<body> 的布局。
- * 通过 LayoutShell 客户端组件根据路径决定是否显示侧边栏。
- * 顶层包一层 ErrorBoundary，防止单页错误白屏整站。
- * 挂载 ToastContainer 让 toast.success/error/progress 等方法在所有页面生效。
- */
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN" className="dark">
       <body>
+        <a className="skip-to-content" href="#main-content">跳到主要内容</a>
+        <BrowserCompatibilityBanner />
         <ErrorBoundary>
-          <AuthGate><LayoutShell>{children}</LayoutShell></AuthGate>
+          <LayoutShell>{children}</LayoutShell>
         </ErrorBoundary>
         <ToastContainer />
       </body>

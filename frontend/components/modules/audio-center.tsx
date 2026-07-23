@@ -8,12 +8,13 @@
  * 增强点（p1-2）：
  * - 内嵌 HTML5 音频播放器（file_url）
  * - AI 配音（TTS）弹窗：speaker 从角色列表选择（EntityPicker）
- * - 工具栏"AI配音"按钮（无选中时，按当前过滤器下第一条音频生成；选中则批量配音）
- * - 关联分镜：卡片显示已关联分镜，点击可重选；列表工具栏批量关联
+ * - 工具栏"AI配音"按钮（选中则批量配音）
+ * - 关联分镜：卡片显示已关联分镜，点击可重选
+ * - 时间轴编辑：设置 start_time / end_time 与视频对齐
  */
 
-import { useState, useRef, useEffect } from "react";
-import { Music, Pencil, Trash2, CheckSquare, Wand2, Volume2, Mic, X, Loader2, Link as LinkIcon, Film } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Music, Pencil, Trash2, CheckSquare, Wand2, Mic, Loader2, Link as LinkIcon, Film, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,7 +32,6 @@ import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import type { AudioItem, AudioType, Character, Storyboard } from "@/lib/module-types";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { clearApiCache } from "@/lib/api-client";
-import { useNameLookup } from "@/hooks/use-name-lookup";
 import {
   listAudios,
   createAudio,
@@ -42,6 +42,7 @@ import {
   permanentDeleteAudios,
   copyAudioToProjects,
   generateTTS,
+  batchGenerateTTS,
 } from "@/services/audio.service";
 import { listCharacters } from "@/services/module.service";
 import { listStoryboards } from "@/services/storyboard.service";
@@ -149,6 +150,113 @@ function AssociateStoryboardDialog({
   );
 }
 
+/** 时间轴编辑弹窗：设置 audio.start_time / end_time */
+function TimelineDialog({
+  audio,
+  isOpen,
+  onClose,
+  onSuccess,
+}: {
+  audio: AudioItem | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+}) {
+  const [startTime, setStartTime] = useState<string>("");
+  const [endTime, setEndTime] = useState<string>("");
+  const [busy, setBusy] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isOpen && audio) {
+      setStartTime(audio.start_time !== undefined ? String(audio.start_time) : "");
+      setEndTime(audio.end_time !== undefined ? String(audio.end_time) : "");
+    }
+  }, [isOpen, audio]);
+
+  if (!isOpen || !audio) return null;
+
+  const handleSubmit = async () => {
+    setBusy(true);
+    try {
+      const patch: Partial<AudioItem> = {};
+      if (startTime.trim() !== "") {
+        patch.start_time = parseFloat(startTime);
+      } else {
+        patch.start_time = undefined as any;
+      }
+      if (endTime.trim() !== "") {
+        patch.end_time = parseFloat(endTime);
+      } else {
+        patch.end_time = undefined as any;
+      }
+      await updateAudio(audio.id, patch);
+      clearApiCache();
+      toast.success("时间轴已更新", `起始: ${startTime || "未设置"}s, 结束: ${endTime || "未设置"}s`);
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      toast.error("更新失败", (err as Error)?.message ?? "请稍后重试");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="border-border">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-orange-400" />
+            时间轴编辑 · {audio.name}
+          </DialogTitle>
+          <DialogDescription>设置音频在时间轴上的起始和结束位置（秒），用于与视频对齐</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 px-6">
+          <div>
+            <label className="mb-1 block text-xs text-muted-foreground">起始时间（秒）</label>
+            <input
+              type="number"
+              min={0}
+              step={0.1}
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              placeholder="例如: 0.0"
+              className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/40"
+            />
+            <p className="text-[10px] text-[#666] mt-1">留空表示不设置起始时间</p>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-muted-foreground">结束时间（秒）</label>
+            <input
+              type="number"
+              min={0}
+              step={0.1}
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              placeholder="例如: 5.5"
+              className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/40"
+            />
+            <p className="text-[10px] text-[#666] mt-1">留空表示不设置结束时间</p>
+          </div>
+          <div className="rounded-md bg-orange-500/5 border border-orange-500/20 px-3 py-2">
+            <p className="text-xs text-orange-300/80">
+              提示：设置时间轴后，音频将在视频编辑时自动对齐到指定位置。
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>取消</Button>
+          <Button variant="secondary" size="sm" onClick={handleSubmit} disabled={busy}>
+            {busy ? <><Loader2 className="mr-1 h-3 w-3 animate-spin" />保存中...</> : "保存时间轴"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /** 集数下拉选项（1-20）。 */
 const episodeOptions: { value: string; label: string }[] = [
   { value: "", label: "全部集数" },
@@ -162,13 +270,16 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+/** 把时间（秒）格式化为 mm:ss.ms */
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 10);
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}${ms > 0 ? "." + ms : ""}`;
+}
+
 /**
  * AI 配音（TTS）弹窗
- *
- * - 文本：可手动输入或引用 audio.description
- * - 角色：EntityPicker 选中项目内的角色
- * - 调速：可选（0.5 - 2.0）
- * - 提交后调用 `generateTTS(audioId, body)`，完成后由后端更新 audio.file_url
  */
 function TTSDialog({
   audio,
@@ -302,11 +413,13 @@ function AudioCard({
   actions,
   onTTSClick,
   onAssociateClick,
+  onTimelineClick,
 }: {
   a: AudioItem;
   actions: import("@/components/factory").CardActions;
   onTTSClick: (a: AudioItem) => void;
   onAssociateClick: (a: AudioItem) => void;
+  onTimelineClick: (a: AudioItem) => void;
 }) {
   const type = (a.type ?? "voiceover") as AudioType;
   const color = AUDIO_TYPE_COLORS[type] ?? "bg-gray-500/20 text-gray-400";
@@ -353,6 +466,17 @@ function AudioCard({
                 已关联分镜
               </span>
             )}
+            {a.shot_id && (
+              <span className="inline-flex items-center gap-1 text-xs text-purple-300/90 bg-purple-500/10 px-1.5 py-0.5 rounded" title="已关联镜头">
+                <Film className="h-3 w-3" />
+                已关联镜头
+              </span>
+            )}
+            {(a.start_time !== undefined || a.end_time !== undefined) && (
+              <span className="text-xs text-orange-300/90 bg-orange-500/10 px-1.5 py-0.5 rounded">
+                {formatTime(a.start_time ?? 0)} - {formatTime(a.end_time ?? (a.duration ?? 0))}
+              </span>
+            )}
           </div>
           {a.file_url ? (
             <audio
@@ -374,6 +498,15 @@ function AudioCard({
             className="text-emerald-300"
           >
             <Mic className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onTimelineClick(a)}
+            title="编辑时间轴"
+            className="text-orange-300"
+          >
+            <Clock className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -439,12 +572,9 @@ const config: FactoryCRUDPageProps<AudioItem> = {
     <AudioCard
       a={a}
       actions={actions}
-      onTTSClick={() => {
-        /* 占位：实际渲染在 AudioCenterPage 中以 props.renderCard 覆盖 */
-      }}
-      onAssociateClick={() => {
-        /* 同上 */
-      }}
+      onTTSClick={() => {}}
+      onAssociateClick={() => {}}
+      onTimelineClick={() => {}}
     />
   ),
 
@@ -477,6 +607,101 @@ export function AudioCenterPage() {
   const [ttsOpen, setTtsOpen] = useState<boolean>(false);
   const [associateTarget, setAssociateTarget] = useState<AudioItem | null>(null);
   const [associateOpen, setAssociateOpen] = useState<boolean>(false);
+  const [timelineTarget, setTimelineTarget] = useState<AudioItem | null>(null);
+  const [timelineOpen, setTimelineOpen] = useState<boolean>(false);
+
+  // 监听 FactoryCRUDPage 内的选中状态变化（用于批量 TTS）
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [audioList, setAudioList] = useState<AudioItem[]>([]);
+  const [isBatchTTSLoading, setIsBatchTTSLoading] = useState(false);
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
+
+  // 拉取音频列表（用于批量 TTS 时获取选中项的详细信息）
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setAudioList([]);
+      return;
+    }
+    listAudios(selectedProjectId)
+      .then((data) => setAudioList(data))
+      .catch((err) => console.warn("listAudios failed", err));
+  }, [selectedProjectId]);
+
+  // 监听选中状态变化
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = setInterval(() => {
+      const container = document.querySelector("[data-factory-selected]");
+      if (!container) return;
+      try {
+        const raw = container.getAttribute("data-factory-selected") ?? "[]";
+        const ids: string[] = JSON.parse(raw);
+        setSelectedIds((prev) => {
+          const next = new Set(ids);
+          if (next.size === prev.size && Array.from(next).every((x) => prev.has(x))) return prev;
+          return next;
+        });
+      } catch {
+        // ignore parse errors
+      }
+    }, 500);
+    return () => clearInterval(id);
+  }, []);
+
+  // 批量 TTS 处理
+  const handleBatchTTS = useCallback(async () => {
+    if (!selectedProjectId) {
+      toast.error("未选择项目", "请先在右上角选择或创建项目");
+      return;
+    }
+    if (selectedIds.size === 0) {
+      toast.error("未选中音频", "请先勾选要配音的音频素材");
+      return;
+    }
+
+    // 获取选中音频的详细信息
+    const selectedAudios = audioList.filter((a) => selectedIds.has(a.id));
+    if (selectedAudios.length === 0) {
+      toast.error("未找到选中音频", "请刷新列表后重试");
+      return;
+    }
+
+    // 过滤出有 description（文本内容）的音频
+    const validAudios = selectedAudios.filter((a) => a.description?.trim());
+    if (validAudios.length === 0) {
+      toast.error("无可用文本", "选中的音频都没有描述文本，无法生成配音");
+      return;
+    }
+
+    setIsBatchTTSLoading(true);
+    try {
+      const items = validAudios.map((a) => ({
+        text: a.description!.trim(),
+        speaker: a.speaker || "默认配音",
+        character_id: a.character_id,
+        storyboard_id: a.storyboard_id,
+        shot_id: a.shot_id,
+      }));
+
+      const result = await batchGenerateTTS({
+        project_id: selectedProjectId,
+        items,
+      });
+
+      toast.success(
+        "批量配音完成",
+        `成功: ${result.success.length} 条, 失败: ${result.failed} 条`
+      );
+      clearApiCache();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("factory:reload"));
+      }
+    } catch (err) {
+      toast.error("批量配音失败", (err as Error)?.message ?? "请稍后重试");
+    } finally {
+      setIsBatchTTSLoading(false);
+    }
+  }, [selectedIds, audioList, selectedProjectId]);
 
   return (
     <>
@@ -494,30 +719,31 @@ export function AudioCenterPage() {
               setAssociateTarget(it);
               setAssociateOpen(true);
             }}
+            onTimelineClick={(it) => {
+              setTimelineTarget(it);
+              setTimelineOpen(true);
+            }}
           />
         )}
         toolbarExtra={
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
-              // 无选中时，给出提示
-              const factoryEl = document.querySelector("[data-factory-selected]") as HTMLElement | null;
-              const selectedRaw = factoryEl?.getAttribute("data-factory-selected") ?? "[]";
-              try {
-                const ids = JSON.parse(selectedRaw) as string[];
-                if (ids.length === 0) {
-                  toast.success("请先选中一条音频", "可通过多选框选择要配音的素材");
-                  return;
-                }
-                toast.success("功能提示", "目前仅支持单条配音；如需批量请逐条操作或扩展后端接口");
-              } catch {
-                toast.success("请先选中一条音频", "可通过多选框选择要配音的素材");
-              }
-            }}
+            onClick={handleBatchTTS}
+            disabled={isBatchTTSLoading || selectedIds.size === 0}
+            title={selectedIds.size === 0 ? "请先勾选要配音的音频" : `为选中的 ${selectedIds.size} 条音频批量配音`}
           >
-            <Wand2 className="mr-1 h-3 w-3" />
-            AI配音
+            {isBatchTTSLoading ? (
+              <>
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                配音中...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-1 h-3 w-3" />
+                AI配音{selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
+              </>
+            )}
           </Button>
         }
       />
@@ -541,6 +767,17 @@ export function AudioCenterPage() {
           }
         }}
       />
+      <TimelineDialog
+        audio={timelineTarget}
+        isOpen={timelineOpen}
+        onClose={() => setTimelineOpen(false)}
+        onSuccess={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("factory:reload"));
+          }
+        }}
+      />
     </>
   );
 }
+

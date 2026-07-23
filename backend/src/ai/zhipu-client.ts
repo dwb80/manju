@@ -12,6 +12,7 @@
  */
 import { rootLogger } from "../logger.js";
 import type { ChatChunk, ChatParams, ImageParams, TaskStatus, VideoParams } from "../types.js";
+import { safeProviderFetch } from "../services/security/hardening.js";
 
 const ZHIPU_DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
 const ZHIPU_CHAT_PATH = "/chat/completions";
@@ -104,7 +105,7 @@ export class ZhipuClient {
     };
     if (params.top_p != null) body.top_p = params.top_p;
     if (thinking) body.thinking = thinking;
-    const response = await fetch(`${this.baseUrl}${ZHIPU_CHAT_PATH}`, {
+    const response = await safeProviderFetch(`${this.baseUrl}${ZHIPU_CHAT_PATH}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

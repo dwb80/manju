@@ -30,7 +30,7 @@ import { attachDebugHook } from "./request-debug.js";
 import { addFavorite, addMessage, createConversation, createLocalImageTask, deleteConversation, ensureConversation, generateImage, generateVideo, listConversations, listImages, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateSettings } from "../services/domain.js";
 import { enhancePrompt } from "../services/domain/image.js";
 import {
-  createProject, listProjects, updateProject, deleteProject, summarizeProject,
+  createProject, listProjects, listDeletedProjects, updateProject, deleteProject, restoreProject, summarizeProject,
   listProjectTasks, createProjectTask, updateProjectTask, deleteProjectTask,
   listProjectMembers, createProjectMember, updateProjectMember, deleteProjectMember,
   listProjectIssues, createProjectIssue, updateProjectIssue, deleteProjectIssue,
@@ -58,13 +58,38 @@ import {
   listScriptAnalyzedAssets, replaceScriptAnalyzedAssets, updateScriptAnalyzedCharacter, updateScriptAnalyzedScene, updateScriptAnalyzedProp, deleteScriptAnalyzedCharacter, deleteScriptAnalyzedScene, deleteScriptAnalyzedProp,
 } from "../services/script-center-impl.js";
 import { matchFactoryRoute } from "./factory-router.js";
+import { matchConsistencyPackRoute } from "./consistency-pack-router.js";
 import { handleAITasksRouter } from "./ai-tasks-router.js";
 import { handleDataRouter } from "./data-router.js";
 import { handleModelsRouter } from "./models-router.js";
 import { handlePublishRouter } from "./publish-router.js";
 import { handlePipelineRouter } from "./pipeline-router.js";
 import { handleAssistantRouter } from "./assistant-router.js";
-import { handleAdminRouter } from "./admin-router.js";
+import { handleSlaRouter } from "./sla-router.js";
+import { handleQualityRouter, deleteQualityAutoConfig } from "./quality-router.js";
+import { handleErrorRecoveryRouter } from "./error-recovery-router.js";
+import { handleMediaAccessRouter } from "./media-access-router.js";
+import { handleRenderPresetsRouter } from "./render-presets-router.js";
+import { handleModelConstraintsRouter } from "./model-constraints-router.js";
+import { handleRoutePoliciesRouter } from "./route-policies-router.js";
+import { handleMetricsRouter } from "./metrics-router.js";
+import { handleAudioExtrasRouter } from "./audio-extras-router.js";
+import { handleFinalVideosRouter } from "./final-videos-router.js";
+import { handleTasksRouter } from "./tasks-router.js";
+import { handleSubtitlesRouter } from "./subtitles-router.js";
+import { handleTimelinesRouter } from "./timelines-router.js";
+import { handleCostRouter } from "./cost-router.js";
+import { handleReviewSnapshotsRouter } from "./review-snapshots-router.js";
+import { handleTtsModelsRouter, handleCharacterVoiceRouter } from "./tts-models-router.js";
+import { handleP2FeaturesRouter } from "./p2-features-router.js";
+import { handleP1FeaturesRouter } from "./p1-features-router.js";
+import { handleSecP1Router } from "./sec-p1-router.js";
+import { handleSecP2Router } from "./sec-p2-router.js";
+import { recordHttpPerformance } from "../services/horizontal/http-performance-service.js";
+import { applySecurityHeaders, EndpointRateLimiter, enforceHttps, logRateLimit } from "../services/security/hardening.js";
+import { assertAiPayloadSafe, assertMediaInputsSafe, assertTextSafe } from "../services/security/content-safety.js";
+import { buildCspHeader, generateCspNonce, guardPrompt, recordAigcWatermark } from "../services/module-domain/sec-p1-service.js";
+// import { handleAdminRouter } from "./admin-router.js";  // TODO: 恢复后启用
 import { readJsonBody as readJson } from "./http-utils.js";
 import { analyzeScriptWithAI } from "../services/script-analyze-ai.js";
 import { listProjectClips, createProjectClip, updateProjectClip, softDeleteProjectClip, syncProjectClipsFromStoryboards } from "../services/domain/storyboard.js";
@@ -82,6 +107,18 @@ function requireRequestPrincipal(req: IncomingMessage): AuthPrincipal {
   const principal = requestPrincipals.get(req);
   if (!principal) throw new Error("无法识别当前登录用户");
   return principal;
+}
+
+function enforceEndpointRateLimit(limiter: EndpointRateLimiter, req: IncomingMessage, res: ServerResponse, userId = "anonymous"): boolean {
+  const result = limiter.check(req, userId);
+  if (result.limit === 0) return true;
+  res.setHeader("x-ratelimit-limit", String(result.limit));
+  res.setHeader("x-ratelimit-remaining", String(result.remaining));
+  if (result.allowed) return true;
+  res.setHeader("retry-after", String(result.retryAfter));
+  logRateLimit(req, result.limit, result.retryAfter);
+  sendError(res, new Error("请求过于频繁，请稍后重试"), 429);
+  return false;
 }
 
 const mediaTypes: Record<string, string> = {
@@ -200,6 +237,8 @@ const ERROR_CODE_UNAUTHORIZED = 1003;
 const ERROR_CODE_NOT_FOUND = 1004;
 const ERROR_CODE_SERVER = 1005;
 const ERROR_CODE_BUDGET_EXCEEDED = 1010; // 项目预算硬上限超支（HTTP 402）
+const ERROR_CODE_VALIDATION = 1007; // 入参校验失败（PROJ-001-008 错误码统一）
+const ERROR_CODE_CONFLICT = 1008; // 状态冲突（如恢复未软删项目，PROJ-001-016）
 
 /**
  * errorCodeForStatus - 将 HTTP 状态码映射到业务错误码
@@ -211,8 +250,40 @@ function errorCodeForStatus(status: number): number {
   if (status === 401 || status === 403) return ERROR_CODE_UNAUTHORIZED;
   if (status === 402) return ERROR_CODE_BUDGET_EXCEEDED;
   if (status === 404) return ERROR_CODE_NOT_FOUND;
+  if (status === 409) return ERROR_CODE_CONFLICT;
+  if (status === 422) return ERROR_CODE_VALIDATION;
   if (status >= 500) return ERROR_CODE_SERVER;
   return 1001;
+}
+
+/**
+ * errorStatusForMessage - 将业务错误消息映射到 HTTP 状态码（V2, REQ-PROJ-001, PROJ-001-008）
+ * @param {string} message - 业务错误消息
+ * @returns {number} HTTP 状态码；未知消息返回 400
+ * @description 统一项目模块错误码到 HTTP 状态码的映射：
+ *              - project_not_found → 404
+ *              - project_not_deleted → 409（PROJ-001-016：恢复未软删项目冲突）
+ *              - name_required / owner_required / project_type_invalid → 422
+ *              - 旧 V1 兼容：`project not found`（带空格）等价 project_not_found
+ *              - 其它 → 400
+ */
+function errorStatusForMessage(message: string): number {
+  const normalized = message.trim().toLowerCase().replace(/\s+/g, "_");
+  switch (normalized) {
+    case "project_not_found":
+    case "project_not_found_due_to_soft_delete":
+      return 404;
+    case "project_not_deleted":
+    case "project_already_deleted":
+      return 409;
+    case "name_required":
+    case "owner_required":
+    case "project_type_invalid":
+    case "invalid_project_storage_path":
+      return 422;
+    default:
+      return 400;
+  }
 }
 
 /**
@@ -240,12 +311,13 @@ function applyCors(req: IncomingMessage, res: ServerResponse): boolean {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-  const allowed = new Set(configured.length > 0 ? configured : [
+  const developmentDefaults = process.env.NODE_ENV === "production" ? [] : [
     "http://localhost:3001",
     "http://127.0.0.1:3001",
     "http://localhost:3101",
     "http://127.0.0.1:3101",
-  ]);
+  ];
+  const allowed = new Set(configured.length > 0 ? configured : developmentDefaults);
   if (typeof origin === "string" && !allowed.has(origin)) return false;
   if (typeof origin === "string") {
     res.setHeader("access-control-allow-origin", origin);
@@ -283,6 +355,23 @@ async function requestResourceProjectId(ctx: AppContext, req: IncomingMessage): 
     "character-image-history": ctx.characterImageHistory,
     "scene-image-history": ctx.sceneImageHistory,
     "prop-image-history": ctx.propImageHistory,
+    shots: ctx.shots,
+    "shot-snapshots": ctx.shotSnapshots,
+    scripts: ctx.scripts,
+    "project-scripts": ctx.projectScripts,
+    assets: ctx.assets,
+    reviews: ctx.reviews,
+    "project-reviews": ctx.projectReviews,
+    "project-tasks": ctx.projectTasks,
+    "project-episodes": ctx.projectEpisodes,
+    "project-issues": ctx.projectIssues,
+    "project-milestones": ctx.projectMilestones,
+    "project-clips": ctx.projectClips,
+    "work-items": ctx.workItems,
+    "publish-plans": ctx.publishPlans,
+    "review-items": ctx.reviewItems,
+    "publish-records": ctx.publishRecords,
+    "cost-records": ctx.costRecords,
   } as const;
   const repository = repositories[parts[1] as keyof typeof repositories];
   if (!repository) return null;
@@ -636,11 +725,19 @@ async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResp
     ? body.attachments.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
       .map((item) => ({
         name: typeof item.name === "string" ? item.name : "图片附件",
+        type: typeof item.type === "string" ? item.type : "",
         size: typeof item.size === "number" ? item.size : 0,
         url: typeof item.url === "string" ? item.url : "",
       }))
       .filter((item) => item.url)
     : [];
+  await assertTextSafe(ctx, userText, "input", conversationId);
+  // SEC-AI-01：聊天入口强制 prompt injection 检测；命中 block 立即拒绝调用模型
+  const guard = guardPrompt(ctx.databaseFile, principal.userId, userText);
+  if (!guard.safe) {
+    return sendError(res, new Error(`prompt_injection_blocked: ${guard.hits.map((h) => h.name).join(",")}`), 422);
+  }
+  assertMediaInputsSafe(attachments);
   await addMessage(ctx, { conversation_id: conversationId, role: "user", content: userText, meta: { attachments } });
 
   const controller = new AbortController();
@@ -660,6 +757,7 @@ async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResp
   });
 
   let full = "";
+  let safetyBlocked = false;
   const startedAt = Date.now();
   let firstContentAt = 0;
   // 注意：SSE header 已经写完，这里的 for-await 抛错**不能**让 router 顶层兜底变 500，
@@ -674,6 +772,7 @@ async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResp
     }, controller.signal)) {
       if (controller.signal.aborted) break;
       full += chunk.content;
+      await assertTextSafe(ctx, full.slice(-2_000), "output", conversationId);
       if (!firstContentAt && chunk.content) {
         firstContentAt = Date.now();
         const firstContentMs = firstContentAt - startedAt;
@@ -686,6 +785,7 @@ async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResp
       res.write(`data: ${JSON.stringify(chunk)}\n\n`);
     }
   } catch (err) {
+    safetyBlocked = (err as { code?: string })?.code === "content_policy_violation";
     // 不重抛，避免 router 顶层再写 500（这时 SSE header 已发出，写不进去会爆）
     const message = err instanceof Error ? err.message : String(err);
     rootLogger.error(
@@ -701,7 +801,7 @@ async function handleChat(ctx: AppContext, req: IncomingMessage, res: ServerResp
       }
     }
   }
-  if (full) {
+  if (full && !safetyBlocked) {
     try {
       // 4 中心横切：敏感词标红（详见 docs/spec.md 3.1）
       // 流式收完的全文做一次敏感词扫描，命中词写入消息 meta。
@@ -774,12 +874,21 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       }
       return sendJson(res, visible);
     }
+    // V2 (REQ-PROJ-001, PROJ-001-015)：回收站端点
+    // 必须放在通用 project 路由之前（parts[2]="trash" 不会被当作 projectId 处理）
+    if (method === "GET" && parts[0] === "api" && parts[1] === "projects" && parts[2] === "trash" && !parts[3]) {
+      return sendJson(res, await listDeletedProjects(ctx));
+    }
     if (method === "POST" && parts.join("/") === "api/projects") return sendJson(res, await createProject(ctx, await readJson(req)));
     if (method === "PUT" && parts[0] === "api" && parts[1] === "projects" && parts[2] && !parts[3]) return sendJson(res, await updateProject(ctx, parts[2], await readJson(req) as Partial<Project>));
     if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "open-folder") return sendJson(res, await openProjectFolder(ctx, parts[2]));
     if (method === "DELETE" && parts[0] === "api" && parts[1] === "projects" && parts[2] && !parts[3]) {
-      await deleteProject(ctx, parts[2]);
-      return sendJson(res, { deleted: true });
+      const result = await deleteProject(ctx, parts[2]);
+      return sendJson(res, result);
+    }
+    // V2 (REQ-PROJ-001, PROJ-001-016)：恢复已软删项目
+    if (method === "POST" && parts[0] === "api" && parts[1] === "projects" && parts[2] && parts[3] === "restore" && !parts[4]) {
+      return sendJson(res, await restoreProject(ctx, parts[2]));
     }
     // ===== 项目工作台 =====
     // 所有嵌套资源都校验 projectId，避免跨项目读取或修改。
@@ -850,6 +959,7 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
         if (method === "DELETE" && resourceId && !action) { await deleteProjectStoryboard(ctx, projectId, resourceId); return sendJson(res, { deleted: true }); }
         if (method === "POST" && resourceId && action === "generate-image") {
           const body = await readJson(req);
+          await assertAiPayloadSafe(ctx, body, "input", resourceId);
           const task = await generateImage(ctx, { ...body, projectId });
           await updateProjectStoryboard(ctx, projectId, resourceId, { image_task_id: task.id, image_url: task.image_urls[0] ?? "", status: "image" });
           return sendJson(res, task);
@@ -1075,6 +1185,13 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     if (method === "POST" && parts.join("/") === "api/chat") return handleChat(ctx, req, res, requireRequestPrincipal(req));
     if (method === "POST" && parts.join("/") === "api/ai/script-analyze") {
       const body = (await readJson(req)) as { content?: string; format?: string; useLocal?: boolean; timeoutMs?: number; model?: string };
+      await assertAiPayloadSafe(ctx, body, "input", "script-analyze");
+      // SEC-AI-01：AI 入口强制 prompt injection 检测
+      const principal = requireRequestPrincipal(req);
+      const guard = guardPrompt(ctx.databaseFile, principal.userId, body.content || "");
+      if (!guard.safe) {
+        return sendError(res, new Error(`prompt_injection_blocked: ${guard.hits.map((h) => h.name).join(",")}`), 422);
+      }
       return sendJson(res, await analyzeScriptWithAI(ctx, {
         content: body.content || "",
         format: body.format || "txt",
@@ -1157,6 +1274,14 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
         if (!doc) throw new Error("剧本文档不存在");
         if (!(await requireProjectAccess(ctx, req, res, doc.project_id))) return;
       }
+      // SEC-AI-01：AI 入口强制 prompt injection 检测
+      if (content) {
+        const principal = requireRequestPrincipal(req);
+        const guard = guardPrompt(ctx.databaseFile, principal.userId, content);
+        if (!guard.safe) {
+          return sendError(res, new Error(`prompt_injection_blocked: ${guard.hits.map((h) => h.name).join(",")}`), 422);
+        }
+      }
       return sendJson(res, await optimizeScriptWithAI(ctx, "local-user", body as any));
     }
     if (method === "POST" && parts.join("/") === "api/ai/script-generate") {
@@ -1172,6 +1297,12 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
         return sendError(res, new Error("prompt 不能为空"), 400);
       }
       if (body.project_id && !(await requireProjectAccess(ctx, req, res, body.project_id))) return;
+      // SEC-AI-01：AI 入口强制 prompt injection 检测
+      const principal = requireRequestPrincipal(req);
+      const guard = guardPrompt(ctx.databaseFile, principal.userId, prompt);
+      if (!guard.safe) {
+        return sendError(res, new Error(`prompt_injection_blocked: ${guard.hits.map((h) => h.name).join(",")}`), 422);
+      }
       return sendJson(res, await generateScriptWithAI(ctx, "local-user", {
         prompt,
         style: body.style,
@@ -1233,6 +1364,7 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const principal = requireRequestPrincipal(req);
       const body = await readJson(req);
       const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
+      await assertAiPayloadSafe(ctx, body, "input", conversationId);
       if (conversationId && !(await requireOwnedConversation(ctx, conversationId, principal))) return sendError(res, new Error("conversation not found"), 404);
       return sendJson(res, await generateImage(ctx, { ...body, user_id: principal.userId }));
     }
@@ -1242,6 +1374,7 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     // 后端 chat 流式有 30s 超时（AI_TIMEOUTS.enhancePrompt），失败时返回 500。
     if (method === "POST" && parts.join("/") === "api/prompts/enhance") {
       const body = (await readJson(req)) as { prompt?: string; mode?: string };
+      await assertAiPayloadSafe(ctx, body, "input", "prompt-enhance");
       return sendJson(res, await enhancePrompt(ctx, { prompt: body.prompt, mode: body.mode }));
     }
     if (method === "POST" && parts.join("/") === "api/images/local") {
@@ -1273,6 +1406,7 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       const principal = requireRequestPrincipal(req);
       const body = await readJson(req);
       const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
+      await assertAiPayloadSafe(ctx, body, "input", conversationId);
       if (conversationId && !(await requireOwnedConversation(ctx, conversationId, principal))) return sendError(res, new Error("conversation not found"), 404);
       return sendJson(res, await generateVideo(ctx, { ...body, user_id: principal.userId }));
     }
@@ -1333,6 +1467,14 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
     }
     // 评审 P1-H9 修复：工厂类路由（角色/场景/道具/分镜/音频/视频/剪辑 GET）
     // 拆到 factory-router.ts，handleApi 保持扁平
+    if (await matchConsistencyPackRoute(ctx, req, res, {
+      method,
+      parts,
+      readJson,
+      sendJson,
+      sendError,
+      canAccessProject: (projectId) => canAccessProject(ctx, requireRequestPrincipal(req), projectId),
+    })) return;
     if (await matchFactoryRoute(ctx, req, res, {
       method,
       parts,
@@ -1610,7 +1752,10 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
         canAccessProject: (projectId) => canAccessProject(ctx, principal, projectId),
       });
     }
-    if (parts[0] === "api" && parts[1] === "data") {
+    if (
+      parts[0] === "api" && parts[1] === "data" &&
+      parts[2] !== "manual-work" && parts[2] !== "p2-metrics"
+    ) {
       const principal = requireRequestPrincipal(req);
       return handleDataRouter(ctx, req, res, {
         userId: principal.userId,
@@ -1630,14 +1775,243 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       });
     }
     if (parts[0] === "api" && parts[1] === "pipeline") {
-      return handlePipelineRouter(ctx, req, res);
+      const principal = requireRequestPrincipal(req);
+      return handlePipelineRouter(ctx, req, res, {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId) => canAccessProject(ctx, principal, projectId),
+      });
+    }
+    // V2 W8 REQ-PIPE-005-03 SLA 监控路由
+    if (parts[0] === "api" && parts[1] === "sla") {
+      const principal = requireRequestPrincipal(req);
+      return handleSlaRouter(ctx, req, res, {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId) => canAccessProject(ctx, principal, projectId),
+      });
+    }
+    // V2 W6 REQ-PIPE-004-05 质检中心路由
+    if (parts[0] === "api" && parts[1] === "quality") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId: string) => canAccessProject(ctx, principal, projectId),
+      };
+      // DELETE 走单独 helper（router 内部用 query 解析 projectId）
+      if ((req.method ?? "GET").toUpperCase() === "DELETE" && parts[2] === "auto-config") {
+        return deleteQualityAutoConfig(ctx, req, res, access);
+      }
+      return handleQualityRouter(ctx, req, res, access);
+    }
+    // V2 W10 FEAT-PIPE-006：错误恢复路由（死信队列 / 熔断器 / 错误分类）
+    if (parts[0] === "api" && parts[1] === "error-recovery") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId: string) => canAccessProject(ctx, principal, projectId),
+      };
+      return handleErrorRecoveryRouter(ctx, req, res, access);
+    }
+    // V2 W11 RENDER-F03/F04 横/竖版 preset 路由
+    if (parts[0] === "api" && parts[1] === "render" && parts[2] === "presets") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId: string) => canAccessProject(ctx, principal, projectId),
+      };
+      return handleRenderPresetsRouter(ctx, req, res, access);
+    }
+    // V2 W11 MODEL-F01~F06 模型能力/参数约束路由
+    if (parts[0] === "api" && parts[1] === "models" && parts[2] === "capabilities") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+      };
+      return handleModelConstraintsRouter(ctx, req, res, access);
+    }
+    // V2 W11 ROUTE-F01~F05 路由策略/决策日志路由
+    if (parts[0] === "api" && parts[1] === "route") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+      };
+      return handleRoutePoliciesRouter(ctx, req, res, access);
+    }
+    // V2 W11 DATA-F01~F12 指标字典 + 12 个聚合 SQL 视图路由
+    if (parts[0] === "api" && parts[1] === "metrics") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+      };
+      return handleMetricsRouter(ctx, req, res, access);
+    }
+    // V2 W11 AUDIO-F04/F06/F11/F13/F14 配音参数 + 候选 + 口型同步路由
+    if (parts[0] === "api" && parts[1] === "audio") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+      };
+      return handleAudioExtrasRouter(ctx, req, res, access);
+    }
+    // V2 W11 P0 REQ-NF-F09：媒体鉴权代理
+    if (parts[0] === "api" && parts[1] === "media" && parts[2] === "access") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId: string) => canAccessProject(ctx, principal, projectId),
+      };
+      return handleMediaAccessRouter(ctx, req, res, access);
+    }
+    // V2 W11 P0 REQ-RENDER-F08/F09：成片版本 / 下载导出
+    if (parts[0] === "api" && parts[1] === "final-videos") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId: string) => canAccessProject(ctx, principal, projectId),
+      };
+      const urlObj = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+      // V2.1 P1-007：路由器现在只依赖 UseCase 端口（FinalVideoUseCases + internalAuth）
+      const { createUseCases } = await import("../services/use-cases.js");
+      const useCases = createUseCases(ctx);
+      const handled = await handleFinalVideosRouter(
+        useCases.finalVideo,
+        ctx.internalAuth,
+        req,
+        res,
+        { ...access, databaseFile: ctx.databaseFile },
+        urlObj,
+      );
+      if (handled) return;
+    }
+    // V2 chapter 8 P1：审核协作、成本回填、模板生命周期与性能观测
+    if (parts[0] === "api" && parts[1] === "p1") {
+      const principal = requireRequestPrincipal(req);
+      const handled = await handleP1FeaturesRouter(ctx, req, res, {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId: string) => canAccessProject(ctx, principal, projectId),
+      }, parts);
+      if (handled) return;
+    }
+    // V2 chapter 8 P2：模板、账单对账、人工时长与复用率指标
+    if (
+      parts[0] === "api" &&
+      ((parts[1] === "p2" && parts[2] === "templates") ||
+        (parts[1] === "cost" && parts[2] === "reconciliations") ||
+        (parts[1] === "data" && (parts[2] === "manual-work" || parts[2] === "p2-metrics")))
+    ) {
+      const principal = requireRequestPrincipal(req);
+      const handled = await handleP2FeaturesRouter(ctx, req, res, {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        canAccessProject: (projectId: string) => canAccessProject(ctx, principal, projectId),
+      }, parts);
+      if (handled) return;
+    }
+    // V2 chapter 8.13 SEC P1: 安全相关端点（MFA / GDPR / 备份 / PII / Prompt guard / AIGC / sanitize / CSP）
+    if (parts[0] === "api" && parts[1] === "sec") {
+      const principal = requireRequestPrincipal(req);
+      const secUrl = new URL(req.url ?? "/", "http://localhost");
+      const handledP1 = await handleSecP1Router(req, res, {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+      }, secUrl);
+      if (handledP1) return;
+      // SEC P2：深度伪造检测 + 人脸授权 + 相似度告警
+      const handledP2 = await handleSecP2Router(req, res, {
+        userId: principal.userId,
+        isAdmin: principal.role === "admin",
+        role: principal.role,
+      }, secUrl);
+      if (handledP2) return;
+    }
+    // V2 W12 P0 REQ-TASK-F11/F17/F18：任务路由
+    if (parts[0] === "api" && parts[1] === "tasks") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        ok: true,
+        principal: { userId: principal.userId, role: principal.role, isAdmin: principal.role === "admin" },
+      };
+      const handled = await handleTasksRouter(ctx, req, res, access, parts);
+      if (handled) return;
+    }
+    // V2 W12 P0 REQ-AUDIO-F08/F09/F10：字幕路由
+    if (parts[0] === "api" && parts[1] === "subtitles") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        ok: true,
+        principal: { userId: principal.userId, role: principal.role, isAdmin: principal.role === "admin" },
+      };
+      const handled = await handleSubtitlesRouter(ctx, req, res, access, parts);
+      if (handled) return;
+    }
+    // V2 W12 P0 REQ-EDIT-F01~F10：时间线路由
+    if (parts[0] === "api" && parts[1] === "timelines") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        ok: true,
+        principal: { userId: principal.userId, role: principal.role, isAdmin: principal.role === "admin" },
+      };
+      const handled = await handleTimelinesRouter(ctx, req, res, access, parts);
+      if (handled) return;
+    }
+    // V2 W12 P0 REQ-COST-F10：成本聚合路由
+    if (parts[0] === "api" && parts[1] === "cost" && parts[2] === "by-shot") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        ok: true,
+        principal: { userId: principal.userId, role: principal.role, isAdmin: principal.role === "admin" },
+      };
+      const handled = await handleCostRouter(ctx, req, res, access, parts);
+      if (handled) return;
+    }
+    // V2 W12 P0 REQ-REVIEW-F01：审核快照路由
+    if (parts[0] === "api" && parts[1] === "review-snapshots") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        ok: true,
+        principal: { userId: principal.userId, role: principal.role, isAdmin: principal.role === "admin" },
+      };
+      const handled = await handleReviewSnapshotsRouter(ctx, req, res, access, parts);
+      if (handled) return;
+    }
+    // V2 W12 P0 REQ-AUDIO-F01/F02：TTS 模型 / 角色音色
+    if (parts[0] === "api" && parts[1] === "tts") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        ok: true,
+        principal: { userId: principal.userId, role: principal.role, isAdmin: principal.role === "admin" },
+      };
+      const handled = await handleTtsModelsRouter(ctx, req, res, access, parts);
+      if (handled) return;
+    }
+    if (parts[0] === "api" && parts[1] === "characters" && parts[3] === "voice") {
+      const principal = requireRequestPrincipal(req);
+      const access = {
+        ok: true,
+        principal: { userId: principal.userId, role: principal.role, isAdmin: principal.role === "admin" },
+      };
+      const handled = await handleCharacterVoiceRouter(ctx, req, res, access, parts);
+      if (handled) return;
     }
     if (parts[0] === "api" && parts[1] === "assistant") {
       const principal = requireRequestPrincipal(req);
       return handleAssistantRouter(ctx, req, res, principal, (projectId) => canAccessProject(ctx, principal, projectId));
     }
     if (parts[0] === "api" && parts[1] === "admin") {
-      return handleAdminRouter(ctx, req, res);
+      // TODO: 恢复 admin-router 后启用
+      sendError(res, new Error("admin 路由尚未恢复"), 503);
+      return;
     }
     sendError(res, new Error("not found"), 404);
   } catch (error) {
@@ -1650,11 +2024,20 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
       // 兜底避免 4 中心横切的业务错误（如 budget_exceeded 402）被默认 400 吃掉。
       // 注意：这里只处理 sendError(res, error)（默认 400）的情况，
       // 已经有 status 4xx 的显式 sendError(res, error, status) 不受影响。
+      // V2 (REQ-PROJ-001, PROJ-001-008)：当业务错误没有显式 status 但消息是项目模块
+      // 已知错误码时（project_not_found / project_not_deleted / name_required 等），
+      // 用 errorStatusForMessage 推导 HTTP 状态码，确保前端能用准确的 4xx 区分错误类型。
       const errorStatus = (error as Error & { status?: number })?.status;
+      const errMessage = (error as Error)?.message ?? "";
       if (typeof errorStatus === "number" && errorStatus >= 400 && errorStatus < 500) {
         sendError(res, error, errorStatus);
       } else {
-        sendError(res, error);
+        const mappedStatus = errorStatusForMessage(errMessage);
+        if (mappedStatus !== 400) {
+          sendError(res, error, mappedStatus);
+        } else {
+          sendError(res, error);
+        }
       }
     }
   }
@@ -1668,14 +2051,26 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
  */
 export function createServer(ctx: AppContext): http.Server {
   const auth = new AuthService(ctx.databaseFile, resolveAuthMode());
+  const endpointRateLimiter = new EndpointRateLimiter();
   return http.createServer(async (req, res) => {
+    const requestStartedAt = performance.now();
+    res.once("finish", () => {
+      try {
+        recordHttpPerformance({
+          path: new URL(req.url ?? "/", "http://localhost").pathname,
+          method: req.method ?? "GET",
+          durationMs: performance.now() - requestStartedAt,
+          status: res.statusCode,
+        });
+      } catch { /* performance telemetry must never break requests */ }
+    });
     // 评审增量改造 P0：每个请求生成 traceId，AsyncLocalStorage 绑定，
     // 业务内任意 logger.child() 都自动带上 traceId，便于全链路关联。
     const traceId = resolveTraceId(req);
     res.setHeader("x-request-id", traceId);
     withLogContext({ traceId }, () => {
       // 同步完成所有操作（createServer 的 handler 是 async，用 .then() 处理）
-      Promise.resolve(handleRequest(ctx, auth, req, res, traceId)).catch((err) => {
+      Promise.resolve(handleRequest(ctx, auth, endpointRateLimiter, req, res, traceId)).catch((err) => {
         // AI 流式调用超时（withTimeout 抛 TimeoutError）→ 用 504 Gateway Timeout 区分
         // 真实服务故障（500）。否则前端只能看到 "Internal Server Error"，无法分辨
         // "AI 排队慢" vs "服务挂了"，定位成本极高。
@@ -1745,6 +2140,7 @@ export function createServer(ctx: AppContext): http.Server {
 async function handleRequest(
   ctx: AppContext,
   auth: AuthService,
+  endpointRateLimiter: EndpointRateLimiter,
   req: IncomingMessage,
   res: ServerResponse,
   traceId: string,
@@ -1754,9 +2150,18 @@ async function handleRequest(
   // debug hook：仅 LOG_LEVEL=debug 时真正抓 body/headers，
   // info 级别 attachDebugHook 内部直接 return，零开销
   attachDebugHook(req, res, traceId, startedAt);
-  res.setHeader("x-content-type-options", "nosniff");
-  res.setHeader("x-frame-options", "DENY");
-  res.setHeader("referrer-policy", "no-referrer");
+  // SEC-TRANS-04 + SEC-TRANS-02：所有 API 路径统一下发安全响应头与 CSP nonce
+  // （health/ready/auth 等快捷路径也覆盖），L2120 的二次下发用于保持 CSP nonce 真正随机（每次请求重生成）
+  applySecurityHeaders(res);
+  if (!enforceHttps(req, res)) return;
+  // SEC-TRANS-04：一次性下发完整安全响应头（frame-ancestors via CSP + referrer-policy
+  // strict-origin-when-cross-origin + permissions-policy + COOP/COEP/CORP + nosniff + DENY）。
+  applySecurityHeaders(res);
+  // SEC-TRANS-02：每个请求生成 CSP nonce，注入到 Content-Security-Policy 头
+  // 与 X-CSP-Nonce 头（前端可读，用于内联 <script nonce=…>）。
+  const cspNonce = generateCspNonce();
+  res.setHeader("content-security-policy", buildCspHeader(cspNonce).replace(/^Content-Security-Policy(?:-Report-Only)?:\s*/, ""));
+  res.setHeader("x-csp-nonce", cspNonce);
   if (!applyCors(req, res)) {
     res.writeHead(403, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify({ code: ERROR_CODE_UNAUTHORIZED, message: "不允许的请求来源", data: { traceId } }));
@@ -1768,6 +2173,7 @@ async function handleRequest(
     return;
   }
   if ((req.url ?? "").startsWith("/api/auth/")) {
+    if (!enforceEndpointRateLimit(endpointRateLimiter, req, res)) return;
     await auth.handleRoute(req, res);
     return;
   }
@@ -1777,6 +2183,7 @@ async function handleRequest(
   }
   if ((req.url ?? "").startsWith("/api/") || (req.url ?? "").startsWith("/media/") || (req.url ?? "").startsWith("/project-media/")) {
     if (!(await enforceAuthorization(ctx, auth, req, res))) return;
+    if (!enforceEndpointRateLimit(endpointRateLimiter, req, res, requireRequestPrincipal(req).userId)) return;
   }
   if ((req.url ?? "").startsWith("/api/")) {
     await handleApi(ctx, req, res);

@@ -17,6 +17,9 @@ export type AudioInput = {
   speaker?: string;
   character_id?: string;
   storyboard_id?: string;
+  shot_id?: string;
+  start_time?: number;
+  end_time?: number;
   episode?: number;
   tags?: string[];
   format?: string;
@@ -53,6 +56,9 @@ export async function createAudio(ctx: AppContext, input: AudioInput): Promise<A
     speaker: input.speaker ?? "",
     character_id: input.character_id ?? "",
     storyboard_id: input.storyboard_id ?? "",
+    shot_id: input.shot_id ?? "",
+    start_time: input.start_time ?? 0,
+    end_time: input.end_time ?? 0,
     episode: input.episode ?? 1,
     tags: input.tags ?? [],
     format: input.format ?? "",

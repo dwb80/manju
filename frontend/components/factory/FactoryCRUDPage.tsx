@@ -277,6 +277,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
     filterPlaceholder = "筛选",
     filterValue: filterValueProp,
     onFilterChange,
+    secondaryFilter,
     stats,
     aiConfig,
     fetchUsage,
@@ -287,6 +288,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
     selectAllLabel = "全选",
     loadingView,
     extraToolbarContent,
+    toolbarExtra,
     showStats,
     enableTemplates,
     templateFetcher,
@@ -334,10 +336,16 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   // ===== 搜索 / 过滤 =====
   const [searchQuery, setSearchQuery] = useState("");
   const [internalFilterValue, setInternalFilterValue] = useState("");
+  const [internalSecondaryFilterValue, setInternalSecondaryFilterValue] = useState("");
   const filterValue = filterValueProp ?? internalFilterValue;
+  const secondaryFilterValue = secondaryFilter?.value ?? internalSecondaryFilterValue;
   const setFilterValue = (v: string) => {
     if (onFilterChange) onFilterChange(v);
     else setInternalFilterValue(v);
+  };
+  const setSecondaryFilterValue = (value: string) => {
+    if (secondaryFilter?.onChange) secondaryFilter.onChange(value);
+    else setInternalSecondaryFilterValue(value);
   };
 
   // ===== 表单弹窗 =====
@@ -384,9 +392,10 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
     return items.filter((it) => {
       if (q && !searchFields(it, q)) return false;
       if (filterField && filterValue && !filterField(it, filterValue)) return false;
+      if (secondaryFilter && secondaryFilterValue && !secondaryFilter.match(it, secondaryFilterValue)) return false;
       return true;
     });
-  }, [items, searchQuery, searchFields, filterField, filterValue]);
+  }, [items, searchQuery, searchFields, filterField, filterValue, secondaryFilter, secondaryFilterValue]);
 
   // 分页后的列表
   const totalPages = usePagination ? Math.ceil(filteredItems.length / pageSize) : 1;
@@ -768,6 +777,14 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                         placeholder={filterPlaceholder}
                       />
                     )}
+                    {secondaryFilter && (
+                      <FilterSelect
+                        value={secondaryFilterValue}
+                        onChange={setSecondaryFilterValue}
+                        options={secondaryFilter.options}
+                        placeholder={secondaryFilter.placeholder ?? "二级筛选"}
+                      />
+                    )}
                   </>
                 }
                 right={
@@ -827,6 +844,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                             历史
                           </Button>
                         )}
+                        {toolbarExtra}
                         <Button size="sm" onClick={openCreate}>
                           <Plus className="mr-2 h-4 w-4" />
                           新建{entityLabel}
@@ -838,7 +856,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
               />
 
               {/* 列表 */}
-              <PageCard title={listTitle}>
+              <PageCard title={listTitle} data-factory-selected={JSON.stringify(Array.from(selectedIds))}>
                 {isLoading && loadingView ? (
                   loadingView
                 ) : filteredItems.length > 0 ? (

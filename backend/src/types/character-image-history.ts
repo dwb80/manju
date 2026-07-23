@@ -34,3 +34,43 @@ export interface CharacterImageHistory {
   applied_at: string;
   created_at: string;
 }
+
+/**
+ * 道具图片生成历史实体（结构同 CharacterImageHistory，主体字段指向 prop_id）
+ */
+export interface PropImageHistory {
+  id: string;
+  prop_id: string;
+  project_id: string;
+  url: string;
+  ratio: string;
+  model: string;
+  size: string;
+  prompt: string;
+  negative_prompt?: string;
+  response_format: string;
+  n: number;
+  is_applied: boolean;
+  applied_at: string;
+  created_at: string;
+}
+
+/**
+ * 场景图片生成历史实体（结构同 CharacterImageHistory，主体字段指向 scene_id）
+ */
+export interface SceneImageHistory {
+  id: string;
+  scene_id: string;
+  project_id: string;
+  url: string;
+  ratio: string;
+  model: string;
+  size: string;
+  prompt: string;
+  negative_prompt?: string;
+  response_format: string;
+  n: number;
+  is_applied: boolean;
+  applied_at: string;
+  created_at: string;
+}

@@ -22,9 +22,9 @@ const MODULES = [
   { path: "/scenes", name: "场景工厂", createLabel: /新建场景|AI生成场景/ },
   { path: "/props", name: "道具工厂", createLabel: /新建道具|AI生成道具/ },
   { path: "/storyboards", name: "分镜导演台", createLabel: /新建分镜/ },
-  { path: "/module-videos", name: "视频生产线", createLabel: /新建视频/ },
-  { path: "/audio-center", name: "音频中心", createLabel: /新建音频/ },
-  { path: "/clip-center", name: "剪辑中心", createLabel: /新建剪辑/ },
+  { path: "/video-production", name: "视频生产线", createLabel: /新建视频/ },
+  { path: "/audio", name: "音频中心", createLabel: /新建音频/ },
+  { path: "/clips", name: "剪辑中心", createLabel: /新建剪辑/ },
 ];
 
 test.describe("7 模块页面加载（硬断言）", () => {
@@ -67,8 +67,8 @@ test.describe("三厂 UsageBadge / 插入到分镜", () => {
 test.describe("分镜/视频/音频 episode 二级筛选", () => {
   const epModules = [
     { path: "/storyboards", name: "分镜导演台" },
-    { path: "/module-videos", name: "视频生产线" },
-    { path: "/audio-center", name: "音频中心" },
+    { path: "/video-production", name: "视频生产线" },
+    { path: "/audio", name: "音频中心" },
   ];
 
   for (const m of epModules) {
@@ -80,7 +80,7 @@ test.describe("分镜/视频/音频 episode 二级筛选", () => {
         timeout: 20000,
       });
       // FactoryCRUDPage 的 FilterSelect placeholder 包含"集数"
-      const episodeFilter = page.getByText(/集数/).first();
+      const episodeFilter = page.getByRole("combobox", { name: "集数" });
       await expect(episodeFilter).toBeVisible({ timeout: 10000 });
     });
   }
@@ -100,7 +100,7 @@ test.describe("分镜导演台 一键生成视频", () => {
 
 test.describe("视频生产线 失败重试 / 重新生成", () => {
   test("视频卡片包含文件名 / 状态徽章", async ({ page }) => {
-    await page.goto("/module-videos");
+    await page.goto("/video-production");
     await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("h1, h2").filter({ hasText: "视频生产线" }).first()).toBeVisible({
       timeout: 20000,
@@ -112,7 +112,7 @@ test.describe("视频生产线 失败重试 / 重新生成", () => {
 
 test.describe("音频中心 AI 配音", () => {
   test("工具栏应有'AI配音'按钮", async ({ page }) => {
-    await page.goto("/audio-center");
+    await page.goto("/audio");
     await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("h1, h2").filter({ hasText: "音频中心" }).first()).toBeVisible({
       timeout: 20000,
@@ -124,7 +124,7 @@ test.describe("音频中心 AI 配音", () => {
 
 test.describe("剪辑中心 列表/时间轴视图切换", () => {
   test("工具栏应包含 列表/时间轴 切换按钮", async ({ page }) => {
-    await page.goto("/clip-center");
+    await page.goto("/clips");
     await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("h1, h2").filter({ hasText: "剪辑中心" }).first()).toBeVisible({
       timeout: 20000,

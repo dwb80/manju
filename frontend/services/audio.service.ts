@@ -20,6 +20,9 @@ export async function createAudio(data: {
   description?: string;
   character_id?: string;
   storyboard_id?: string;
+  shot_id?: string;
+  start_time?: number;
+  end_time?: number;
   tags?: string[];
   format?: string;
   size?: number;
@@ -40,6 +43,9 @@ export async function updateAudio(id: string, data: Partial<{
   description: string;
   character_id: string;
   storyboard_id: string;
+  shot_id: string;
+  start_time: number;
+  end_time: number;
   tags: string[];
   format: string;
   size: number;
@@ -103,6 +109,27 @@ export async function generateTTS(
   body: { text: string; speaker?: string; voice_id?: string; speed?: number } & Record<string, unknown>,
 ): Promise<unknown> {
   return api(`/api/audios/${audioId}/tts`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** 批量 TTS 生成 */
+export async function batchGenerateTTS(
+  body: {
+    project_id: string;
+    items: Array<{
+      text: string;
+      speaker: string;
+      character_id?: string;
+      storyboard_id?: string;
+      shot_id?: string;
+      voice?: string;
+      emotion?: string;
+    }>;
+  },
+): Promise<{ success: Array<{ id: string; name: string; file_url: string }>; failed: number }> {
+  return api("/api/tts/batch", {
     method: "POST",
     body: JSON.stringify(body),
   });

@@ -1,22 +1,52 @@
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { setTimeout as delay } from "node:timers/promises";
 import { getRawDatabase } from "../storage/sqlite.js";
+import {
+  buildAuthorizeUrl,
+  consumeSsoState,
+  ensureSsoTables,
+  exchangeCodeForToken,
+  fetchLarkUserInfo,
+  generateSsoState,
+  getSsoConfig,
+  safeRedirectPath,
+  type LarkUserInfo,
+} from "./security/sso.js";
 
 const COOKIE_NAME = "manju_session";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 5;
+const PASSWORD_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+const SCRYPT_OPTIONS = { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 } as const;
+const COMMON_PASSWORDS = new Set(["password", "password123", "123456789012", "qwertyuiop12", "admin123456", "letmein123456"]);
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function hashPassword(password: string, salt: string = randomBytes(16).toString("hex")): string {
-  const digest = scryptSync(password, salt, 64).toString("hex");
-  return `scrypt:${salt}:${digest}`;
+export function validatePasswordStrength(password: string): string | null {
+  if (password.length < 12 || password.length > 128) return "密码长度必须为 12-128 位";
+  if (COMMON_PASSWORDS.has(password.toLowerCase())) return "密码过于常见";
+  const classes = [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z0-9]/].filter((pattern) => pattern.test(password)).length;
+  if (classes < 3 && password.length < 20) return "密码至少包含大小写字母、数字、符号中的三类，或使用 20 位以上口令短语";
+  return null;
 }
 
-function verifyPassword(password: string, encoded: string): boolean {
+export function hashPassword(password: string, salt: string = randomBytes(16).toString("hex")): string {
+  const digest = scryptSync(password, salt, 64, SCRYPT_OPTIONS).toString("hex");
+  return `scrypt-v2$32768$8$1$${salt}$${digest}`;
+}
+
+export function verifyPassword(password: string, encoded: string): boolean {
+  if (encoded.startsWith("scrypt-v2$")) {
+    const [algorithm, n, r, p, salt, expectedHex] = encoded.split("$");
+    if (algorithm !== "scrypt-v2" || !salt || !expectedHex) return false;
+    const actual = scryptSync(password, salt, 64, { N: Number(n), r: Number(r), p: Number(p), maxmem: 64 * 1024 * 1024 });
+    const expected = Buffer.from(expectedHex, "hex");
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  }
   const [algorithm, salt, expectedHex] = encoded.split(":");
   if (algorithm !== "scrypt" || !salt || !expectedHex) return false;
   const actual = scryptSync(password, salt, 64);
@@ -101,6 +131,7 @@ export class AuthService {
     this.mode = mode;
     this.db = getRawDatabase(databaseFile);
     this.ensureSchema();
+    ensureSsoTables(databaseFile);
     if (mode === "required") this.ensureBootstrapAdmin();
   }
 
@@ -111,7 +142,8 @@ export class AuthService {
       );
       CREATE TABLE IF NOT EXISTS auth_users (
         id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL,
-        password_hash TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        password_hash TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        failed_login_count INTEGER NOT NULL DEFAULT 0, locked_until TEXT NOT NULL DEFAULT '', password_expires_at TEXT NOT NULL DEFAULT ''
       );
       CREATE TABLE IF NOT EXISTS auth_memberships (
         id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, user_id TEXT NOT NULL,
@@ -126,6 +158,13 @@ export class AuthService {
       CREATE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions(token_hash);
       CREATE INDEX IF NOT EXISTS idx_auth_memberships_user ON auth_memberships(user_id);
     `);
+    for (const sql of [
+      "ALTER TABLE auth_users ADD COLUMN failed_login_count INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE auth_users ADD COLUMN locked_until TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE auth_users ADD COLUMN password_expires_at TEXT NOT NULL DEFAULT ''",
+    ]) {
+      try { this.db.exec(sql); } catch { /* 已存在：兼容旧数据库迁移 */ }
+    }
   }
 
   private ensureBootstrapAdmin(): void {
@@ -133,9 +172,8 @@ export class AuthService {
     if (count > 0) return;
 
     const password = process.env.AUTH_ADMIN_PASSWORD ?? "";
-    if (password.length < 12) {
-      throw new Error("AUTH_MODE=required 首次启动必须配置至少 12 位的 AUTH_ADMIN_PASSWORD");
-    }
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) throw new Error(`AUTH_MODE=required 首次启动的 AUTH_ADMIN_PASSWORD 不合格：${passwordError}`);
 
     const username = (process.env.AUTH_ADMIN_USERNAME ?? "admin").trim().toLowerCase();
     const displayName = (process.env.AUTH_ADMIN_DISPLAY_NAME ?? "系统管理员").trim();
@@ -147,6 +185,8 @@ export class AuthService {
       .run(organizationId, process.env.AUTH_ORGANIZATION_NAME ?? "默认组织", now);
     this.db.prepare("INSERT INTO auth_users (id,username,display_name,password_hash,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)")
       .run(userId, username, displayName, hashPassword(password), now, now);
+    this.db.prepare("UPDATE auth_users SET password_expires_at=? WHERE id=?")
+      .run(new Date(Date.now() + PASSWORD_TTL_MS).toISOString(), userId);
     this.db.prepare("INSERT INTO auth_memberships (id,organization_id,user_id,role,created_at) VALUES (?,?,?,?,?)")
       .run(`mem-${randomUUID()}`, organizationId, userId, "admin", now);
   }
@@ -218,18 +258,41 @@ export class AuthService {
       const body = await readJson(req);
       const username = String(body.username ?? "").trim().toLowerCase();
       const password = String(body.password ?? "");
-      const row = this.db.prepare("SELECT id,username,display_name,password_hash FROM auth_users WHERE username=? AND active=1").get(username) as {
+      const row = this.db.prepare("SELECT id,username,display_name,password_hash,failed_login_count,locked_until,password_expires_at FROM auth_users WHERE username=? AND active=1").get(username) as {
         id: string; username: string; display_name: string; password_hash: string;
+        failed_login_count: number; locked_until: string; password_expires_at: string;
       } | undefined;
+      if (row?.locked_until && Date.parse(row.locked_until) > Date.now()) {
+        send(res, 429, null, "账号已临时锁定，请稍后重试");
+        return true;
+      }
       if (!row || !verifyPassword(password, String(row.password_hash))) {
         const next = !current || current.resetAt <= Date.now()
           ? { count: 1, resetAt: Date.now() + LOGIN_WINDOW_MS }
           : { ...current, count: current.count + 1 };
         this.attempts.set(key, next);
+        if (row) {
+          const failures = Number(row.failed_login_count ?? 0) + 1;
+          const lockedUntil = failures >= LOGIN_MAX_ATTEMPTS ? new Date(Date.now() + LOGIN_WINDOW_MS).toISOString() : "";
+          this.db.prepare("UPDATE auth_users SET failed_login_count=?,locked_until=? WHERE id=?")
+            .run(failures, lockedUntil, row.id);
+          await delay(Math.min(2_000, 100 * (2 ** Math.min(failures, 4))));
+        } else {
+          await delay(200);
+        }
         send(res, 401, null, "用户名或密码错误");
         return true;
       }
       this.attempts.delete(key);
+      this.db.prepare("UPDATE auth_users SET failed_login_count=0,locked_until='' WHERE id=?").run(row.id);
+      if (row.password_expires_at && Date.parse(row.password_expires_at) <= Date.now()) {
+        send(res, 403, null, "密码已过期，请联系管理员重置");
+        return true;
+      }
+      if (!String(row.password_hash).startsWith("scrypt-v2$")) {
+        this.db.prepare("UPDATE auth_users SET password_hash=?,updated_at=? WHERE id=?")
+          .run(hashPassword(password), new Date().toISOString(), row.id);
+      }
 
       const membership = this.db.prepare("SELECT organization_id,role FROM auth_memberships WHERE user_id=? ORDER BY created_at LIMIT 1").get(String(row.id)) as {
         organization_id: string; role: string;
@@ -263,6 +326,64 @@ export class AuthService {
 
     const principal = this.authenticate(req);
     if (!principal) {
+      // SEC-AUTH-02 SSO 公开端点（status / login / callback）允许未登录访问
+      if (req.method === "GET" && path === "/api/auth/sso/status") {
+        const cfg = getSsoConfig();
+        send(res, 200, {
+          enabled: cfg.enabled,
+          provider: cfg.provider,
+          autoCreateUser: cfg.autoCreateUser,
+          defaultRole: cfg.defaultRole,
+        });
+        return true;
+      }
+      if (req.method === "GET" && path === "/api/auth/sso/lark/login") {
+        const cfg = getSsoConfig();
+        if (!cfg.enabled) {
+          send(res, 404, null, "SSO 未启用（缺少 LARK_APP_ID / LARK_APP_SECRET / SSO_REDIRECT_URI）");
+          return true;
+        }
+        const redirect = safeRedirectPath(new URL(req.url ?? "/", "http://localhost").searchParams.get("redirect"));
+        const state = generateSsoState(this.db, redirect);
+        const url = buildAuthorizeUrl(cfg, state);
+        res.writeHead(302, { location: url, "cache-control": "no-store" });
+        res.end();
+        return true;
+      }
+      if (req.method === "GET" && path === "/api/auth/sso/lark/callback") {
+        const cfg = getSsoConfig();
+        if (!cfg.enabled) {
+          send(res, 404, null, "SSO 未启用");
+          return true;
+        }
+        const url = new URL(req.url ?? "/", "http://localhost");
+        const code = url.searchParams.get("code") ?? "";
+        const state = url.searchParams.get("state") ?? "";
+        const stateResult = consumeSsoState(this.db, state);
+        if (!stateResult.ok) {
+          send(res, 400, null, `SSO 状态校验失败：${stateResult.reason}`);
+          return true;
+        }
+        if (!code || code.length < 8 || code.length > 1024) {
+          send(res, 400, null, "授权码无效");
+          return true;
+        }
+        try {
+          const accessToken = await exchangeCodeForToken(cfg, code);
+          const userInfo = await fetchLarkUserInfo(cfg, accessToken);
+          const resolved = this.resolveSsoUser(cfg, userInfo);
+          this.issueSession(res, resolved.user, resolved.csrfToken);
+          const target = stateResult.redirectAfter && stateResult.redirectAfter !== "/" ? stateResult.redirectAfter : "/";
+          const joiner = target.includes("?") ? "&" : "?";
+          res.writeHead(302, { location: `${target}${joiner}sso=ok&created=${resolved.created ? "1" : "0"}`, "cache-control": "no-store" });
+          res.end();
+          return true;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          send(res, 502, null, `SSO 回调失败：${message}`);
+          return true;
+        }
+      }
       send(res, 401, null, "请先登录");
       return true;
     }
@@ -290,8 +411,9 @@ export class AuthService {
       const body = await readJson(req);
       const currentPassword = String(body.currentPassword ?? "");
       const newPassword = String(body.newPassword ?? "");
-      if (newPassword.length < 12) {
-        send(res, 400, null, "新密码至少需要 12 位");
+      const passwordError = validatePasswordStrength(newPassword);
+      if (passwordError) {
+        send(res, 400, null, passwordError);
         return true;
       }
       if (currentPassword === newPassword) {
@@ -304,8 +426,8 @@ export class AuthService {
         return true;
       }
       const now = new Date().toISOString();
-      this.db.prepare("UPDATE auth_users SET password_hash=?,updated_at=? WHERE id=?")
-        .run(hashPassword(newPassword), now, principal.userId);
+      this.db.prepare("UPDATE auth_users SET password_hash=?,updated_at=?,password_expires_at=?,failed_login_count=0,locked_until='' WHERE id=?")
+        .run(hashPassword(newPassword), now, new Date(Date.now() + PASSWORD_TTL_MS).toISOString(), principal.userId);
       const token = parseCookies(req)[COOKIE_NAME];
       if (token) {
         this.db.prepare("DELETE FROM auth_sessions WHERE user_id=? AND token_hash<>?")
@@ -317,6 +439,13 @@ export class AuthService {
 
     if (principal.role !== "admin") {
       send(res, 403, null, "仅管理员可管理用户和组织");
+      return true;
+    }
+
+    // SEC-AUTH-02 SSO 解绑：仅当前登录用户本人可解绑（不需要 admin）
+    if (req.method === "POST" && path === "/api/auth/sso/lark/unlink") {
+      this.db.prepare("DELETE FROM auth_sso_accounts WHERE user_id=? AND provider='lark'").run(principal.userId);
+      send(res, 200, { unlinked: true });
       return true;
     }
 
@@ -348,8 +477,9 @@ export class AuthService {
       const password = String(body.password ?? "");
       const displayName = String(body.displayName ?? username).trim();
       const role = body.role;
-      if (!/^[a-z0-9._-]{3,64}$/.test(username) || password.length < 12 || !isRole(role) || displayName.length < 1 || displayName.length > 64) {
-        send(res, 400, null, "用户名、显示名称、至少 12 位密码或角色不符合要求");
+      const passwordError = validatePasswordStrength(password);
+      if (!/^[a-z0-9._-]{3,64}$/.test(username) || passwordError || !isRole(role) || displayName.length < 1 || displayName.length > 64) {
+        send(res, 400, null, passwordError ?? "用户名、显示名称或角色不符合要求");
         return true;
       }
       const now = new Date().toISOString();
@@ -357,6 +487,8 @@ export class AuthService {
       try {
         this.db.prepare("INSERT INTO auth_users (id,username,display_name,password_hash,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)")
           .run(userId, username, displayName, hashPassword(password), now, now);
+        this.db.prepare("UPDATE auth_users SET password_expires_at=? WHERE id=?")
+          .run(new Date(Date.now() + PASSWORD_TTL_MS).toISOString(), userId);
         this.db.prepare("INSERT INTO auth_memberships (id,organization_id,user_id,role,created_at) VALUES (?,?,?,?,?)")
           .run(`mem-${randomUUID()}`, principal.organizationId, userId, role, now);
       } catch {
@@ -431,13 +563,14 @@ export class AuthService {
       }
       const body = await readJson(req);
       const newPassword = String(body.newPassword ?? "");
-      if (newPassword.length < 12) {
-        send(res, 400, null, "新密码至少需要 12 位");
+      const passwordError = validatePasswordStrength(newPassword);
+      if (passwordError) {
+        send(res, 400, null, passwordError);
         return true;
       }
       const now = new Date().toISOString();
-      this.db.prepare("UPDATE auth_users SET password_hash=?,updated_at=? WHERE id=?")
-        .run(hashPassword(newPassword), now, targetUserId);
+      this.db.prepare("UPDATE auth_users SET password_hash=?,updated_at=?,password_expires_at=?,failed_login_count=0,locked_until='' WHERE id=?")
+        .run(hashPassword(newPassword), now, new Date(Date.now() + PASSWORD_TTL_MS).toISOString(), targetUserId);
       this.db.prepare("DELETE FROM auth_sessions WHERE user_id=?").run(targetUserId);
       send(res, 200, { reset: true }, "密码已重置");
       return true;
@@ -445,6 +578,98 @@ export class AuthService {
 
     send(res, 404, null, "认证接口不存在");
     return true;
+  }
+
+  /**
+   * SEC-AUTH-02 SSO 解析用户：
+   * 1. 在 auth_sso_accounts 中查 provider + provider_user_id
+   * 2. 命中 → 关联已有用户，刷新 display/email/avatar
+   * 3. 未命中 + autoCreateUser → 创建只读账号（username = lark_<openId前16位>，随机密码）
+   * 4. 未命中 + !autoCreateUser → 抛 403，要求先绑定
+   */
+  private resolveSsoUser(config: ReturnType<typeof getSsoConfig>, info: LarkUserInfo): {
+    user: { id: string; username: string; displayName: string; role: AuthRole; organizationId: string };
+    csrfToken: string;
+    created: boolean;
+  } {
+    if (!info.openId) throw new Error("飞书 openId 缺失");
+    const now = new Date().toISOString();
+    const existing = this.db.prepare(`
+      SELECT user_id, display_name, provider_email, avatar_url FROM auth_sso_accounts
+      WHERE provider = ? AND provider_user_id = ?
+    `).get("lark", info.openId) as { user_id: string; display_name: string; provider_email: string; avatar_url: string } | undefined;
+
+    if (existing) {
+      this.db.prepare(`
+        UPDATE auth_sso_accounts SET display_name=?, provider_email=?, avatar_url=?, provider_union_id=?, updated_at=?
+        WHERE provider=? AND provider_user_id=?
+      `).run(info.name || existing.display_name, info.email || existing.provider_email, info.avatarUrl || existing.avatar_url, info.unionId, now, "lark", info.openId);
+      const membership = this.db.prepare("SELECT organization_id, role FROM auth_memberships WHERE user_id=? ORDER BY created_at LIMIT 1").get(existing.user_id) as { organization_id: string; role: string } | undefined;
+      if (!membership || !isRole(membership.role)) throw new Error("SSO 账号未关联有效组织");
+      const csrfToken = randomBytes(24).toString("base64url");
+      return {
+        user: { id: existing.user_id, username: "", displayName: info.name || existing.display_name, role: membership.role, organizationId: membership.organization_id },
+        csrfToken,
+        created: false,
+      };
+    }
+
+    if (!config.autoCreateUser) {
+      throw new Error("SSO 首次登录未开启自动注册，请联系管理员");
+    }
+
+    // 自动注册：用 lark_<openId8位> 作为 username（保证唯一且匿名）
+    const username = `lark_${info.openId.slice(0, 8).toLowerCase()}`;
+    const existingUser = this.db.prepare("SELECT id FROM auth_users WHERE username=?").get(username) as { id: string } | undefined;
+    let userId: string;
+    let organizationId: string;
+    if (existingUser) {
+      userId = existingUser.id;
+    } else {
+      userId = `usr-${randomUUID()}`;
+      // SSO 用户暂归入 bootstrap 的组织
+      const org = this.db.prepare("SELECT id FROM auth_organizations ORDER BY created_at LIMIT 1").get() as { id: string } | undefined;
+      if (!org) {
+        organizationId = `org-${randomUUID()}`;
+        this.db.prepare("INSERT INTO auth_organizations (id,name,created_at) VALUES (?,?,?)").run(organizationId, "默认组织", now);
+      } else {
+        organizationId = org.id;
+      }
+      // SSO 用户没有密码：用 randomBytes(48) 占位 + 立即过期，强制其绑密码或保持 SSO-only
+      this.db.prepare("INSERT INTO auth_users (id,username,display_name,password_hash,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)")
+        .run(userId, username, info.name || "飞书用户", `sso-only:${randomBytes(32).toString("base64url")}`, now, now);
+      this.db.prepare("INSERT INTO auth_memberships (id,organization_id,user_id,role,created_at) VALUES (?,?,?,?,?)")
+        .run(`mem-${randomUUID()}`, organizationId, userId, config.defaultRole, now);
+    }
+    this.db.prepare(`
+      INSERT INTO auth_sso_accounts (id,user_id,provider,provider_user_id,provider_union_id,provider_email,display_name,avatar_url,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(provider, provider_user_id) DO UPDATE SET
+        display_name=excluded.display_name, provider_email=excluded.provider_email,
+        avatar_url=excluded.avatar_url, provider_union_id=excluded.provider_union_id, updated_at=excluded.updated_at
+    `).run(`sso-${randomUUID()}`, userId, "lark", info.openId, info.unionId, info.email, info.name, info.avatarUrl, now, now);
+    const finalOrg = this.db.prepare("SELECT organization_id FROM auth_memberships WHERE user_id=? ORDER BY created_at LIMIT 1").get(userId) as { organization_id: string };
+    const csrfToken = randomBytes(24).toString("base64url");
+    return {
+      user: { id: userId, username, displayName: info.name || "飞书用户", role: config.defaultRole, organizationId: finalOrg.organization_id },
+      csrfToken,
+      created: true,
+    };
+  }
+
+  /** SEC-AUTH-02 SSO 写 session：复用密码登录的 cookie 体系。 */
+  private issueSession(
+    res: ServerResponse,
+    user: { id: string; username: string; displayName: string; role: AuthRole; organizationId: string },
+    csrfToken: string,
+  ): void {
+    const token = randomBytes(32).toString("base64url");
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+    this.db.prepare("INSERT INTO auth_sessions (id,token_hash,user_id,organization_id,csrf_token,expires_at,created_at,last_seen_at) VALUES (?,?,?,?,?,?,?,?)")
+      .run(`ses-${randomUUID()}`, hashToken(token), user.id, user.organizationId, csrfToken, expiresAt, now, now);
+    const secure = process.env.AUTH_COOKIE_SECURE === "true" ? "; Secure" : "";
+    res.setHeader("set-cookie", `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_MS / 1000}${secure}`);
   }
 }
 

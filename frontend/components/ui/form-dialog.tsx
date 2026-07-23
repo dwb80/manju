@@ -400,6 +400,6 @@ function renderFieldControl(
       );
     }
     default:
-      return null;
+      return <></>;
   }
 }

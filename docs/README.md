@@ -1,6 +1,6 @@
 # 文档索引
 
-> **更新时间**: 2026-07-18
+> **更新时间**: 2026-07-23
 > **说明**: 本文档说明 `docs` 目录下每个文档的用途和推荐阅读顺序。
 
 ---
@@ -54,14 +54,13 @@
 
 | 文档 | 说明 |
 |------|------|
-| **[platform-diagnosis-and-competitive-prd.md](platform-diagnosis-and-competitive-prd.md)** | 2026-07-18 平台功能盘点、文档差异、合理性分析、整改建议与竞争性产品 PRD。 |
-| **[code-review-report-2026-07-18.md](code-review-report-2026-07-18.md)** | 2026-07-18 代码评审、风险分级、工程整改与 90 天计划。 |
-| **[feature-status.md](feature-status.md)** | 2026-07-18 当前能力分级、明确边界、对外表达红线和版本准入。 |
-| **[functional-specification.md](functional-specification.md)** | 2026-07-18 功能验证唯一基线，定义模块行为、异常、边界和验收条件。 |
-| **[requirements-traceability-matrix.md](requirements-traceability-matrix.md)** | 73 个功能编号到页面、API、数据和测试证据的追踪矩阵。 |
-| **[defect-register.md](defect-register.md)** | 功能验证中发现的缺陷、级别、证据、影响和闭环状态。 |
-| **[static-audit-report.md](static-audit-report.md)** | 静态质量、供应链、敏感信息和安全边界审计结论。 |
-| **[verification-and-remediation-report-2026-07-18.md](verification-and-remediation-report-2026-07-18.md)** | 七阶段验证结果、整改证据、残余风险与发布建议。 |
+
+### 迭代计划
+
+| 文档 | 说明 |
+|------|------|
+| **[V2.1 DDD 三聚合加固迭代计划](iterations/v2.1-ddd-three-aggregates-iteration-plan.md)** | PipelineRun、Shot、Review 三条并行任务线的职责、文件所有权、事件契约、集成顺序和验收标准。 |
+
 
 ### 独立保留文档
 
@@ -82,20 +81,7 @@
 
 | 文档 | 归档原因 |
 |------|----------|
-| `system-architecture-refactor-plan.md` | 改造计划已完成 |
-| `api-integration-and-test-data-plan.md` | API 已对接完成 |
-| `creative-center-evaluation.md` | 评估报告已过时 |
-| `project-center-evaluation.md` | 评估报告已过时 |
-| `asset-center-evaluation.md` | 评估报告已过时 |
-| `ai-production-center-evaluation.md` | 评估报告已过时 |
-| `frontend-consistency-report.md` | 一致性修复已完成 |
-| `dashboard-implementation-report.md` | Dashboard 已实现 |
-| `final-integration-report.md` | 集成已完成 |
-| `sync-report.md` | 同步已完成 |
-| `script-center-development-checklist.md` | 内容已整合到 script-center-guide.md |
-| `script-center-scope.md` | 内容已整合到 script-center-guide.md |
-| `script-center-supplement-designs.md` | 内容已整合到 script-center-guide.md |
-| `SYSTEM_INTEGRATION_FINAL_COMPLETE_REPORT.md` | 集成已完成 |
+
 
 ---
 
@@ -108,11 +94,3 @@
 3. **归档文档**不再更新，仅作为历史参考
 
 ### 合并记录
-
-- **2026-07-13**: 将 42 个文档整理为 14 个有效文档 + 14 个归档文档
-  - 合并 7 个核心设计文档 → `product-design-spec.md`
-  - 合并 5 个需求验收文档 → `requirements-and-acceptance.md`
-  - 合并 4 个架构开发文档 → `architecture-and-development.md`
-  - 合并 3 个模块关系文档 → `module-relationships.md`
-  - 保留 `script-center-guide.md` 作为剧本中心主文档
-  - 移入 archive 14 个过时/临时文档

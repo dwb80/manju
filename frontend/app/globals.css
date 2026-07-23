@@ -50,6 +50,55 @@ button, input, textarea, select {
   letter-spacing: 0;
 }
 
+/* V2 NF-F18/F19: consistent keyboard navigation and clearly visible focus. */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.22);
+}
+
+.skip-to-content {
+  position: fixed;
+  z-index: 9999;
+  top: 8px;
+  left: 8px;
+  transform: translateY(-150%);
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  font-weight: 700;
+}
+.skip-to-content:focus { transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.browser-compatibility-banner {
+  position: sticky;
+  top: 0;
+  z-index: 9998;
+  padding: 10px 16px;
+  background: #7f1d1d;
+  color: #fff;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* NF-F17: the supported minimum workstation viewport is 1366×768. */
+@media (max-width: 1366px), (max-height: 768px) {
+  :root { --workspace-gutter: 12px; }
+  body { min-width: 1024px; }
+  main { max-width: 100vw; overflow-x: auto; }
+  .agnes-media-viewport { max-height: calc(100vh - 132px); overflow: auto; }
+}
+
 /* 剧本编辑：剧集/场景锚定闪烁高亮 */
 @keyframes episodeHighlightFlash {
   0%, 100% {

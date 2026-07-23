@@ -134,7 +134,7 @@ export async function getCharacterUsage(ctx: AppContext, characterId: string): P
   const storyboards: UsageReferenceItem[] = matchedStoryboards.map((sb) => ({
     type: "storyboard",
     id: sb.id,
-    title: sb.description?.slice(0, 30) || `分镜 #${sb.shot_number}`,
+    title: sb.description?.slice(0, 30) || `分镜 #${sb.storyboard_number}`,
     project_id: sb.project_id,
     context: sb.dialogue,
     episode: sb.episode,
@@ -189,7 +189,7 @@ export async function getSceneUsage(ctx: AppContext, sceneId: string): Promise<A
   const storyboards: UsageReferenceItem[] = allStoryboards.map((sb) => ({
     type: "storyboard",
     id: sb.id,
-    title: sb.description?.slice(0, 30) || `分镜 #${sb.shot_number}`,
+    title: sb.description?.slice(0, 30) || `分镜 #${sb.storyboard_number}`,
     project_id: sb.project_id,
     context: sb.dialogue,
     episode: sb.episode,
@@ -282,7 +282,7 @@ export async function getPropUsage(ctx: AppContext, propId: string): Promise<Ass
   const storyboards: UsageReferenceItem[] = matchedStoryboards.map((sb) => ({
     type: "storyboard",
     id: sb.id,
-    title: sb.description?.slice(0, 30) || `分镜 #${sb.shot_number}`,
+    title: sb.description?.slice(0, 30) || `分镜 #${sb.storyboard_number}`,
     project_id: sb.project_id,
     context: sb.dialogue,
     episode: sb.episode,

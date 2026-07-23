@@ -14,7 +14,7 @@ import { AssetImageGenerator } from "../asset-image-generator";
 import type { CharacterImageGeneratorProps } from "../asset-image-generator/types";
 import { adaptCharacterPropsToAsset } from "../asset-image-generator/registry";
 
-export { ratioToAspectRatio, detectClosestRatio, detectRatioFromImageUrl } from "../asset-image-generator/types";
+export { ratioToAspectRatio, detectClosestRatio, detectRatioFromImageUrl } from "./types";
 export type { CharacterImageGeneratorProps } from "../asset-image-generator/types";
 
 export function CharacterImageGenerator(props: CharacterImageGeneratorProps) {

@@ -27,6 +27,7 @@ import {
   Inbox,
   CheckSquare,
   Bot,
+  ShieldCheck,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 
@@ -101,6 +102,7 @@ const MENU_GROUPS: MenuGroup[] = [
     items: [
       { id: "projects", name: "项目中心", icon: FolderOpen, href: "/projects" },
       { id: "review", name: "审核中心", icon: CheckCircle, href: "/review" },
+      { id: "quality", name: "质检中心", icon: ShieldCheck, href: "/quality" },
       { id: "publish", name: "发布准备", icon: Rocket, href: "/publish" },
     ],
   },

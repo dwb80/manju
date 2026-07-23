@@ -22,3 +22,12 @@ backend/build.log
 backend/logs.stderr.log
 backend/logs.stdout.log
 backend/backend-tsc.out
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+backend/*.log
+backend/server.err
+backend/tests/.tmp-*/
+
+# SEC-SUP-02 SBOM 由 CI 生成（artifacts/sbom/）
+artifacts/

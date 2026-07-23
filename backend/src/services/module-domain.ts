@@ -31,8 +31,8 @@ export { getCharacterUsage, getSceneUsage, getPropUsage } from "./module-domain/
 export type { UsageReferenceItem, AssetUsage } from "./module-domain/asset-usage.js";
 
 // ==================== 分镜模块 ====================
-export { listStoryboards, createStoryboard, updateStoryboard, deleteStoryboard } from "./module-domain/storyboard-module.js";
-export type { StoryboardInput } from "./module-domain/storyboard-module.js";
+export { listStoryboards, createStoryboard, updateStoryboard, deleteStoryboard, listShots, createShot, updateShot, deleteShot, autoSplitShots, batchDeleteStoryboards, batchUpdateStoryboards } from "./module-domain/storyboard-module.js";
+export type { StoryboardInput, ShotInput } from "./module-domain/storyboard-module.js";
 
 // ==================== 音频模块 ====================
 export { listAudios, createAudio, updateAudio, deleteAudio } from "./module-domain/audio-module.js";
@@ -59,4 +59,4 @@ export {
 } from "./module-domain/soft-delete-ops.js";
 
 // ==================== 视频生成 / TTS / 出现次数聚合 / 模板预设 ====================
-export { generateVideoFromStoryboard, generateTTS, getCharacterAppearances, getSceneAppearances, getPropAppearances, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets } from "./module-domain/video-generation.js";
+export { generateVideoFromStoryboard, generateVideoFromShot, generateTTS, batchGenerateTTS, getCharacterAppearances, getSceneAppearances, getPropAppearances, listCharacterTemplatePresets, listSceneTemplatePresets, listPropTemplatePresets } from "./module-domain/video-generation.js";

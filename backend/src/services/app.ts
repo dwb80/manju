@@ -17,7 +17,7 @@ import type { Character } from "../types/character.js";
 import type { Scene } from "../types/scene.js";
 import type { Prop } from "../types/prop.js";
 import type { CharacterImage, PropImage, SceneImage } from "../types/asset-image.js";
-import type { Storyboard, ProjectStoryboard } from "../types/storyboard.js";
+import type { Storyboard, ProjectStoryboard, Shot, ShotSnapshot } from "../types/storyboard.js";
 import type { Audio } from "../types/audio.js";
 import type { ModuleVideoTask } from "../types/video.js";
 import type { ProjectClip, ProjectTask, ProjectEpisode, ProjectIssue, ProjectMember, ProjectMilestone, PublishPlan } from "../types/project.js";
@@ -25,13 +25,17 @@ import type { Asset, ProjectAsset } from "../types/asset.js";
 import type { Review, ProjectReview } from "../types/review.js";
 import type { ModelConfig, ModelQuota, ModelCallLog } from "../types/model.js";
 import type { ScriptDocument, ScriptEpisode, ScriptScene, ScriptDialogue, ScriptSceneCharacter, ScriptSceneLocation, ScriptTemplate, ScriptTag, ScriptQualityAssessment, ScriptApproval, ScriptBackup, ProjectScript, ScriptAnalyzedCharacter, ScriptAnalyzedScene, ScriptAnalyzedProp } from "../types/script.js";
-import type { SensitiveWord, ProjectBudget, AuditLog, Notification, PublishTemplate, ReviewItem, PublishAccount, PublishRecord, ProjectPermission } from "../types/horizontal.js";
+import type { SensitiveWord, ProjectBudget, AuditLog, Notification, PublishTemplate, ReviewItem, PublishAccount, PublishRecord, ProjectPermission, ReviewConfig } from "../types/horizontal.js";
+import type { CostRecord, ReviewHistory, PublishChannel, PublishJob, PublishMetrics } from "../types/horizontal.js";
+import type { ReviewSnapshot, ShotSubtitle, Timeline, TimelineShot, TimelineVersion } from "../types/horizontal.js";
+import type { ProjectInvitation } from "../types/project.js";
+import type { PipelineRun, PipelineNode, PipelineDependency, PipelineEvent, QualityReport, QualityAutoConfig, RetryPolicy, PipelineDeadLetter } from "../types/pipeline.js";
 import { SqliteRepository, SqliteSettingsRepository, closeDatabase, getRawDatabase } from "../storage/sqlite.js";
 import { Repository, KeyValueRepository } from "../storage/repository.js";
 import {
   conversationFields, favoriteFields, imageTaskFields, messageFields, projectFields, videoTaskFields, scriptCommentFields, assetVersionFields, characterImageHistoryFields, propImageHistoryFields, sceneImageHistoryFields, todoFields, appLogFields, workItemFields,
   projectTaskFields, projectEpisodeFields, projectIssueFields, projectMilestoneFields, projectMemberFields, publishPlanFields,
-  characterFields, sceneFields, propFields, storyboardFields, audioFields, moduleVideoTaskFields, projectClipFields, projectStoryboardFields,
+  characterFields, sceneFields, propFields, storyboardFields, shotFields, shotSnapshotFields, audioFields, moduleVideoTaskFields, projectClipFields, projectStoryboardFields,
   characterImageFields, sceneImageFields, propImageFields,
   scriptFields, assetFields, reviewFields, projectScriptFields, projectAssetFields, projectReviewFields,
   scriptDocumentFields, scriptEpisodeFields, scriptSceneFields, scriptDialogueFields, scriptSceneCharacterFields, scriptSceneLocationFields,
@@ -40,12 +44,25 @@ import {
   modelConfigFields, modelQuotaFields, modelCallLogFields,
   // 4 中心横切：5 张新表（详见 docs/spec.md 第三节）
   sensitiveWordFields, projectBudgetFields, auditLogFields, notificationFields, publishTemplateFields,
-  // 4 中心业务：4 张新表（spec 4.1 审核 + 4.2 发布 + 4.4 系统管理）
-  reviewItemFields, publishAccountFields, publishRecordFields, projectPermissionFields,
+  // 4 中心业务（spec 4.1 审核 + 4.2 发布 + 4.4 系统管理）
+  reviewItemFields, publishAccountFields, publishRecordFields, projectPermissionFields, reviewConfigFields,
+  // P0-08 / 业务扩展
+  costRecordFields, reviewHistoryFields, projectInvitationFields, publishChannelFields, publishJobFields, publishMetricsFields,
+  // V2 W12 P0 REQ-REVIEW-F01 / REQ-AUDIO-F08-F10 / REQ-EDIT-F01-F10
+  reviewSnapshotFields, shotSubtitleFields, timelineFields, timelineShotFields, timelineVersionFields,
 } from "../storage/schema.js";
+import {
+  // V2 MOD-PIPELINE：8 张表 FieldSpec（types/pipeline.js 内部定义，schema.ts 未转出）；W10 新增 pipeline_dead_letters
+  pipelineRunFields, pipelineNodeFields, pipelineDependencyFields, qualityReportFields, qualityAutoConfigFields, retryPolicyFields, pipelineEventFields, pipelineDeadLetterFields,
+} from "../types/pipeline.js";
+import { finalVideoVersionFields } from "../types/av.js";
+import type { FinalVideoVersion } from "../types/av.js";
 import { rootLogger } from "../logger.js";
+import { assertEncryptionConfigured } from "./security/hardening.js";
 
 export interface AppContext {
+  /** 停止定时器、等待后台任务排空并关闭数据库。可重复调用。 */
+  close(): Promise<void>;
   ai: AgnesClient;
   root: string;
   mediaRoot: string;
@@ -78,8 +95,10 @@ export interface AppContext {
   characterImages: Repository<CharacterImage>;
   sceneImages: Repository<SceneImage>;
   propImages: Repository<PropImage>;
-  /** 独立模块：分镜 / 音频 / 视频任务 / 剪辑。 */
+  /** 独立模块：分镜 / 镜头 / 镜头快照 / 音频 / 视频任务 / 剪辑。 */
   storyboards: Repository<Storyboard>;
+  shots: Repository<Shot>;
+  shotSnapshots: Repository<ShotSnapshot>;
   /** 剧本侧分镜（剧本编辑器中的分镜，独立于工业流水线分镜）。 */
   projectStoryboards: Repository<ProjectStoryboard>;
   audios: Repository<Audio>;
@@ -139,15 +158,20 @@ export interface AppContext {
   notifications: Repository<Notification>;
   /** 发布平台模板（5 平台 × 3 物料）。 */
   publishTemplates: Repository<PublishTemplate>;
-  // === 4 中心（spec 4.1 审核 + 4.2 发布 + 4.4 系统管理）===
-  /** 审核项（分镜/角色图/场景图/视频）。 */
+  // === 4 中心业务（spec 4.1 审核 + 4.2 发布 + 4.4 系统管理）===
   reviewItems: Repository<ReviewItem>;
-  /** 发布账号库（V1 仅登记，不存 Cookie/Token）。 */
+  // V2 W8 REQ-PIPE-005-03 SLA 升级：审核配置（每项目一份，含 sla_pending_hours/sla_review_hours/升级开关/最大等级）
+  reviewConfigs: Repository<ReviewConfig>;
   publishAccounts: Repository<PublishAccount>;
-  /** 发布记录 + 数据回收（回填播放/点赞/完播率）。 */
   publishRecords: Repository<PublishRecord>;
-  /** 项目权限（覆盖全局默认）。 */
   projectPermissions: Repository<ProjectPermission>;
+  // P0-08 / 业务扩展
+  costRecords: Repository<CostRecord>;
+  reviewHistories: Repository<ReviewHistory>;
+  projectInvitations: Repository<ProjectInvitation>;
+  publishChannels: Repository<PublishChannel>;
+  publishJobs: Repository<PublishJob>;
+  publishMetrics: Repository<PublishMetrics>;
 
   // === 4 中心横切服务（详见 docs/spec.md 第三节）===
   /** 敏感词服务（带 5s 缓存，审核/发布/聊天复用）。 */
@@ -163,6 +187,62 @@ export interface AppContext {
   // === 4 中心业务服务（spec 4.1 审核 + 4.2 发布 + 4.4 系统管理）===
   /** 审核中心服务（状态机 + 通知/审计/todo 联动）。 */
   reviewService: import("./horizontal/review-service.js").ReviewService;
+  // V2 W8 REQ-PIPE-005-03 SLA 升级：监控器（定时扫描 + 升级 + 配置 CRUD）
+  slaMonitor: import("./horizontal/sla-monitor.js").SlaMonitor;
+
+  // === MOD-PIPELINE 任务编排（W0-W5 累计）===
+  /** Pipeline Run 仓储（DAG 执行实例）。 */
+  pipelineRuns: Repository<PipelineRun>;
+  /** Pipeline 节点仓储（DAG 中的单个节点）。 */
+  pipelineNodes: Repository<PipelineNode>;
+  /** Pipeline 节点依赖仓储（边）。 */
+  pipelineDependencies: Repository<PipelineDependency>;
+  /** Pipeline 事件流仓储（节点 / Run 生命周期事件，SSE 与事后排查共用）。 */
+  pipelineEvents: Repository<PipelineEvent>;
+  /** 节点质检报告仓储（黑场/模糊/分辨率 等）。 */
+  qualityReports: Repository<QualityReport>;
+  /** 节点重试策略仓储。 */
+  retryPolicies: Repository<RetryPolicy>;
+  /** V2 W6 REQ-PIPE-004-05 配套：每项目级自动质检配置仓储。 */
+  qualityAutoConfigs: Repository<QualityAutoConfig>;
+  /** V2 W10 REQ-PIPE-006-03 死信队列仓储（重试耗尽 / 永久错误 / 熔断打开的失败节点）。 */
+  pipelineDeadLetters: Repository<PipelineDeadLetter>;
+  /** V2 W11 P0 REQ-RENDER-F08：成片版本仓储 */
+  finalVideoVersions: Repository<FinalVideoVersion>;
+  /** V2 W12 P0 REQ-REVIEW-F01：审核快照仓储（不可变 JSON 快照，按 review_id 列表）。 */
+  reviewSnapshots: Repository<ReviewSnapshot>;
+  // V2 W12 P0 REQ-AUDIO-F08/F09/F10：字幕表（shot 维度）
+  subtitles: Repository<ShotSubtitle>;
+  /** V2 W12 P0 REQ-EDIT-F01/F02/F03：时间线仓储。 */
+  timelines: Repository<Timeline>;
+  /** V2 W12 P0 REQ-EDIT-F01/F02/F03：时间线节点仓储（shot ↔ timeline + order + in/out point + subtitle/audio track）。 */
+  timelineShots: Repository<TimelineShot>;
+  /** V2 W12 P0 REQ-EDIT-F10：时间线版本仓储（不可变快照）。 */
+  timelineVersions: Repository<TimelineVersion>;
+  /** 节点并发追踪器（per-type 计数，跨 Run 共享，REQ-PIPE-001-05）。 */
+  concurrencyTracker: import("./horizontal/concurrency-tracker.js").ConcurrencyTracker;
+  /** 节点事件 pub/sub 总线（SSE 实时推送底层，REQ-PIPE-003-01）。 */
+  pipelineEventBus: import("./horizontal/pipeline-event-bus.js").PipelineEventBus;
+  /** Pipeline Run 服务（CRUD / 状态机 / 节点执行 / 并发调度 / 事件流）。 */
+  pipelineRunService: import("./module-domain/pipeline-run-service.js").PipelineRunService;
+  /** V2 W6+ REQ-PIPE-004 质检中心服务（detect + 落表 + 自动 hook）。 */
+  qualityDetectionService: import("./module-domain/quality-detection-service.js").QualityDetectionService;
+  /** V2 W11 RENDER-F01/REVIEW-F20：合成/渲染预检服务（preRenderCheck + 上游审核拦截 + 横/竖版 preset 解析）。 */
+  compositionService: import("./module-domain/composition-service.js").CompositionService;
+  /** V2 W11 MODEL-F01~F06 模型能力/参数约束服务（声明 + 校验 + 标准化）。 */
+  modelConstraintsService: import("./horizontal/model-constraints-service.js").ModelConstraintsService;
+  /** V2 W11 ROUTE-F01~F05 路由策略服务（4 维评分 + 决策日志）。 */
+  routePolicyService: import("./horizontal/route-policy-service.js").RoutePolicyService;
+  /** V2 W11 DATA-F01~F12 指标服务（字典 + 12 个聚合 SQL 视图 + 项目验收报告）。 */
+  metricsService: import("./horizontal/metrics-service.js").MetricsService;
+  /** V2 W11 AUDIO-F04/F06/F11/F13/F14 配音参数 + 候选 + 口型同步服务。 */
+  audioExtrasService: import("./horizontal/audio-extras-service.js").AudioExtrasService;
+  /** V2.1 REM-P1-010 内部服务凭证（成片回调 / 渲染回调等"后端-后端"调用）。 */
+  internalAuth: import("./internal-auth.js").InternalAuthService;
+  /** V2.1 REM-P1-008 跨模块事务/Outbox 管理器。 */
+  transactionService: import("./horizontal/transaction-service.js").TransactionService;
+  /** V2.1 REM-P1-009 节点级重试策略（质控低分自动重试）。 */
+  retryPolicyService: import("./horizontal/retry-policy-service.js").RetryPolicyService;
 }
 
 /**
@@ -189,6 +269,7 @@ export async function createAppContext(
   root = process.cwd(),
   options: { mediaCacheEnabled?: boolean; aiClient?: AgnesClient } = {},
 ): Promise<AppContext> {
+  assertEncryptionConfigured();
   const databaseFile = path.join(root, "data", "sqlite.db");
   const ai: AgnesClient = options.aiClient ?? createAIClient();
   const ctx = {
@@ -220,6 +301,8 @@ export async function createAppContext(
     propImages: new SqliteRepository<PropImage>(databaseFile, "prop_images", propImageFields),
     // 独立模块
     storyboards: new SqliteRepository<Storyboard>(databaseFile, "storyboards", storyboardFields),
+    shots: new SqliteRepository<Shot>(databaseFile, "shots", shotFields),
+    shotSnapshots: new SqliteRepository<ShotSnapshot>(databaseFile, "shot_snapshots", shotSnapshotFields),
     projectStoryboards: new SqliteRepository<ProjectStoryboard>(databaseFile, "project_storyboards", projectStoryboardFields),
     audios: new SqliteRepository<Audio>(databaseFile, "audios", audioFields),
     moduleVideos: new SqliteRepository<ModuleVideoTask>(databaseFile, "module_video_tasks", moduleVideoTaskFields),
@@ -285,6 +368,15 @@ export async function createAppContext(
     publishAccounts: new SqliteRepository<PublishAccount>(databaseFile, "publish_accounts", publishAccountFields),
     publishRecords: new SqliteRepository<PublishRecord>(databaseFile, "publish_records", publishRecordFields),
     projectPermissions: new SqliteRepository<ProjectPermission>(databaseFile, "project_permissions", projectPermissionFields),
+    // P0-08 成本账本 + 审核 / 发布 业务扩展
+    costRecords: new SqliteRepository<CostRecord>(databaseFile, "cost_records", costRecordFields),
+    reviewHistories: new SqliteRepository<ReviewHistory>(databaseFile, "review_histories", reviewHistoryFields),
+    projectInvitations: new SqliteRepository<ProjectInvitation>(databaseFile, "project_invitations", projectInvitationFields),
+    publishChannels: new SqliteRepository<PublishChannel>(databaseFile, "publish_channels", publishChannelFields),
+    publishJobs: new SqliteRepository<PublishJob>(databaseFile, "publish_jobs", publishJobFields),
+    publishMetrics: new SqliteRepository<PublishMetrics>(databaseFile, "publish_metrics", publishMetricsFields),
+    // V2 W8 REQ-PIPE-005-03 SLA 升级：审核配置表
+    reviewConfigs: new SqliteRepository<ReviewConfig>(databaseFile, "review_configs", reviewConfigFields),
   };
 
   // === 4 中心横切服务（详见 docs/spec.md 第三节）===
@@ -299,8 +391,78 @@ export async function createAppContext(
     publishTemplateService: (await import("./horizontal/publish-template-service.js")).createPublishTemplateService(ctxTyped),
     // 4 中心业务（spec 4.1）
     reviewService: (await import("./horizontal/review-service.js")).createReviewService(ctxTyped),
+    // V2 W8 REQ-PIPE-005-03 SLA 升级：监控器
+    slaMonitor: (await import("./horizontal/sla-monitor.js")).createSlaMonitor(ctxTyped),
+    // REQ-PIPE-001-05：节点并发追踪器（per-type 计数，跨 Run 共享）
+    concurrencyTracker: (await import("./horizontal/concurrency-tracker.js")).createConcurrencyTracker(),
+    // REQ-PIPE-003-01：节点事件 pub/sub 总线（SSE 实时进度推送底层）
+    pipelineEventBus: (await import("./horizontal/pipeline-event-bus.js")).createPipelineEventBus(),
+    // V2 W11 P0 REQ-RENDER-F01 / REQ-REVIEW-F20：合成/渲染预检服务
+    compositionService: (await import("./module-domain/composition-service.js")).createCompositionService(ctxTyped),
+    // V2 W11 MODEL-F01~F06 模型能力/参数约束服务
+    modelConstraintsService: (await import("./horizontal/model-constraints-service.js")).getModelConstraintsService(),
+    // V2 W11 ROUTE-F01~F05 路由策略服务（注入 databaseFile 走 route_policies / route_decision_logs 两表）
+    routePolicyService: (await import("./horizontal/route-policy-service.js")).getRoutePolicyService(databaseFile),
+    // V2 W11 DATA-F01~F12 指标服务（字典 + 12 个聚合 SQL 视图）
+    metricsService: (await import("./horizontal/metrics-service.js")).getMetricsService(databaseFile),
+    // V2 W11 AUDIO-F04/F06/F11/F13/F14 配音参数 + 候选 + 口型同步
+    audioExtrasService: (await import("./horizontal/audio-extras-service.js")).getAudioExtrasService(databaseFile),
+    // V2.1 REM-P1-010 内部服务凭证
+    internalAuth: (await import("./internal-auth.js")).createInternalAuthService(),
+    // V2.1 REM-P1-008 跨模块事务/Outbox 管理器
+    transactionService: (await import("./horizontal/transaction-service.js")).createTransactionService({
+      databaseFile,
+    }),
+    // V2.1 REM-P1-009 节点级重试策略（质控低分自动重试）
+    retryPolicyService: (await import("./horizontal/retry-policy-service.js")).createRetryPolicyService({
+      databaseFile,
+    }),
   });
-  (ctx as unknown as { close: () => void }).close = () => closeDatabase(databaseFile);
+  // REQ-PIPE-W0：Pipeline 仓储（用真正的 FieldSpec，不能用 []）
+  const { pipelineRunFields, pipelineNodeFields, pipelineDependencyFields, pipelineEventFields, qualityReportFields, qualityAutoConfigFields, retryPolicyFields } = await import("../types/pipeline.js");
+  Object.assign(ctx, {
+    pipelineRuns: new SqliteRepository<PipelineRun>(databaseFile, "pipeline_runs", pipelineRunFields),
+    pipelineNodes: new SqliteRepository<PipelineNode>(databaseFile, "pipeline_nodes", pipelineNodeFields),
+    pipelineDependencies: new SqliteRepository<PipelineDependency>(databaseFile, "pipeline_dependencies", pipelineDependencyFields),
+    pipelineEvents: new SqliteRepository<PipelineEvent>(databaseFile, "pipeline_events", pipelineEventFields),
+    qualityReports: new SqliteRepository<QualityReport>(databaseFile, "quality_reports", qualityReportFields),
+    // V2 W6 REQ-PIPE-004-05：项目级自动质检配置（upsert by project_id）
+    qualityAutoConfigs: new SqliteRepository<QualityAutoConfig>(databaseFile, "quality_auto_configs", qualityAutoConfigFields),
+    // V2 W10 REQ-PIPE-006-03 死信队列：自动建表 pipeline_dead_letters
+    pipelineDeadLetters: new SqliteRepository<PipelineDeadLetter>(databaseFile, "pipeline_dead_letters", pipelineDeadLetterFields),
+    retryPolicies: new SqliteRepository<RetryPolicy>(databaseFile, "retry_policies", retryPolicyFields),
+    // V2 W11 P0 REQ-RENDER-F08：成片版本表
+    finalVideoVersions: new SqliteRepository<FinalVideoVersion>(databaseFile, "final_video_versions", finalVideoVersionFields),
+    // V2 W12 P0 REQ-REVIEW-F01：审核快照表
+    reviewSnapshots: new SqliteRepository<ReviewSnapshot>(databaseFile, "review_snapshots", reviewSnapshotFields),
+    // V2 W12 P0 REQ-AUDIO-F08/F09/F10：字幕表（shot 维度）
+    subtitles: new SqliteRepository<ShotSubtitle>(databaseFile, "shot_subtitles", shotSubtitleFields),
+    // V2 W12 P0 REQ-EDIT-F01/F02/F03：时间线表
+    timelines: new SqliteRepository<Timeline>(databaseFile, "timelines", timelineFields),
+    // V2 W12 P0 REQ-EDIT-F02：时间线节点表
+    timelineShots: new SqliteRepository<TimelineShot>(databaseFile, "timeline_shots", timelineShotFields),
+    // V2 W12 P0 REQ-EDIT-F10：时间线版本表
+    timelineVersions: new SqliteRepository<TimelineVersion>(databaseFile, "timeline_versions", timelineVersionFields),
+  });
+  // REQ-PIPE-W0：pipelineRunService 需引用 ctx 里的所有 pipeline 仓储 + bus + tracker
+  (ctxTyped as { pipelineRunService: unknown }).pipelineRunService = (await import("./module-domain/pipeline-run-service.js")).createPipelineRunService(ctxTyped);
+  // V2 W6+ REQ-PIPE-004 质检中心服务
+  (ctxTyped as { qualityDetectionService: unknown }).qualityDetectionService =
+    (await import("./module-domain/quality-detection-service.js"))
+      .createQualityDetectionService(ctxTyped);
+  // V2 W8 REQ-PIPE-005-03：启动 SLA 监控器（默认 60s tick；可被 env SLA_MONITOR_INTERVAL_MS 覆盖）
+  (ctxTyped as { slaMonitor?: { start?: () => void; stop?: () => void } }).slaMonitor?.start?.();
+  let closePromise: Promise<void> | null = null;
+  (ctx as unknown as { close: () => Promise<void> }).close = () => {
+    if (closePromise) return closePromise;
+    try { (ctxTyped as { slaMonitor?: { stop?: () => void } }).slaMonitor?.stop?.(); } catch { /* ignore */ }
+    closePromise = (async () => {
+      await ctxTyped.pipelineRunService.waitForIdle();
+      try { (ctxTyped as { concurrencyTracker?: { dispose?: () => void } }).concurrencyTracker?.dispose?.(); } catch { /* ignore */ }
+      closeDatabase(databaseFile);
+    })();
+    return closePromise;
+  };
   // 数据中心视图（spec 4.3）：3 个 view，一次性启动建。
   // 用 raw connection 直接 exec，不走 Repository（避免 FieldSpec 约束）。
   ensureAnalyticsViews(databaseFile);
@@ -390,6 +552,17 @@ export async function createAppContext(
     }
   } catch (e) {
     if (ai instanceof RoutedAIClient) rootLogger.warn({ err: e }, "商汤配置注入失败（不影响启动）");
+  }
+
+  // V2.1 P1-008：启动 Outbox 后台 dispatcher（默认 2s 周期）。
+  // 仅在非测试环境启动，避免测试用例被后台 timer 干扰；测试可显式调用 startBackgroundDispatcher。
+  if (process.env.NODE_ENV !== "test" && process.env.MANJU_DISABLE_OUTBOX_DISPATCHER !== "1") {
+    try {
+      (ctx as any).transactionService.startBackgroundDispatcher({ intervalMs: 2000, batchSize: 32 });
+      rootLogger.info({ event: "outbox.dispatcher_started", intervalMs: 2000 }, "Outbox 后台 dispatcher 已启动");
+    } catch (e) {
+      rootLogger.warn({ err: e }, "Outbox dispatcher 启动失败（不影响主流程）");
+    }
   }
 
   return ctx as unknown as AppContext;

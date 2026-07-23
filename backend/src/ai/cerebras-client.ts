@@ -9,6 +9,7 @@
  *  - 错误统一封装为 `CerebrasError`，携带 status + code 便于上层退避。
  */
 import { rootLogger } from "../logger.js";
+import { safeProviderFetch } from "../services/security/hardening.js";
 
 interface ProxyResponse {
   status: number;
@@ -297,7 +298,7 @@ export class CerebrasClient {
     };
     const response = this.proxyURL
       ? await this.requestWithProxy(url, { ...options, headers })
-      : await fetch(url, {
+      : await safeProviderFetch(url, {
         method: options.method,
         headers,
         body: options.body,

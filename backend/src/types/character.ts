@@ -90,4 +90,15 @@ export interface Character {
    * V1 用单张图；V2 可扩展为多图集。
    */
   reference_image_id?: string;
+  // === V2 W12 P0 REQ-AUDIO-F02：TTS 音色绑定 ===
+  /**
+   * TTS 音色 ID（Edge-TTS zh-CN-XiaoxiaoNeural / yunxi / yunyang 等）。
+   * - 启用后，generateTTS 路由 / 批量 TTS 会自动以该角色音色覆盖默认 voice。
+   * - 与 Audio 表 character_id 关联，TTS 输出可追溯到角色。
+   */
+  voice_id?: string;
+  /** TTS 语速倍率（1.0=正常，0.5=一半，2.0=两倍）。 */
+  voice_speed?: number;
+  /** TTS 情绪（neutral / happy / sad / angry / fearful 等）。 */
+  voice_emotion?: string;
 }

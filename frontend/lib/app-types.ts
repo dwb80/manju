@@ -1,6 +1,81 @@
 export type Mode = "chat" | "image" | "video" | "favorites" | "project";
 export type Status = "pending" | "processing" | "success" | "failed";
 
+// ===== V2 MOD-ASSET FEAT-ASSET-011/012/013 一致性包类型 =====
+export type ConsistencyImageType =
+  | "full_front"
+  | "full_side"
+  | "full_back"
+  | "half_body"
+  | "neutral"
+  | "happy"
+  | "sad"
+  | "angry"
+  | "surprised"
+  | "thinking"
+  | "eye_level"
+  | "low_angle"
+  | "high_angle";
+
+export type ConsistencyImageStatus = "pending" | "generating" | "success" | "failed";
+
+export interface ConsistencyPack {
+  id: string;
+  project_id: string;
+  entity_id: string;
+  entity_type: "character" | "scene" | "prop";
+  status: "draft" | "ready" | "failed";
+  version: number;
+  error_message: string;
+  last_progress_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConsistencyPackImage {
+  id: string;
+  project_id: string;
+  pack_id: string;
+  image_type: ConsistencyImageType;
+  prompt: string;
+  negative_prompt: string;
+  model_id: string;
+  status: ConsistencyImageStatus;
+  url: string;
+  error_message: string;
+  attempt: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConsistencyPackSnapshot {
+  pack: ConsistencyPack | null;
+  images: ConsistencyPackImage[];
+  typeCounts: { character: number; scene: number; prop: number };
+}
+
+export interface ConsistencyPackGenerateResponse {
+  packId: string;
+  total: number;
+  types: ConsistencyImageType[];
+}
+
+export const CONSISTENCY_IMAGE_LABELS: Record<ConsistencyImageType, string> = {
+  full_front: "全身正面",
+  full_side: "全身侧面",
+  full_back: "全身背面",
+  half_body: "半身像",
+  neutral: "平静",
+  happy: "开心",
+  sad: "悲伤",
+  angry: "愤怒",
+  surprised: "惊讶",
+  thinking: "思考",
+  eye_level: "平视",
+  low_angle: "仰视",
+  high_angle: "俯视",
+};
+
 export interface Conversation {
   id: string;
   title: string;
@@ -572,3 +647,60 @@ export interface DashboardData {
   teamActivities: TeamActivity[];
   health: ProductionHealth;
 }
+
+// ===== V2 W5 REQ-PIPE-001-06 节点启停开关类型 =====
+export type PipelineNodeStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "paused"
+  | "skipped";
+
+export interface PipelineNode {
+  id: string;
+  run_id: string;
+  project_id: string;
+  type: string;
+  name: string;
+  status: PipelineNodeStatus;
+  config: unknown;
+  input_data: unknown;
+  output_data: unknown;
+  error: string;
+  retry_count: number;
+  started_at: string;
+  completed_at: string;
+  created_at: string;
+  updated_at: string;
+  idempotency_key: string;
+}
+
+export interface PipelineDependency {
+  id: string;
+  run_id: string;
+  source_node_id: string;
+  target_node_id: string;
+  condition_type: "always" | "on_approve" | "on_reject" | "on_skip" | "expression";
+  condition_expr?: string;
+}
+
+export type PipelineNodeAction = "pause" | "resume" | "skip";
+
+export const PIPELINE_NODE_STATUS_LABELS: Record<PipelineNodeStatus, string> = {
+  pending: "待执行",
+  running: "执行中",
+  completed: "已完成",
+  failed: "失败",
+  paused: "已暂停",
+  skipped: "已跳过",
+};
+
+export const PIPELINE_NODE_STATUS_COLORS: Record<PipelineNodeStatus, string> = {
+  pending: "#94a3b8",
+  running: "#3b82f6",
+  completed: "#22c55e",
+  failed: "#ef4444",
+  paused: "#f59e0b",
+  skipped: "#6b7280",
+};

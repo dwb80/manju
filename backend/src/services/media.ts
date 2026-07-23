@@ -18,6 +18,8 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import type { AppContext } from "./app.js";
 import { rootLogger } from "../logger.js";
+import { safeRemoteFetch } from "./security/hardening.js";
+import { scanUploadForMalware } from "./security/upload-scanner.js";
 
 const contentTypeExtensions: Record<string, string> = {
   "image/jpeg": ".jpg",
@@ -126,15 +128,19 @@ async function bytesFromDataUrl(url: string): Promise<{ bytes: Buffer; ext: stri
   const mediaType = match[1]?.toLowerCase() ?? "";
   const body = decodeURIComponent(match[3] ?? "");
   const bytes = match[2] ? Buffer.from(body, "base64") : Buffer.from(body, "utf8");
+  if (bytes.length > 100 * 1024 * 1024) throw new Error("data URL 超过 100MB 限制");
   return { bytes, ext: contentTypeExtensions[mediaType] ?? "" };
 }
 
 /** 下载远程媒体或解析 data URL，返回可写入磁盘的二进制内容。 */
 async function downloadBytes(url: string): Promise<{ bytes: Buffer; ext: string }> {
   if (url.startsWith("data:")) return bytesFromDataUrl(url);
-  const response = await fetch(url);
+  const response = await safeRemoteFetch(url);
   if (!response.ok) throw new Error(`download failed: ${response.status}`);
+  const declaredLength = Number(response.headers.get("content-length") ?? 0);
+  if (declaredLength > 100 * 1024 * 1024) throw new Error("远程媒体超过 100MB 限制");
   const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > 100 * 1024 * 1024) throw new Error("远程媒体超过 100MB 限制");
   return { bytes, ext: extensionFromContentType(response.headers.get("content-type")) || extensionFromUrl(url) };
 }
 
@@ -197,12 +203,22 @@ export interface StoredUpload {
  */
 export async function saveUploadedImage(ctx: AppContext, upload: UploadInput, userId = ""): Promise<StoredUpload> {
   const type = upload.contentType.split(";")[0].trim().toLowerCase();
-  if (!type.startsWith("image/")) throw new Error("only image uploads are supported");
-  const ext = contentTypeExtensions[type] ?? (extensionFromName(upload.filename) || ".png");
+  const signatures: Record<string, (bytes: Buffer) => boolean> = {
+    "image/jpeg": (bytes) => bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
+    "image/png": (bytes) => bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+    "image/webp": (bytes) => bytes.length >= 12 && bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP",
+    "image/gif": (bytes) => bytes.length >= 6 && ["GIF87a", "GIF89a"].includes(bytes.subarray(0, 6).toString("ascii")),
+  };
+  if (!signatures[type] || !signatures[type](upload.bytes)) throw new Error("文件 MIME 类型与内容魔数不匹配，或格式不受支持");
+  if (upload.bytes.length === 0 || upload.bytes.length > 200 * 1024 * 1024) throw new Error("图片大小必须在 1B 到 200MB 之间");
+  const ext = contentTypeExtensions[type];
+  const suppliedExt = extensionFromName(upload.filename);
+  if (suppliedExt && suppliedExt !== ext && !(type === "image/jpeg" && suppliedExt === ".jpeg")) throw new Error("文件扩展名与 MIME 类型不匹配");
+  await scanUploadForMalware(upload.bytes);
   const created = new Date().toISOString().slice(0, 10);
   const owner = safeName(userId) || "legacy";
   const directory = path.join(ctx.mediaRoot, "uploads", owner, created);
-  const filename = `${safeName(path.basename(upload.filename, path.extname(upload.filename)) || "image")}-${randomUUID()}${ext}`;
+  const filename = `${randomUUID()}${ext}`;
   await mkdir(directory, { recursive: true });
   await writeFile(path.join(directory, filename), upload.bytes);
   return {

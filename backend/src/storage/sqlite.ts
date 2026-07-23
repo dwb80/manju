@@ -10,6 +10,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { jsonClone } from "../utils.js";
 import { rootLogger } from "../logger.js";
+import { protectSensitiveJson, revealSensitiveJson } from "../services/security/hardening.js";
 import type { FieldSpec, FieldType, KeyValueRepository, QueryOptions, Repository } from "./repository.js";
 
 /** 慢查询阈值：超过此毫秒数会打 debug 日志。仅在 LOG_LEVEL=debug 时启用计时（零开销）。 */
@@ -121,7 +122,7 @@ function quoteIdentifier(value: string): string {
 /** JSON 字段写入字符串，其他字段按原始值写入。 */
 function encodeValue(type: FieldType, value: unknown): unknown {
   if (value === undefined || value === null) return "";
-  if (type === "json") return JSON.stringify(value ?? null);
+  if (type === "json") return JSON.stringify(protectSensitiveJson(value ?? null));
   if (type === "boolean") return value ? 1 : 0;
   return value;
 }
@@ -132,7 +133,7 @@ function decodeValue(type: FieldType, value: unknown): unknown {
   if (type === "boolean") return value === 1 || value === "1" || value === true || value === "true";
   if (type === "json") {
     if (typeof value !== "string" || value.length === 0) return null;
-    return JSON.parse(value);
+    return revealSensitiveJson(JSON.parse(value));
   }
   return String(value ?? "");
 }
@@ -402,14 +403,14 @@ export class SqliteSettingsRepository<T> implements KeyValueRepository<T> {
   async get(): Promise<T> {
     const row = this.database.prepare("SELECT value FROM settings WHERE key = ?").get("app");
     if (!row || typeof row.value !== "string") return jsonClone(this.defaults);
-    return JSON.parse(row.value) as T;
+    return revealSensitiveJson(JSON.parse(row.value)) as T;
   }
 
   /** 保存应用设置并返回保存后的副本。 */
   async set(settings: T): Promise<T> {
     this.database
       .prepare("INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
-      .run("app", JSON.stringify(settings), new Date().toISOString());
+      .run("app", JSON.stringify(protectSensitiveJson(settings)), new Date().toISOString());
     return jsonClone(settings);
   }
 }

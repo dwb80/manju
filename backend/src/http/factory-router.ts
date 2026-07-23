@@ -52,6 +52,14 @@ import {
   permanentDeleteStoryboard,
   copyStoryboardToProject,
   generateVideoFromStoryboard,
+  generateVideoFromShot,
+  listShots,
+  createShot,
+  updateShot,
+  deleteShot,
+  autoSplitShots,
+  batchDeleteStoryboards,
+  batchUpdateStoryboards,
   listAudios,
   createAudio,
   updateAudio,
@@ -61,6 +69,7 @@ import {
   permanentDeleteAudio,
   copyAudioToProject,
   generateTTS,
+  batchGenerateTTS,
   listModuleVideoTasks,
   createModuleVideoTask,
   updateModuleVideoTask,
@@ -569,6 +578,49 @@ export async function matchFactoryRoute(
       sendJson(res, await copyStoryboardToProject(ctx, seg2, targetProjectId));
       return true;
     }
+    if (method === "POST" && parts.join("/") === "api/storyboards/batch") {
+      const body = await readJson(req);
+      const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
+      const records = await Promise.all(ids.map((assetId) => ctx.storyboards.findById(assetId)));
+      if (records.some((record) => !record)) { sendError(res, new Error("分镜不存在"), 404); return true; }
+      if (!(await requireProjectAccess(res, h, ...records.map((record) => record?.project_id)))) return true;
+      if (body.action === "delete") {
+        await batchDeleteStoryboards(ctx, ids);
+        sendJson(res, { deleted: ids.length });
+        return true;
+      }
+      if (body.action === "update") {
+        await batchUpdateStoryboards(ctx, ids, (body.patch ?? {}) as any);
+        sendJson(res, { updated: ids.length });
+        return true;
+      }
+      throw new Error("unknown batch action");
+    }
+    // ===== 镜头（shots）子路由 =====
+    // GET    /api/storyboards/:id/shots          列出分镜下的镜头
+    // POST   /api/storyboards/:id/shots          在该分镜下创建镜头
+    // POST   /api/storyboards/:id/split-shots    AI 自动拆分镜头
+    if (seg2 && seg3 === "shots") {
+      if (method === "GET") {
+        sendJson(res, await listShots(ctx, seg2));
+        return true;
+      }
+      if (method === "POST") {
+        const body = await readJson(req);
+        sendJson(res, await createShot(ctx, { ...body, storyboard_id: seg2 } as any));
+        return true;
+      }
+    }
+    if (method === "POST" && seg2 && seg3 === "split-shots") {
+      sendJson(res, await autoSplitShots(ctx, seg2));
+      return true;
+    }
+    // POST /api/storyboards/:id/shots/:shotId/generate-video  镜头级别图生视频
+    if (method === "POST" && seg2 && seg3 && parts[4] === "generate-video") {
+      const body = await readJson(req);
+      sendJson(res, await generateVideoFromShot(ctx, seg3, body ?? {}));
+      return true;
+    }
     return false;
   }
 
@@ -630,6 +682,13 @@ export async function matchFactoryRoute(
       const body = await readJson(req);
       if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
       sendJson(res, await generateTTS(ctx, body as any));
+      return true;
+    }
+    if (method === "POST" && parts.join("/") === "api/tts/batch") {
+      const body = await readJson(req);
+      const items = Array.isArray(body.items) ? (body.items as any[]) : [];
+      if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
+      sendJson(res, await batchGenerateTTS(ctx, items));
       return true;
     }
     return false;

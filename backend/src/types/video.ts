@@ -65,6 +65,8 @@ export interface ModuleVideoTask {
   project_id: string;
   /** 来源分镜（一键生成时回填）。 */
   storyboard_id: string;
+  /** 来源镜头（镜头级别生成时回填）。 */
+  shot_id?: string;
   title: string;
   /** 提示词（来自分镜描述）。 */
   prompt: string;

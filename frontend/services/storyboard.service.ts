@@ -1,9 +1,11 @@
 /**
- * 分镜 API
+ * 分镜 & 镜头 API（V2 父子结构）
  */
 
 import { api } from "./api-client";
-import type { Storyboard } from "@/lib/module-types";
+import type { Storyboard, Shot } from "@/lib/module-types";
+
+// ==================== Storyboard API ====================
 
 export async function listStoryboards(projectId?: string): Promise<Storyboard[]> {
   const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
@@ -12,20 +14,15 @@ export async function listStoryboards(projectId?: string): Promise<Storyboard[]>
 
 export interface CreateStoryboardInput {
   scene_id?: string;
-  shot_number?: number;
+  episode_id?: string;
+  storyboard_number?: string;
   episode?: number;
   title?: string;
   description?: string;
-  duration?: number;
-  camera_angle?: string;
-  movement?: string;
   dialogue?: string;
   notes?: string;
   status?: string;
   order?: number;
-  image_url?: string;
-  video_url?: string;
-  tags?: string[];
   /** 关联角色资产 ID 列表。 */
   character_asset_ids?: string[];
   /** 关联道具资产 ID 列表。 */
@@ -52,6 +49,60 @@ export async function deleteStoryboard(id: string): Promise<void> {
   await api(`/api/storyboards/${id}`, { method: "DELETE" });
 }
 
+// ==================== Shot API ====================
+
+export async function listShots(storyboardId: string): Promise<Shot[]> {
+  return api<Shot[]>(`/api/storyboards/${storyboardId}/shots`);
+}
+
+export interface CreateShotInput {
+  storyboard_id: string;
+  scene_id?: string;
+  episode?: number;
+  shot_number?: string;
+  title?: string;
+  description?: string;
+  duration?: number;
+  shot_size?: string;
+  camera_angle?: string;
+  camera_movement?: string;
+  dialogue?: string;
+  notes?: string;
+  image_url?: string;
+  video_task_id?: string;
+  video_url?: string;
+  status?: string;
+  order?: number;
+  character_asset_ids?: string[];
+  prop_asset_ids?: string[];
+  project_id?: string;
+}
+
+export async function createShot(data: CreateShotInput): Promise<Shot> {
+  return api<Shot>(`/api/storyboards/${data.storyboard_id}/shots`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateShot(id: string, data: Partial<CreateShotInput>): Promise<Shot> {
+  return api<Shot>(`/api/shots/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteShot(id: string): Promise<void> {
+  await api(`/api/shots/${id}`, { method: "DELETE" });
+}
+
+/** 自动拆分：将分镜拆分为多个镜头（调用 AI 或启发式规则）。 */
+export async function autoSplitShots(storyboardId: string): Promise<Shot[]> {
+  return api<Shot[]>(`/api/storyboards/${storyboardId}/split-shots`, {
+    method: "POST",
+  });
+}
+
 // ==================== 回收站 ====================
 
 export async function listDeletedStoryboards(projectId?: string): Promise<Storyboard[]> {
@@ -67,6 +118,25 @@ export async function permanentDeleteStoryboards(ids: string[]): Promise<void> {
   await api("/api/storyboards/permanent", {
     method: "POST",
     body: JSON.stringify({ ids }),
+  });
+}
+
+// ==================== 批量操作 ====================
+
+export async function batchDeleteStoryboards(ids: string[]): Promise<{ deleted: number }> {
+  return api<{ deleted: number }>("/api/storyboards/batch", {
+    method: "POST",
+    body: JSON.stringify({ action: "delete", ids }),
+  });
+}
+
+export async function batchUpdateStoryboards(
+  ids: string[],
+  patch: Partial<CreateStoryboardInput>,
+): Promise<{ updated: number }> {
+  return api<{ updated: number }>("/api/storyboards/batch", {
+    method: "POST",
+    body: JSON.stringify({ action: "update", ids, patch }),
   });
 }
 
@@ -106,6 +176,18 @@ export async function generateVideoFromStoryboard(
   });
 }
 
+/** 镜头级别图生视频 */
+export async function generateVideoFromShot(
+  storyboardId: string,
+  shotId: string,
+  body: Record<string, unknown> = {},
+): Promise<unknown> {
+  return api(`/api/storyboards/${storyboardId}/shots/${shotId}/generate-video`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 /** 在三厂「插入到分镜」中复用：从资产快速创建一个新的分镜。 */
 export async function createStoryboardFromAsset(asset: {
   name?: string;
@@ -132,12 +214,10 @@ export async function createStoryboardFromAsset(asset: {
     title,
     description: asset.description ?? "",
     notes: `从${typeLabel}资产创建`,
-    image_url: asset.image_url ?? asset.image ?? "",
-    tags: asset.tags ?? [],
     status: "draft",
     character_asset_ids,
     prop_asset_ids,
     scene_id,
     project_id: asset.project_id,
-  });
+  } as CreateStoryboardInput);
 }

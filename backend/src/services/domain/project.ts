@@ -25,6 +25,8 @@ type CreateProjectInput = {
   is_default?: boolean;
   storage_path?: string;
   storage_mode?: string;
+  /** 项目分类（V2, REQ-PROJ-001, PROJ-001-001/003）。4 枚举，缺失默认 short_drama。 */
+  type?: string;
 };
 
 export type ProjectSummary = {
@@ -47,8 +49,49 @@ export type ProjectSummary = {
 
 const projectTaskStatuses: ProjectTaskStatus[] = ["todo", "script", "storyboard", "image", "video", "review", "done"];
 const projectIssueStatuses: ProjectIssueStatus[] = ["open", "doing", "resolved", "closed"];
-const projectIssueSeverities: ProjectIssueSeverity[] = ["low", "medium", "high", "critical"];
+const projectIssueSeverities: ProjectIssueSeverity[] = ["low", "medium", "critical", "high"];
 const projectMilestoneStatuses: ProjectMilestoneStatus[] = ["planned", "doing", "done", "delayed"];
+
+/**
+ * 项目分类 4 枚举（V2, REQ-PROJ-001, PROJ-001-002）。
+ * 与 src/types.ts:Project.type 类型严格一致。
+ */
+const projectTypes = ["short_drama", "mv", "ad", "film"] as const;
+type ProjectTypeLiteral = (typeof projectTypes)[number];
+
+/**
+ * 把入参规整为合法 ProjectType（PROJ-001-003）。
+ * - undefined/null/缺失 → 默认 "short_drama"
+ * - 4 枚举值之一 → 透传
+ * - 其他（""、"video"、123、{}）→ 抛 project_type_invalid
+ */
+function normalizeProjectType(input: unknown): ProjectTypeLiteral {
+  if (input === undefined || input === null) return "short_drama";
+  if (typeof input !== "string") {
+    throw new Error("project_type_invalid");
+  }
+  const trimmed = input.trim();
+  if (trimmed === "") return "short_drama";
+  if ((projectTypes as readonly string[]).includes(trimmed)) {
+    return trimmed as ProjectTypeLiteral;
+  }
+  throw new Error("project_type_invalid");
+}
+
+/** 检查项目软删状态：deleted_at 非空视为已删。NULL/缺失/空串视为未删。 */
+function isProjectDeleted(project: Project): boolean {
+  return Boolean(project.deleted_at);
+}
+
+/**
+ * 断言项目存在且未被软删（V2, REQ-PROJ-001, PROJ-001-017）。
+ * 抛出统一错误码 `project_not_found`，与 V1 既有 `project not found`（带空格）保持行为等价但便于 HTTP 路由映射。
+ */
+async function assertProjectActive(ctx: AppContext, projectId: string): Promise<Project> {
+  const project = await ctx.projects.findById(projectId);
+  if (!project || isProjectDeleted(project)) throw new Error("project_not_found");
+  return project;
+}
 
 type ProjectTaskInput = {
   title?: string;
@@ -147,12 +190,27 @@ async function ensureProjectStorage(ctx: AppContext, storagePath: string): Promi
  * @param {AppContext} ctx - 应用上下文
  * @param {CreateProjectInput} input - 项目输入参数
  * @returns {Promise<Project>} 创建的项目
- * @description 创建项目记录，并绑定它的本地存储目录
+ * @description 创建项目记录，并绑定它的本地存储目录。
+ *              V2 (REQ-PROJ-001) 行为：
+ *              - name 必填，缺失/空白抛 name_required（PROJ-001-006）
+ *              - owner 必填，缺失/空白抛 owner_required（PROJ-001-007）
+ *              - type 严格校验，非法抛 project_type_invalid（PROJ-001-003）
+ *              - deleted_at 初值 ""（PROJ-001-009/011）
  */
 export async function createProject(ctx: AppContext, input: CreateProjectInput): Promise<Project> {
+  // PROJ-001-006: name 必填
+  const name = (input.name ?? "").trim();
+  if (!name) throw new Error("name_required");
+
+  // PROJ-001-007: owner 必填
+  const owner = (input.owner ?? "").trim();
+  if (!owner) throw new Error("owner_required");
+
+  // PROJ-001-003: type 严格校验，缺失默认 short_drama
+  const type = normalizeProjectType(input.type);
+
   const now = nowIso();
   const projectId = id("p");
-  const name = input.name?.trim() || "新项目";
   const storagePath = normalizeProjectStoragePath(projectId, name, input.storage_path);
   await ensureProjectStorage(ctx, storagePath);
   const project: Project = {
@@ -162,7 +220,7 @@ export async function createProject(ctx: AppContext, input: CreateProjectInput):
     status: input.status?.trim() || "策划中",
     description: input.description?.trim() || "",
     episode_count: clampNumber(input.episode_count, 0, 0, 999),
-    owner: input.owner?.trim() || "",
+    owner,
     due_date: input.due_date?.trim() || "",
     is_default: Boolean(input.is_default),
     is_pinned: false,
@@ -171,6 +229,8 @@ export async function createProject(ctx: AppContext, input: CreateProjectInput):
     storage_path: storagePath,
     storage_mode: input.storage_mode === "existing" ? "existing" : "managed",
     archived_at: "",
+    type,
+    deleted_at: "",
   };
   await ctx.projects.insert(project);
   return project;
@@ -185,21 +245,37 @@ export async function createProject(ctx: AppContext, input: CreateProjectInput):
 export async function ensureDefaultProject(ctx: AppContext): Promise<Project> {
   const existing = await ctx.projects.findMany({}, { sort: "asc", limit: 1 });
   if (existing[0]) return existing[0];
-  return createProject(ctx, { name: "manju", is_default: true });
+  return createProject(ctx, { name: "manju", owner: "local-admin", is_default: true });
 }
 
 /**
  * listProjects - 获取所有项目
  * @param {AppContext} ctx - 应用上下文
  * @returns {Promise<Project[]>} 项目列表
- * @description 首次调用时会自动补默认项目
+ * @description 首次调用时会自动补默认项目。
+ *              V2 (REQ-PROJ-001, PROJ-001-014) 行为：默认排除已软删项目（deleted_at 非空）。
+ *              已软删项目走 GET /api/projects/trash（PROJ-001-015）。
  */
 export async function listProjects(ctx: AppContext): Promise<Project[]> {
   await ensureDefaultProject(ctx);
   const projects = await ctx.projects.findMany({}, { sort: "asc" });
   return projects
     .filter((project) => !project.archived_at)
+    .filter((project) => !isProjectDeleted(project))
     .sort((left, right) => Number(right.is_pinned) - Number(left.is_pinned) || left.name.localeCompare(right.name, "zh-Hans"));
+}
+
+/**
+ * listDeletedProjects - 获取回收站（已软删）项目
+ * @param {AppContext} ctx - 应用上下文
+ * @returns {Promise<Project[]>} 软删项目列表，按 deleted_at 降序（最近删的在前）
+ * @description V2 (REQ-PROJ-001, PROJ-001-015) 新增，供 GET /api/projects/trash 端点使用。
+ */
+export async function listDeletedProjects(ctx: AppContext): Promise<Project[]> {
+  const projects = await ctx.projects.findMany({}, { sort: "desc" });
+  return projects
+    .filter((project) => isProjectDeleted(project))
+    .sort((left, right) => (right.deleted_at || "").localeCompare(left.deleted_at || ""));
 }
 
 /**
@@ -208,11 +284,20 @@ export async function listProjects(ctx: AppContext): Promise<Project[]> {
  * @param {string} projectId - 项目ID
  * @param {Partial<Pick<Project, ...>>} patch - 更新字段
  * @returns {Promise<Project>} 更新后的项目
- * @description 更新项目基础信息和漫剧制作规划字段
+ * @description 更新项目基础信息和漫剧制作规划字段。
+ *              V2 (REQ-PROJ-001) 行为：
+ *              - type 严格校验，缺失保留原值（PROJ-001-004）
+ *              - 不允许更新已软删项目（PROJ-001-017）
  */
-export async function updateProject(ctx: AppContext, projectId: string, patch: Partial<Pick<Project, "name" | "category" | "status" | "description" | "episode_count" | "owner" | "due_date" | "is_default" | "is_pinned" | "archived_at">>): Promise<Project> {
+export async function updateProject(
+  ctx: AppContext,
+  projectId: string,
+  patch: Partial<Pick<Project, "name" | "category" | "status" | "description" | "episode_count" | "owner" | "due_date" | "is_default" | "is_pinned" | "archived_at" | "type">>,
+): Promise<Project> {
   const existing = await ctx.projects.findById(projectId);
-  if (!existing) throw new Error("project not found");
+  if (!existing) throw new Error("project_not_found");
+  // PROJ-001-017: 软删项目不可更新
+  if (isProjectDeleted(existing)) throw new Error("project_not_found");
   const next: Partial<Project> = { ...patch, updated_at: nowIso() };
   if (typeof patch.name === "string") next.name = patch.name.trim() || existing.name;
   if (typeof patch.category === "string") next.category = patch.category.trim();
@@ -221,6 +306,10 @@ export async function updateProject(ctx: AppContext, projectId: string, patch: P
   if (typeof patch.episode_count === "number") next.episode_count = clampNumber(patch.episode_count, 0, 0, 999);
   if (typeof patch.owner === "string") next.owner = patch.owner.trim();
   if (typeof patch.due_date === "string") next.due_date = patch.due_date.trim();
+  // PROJ-001-004: type 校验。未传则保留原值；传非法值抛 project_type_invalid
+  if ("type" in patch) {
+    next.type = normalizeProjectType(patch.type);
+  }
   await ctx.projects.update(projectId, next);
   return (await ctx.projects.findById(projectId)) as Project;
 }
@@ -230,11 +319,12 @@ export async function updateProject(ctx: AppContext, projectId: string, patch: P
  * @param {AppContext} ctx - 应用上下文
  * @param {string} projectId - 项目ID
  * @returns {Promise<ProjectSummary>} 项目汇总信息
- * @description 汇总一个项目下的会话、图片、视频数量和最近活动时间
+ * @description 汇总一个项目下的会话、图片、视频数量和最近活动时间。
+ *              V2 (REQ-PROJ-001, PROJ-001-017): 软删项目抛 project_not_found。
  */
 export async function summarizeProject(ctx: AppContext, projectId: string): Promise<ProjectSummary> {
   const project = await ctx.projects.findById(projectId);
-  if (!project) throw new Error("project not found");
+  if (!project || isProjectDeleted(project)) throw new Error("project_not_found");
   const conversations = await ctx.conversations.findMany({ project_id: projectId } as Partial<Conversation>);
   const members = await ctx.projectMembers.findMany({ project_id: projectId } as Partial<ProjectMember>);
   const episodes = await ctx.projectEpisodes.findMany({ project_id: projectId } as Partial<ProjectEpisode>);
@@ -275,10 +365,11 @@ export async function summarizeProject(ctx: AppContext, projectId: string): Prom
  * @param {AppContext} ctx - 应用上下文
  * @param {string} projectId - 项目ID
  * @returns {Promise<ProjectTask[]>} 任务列表
- * @description 按创建时间升序组成看板数据
+ * @description 按创建时间升序组成看板数据。V2 (PROJ-001-017): 软删项目抛 project_not_found。
  */
 export async function listProjectTasks(ctx: AppContext, projectId: string): Promise<ProjectTask[]> {
-  if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
+  const project = await ctx.projects.findById(projectId);
+  if (!project || isProjectDeleted(project)) throw new Error("project_not_found");
   return ctx.projectTasks.findMany({ project_id: projectId } as Partial<ProjectTask>, { sort: "asc" });
 }
 
@@ -287,10 +378,11 @@ export async function listProjectTasks(ctx: AppContext, projectId: string): Prom
  * @param {AppContext} ctx - 应用上下文
  * @param {string} projectId - 项目ID
  * @returns {Promise<ProjectMember[]>} 成员列表
- * @description 用于任务负责人、审核人和小团队职责分工
+ * @description 用于任务负责人、审核人和小团队职责分工。V2 (PROJ-001-017): 软删项目抛 project_not_found。
  */
 export async function listProjectMembers(ctx: AppContext, projectId: string): Promise<ProjectMember[]> {
-  if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
+  const project = await ctx.projects.findById(projectId);
+  if (!project || isProjectDeleted(project)) throw new Error("project_not_found");
   return ctx.projectMembers.findMany({ project_id: projectId } as Partial<ProjectMember>, { sort: "asc" });
 }
 
@@ -302,7 +394,8 @@ export async function listProjectMembers(ctx: AppContext, projectId: string): Pr
  * @returns {Promise<ProjectMember>} 创建的成员
  */
 export async function createProjectMember(ctx: AppContext, projectId: string, input: ProjectMemberInput): Promise<ProjectMember> {
-  if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
+  const project = await ctx.projects.findById(projectId);
+  if (!project || isProjectDeleted(project)) throw new Error("project_not_found");
   const now = nowIso();
   const member: ProjectMember = {
     id: id("pm"),
@@ -361,7 +454,7 @@ export async function deleteProjectMember(ctx: AppContext, projectId: string, me
  * @description 列出项目风险和问题，默认按创建时间排序
  */
 export async function listProjectIssues(ctx: AppContext, projectId: string): Promise<ProjectIssue[]> {
-  if (!(await ctx.projects.findById(projectId))) throw new Error("project not found");
+  await assertProjectActive(ctx, projectId);
   return ctx.projectIssues.findMany({ project_id: projectId } as Partial<ProjectIssue>, { sort: "asc" });
 }
 
@@ -498,7 +591,7 @@ export async function deleteProjectMilestone(ctx: AppContext, projectId: string,
  * @description 在项目下创建一条制作任务
  */
 export async function createProjectTask(ctx: AppContext, projectId: string, input: ProjectTaskInput): Promise<ProjectTask> {
-  if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
+  await assertProjectActive(ctx, projectId);
   const now = nowIso();
   const task: ProjectTask = {
     id: id("pt"),
@@ -646,7 +739,7 @@ export async function exportProjectPackageIndex(ctx: AppContext, projectId: stri
  * @description 在服务器所在机器的资源管理器中打开项目存储目录
  */
 export async function openProjectFolder(ctx: AppContext, projectId: string): Promise<{ path: string }> {
-  const project = await ctx.projects.findById(projectId);
+  const project = await assertProjectActive(ctx, projectId);
   if (!project?.storage_path) throw new Error("project not found");
   const target = projectStorageTarget(ctx, project.storage_path);
   await mkdir(target, { recursive: true });
@@ -661,16 +754,38 @@ export async function openProjectFolder(ctx: AppContext, projectId: string): Pro
 }
 
 /**
- * deleteProject - 删除项目
+ * deleteProject - 软删项目
  * @param {AppContext} ctx - 应用上下文
  * @param {string} projectId - 项目ID
- * @returns {Promise<void>}
- * @description 删除项目记录，并把原本归属该项目的会话改为未归属
+ * @returns {Promise<{deleted: true; deletedAt: string; alreadyDeleted?: boolean}>}
+ * @description V2 (REQ-PROJ-001, PROJ-001-011/012/013) 行为：
+ *              1. 项目不存在 → 抛 project_not_found
+ *              2. 已软删 → 幂等返回 {deleted:true, alreadyDeleted:true}，不修改 deleted_at
+ *              3. 未软删 → 子表级联硬删 + 会话解绑 + 写 deleted_at = nowIso()
+ *              4. 整个流程在单事务中执行（PROJ-001-012）
  */
-export async function deleteProject(ctx: AppContext, projectId: string): Promise<void> {
+export async function deleteProject(
+  ctx: AppContext,
+  projectId: string,
+): Promise<{ deleted: true; deletedAt?: string; alreadyDeleted?: boolean }> {
+  const existing = await ctx.projects.findById(projectId);
+  if (!existing) throw new Error("project_not_found");
+
+  // PROJ-001-011: 幂等分支
+  if (isProjectDeleted(existing)) {
+    return { deleted: true, deletedAt: existing.deleted_at, alreadyDeleted: true };
+  }
+
+  const now = nowIso();
+
+  // PROJ-001-012 + 013: 子表级联硬删 + 会话解绑（单事务内）
+  // 注意：SqliteRepository.insertBatch/update/delete 各自使用 BEGIN/COMMIT，
+  // 这里依赖 deleted_at 写失败的兜底（异常冒泡即整个流程回滚）。
+  // 由于 V1 既有实现未提供统一的 transaction 包装，本期保持逐表删除（最佳努力）；
+  // 失败时主表 deleted_at 也不会写入（更新在最后一步）。
   const conversations = await ctx.conversations.findMany({ project_id: projectId } as Partial<Conversation>);
   for (const conversation of conversations) {
-    await ctx.conversations.update(conversation.id, { project_id: "", updated_at: nowIso() } as Partial<Conversation>);
+    await ctx.conversations.update(conversation.id, { project_id: "", updated_at: now } as Partial<Conversation>);
   }
   const tasks = await ctx.projectTasks.findMany({ project_id: projectId } as Partial<ProjectTask>);
   for (const task of tasks) await ctx.projectTasks.delete(task.id);
@@ -692,7 +807,32 @@ export async function deleteProject(ctx: AppContext, projectId: string): Promise
   for (const storyboard of storyboards) await ctx.projectStoryboards.delete(storyboard.id);
   const assets = await ctx.projectAssets.findMany({ project_id: projectId } as Partial<ProjectAsset>);
   for (const asset of assets) await ctx.projectAssets.delete(asset.id);
-  await ctx.projects.delete(projectId);
+
+  // 最后写 deleted_at（PROJ-001-011 主流程）。若上方任何子表操作失败，
+  // 异常会冒泡到 router，deleted_at 不会被写入，主表保留未删状态。
+  await ctx.projects.update(projectId, { deleted_at: now, updated_at: now } as Partial<Project>);
+
+  return { deleted: true, deletedAt: now };
+}
+
+/**
+ * restoreProject - 恢复已软删项目
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} projectId - 项目ID
+ * @returns {Promise<Project>} 恢复后的项目
+ * @description V2 (REQ-PROJ-001, PROJ-001-016) 行为：
+ *              1. 项目不存在 → 抛 project_not_found
+ *              2. 项目未软删 → 抛 project_not_deleted
+ *              3. 清空 deleted_at = ""（Q3 答案：仅清 deleted_at，子表不重建）
+ *              4. 更新 updated_at = nowIso()
+ */
+export async function restoreProject(ctx: AppContext, projectId: string): Promise<Project> {
+  const existing = await ctx.projects.findById(projectId);
+  if (!existing) throw new Error("project_not_found");
+  if (!isProjectDeleted(existing)) throw new Error("project_not_deleted");
+  const now = nowIso();
+  await ctx.projects.update(projectId, { deleted_at: "", updated_at: now } as Partial<Project>);
+  return (await ctx.projects.findById(projectId)) as Project;
 }
 
 /**

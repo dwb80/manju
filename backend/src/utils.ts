@@ -56,6 +56,31 @@ export function requireString(value: unknown, name: string): string {
   return value.trim();
 }
 
+/**
+ * 安全的字符串转换：非 string / null / undefined 全部返空串。
+ * 永不抛错，专为可选字段设计。
+ */
+export function asString(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
+}
+
+/**
+ * 安全的整数转换：解析失败返 fallback。
+ * 接受 string / number；NaN / Infinity 全部回退。
+ */
+export function asInt(value: unknown, fallback = 0): number {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+  if (typeof value === "string") {
+    const n = Number(value);
+    if (Number.isFinite(n)) return Math.trunc(n);
+  }
+  return fallback;
+}
+
 /** 把用户传入的数字限制在指定范围内，非法值则使用默认值。 */
 export function clampNumber(value: unknown, fallback: number, min: number, max: number): number {
   const numeric = typeof value === "number" ? value : Number(value);

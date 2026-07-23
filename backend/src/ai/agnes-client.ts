@@ -7,6 +7,7 @@
 
 import type { ChatChunk, ChatParams, ImageParams, TaskStatus, VideoParams } from "../types.js";
 import { rootLogger } from "../logger.js";
+import { safeProviderFetch } from "../services/security/hardening.js";
 
 /**
  * Agnes API 限流错误（HTTP 429 / 配额用尽）。
@@ -493,7 +494,7 @@ export class RealAgnesClient implements AgnesClient {
 
     let response: Response;
     try {
-      response = await fetch(url, {
+      response = await safeProviderFetch(url, {
         ...init,
         headers: {
           authorization: `Bearer ${this.apiKey}`,

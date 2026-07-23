@@ -12,7 +12,7 @@ import type { Character } from "../types/character.js";
 import type { Scene } from "../types/scene.js";
 import type { Prop } from "../types/prop.js";
 import type { CharacterImage, PropImage, SceneImage } from "../types/asset-image.js";
-import type { Storyboard, ProjectStoryboard } from "../types/storyboard.js";
+import type { Storyboard, ProjectStoryboard, Shot, ShotSnapshot } from "../types/storyboard.js";
 import type { Audio } from "../types/audio.js";
 import type { ModuleVideoTask } from "../types/video.js";
 import type { ProjectClip, ProjectTask, ProjectEpisode, ProjectIssue, ProjectMilestone, ProjectMember, PublishPlan } from "../types/project.js";
@@ -20,6 +20,14 @@ import type { Asset, ProjectAsset } from "../types/asset.js";
 import type { Review, ProjectReview } from "../types/review.js";
 import type { ScriptDocument, ScriptEpisode, ScriptScene, ScriptDialogue, ScriptSceneCharacter, ScriptSceneLocation, ScriptTemplate, ScriptTag, ScriptQualityAssessment, ScriptApproval, ScriptBackup, ScriptAnalyzedCharacter, ScriptAnalyzedScene, ScriptAnalyzedProp } from "../types/script.js";
 import type { FieldSpec } from "./repository.js";
+import type {
+  SensitiveWord, ProjectBudget, AuditLog, Notification, PublishTemplate,
+  ReviewItem, ReviewHistory, ReviewAssignment, ReviewPool, ReviewConfig,
+  PublishAccount, PublishRecord, PublishChannel, PublishJob, PublishMetrics, ProjectPermission,
+  ReviewSnapshot, ShotSubtitle, Timeline, TimelineShot, TimelineVersion,
+} from "../types/horizontal.js";
+import type { ProjectInvitation } from "../types/project.js";
+import type { CostRecord } from "../types/horizontal.js";
 
 export const conversationFields: FieldSpec<Conversation>[] = [
   { key: "id", type: "string" },
@@ -52,6 +60,11 @@ export const projectFields: FieldSpec<Project>[] = [
   { key: "storage_path", type: "string" },
   { key: "storage_mode", type: "string" },
   { key: "archived_at", type: "string" },
+  // V2 增量字段（REQ-PROJ-001, 2026-07-22）。由 ensureColumns() 自动迁移：
+  // 新表直接含此列，旧表 ALTER TABLE ADD COLUMN。旧数据此字段为 NULL，
+  // 业务代码用 !p.deleted_at 同时兼容 NULL 与 ''。
+  { key: "type", type: "string" },
+  { key: "deleted_at", type: "string" },
 ];
 
 export const messageFields: FieldSpec<Message>[] = [
@@ -545,33 +558,67 @@ export const propImageFields: FieldSpec<PropImage>[] = [
 
 // ==================== 独立模块：分镜/音频/视频/剪辑 ====================
 
-/** 分镜实体（独立模块，区别于剧本侧分镜） */
+/** 分镜实体（V2：纯分镜，导演台层面）。 */
 export const storyboardFields: FieldSpec<Storyboard>[] = [
   { key: "id", type: "string" },
   { key: "project_id", type: "string" },
+  { key: "episode_id", type: "string" },
   { key: "scene_id", type: "string" },
   { key: "episode", type: "number" },
-  { key: "shot_number", type: "number" },
+  { key: "storyboard_number", type: "string" },
+  { key: "title", type: "string" },
+  { key: "description", type: "string" },
+  { key: "dialogue", type: "string" },
+  { key: "notes", type: "string" },
+  { key: "status", type: "string" },
+  { key: "order", type: "number" },
+  { key: "character_asset_ids", type: "json" },
+  { key: "prop_asset_ids", type: "json" },
+  { key: "version", type: "number" },
+  { key: "created_at", type: "string" },
+  { key: "updated_at", type: "string" },
+  { key: "deleted_at", type: "string" },
+];
+
+/** 镜头实体（V2 新增，属于一个分镜）。 */
+export const shotFields: FieldSpec<Shot>[] = [
+  { key: "id", type: "string" },
+  { key: "project_id", type: "string" },
+  { key: "storyboard_id", type: "string" },
+  { key: "scene_id", type: "string" },
+  { key: "episode", type: "number" },
+  { key: "shot_number", type: "string" },
   { key: "title", type: "string" },
   { key: "description", type: "string" },
   { key: "duration", type: "number" },
+  { key: "shot_size", type: "string" },
   { key: "camera_angle", type: "string" },
-  { key: "movement", type: "string" },
+  { key: "camera_movement", type: "string" },
   { key: "dialogue", type: "string" },
   { key: "notes", type: "string" },
   { key: "image_url", type: "string" },
   { key: "video_task_id", type: "string" },
   { key: "video_url", type: "string" },
   { key: "status", type: "string" },
-  { key: "tags", type: "json" },
   { key: "order", type: "number" },
-  { key: "usage_count", type: "number" },
-  { key: "version", type: "number" },
   { key: "character_asset_ids", type: "json" },
   { key: "prop_asset_ids", type: "json" },
+  { key: "version", type: "number" },
   { key: "created_at", type: "string" },
   { key: "updated_at", type: "string" },
   { key: "deleted_at", type: "string" },
+];
+
+/** 镜头快照表（不可变版本历史）。 */
+export const shotSnapshotFields: FieldSpec<ShotSnapshot>[] = [
+  { key: "id", type: "string" },
+  { key: "project_id", type: "string" },
+  { key: "shot_id", type: "string" },
+  { key: "version", type: "number" },
+  { key: "data", type: "string" },
+  { key: "change_note", type: "string" },
+  { key: "created_by", type: "string" },
+  { key: "created_at", type: "string" },
 ];
 
 /** 剧本侧分镜（剧本编辑器内的分镜记录） */
@@ -623,6 +670,12 @@ export const audioFields: FieldSpec<Audio>[] = [
   { key: "created_at", type: "string" },
   { key: "updated_at", type: "string" },
   { key: "deleted_at", type: "string" },
+  /* V2 W11 AUDIO-F14：口型结果绑定字段 */
+  { key: "lip_sync_job_id", type: "string" },
+  { key: "lip_sync_status", type: "string" },
+  { key: "lip_sync_video_id", type: "string" },
+  { key: "lip_sync_error", type: "string" },
+  { key: "lip_sync_completed_at", type: "string" },
 ];
 
 /** 视频任务实体（独立模块） */
@@ -1038,7 +1091,36 @@ export {
   publishAccountFields,
   publishRecordFields,
   projectPermissionFields,
+  // P0-08 / 业务扩展
+  costRecordFields,
+  reviewHistoryFields,
+  reviewAssignmentFields,
+  reviewPoolFields,
+  reviewConfigFields,
+  // V2 W12 P0 REQ-REVIEW-F01 / REQ-AUDIO-F08-F10 / REQ-EDIT-F01-F10
+  reviewSnapshotFields,
+  shotSubtitleFields,
+  timelineFields,
+  timelineShotFields,
+  timelineVersionFields,
+  publishChannelFields,
+  publishJobFields,
+  publishMetricsFields,
 } from "../types/horizontal.js";
+
+/** 项目成员邀请表字段。表名 project_invitations。 */
+export const projectInvitationFields: FieldSpec<ProjectInvitation>[] = [
+  { key: "id", type: "string" },
+  { key: "project_id", type: "string" },
+  { key: "email", type: "string" },
+  { key: "role", type: "string" },
+  { key: "token", type: "string" },
+  { key: "status", type: "string" },
+  { key: "invited_by", type: "string" },
+  { key: "expires_at", type: "string" },
+  { key: "created_at", type: "string" },
+  { key: "responded_at", type: "string" },
+];
 export type {
   SensitiveWord,
   SensitiveWordCategory,
@@ -1057,4 +1139,17 @@ export type {
   PublishRecord,
   ProjectPermission,
   ProjectVisibility,
+  // P0-08 / 业务扩展
+  CostRecord,
+  ReviewHistory,
+  ReviewAction,
+  ReviewAssignment,
+  ReviewAssignmentStatus,
+  ReviewPool,
+  ReviewConfig,
+  PublishChannel,
+  PublishChannelCode,
+  PublishJob,
+  PublishJobStatus,
+  PublishMetrics,
 } from "../types/horizontal.js";

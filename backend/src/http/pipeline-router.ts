@@ -7,12 +7,22 @@
  * - 状态机转换规则
  * - 项目流水线状态推断
  * - 整体进度计算
+ * - 节点启停控制（V2 W5 REQ-PIPE-001-06：listNodes/pause/resume/skip）
  *
  * 8 个阶段：剧本 → 分镜 → 角色 → 场景 → 图片 → 视频 → 剪辑 → 发布
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AppContext } from "../services/app.js";
 import { rootLogger } from "../logger.js";
+import { hasPermission, getMemberByUserId } from "../services/horizontal/project-member-service.js";
+import { readJsonBody } from "./http-utils.js";
+
+/** 节点操作所需的访问上下文（由主路由注入）。 */
+export interface PipelineAccess {
+  userId: string;
+  isAdmin: boolean;
+  canAccessProject(projectId: string): Promise<boolean>;
+}
 
 /** 8阶段工作流阶段名称 */
 export type PipelineStageName =
@@ -221,12 +231,14 @@ function errorCodeForStatus(status: number): number {
  * @param {AppContext} ctx - 应用上下文
  * @param {IncomingMessage} req - HTTP 请求对象
  * @param {ServerResponse} res - HTTP 响应对象
+ * @param {PipelineAccess} [access] - 访问上下文（节点操作路由必传；仅 stages/state 查询可不传）
  * @returns {Promise<void>}
  */
 export async function handlePipelineRouter(
   ctx: AppContext,
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
+  access?: PipelineAccess,
 ): Promise<void> {
   const method = req.method ?? "GET";
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -258,9 +270,317 @@ export async function handlePipelineRouter(
       return;
     }
 
+    // ===== V2 W5 REQ-PIPE-001-06 节点启停开关 =====
+    // GET /api/pipeline/runs/:runId/nodes  —— 列出 run 全部节点（前端节点面板用）
+    if (
+      method === "GET" &&
+      parts.length === 5 &&
+      parts[0] === "api" &&
+      parts[1] === "pipeline" &&
+      parts[2] === "runs" &&
+      parts[4] === "nodes"
+    ) {
+      const runId = decodeURIComponent(parts[3]);
+      const accessOk = await ensureNodeAccessByRunId(ctx, access, runId, res);
+      if (!accessOk.ok) return;
+      const nodes = (await ctx.pipelineNodes.findMany({ run_id: runId } as any)) as any[];
+      const dependencies = (await ctx.pipelineDependencies.findMany({ run_id: runId } as any)) as any[];
+      nodes.sort((a, b) => {
+        const ai = a.created_at ?? "";
+        const bi = b.created_at ?? "";
+        return ai.localeCompare(bi);
+      });
+      sendJson(res, { runId, nodes, dependencies });
+      return;
+    }
+
+    // V2 W11 TASK-F17: POST /api/pipeline/runs (创建 run + 节点 + 依赖)
+    //   body = { projectId, name, nodes: [...], dependencies: [...] }
+    if (
+      method === "POST" &&
+      parts.length === 3 &&
+      parts[0] === "api" &&
+      parts[1] === "pipeline" &&
+      parts[2] === "runs"
+    ) {
+      const body = await readJsonBody(req);
+      const projectId = String(body.projectId ?? body.project_id ?? "");
+      const name = String(body.name ?? `run-${Date.now()}`);
+      const nodes = Array.isArray(body.nodes) ? body.nodes : [];
+      const dependencies = Array.isArray(body.dependencies) ? body.dependencies : [];
+      if (!projectId) {
+        sendError(res, new Error("projectId 必填"), 400);
+        return;
+      }
+      if (nodes.length === 0) {
+        sendError(res, new Error("nodes 必填：非空数组"), 400);
+        return;
+      }
+      if (access && !access.isAdmin) {
+        const allowed = await access.canAccessProject(projectId);
+        if (!allowed) {
+          sendError(res, new Error("forbidden: not project member"), 403);
+          return;
+        }
+      }
+      try {
+        const result = await ctx.pipelineRunService.createRun(projectId, name, nodes, dependencies);
+        if (!result.valid) {
+          sendJson(res, { runId: result.runId, valid: false, errors: result.errors }, 400);
+          return;
+        }
+        sendJson(res, { runId: result.runId, valid: true });
+      } catch (svcErr) {
+        sendError(res, svcErr, 400);
+      }
+      return;
+    }
+
+    // V2 W11 TASK-F11: POST /api/pipeline/runs/:runId/nodes/:nodeId/retry
+    //   放在 pause/resume/skip 之前,因为旧 handler 的 action 白名单不含 retry,会被它先吃掉
+    if (
+      method === "POST" &&
+      parts.length === 7 &&
+      parts[0] === "api" &&
+      parts[1] === "pipeline" &&
+      parts[2] === "runs" &&
+      parts[4] === "nodes" &&
+      parts[6] === "retry"
+    ) {
+      const runId = decodeURIComponent(parts[3]);
+      const nodeId = decodeURIComponent(parts[5]);
+      const accessOk = await ensureNodeAccessByNodeId(ctx, access, runId, nodeId, res);
+      if (!accessOk.ok) return;
+      try {
+        await ctx.pipelineRunService.retryNode(runId, nodeId);
+      } catch (svcErr) {
+        sendError(res, svcErr, 400);
+        return;
+      }
+      const updated = await ctx.pipelineNodes.findById(nodeId);
+      sendJson(res, { runId, nodeId, action: "retry", node: updated });
+      return;
+    }
+
+    // POST /api/pipeline/runs/:runId/nodes/:nodeId/{pause|resume|skip}
+    if (
+      method === "POST" &&
+      parts.length === 7 &&
+      parts[0] === "api" &&
+      parts[1] === "pipeline" &&
+      parts[2] === "runs" &&
+      parts[4] === "nodes"
+    ) {
+      const runId = decodeURIComponent(parts[3]);
+      const nodeId = decodeURIComponent(parts[5]);
+      const action = parts[6];
+      if (!["pause", "resume", "skip"].includes(action)) {
+        sendError(res, new Error("未知节点动作: " + action), 400);
+        return;
+      }
+      const accessOk = await ensureNodeAccessByNodeId(ctx, access, runId, nodeId, res);
+      if (!accessOk.ok) return;
+      try {
+        if (action === "pause") {
+          await ctx.pipelineRunService.pauseNode(runId, nodeId);
+        } else if (action === "resume") {
+          await ctx.pipelineRunService.resumeNode(runId, nodeId);
+        } else {
+          await ctx.pipelineRunService.skipNode(runId, nodeId);
+        }
+      } catch (svcErr) {
+        sendError(res, svcErr, 400);
+        return;
+      }
+      const updated = await ctx.pipelineNodes.findById(nodeId);
+      sendJson(res, { runId, nodeId, action, node: updated });
+      return;
+    }
+
+    // V2 W11 TASK-F16: PATCH /api/pipeline/runs/:runId/nodes/:nodeId/priority
+    //   body = { priority: "high" | 0-3 }
+    if (
+      method === "PATCH" &&
+      parts.length === 7 &&
+      parts[0] === "api" &&
+      parts[1] === "pipeline" &&
+      parts[2] === "runs" &&
+      parts[4] === "nodes" &&
+      parts[6] === "priority"
+    ) {
+      const runId = decodeURIComponent(parts[3]);
+      const nodeId = decodeURIComponent(parts[5]);
+      const accessOk = await ensureNodeAccessByNodeId(ctx, access, runId, nodeId, res);
+      if (!accessOk.ok) return;
+      const body = await readJsonBody(req);
+      const priority = body.priority;
+      if (priority === undefined || priority === null) {
+        sendError(res, new Error("priority 必填（数字 0-3 或字符串 low/normal/high/urgent）"), 400);
+        return;
+      }
+      try {
+        await ctx.pipelineRunService.setNodePriority(runId, nodeId, priority as any);
+      } catch (svcErr) {
+        sendError(res, svcErr, 400);
+        return;
+      }
+      const updated = await ctx.pipelineNodes.findById(nodeId);
+      sendJson(res, { runId, nodeId, priority: (updated as any)?.priority, node: updated });
+      return;
+    }
+
+    // V2 W11 TASK-F18: POST /api/pipeline/runs/:runId/nodes/batch
+    //   body = { action: "pause"|"resume"|"skip"|"retry", nodeIds: string[] }
+    //   parts = ["api","pipeline","runs",":runId","nodes","batch"]  length=6
+    if (
+      method === "POST" &&
+      parts.length === 6 &&
+      parts[0] === "api" &&
+      parts[1] === "pipeline" &&
+      parts[2] === "runs" &&
+      parts[4] === "nodes" &&
+      parts[5] === "batch"
+    ) {
+      const runId = decodeURIComponent(parts[3]);
+      const accessOk = await ensureNodeAccessByRunId(ctx, access, runId, res);
+      if (!accessOk.ok) return;
+      const body = await readJsonBody(req);
+      const action = String(body.action ?? "");
+      const nodeIds = Array.isArray(body.nodeIds) ? body.nodeIds.map((x: any) => String(x)) : [];
+      if (!["pause", "resume", "skip", "retry"].includes(action)) {
+        sendError(res, new Error("action 必填：pause/resume/skip/retry"), 400);
+        return;
+      }
+      if (nodeIds.length === 0) {
+        sendError(res, new Error("nodeIds 必填：非空数组"), 400);
+        return;
+      }
+      let result: any;
+      try {
+        result = await ctx.pipelineRunService.batchNodeAction(runId, nodeIds, action as any);
+      } catch (svcErr) {
+        sendError(res, svcErr, 400);
+        return;
+      }
+      sendJson(res, result);
+      return;
+    }
+
+    // V2 W11 TASK-F17: POST /api/pipeline/runs/:runId/nodes (批量追加)
+    //   body = { nodes: Array<{ id?, type, name?, config?, input_data?, priority? }> }
+    //   parts = ["api","pipeline","runs",":runId","nodes"]  length=5
+    if (
+      method === "POST" &&
+      parts.length === 5 &&
+      parts[0] === "api" &&
+      parts[1] === "pipeline" &&
+      parts[2] === "runs" &&
+      parts[4] === "nodes"
+    ) {
+      const runId = decodeURIComponent(parts[3]);
+      const accessOk = await ensureNodeAccessByRunId(ctx, access, runId, res);
+      if (!accessOk.ok) return;
+      const body = await readJsonBody(req);
+      const nodes = Array.isArray(body.nodes) ? body.nodes : [];
+      if (nodes.length === 0) {
+        sendError(res, new Error("nodes 必填：非空数组"), 400);
+        return;
+      }
+      let result: any;
+      try {
+        result = await ctx.pipelineRunService.batchCreateNodes(runId, nodes);
+      } catch (svcErr) {
+        sendError(res, svcErr, 400);
+        return;
+      }
+      sendJson(res, result);
+      return;
+    }
+
     sendError(res, new Error("not found"), 404);
   } catch (err) {
     rootLogger.error({ event: "pipeline.router.error", error: (err as Error).message }, `流水线路由错误：${(err as Error).message}`);
     sendError(res, err, 500);
   }
+}
+
+/* ============================================================== */
+/* V2 W5 REQ-PIPE-001-06 RBAC 辅助                                */
+/* ============================================================== */
+async function ensureNodeAccessByRunId(
+  ctx: AppContext,
+  access: PipelineAccess | undefined,
+  runId: string,
+  res: ServerResponse,
+): Promise<{ ok: boolean; run?: any; projectId?: string }> {
+  if (!access) {
+    sendError(res, new Error("无权访问"), 401);
+    return { ok: false };
+  }
+  const run = await ctx.pipelineRuns.findById(runId);
+  if (!run) {
+    sendError(res, new Error("run 不存在: " + runId), 404);
+    return { ok: false };
+  }
+  const projectId = String(run.project_id ?? "");
+  if (!(await ensureNodePermission(ctx, access, projectId, res))) return { ok: false };
+  return { ok: true, run, projectId };
+}
+
+async function ensureNodeAccessByNodeId(
+  ctx: AppContext,
+  access: PipelineAccess | undefined,
+  runId: string,
+  nodeId: string,
+  res: ServerResponse,
+): Promise<{ ok: boolean; run?: any; node?: any; projectId?: string }> {
+  if (!access) {
+    sendError(res, new Error("无权访问"), 401);
+    return { ok: false };
+  }
+  const run = await ctx.pipelineRuns.findById(runId);
+  if (!run) {
+    sendError(res, new Error("run 不存在: " + runId), 404);
+    return { ok: false };
+  }
+  const node = await ctx.pipelineNodes.findById(nodeId);
+  if (!node) {
+    sendError(res, new Error("node 不存在: " + nodeId), 404);
+    return { ok: false };
+  }
+  if (node.run_id !== runId) {
+    sendError(res, new Error("node 不属于该 run"), 400);
+    return { ok: false };
+  }
+  const projectId = String(run.project_id ?? "");
+  if (!(await ensureNodePermission(ctx, access, projectId, res))) return { ok: false };
+  return { ok: true, run, node, projectId };
+}
+
+async function ensureNodePermission(
+  ctx: AppContext,
+  access: PipelineAccess,
+  projectId: string,
+  res: ServerResponse,
+): Promise<boolean> {
+  if (access.isAdmin) return true;
+  if (!projectId) {
+    sendError(res, new Error("run 缺少 project_id"), 400);
+    return false;
+  }
+  const accessible = await access.canAccessProject(projectId);
+  if (!accessible) {
+    sendError(res, new Error("无权访问该项目"), 403);
+    return false;
+  }
+  const member = await getMemberByUserId(ctx, projectId, access.userId);
+  if (!member) {
+    sendError(res, new Error("非项目成员，无法操作节点"), 403);
+    return false;
+  }
+  if (!hasPermission(member, "task.update_status")) {
+    sendError(res, new Error("需要 editor 及以上权限"), 403);
+    return false;
+  }
+  return true;
 }

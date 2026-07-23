@@ -369,42 +369,127 @@ export interface AssetVersion {
 
 // ==================== 分镜导演台类型 ====================
 
-/** 分镜状态 */
+/** 分镜状态（8 状态机） */
 export type StoryboardStatus =
   | 'draft'      // 草稿
-  | 'approved'   // 已批准
-  | 'production' // 制作中
-  | 'completed'; // 已完成
+  | 'generating' // 生成中
+  | 'ready'      // 就绪
+  | 'in_review'  // 审核中
+  | 'approved'   // 已通过
+  | 'needs_fix'  // 需修复
+  | 'rejected'   // 已驳回
+  | 'archived';  // 已归档
 
-/** 分镜实体 */
+/** 镜头状态（8 状态机，与分镜对齐但独立） */
+export type ShotStatus =
+  | 'draft'
+  | 'generating'
+  | 'ready'
+  | 'in_review'
+  | 'approved'
+  | 'needs_fix'
+  | 'rejected'
+  | 'archived';
+
+/** 景别枚举 */
+export type ShotSize =
+  | 'extreme_close_up'
+  | 'close_up'
+  | 'medium_close_up'
+  | 'medium_shot'
+  | 'full_shot'
+  | 'long_shot'
+  | 'extreme_long_shot'
+  | 'over_shoulder'
+  | 'point_of_view'
+  | 'two_shot'
+  | 'three_shot'
+  | 'group_shot';
+
+/** 镜头角度枚举 */
+export type CameraAngle =
+  | 'eye_level'
+  | 'low_angle'
+  | 'high_angle'
+  | 'dutch_angle'
+  | 'overhead'
+  | 'worm_eye_view'
+  | 'bird_eye_view'
+  | 'profile'
+  | 'three_quarter'
+  | 'rear_view';
+
+/** 镜头运动枚举 */
+export type CameraMovement =
+  | 'static'
+  | 'pan'
+  | 'tilt'
+  | 'dolly_in'
+  | 'dolly_out'
+  | 'truck'
+  | 'crane'
+  | 'handheld'
+  | 'steadicam'
+  | 'zoom_in'
+  | 'zoom_out'
+  | 'rack_focus';
+
+/** 分镜实体（V2：纯分镜，不含镜头细节） */
 export interface Storyboard extends BaseEntity {
+  shot_number?: string;
+  project_id?: string;
+  episode_id: string;
   scene_id: string;
-  shot_number: number;
-  title?: string;
+  episode: number;
+  storyboard_number: string;
+  title: string;
   description: string;
-  duration: number; // 秒
-  camera_angle?: string;
-  movement?: string;
   dialogue?: string;
   notes?: string;
   status: StoryboardStatus;
-  project_id?: string;
   order: number;
-  episode?: number;
-  image_url?: string;
-  video_task_id?: string;
-  video_url?: string;
-  tags?: string[];
-  /**
-   * 关联角色资产 ID 列表（来自角色工厂）。
-   * 反向展示：角色工厂的 UsageBadge 会统计本字段非空且包含该角色 ID 的分镜数。
-   */
+  /** 关联角色资产 ID 列表（来自角色工厂） */
   character_asset_ids?: string[];
-  /**
-   * 关联道具资产 ID 列表（来自道具工厂）。
-   * 反向展示：道具工厂的 UsageBadge 会统计本字段非空且包含该道具 ID 的分镜数。
-   */
+  /** 关联道具资产 ID 列表（来自道具工厂） */
   prop_asset_ids?: string[];
+  version?: number;
+  deleted_at?: string;
+}
+
+/** 镜头实体（V2 新增，属于一个分镜） */
+export interface Shot extends BaseEntity {
+  project_id: string;
+  storyboard_id: string;
+  scene_id: string;
+  episode: number;
+  shot_number: string;
+  title: string;
+  description: string;
+  duration: number;
+  shot_size?: ShotSize;
+  camera_angle?: CameraAngle;
+  camera_movement?: CameraMovement;
+  dialogue?: string;
+  notes?: string;
+  image_url: string;
+  video_task_id: string;
+  video_url: string;
+  status: ShotStatus;
+  order: number;
+  character_asset_ids?: string[];
+  prop_asset_ids?: string[];
+  version?: number;
+  deleted_at?: string;
+}
+
+/** 镜头快照（不可变版本历史） */
+export interface ShotSnapshot extends BaseEntity {
+  project_id: string;
+  shot_id: string;
+  version: number;
+  data: string;
+  change_note?: string;
+  created_by: string;
 }
 
 // ==================== 视频生产线类型 ====================
@@ -463,6 +548,12 @@ export interface AudioItem extends BaseEntity {
   character_id?: string;
   /** 关联分镜（这条音频用在哪个镜头）。 */
   storyboard_id?: string;
+  /** 关联镜头（更细粒度的关联）。 */
+  shot_id?: string;
+  /** 时间轴起始时间（秒，用于与视频对齐）。 */
+  start_time?: number;
+  /** 时间轴结束时间（秒）。 */
+  end_time?: number;
 }
 
 // ==================== 审核中心类型 ====================

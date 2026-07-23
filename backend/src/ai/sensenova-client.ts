@@ -10,6 +10,7 @@
  */
 import { rootLogger } from "../logger.js";
 import type { ChatChunk, ChatParams } from "../types.js";
+import { safeProviderFetch } from "../services/security/hardening.js";
 
 interface ProxyResponse {
   status: number;
@@ -423,7 +424,7 @@ export class SenseNovaClient {
     };
     const response = this.proxyURL
       ? await this.requestWithProxy(url, { ...options, headers })
-      : await fetch(url, {
+      : await safeProviderFetch(url, {
         method: options.method,
         headers,
         body: options.body,

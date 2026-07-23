@@ -115,7 +115,7 @@ export function ConversationSidebar({
     <aside className="agnes-sidebar flex min-h-0 flex-col border-r border-white/10 p-4 max-md:hidden w-[280px]">
       <div className="mb-4 flex items-center justify-between">
         <div className="text-sm font-semibold">Agnes AI Studio</div>
-        <Button size="icon" variant="ghost" onClick={onCreateConversation} className="transition-all duration-200 hover:scale-105 hover:bg-white/10">
+        <Button aria-label="新建会话" size="icon" variant="ghost" onClick={onCreateConversation} className="transition-all duration-200 hover:scale-105 hover:bg-white/10">
           <Plus className="h-4 w-4" />
         </Button>
       </div>

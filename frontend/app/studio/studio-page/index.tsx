@@ -345,6 +345,7 @@ export default function Home() {
   const previousDraftKeyRef = useRef("");
   const skipNextDraftSaveRef = useRef(false);
   const activeDraftKeyRef = useRef("");
+  const emptyConversationCreationRef = useRef<Promise<Conversation> | null>(null);
 
   const selectedProject = projects.find((project) => project.id === projectScope);
   const projectScopeLabel = projectScope === "all" ? "全部项目" : projectScope === "" ? "不使用项目" : selectedProject?.name ?? "项目";
@@ -387,7 +388,19 @@ export default function Home() {
     try {
       let items = await api<Conversation[]>(`/api/conversations?projectId=${encodeURIComponent(scope)}`);
       if (!items.length) {
-        const created = await api<Conversation>("/api/conversations", { method: "POST", body: JSON.stringify({ project_id: scope === "all" ? "" : scope }) });
+        if (!emptyConversationCreationRef.current) {
+          emptyConversationCreationRef.current = api<Conversation>("/api/conversations", {
+            method: "POST",
+            body: JSON.stringify({ project_id: scope === "all" ? "" : scope }),
+          });
+        }
+        const pendingCreation = emptyConversationCreationRef.current;
+        let created: Conversation;
+        try {
+          created = await pendingCreation;
+        } finally {
+          if (emptyConversationCreationRef.current === pendingCreation) emptyConversationCreationRef.current = null;
+        }
         items = [created];
       }
       const sharedId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("conversationId") ?? "" : "";
