@@ -1,0 +1,1 @@
+export function truncateDesc(value: string | null | undefined, maxLength = 80): string { const text = String(value ?? "").trim(); return text.length > maxLength ? `${text.slice(0, Math.max(0, maxLength - 1))}…` : text; }

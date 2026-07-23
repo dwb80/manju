@@ -1,0 +1,10 @@
+"use client";
+import * as React from "react";
+import * as Primitive from "@radix-ui/react-alert-dialog";
+import { cn } from "@/lib/utils";
+export const AlertDialog = Primitive.Root, AlertDialogTrigger = Primitive.Trigger, AlertDialogAction = Primitive.Action, AlertDialogCancel = Primitive.Cancel;
+export const AlertDialogContent = React.forwardRef<React.ElementRef<typeof Primitive.Content>, React.ComponentPropsWithoutRef<typeof Primitive.Content>>(({ className, ...props }, ref) => <Primitive.Portal><Primitive.Overlay className="fixed inset-0 z-50 bg-black/80" /><Primitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-white/10 bg-[#1a1a1a] p-6", className)} {...props} /></Primitive.Portal>);
+export const AlertDialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div className={cn("space-y-2", className)} {...props} />;
+export const AlertDialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div className={cn("mt-5 flex justify-end gap-2", className)} {...props} />;
+export const AlertDialogTitle = React.forwardRef<React.ElementRef<typeof Primitive.Title>, React.ComponentPropsWithoutRef<typeof Primitive.Title>>(({ className, ...props }, ref) => <Primitive.Title ref={ref} className={cn("text-lg font-semibold text-white", className)} {...props} />);
+export const AlertDialogDescription = React.forwardRef<React.ElementRef<typeof Primitive.Description>, React.ComponentPropsWithoutRef<typeof Primitive.Description>>(({ className, ...props }, ref) => <Primitive.Description ref={ref} className={cn("text-sm text-neutral-400", className)} {...props} />);

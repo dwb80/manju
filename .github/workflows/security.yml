@@ -1,0 +1,34 @@
+name: Security Gate
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 2 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-and-source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        workspace: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ matrix.workspace }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ matrix.workspace }}
+      - name: Block high and critical production vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: ${{ matrix.workspace }}
+      - name: SQL injection and secret checks
+        if: matrix.workspace == 'backend'
+        run: npm run check:security
+        working-directory: backend

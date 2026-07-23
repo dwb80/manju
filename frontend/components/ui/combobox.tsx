@@ -1,0 +1,3 @@
+"use client";
+export type ComboboxOption = { value: string; label: string };
+export function Combobox({ value, onValueChange, options, placeholder = "请选择", className = "" }: { value?: string; onValueChange?: (value: string) => void; options: ComboboxOption[]; placeholder?: string; className?: string }) { return <select className={`h-9 rounded-md border border-white/10 bg-neutral-900 px-3 text-sm ${className}`} value={value ?? ""} onChange={(event) => onValueChange?.(event.target.value)}><option value="">{placeholder}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>; }

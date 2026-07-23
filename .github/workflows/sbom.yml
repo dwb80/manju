@@ -1,0 +1,122 @@
+# SEC-SUP-02 软件物料清单（SBOM）生成
+#
+# 覆盖 backend / frontend 两个工作区，输出 CycloneDX 1.5 JSON。
+# - 每次 push/PR 自动生成并上传为 90 天 artifacts
+# - 每周一 03:00 UTC 定时生成，产物作为合规审计依据
+# - 失败不影响主流程（continue-on-error），但会被 Security 标签 + 邮件订阅抓取
+
+name: sbom
+
+on:
+  push:
+    branches: [main, release/*]
+    paths:
+      - 'backend/package.json'
+      - 'backend/package-lock.json'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - 'scripts/generate-sbom.mjs'
+      - '.github/workflows/sbom.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/package.json'
+      - 'backend/package-lock.json'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+  workflow_dispatch:
+  schedule:
+    # 每周一 03:00 UTC 定时生成（与 Trivy 错开 1 小时）
+    - cron: '0 3 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  generate-sbom:
+    name: 生成 CycloneDX SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 校验生成脚本存在
+        run: |
+          test -f scripts/generate-sbom.mjs || {
+            echo "::error::scripts/generate-sbom.mjs 不存在"
+            exit 1
+          }
+
+      - name: 生成 backend SBOM
+        id: backend
+        continue-on-error: true
+        run: node scripts/generate-sbom.mjs backend
+
+      - name: 生成 frontend SBOM
+        id: frontend
+        continue-on-error: true
+        run: node scripts/generate-sbom.mjs frontend
+
+      - name: 校验产物存在
+        run: |
+          test -f artifacts/sbom/backend-sbom.cdx.json || {
+            echo "::error::backend SBOM 缺失"
+            exit 1
+          }
+          test -f artifacts/sbom/frontend-sbom.cdx.json || {
+            echo "::error::frontend SBOM 缺失"
+            exit 1
+          }
+
+      - name: 输出摘要
+        run: |
+          echo "## 📦 SBOM 摘要（SEC-SUP-02）" >> $GITHUB_STEP_SUMMARY
+          for f in artifacts/sbom/*.cdx.json; do
+            workspace=$(basename "$f" -sbom.cdx.json)
+            count=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$f','utf8')).components.length)")
+            direct=$(node -e "
+              const b = JSON.parse(require('fs').readFileSync('$f','utf8'));
+              console.log(b.components.filter(c => c.properties?.find(p => p.name === 'manju:depth')?.value === 'direct').length);
+            ")
+            echo "### \`${workspace}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- 组件总数：\${count}（直接依赖：\${direct}）" >> $GITHUB_STEP_SUMMARY
+            echo "- 规范：CycloneDX \${SPEC_VERSION:-1.5}" >> $GITHUB_STEP_SUMMARY
+            echo "- 工具：manju-sbom-generator v1.0.0" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          done
+
+      - name: 上传 artifacts（90 天保留）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: artifacts/sbom/*.cdx.json
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: 发布到 GitHub release（main 分支）
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release-assets
+          cp artifacts/sbom/backend-sbom.cdx.json release-assets/
+          cp artifacts/sbom/frontend-sbom.cdx.json release-assets/
+          if [ -d ".release-assets-backup/.git" ]; then
+            cd .release-assets-backup
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            cp ../release-assets/*.cdx.json .
+            git add *.cdx.json
+            git commit -m "chore(sbom): 同步 main 分支 SBOM ($(date -u +%Y-%m-%dT%H:%M:%SZ))" || true
+            git push
+            cd ..
+          fi

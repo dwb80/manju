@@ -1,0 +1,3 @@
+"use client"; import * as React from "react"; import * as Primitive from "@radix-ui/react-toggle-group"; import { cn } from "@/lib/utils";
+export const ToggleGroup = React.forwardRef<React.ElementRef<typeof Primitive.Root>, React.ComponentPropsWithoutRef<typeof Primitive.Root>>(({ className, ...props }, ref) => <Primitive.Root ref={ref} className={cn("inline-flex items-center gap-1", className)} {...props} />);
+export const ToggleGroupItem = React.forwardRef<React.ElementRef<typeof Primitive.Item>, React.ComponentPropsWithoutRef<typeof Primitive.Item>>(({ className, ...props }, ref) => <Primitive.Item ref={ref} className={cn("inline-flex h-9 items-center justify-center rounded px-3 text-sm hover:bg-white/10 data-[state=on]:bg-white/15", className)} {...props} />);

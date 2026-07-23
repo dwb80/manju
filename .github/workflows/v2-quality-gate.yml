@@ -1,0 +1,35 @@
+name: V2 Quality Gate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+      - name: Architecture boundaries
+        run: npm run check:architecture
+        working-directory: backend
+      - name: Backend build and tests
+        run: npm test
+        working-directory: backend
+      - name: Frontend type gate
+        run: npm run lint
+        working-directory: frontend

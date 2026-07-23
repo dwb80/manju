@@ -1,0 +1,2 @@
+"use client"; import React from "react";
+export class ErrorBoundary extends React.Component<{ children: React.ReactNode; fallback?: React.ReactNode; scope?: string }, { error: Error | null }> { state = { error: null as Error | null }; static getDerivedStateFromError(error: Error) { return { error }; } render() { if (this.state.error) return this.props.fallback ?? <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-300">{this.props.scope ? `${this.props.scope}：` : "组件加载失败："}{this.state.error.message}</div>; return this.props.children; } }

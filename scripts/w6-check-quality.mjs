@@ -1,0 +1,10 @@
+import sqlite from "node:sqlite";
+const db = new sqlite.DatabaseSync("backend/data/sqlite.db", { readOnly: true });
+const cols = db.prepare("PRAGMA table_info('quality_reports')").all();
+console.log("quality_reports columns:");
+console.log(JSON.stringify(cols, null, 2));
+const sample = db.prepare("SELECT * FROM quality_reports ORDER BY created_at DESC LIMIT 2").all();
+console.log("sample:");
+console.log(JSON.stringify(sample, null, 2));
+const allTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'quality%'").all();
+console.log("quality tables:", JSON.stringify(allTables));

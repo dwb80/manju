@@ -1,0 +1,12 @@
+"use client";
+import * as React from "react"; import { Controller, FormProvider, useFormContext, type ControllerProps, type FieldPath, type FieldValues } from "react-hook-form"; import { cn } from "@/lib/utils";
+export const Form = FormProvider;
+const FieldContext = React.createContext<{ name: string }>({ name: "" });
+export function FormField<T extends FieldValues, N extends FieldPath<T>>(props: ControllerProps<T, N>) { return <FieldContext.Provider value={{ name: props.name }}><Controller {...props} /></FieldContext.Provider>; }
+const ItemContext = React.createContext({ id: "" });
+export const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => { const id = React.useId(); return <ItemContext.Provider value={{ id }}><div ref={ref} className={cn("space-y-2", className)} {...props} /></ItemContext.Provider>; });
+function useFormField() { const field = React.useContext(FieldContext); const item = React.useContext(ItemContext); const { getFieldState, formState } = useFormContext(); const state = getFieldState(field.name, formState); return { ...state, formItemId: `${item.id}-item`, formMessageId: `${item.id}-message` }; }
+export const FormLabel = React.forwardRef<HTMLLabelElement, React.LabelHTMLAttributes<HTMLLabelElement>>(({ className, ...props }, ref) => { const { error, formItemId } = useFormField(); return <label ref={ref} htmlFor={formItemId} className={cn("text-sm font-medium", error && "text-red-400", className)} {...props} />; });
+export const FormControl = React.forwardRef<HTMLElement, { children: React.ReactElement }>(({ children }, ref) => { const { error, formItemId, formMessageId } = useFormField(); return React.cloneElement(children, { ref, id: formItemId, "aria-invalid": !!error, "aria-describedby": error ? formMessageId : undefined } as object); });
+export const FormDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(({ className, ...props }, ref) => <p ref={ref} className={cn("text-xs text-neutral-500", className)} {...props} />);
+export const FormMessage = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(({ className, children, ...props }, ref) => { const { error, formMessageId } = useFormField(); const body = error ? String(error.message ?? "输入无效") : children; return body ? <p ref={ref} id={formMessageId} className={cn("text-xs text-red-400", className)} {...props}>{body}</p> : null; });
