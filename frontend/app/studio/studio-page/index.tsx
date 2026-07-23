@@ -1115,7 +1115,7 @@ export default function Home() {
       <aside className="flex min-h-0 flex-col border-r border-white/10 bg-[#171717] p-3 max-md:hidden">
         <div className="mb-3 flex items-center justify-between">
           <div className="text-sm font-semibold">Agnes AI Studio</div>
-          <Button size="icon" variant="ghost" onClick={async () => {
+          <Button aria-label="新建会话" size="icon" variant="ghost" onClick={async () => {
             const created = await api<Conversation>("/api/conversations", { method: "POST", body: JSON.stringify({ title: "新的创作会话", project_id: projectScope === "all" ? "" : projectScope }) });
             setConversationId(created.id);
             await loadConversations(created.id, projectScope);

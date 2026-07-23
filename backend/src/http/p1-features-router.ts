@@ -25,7 +25,7 @@ export async function handleP1FeaturesRouter(ctx: AppContext, req: IncomingMessa
       const reviewId = decodeURIComponent(parts[3] ?? ""); const review = await ctx.reviewItems.findById(reviewId);
       if (!review) return fail(res, 404, "review_not_found"); if (!(await allowed(access, review.project_id, res))) return true;
       const action = parts[4];
-      if (action === "assign" && method === "POST") { sendJson(res, 201, { ok: true, data: assignReview(ctx.databaseFile, reviewId, String(body.reviewerId ?? ""), access.userId) }); return true; }
+      if (action === "assign" && method === "POST") { sendJson(res, 201, { ok: true, data: await assignReview(ctx.databaseFile, reviewId, String(body.reviewerId ?? ""), access.userId) }); return true; }
       if (action === "assignments" && method === "GET") { sendJson(res, 200, { ok: true, data: { items: listReviewAssignments(ctx.databaseFile, reviewId) } }); return true; }
       if (action === "annotations" && method === "POST") { sendJson(res, 201, { ok: true, data: addReviewAnnotation(ctx.databaseFile, reviewId, body, access.userId) }); return true; }
       if (action === "annotations" && method === "GET") { sendJson(res, 200, { ok: true, data: { items: listReviewAnnotations(ctx.databaseFile, reviewId) } }); return true; }

@@ -3,8 +3,34 @@ import type { Storyboard, Shot, ShotStatus, ShotSize, CameraAngle, CameraMovemen
 import { id, nowIso, safeAICall, DEFAULT_MODEL } from "../../utils.js";
 import { rootLogger } from "../../logger.js";
 import { AI_TIMEOUTS } from "../../utils.js";
+import {
+  runCreateShot,
+  runEditShot,
+  runSoftDeleteShot,
+  runRestoreShot,
+  runAttachVideoCandidate,
+  loadShotAggregate,
+  type CreateShotRunnerInput,
+  type EditShotRunnerInput,
+  type AttachVideoCandidateRunnerInput,
+  type SoftDeleteShotRunnerInput,
+  type RestoreShotRunnerInput,
+} from "./shot-command-runner.js";
+import { SHOT_TRANSITIONS } from "../../domain/storyboard/shot-state-machine.js";
 
 const log = rootLogger.child({ module: "storyboard" });
+
+/**
+ * 旧调用方使用的只读迁移校验门面。真正状态变更仍必须走 Shot 聚合命令。
+ */
+export function assertShotStatusTransition(from: ShotStatus, to: ShotStatus): void {
+  const allowed = SHOT_TRANSITIONS.some(
+    ([transitionFrom, , transitionTo]) => transitionFrom === from && transitionTo === to,
+  );
+  if (!allowed) {
+    throw new Error(`SHOT_INVALID_STATUS_TRANSITION:${from}->${to}`);
+  }
+}
 
 // ==================== Storyboard Input / Service ====================
 
@@ -85,6 +111,9 @@ export async function updateStoryboard(
 
 /**
  * deleteStoryboard - 软删除分镜，级联软删除其下所有镜头
+ *
+ * 注：级联软删除镜头会通过 runSoftDeleteShot 走 Shot 聚合，校验已审核镜头。
+ * 如果某个镜头已是 in_review/approved，聚合会抛 shot_protected_from_delete。
  */
 export async function deleteStoryboard(
   ctx: AppContext,
@@ -93,27 +122,40 @@ export async function deleteStoryboard(
   const storyboard = await ctx.storyboards.findById(storyboardId);
   if (!storyboard) throw new Error("分镜不存在");
 
-  // 检查是否有 approved 状态的镜头
+  // 先检查是否有 approved 状态的镜头（与原语义一致）
   const shots = await ctx.shots.findMany({ storyboard_id: storyboardId } as any);
   const hasApproved = shots.some((s) => s.status === "approved" && !s.deleted_at);
   if (hasApproved) {
     throw new Error("分镜下有已审核镜头，请先处理");
   }
 
-  const now = nowIso();
-  // 级联软删除镜头
+  // 级联软删除镜头：走 Shot 聚合命令
   for (const shot of shots) {
     if (!shot.deleted_at) {
-      await ctx.shots.update(shot.id, { deleted_at: now } as any);
+      try {
+        await runSoftDeleteShot(ctx, {
+          shotId: shot.id,
+          actorId: "system:deleteStoryboard",
+        } satisfies SoftDeleteShotRunnerInput);
+      } catch (err) {
+        // 已审核镜头（in_review/approved）禁止普通删除 —— 聚合抛出 DomainError。
+        // 仍允许删除 storyboard 本身（语义兼容）；记录错误但不阻断 storyboard 删除。
+        log.warn(
+          { event: "shot.cascade_soft_delete_blocked", shotId: shot.id, err: String(err) },
+          `级联软删除镜头被聚合拦截：${shot.id}`,
+        );
+      }
     }
   }
-  // 软删除分镜
-  await ctx.storyboards.update(storyboardId, { deleted_at: now } as any);
+  // 软删除分镜（Storyboard 仍是直接 patch —— Storyboard 不在本次 Shot 任务范围）
+  await ctx.storyboards.update(storyboardId, { deleted_at: nowIso() } as any);
   log.info({ event: "storyboard.deleted", id: storyboardId, shotCount: shots.length }, `分镜级联删除：${storyboardId}`);
 }
 
 /**
  * restoreStoryboard - 恢复软删除的分镜及其镜头
+ *
+ * 注：镜头恢复通过 runRestoreShot 走 Shot 聚合。
  */
 export async function restoreStoryboard(
   ctx: AppContext,
@@ -123,7 +165,17 @@ export async function restoreStoryboard(
   const shots = await ctx.shots.findMany({ storyboard_id: storyboardId } as any);
   for (const shot of shots) {
     if (shot.deleted_at) {
-      await ctx.shots.update(shot.id, { deleted_at: "" } as any);
+      try {
+        await runRestoreShot(ctx, {
+          shotId: shot.id,
+          actorId: "system:restoreStoryboard",
+        } satisfies RestoreShotRunnerInput);
+      } catch (err) {
+        log.warn(
+          { event: "shot.cascade_restore_failed", shotId: shot.id, err: String(err) },
+          `级联恢复镜头失败：${shot.id}`,
+        );
+      }
     }
   }
   log.info({ event: "storyboard.restored", id: storyboardId }, `分镜恢复：${storyboardId}`);
@@ -208,26 +260,9 @@ export type ShotInput = {
   prop_asset_ids?: string[];
   /** 乐观锁版本；提供时必须与当前版本一致。 */
   expected_version?: number;
+  /** 编辑/创建时的操作者 ID，传入命令作为 actorId 字段。 */
+  actor_id?: string;
 };
-
-/** 镜头状态机。任何状态变更都必须通过此映射校验。 */
-const SHOT_STATUS_TRANSITIONS: Readonly<Record<ShotStatus, readonly ShotStatus[]>> = {
-  draft: ["generating", "ready", "archived"],
-  generating: ["ready", "needs_fix", "rejected"],
-  ready: ["generating", "in_review", "needs_fix", "archived"],
-  in_review: ["approved", "needs_fix", "rejected"],
-  approved: ["needs_fix", "archived"],
-  needs_fix: ["generating", "ready", "in_review", "rejected", "archived"],
-  rejected: ["generating", "needs_fix", "archived"],
-  archived: ["draft"],
-};
-
-export function assertShotStatusTransition(from: ShotStatus, to: ShotStatus): void {
-  if (from === to) return;
-  if (!SHOT_STATUS_TRANSITIONS[from].includes(to)) {
-    throw new Error(`SHOT_INVALID_STATUS_TRANSITION: ${from} -> ${to}`);
-  }
-}
 
 /**
  * listShots - 列出分镜下的镜头（排除已删除）
@@ -243,6 +278,8 @@ export async function listShots(
 
 /**
  * createShot - 创建新镜头（必须属于一个分镜）
+ *
+ * 走 CreateShot 命令，由 Shot 聚合负责状态初始化（draft）与快照写入。
  */
 export async function createShot(
   ctx: AppContext,
@@ -256,58 +293,84 @@ export async function createShot(
     throw new Error("SHOT_MISSING_STORYBOARD: 分镜不存在");
   }
 
-  const shot: Shot = {
-    id: id("sh"),
-    project_id: input.project_id ?? storyboard.project_id,
-    storyboard_id: input.storyboard_id,
-    scene_id: input.scene_id ?? storyboard.scene_id,
+  // 归一化枚举 / 时长字段
+  const shotSize = validateShotSize(input.shot_size);
+  const cameraAngle = validateCameraAngle(input.camera_angle);
+  const cameraMovement = validateCameraMovement(input.camera_movement);
+  const duration = validateDuration(input.duration);
+
+  const runnerInput: CreateShotRunnerInput = {
+    projectId: input.project_id ?? storyboard.project_id,
+    storyboardId: input.storyboard_id,
+    sceneId: input.scene_id ?? storyboard.scene_id,
     episode: input.episode ?? storyboard.episode,
-    shot_number: input.shot_number ?? "shot_001",
+    shotNumber: input.shot_number ?? "shot_001",
     title: input.title ?? input.description ?? "",
     description: input.description ?? "",
-    duration: validateDuration(input.duration),
-    shot_size: validateShotSize(input.shot_size),
-    camera_angle: validateCameraAngle(input.camera_angle),
-    camera_movement: validateCameraMovement(input.camera_movement),
+    duration,
+    shotSize,
+    cameraAngle,
+    cameraMovement,
     dialogue: input.dialogue,
     notes: input.notes,
-    image_url: input.image_url ?? "",
-    video_task_id: input.video_task_id ?? "",
-    video_url: input.video_url ?? "",
-    status: input.status ?? "draft",
-    order: input.order ?? 0,
-    character_asset_ids: input.character_asset_ids ?? [],
-    prop_asset_ids: input.prop_asset_ids ?? [],
-    version: 1,
-    created_at: nowIso(),
-    updated_at: nowIso(),
+    imageUrl: input.image_url,
+    order: input.order,
+    characterAssetIds: input.character_asset_ids,
+    propAssetIds: input.prop_asset_ids,
+    actorId: input.actor_id ?? "system",
   };
-  await ctx.shots.insert(shot);
+
+  const shot = await runCreateShot(ctx, runnerInput);
   log.info({ event: "shot.created", id: shot.id, storyboardId: shot.storyboard_id }, `镜头创建成功：${shot.id}`);
   return shot;
 }
 
+/**
+ * updateShot - 编辑镜头元数据
+ *
+ * 注意：受保护字段（status / version / 审核结果等）不能通过此接口修改，
+ * 必须使用对应的命令（attachGeneratedVideoToShot / submit / approve / reject
+ * / archive / softDelete 等）。保留 expected_version 字段做乐观锁前置检查，
+ * 真正的乐观锁由聚合 Repository 在 save 时再次确认。
+ */
 export async function updateShot(
   ctx: AppContext,
   shotId: string,
   input: ShotInput
 ): Promise<Shot> {
-  const existing = await ctx.shots.findById(shotId);
-  if (!existing) throw new Error("镜头不存在");
+  // 1. 预读：用于 expected_version 校验
+  const existingAggregate = await loadShotAggregate(ctx, shotId);
+  if (!existingAggregate) throw new Error("镜头不存在");
+
+  // 2. 乐观锁：调用方传入的 expected_version 必须匹配当前聚合版本
   if (
     input.expected_version !== undefined
-    && input.expected_version !== (existing.version ?? 1)
+    && input.expected_version !== existingAggregate.version
   ) {
     throw new Error(
-      `SHOT_VERSION_CONFLICT: expected=${input.expected_version}, actual=${existing.version ?? 1}`,
+      `SHOT_VERSION_CONFLICT: expected=${input.expected_version}, actual=${existingAggregate.version}`,
     );
   }
+
+  // 3. 拒绝 status / video_url / video_task_id 等受保护字段通过此接口传入
   if (input.status !== undefined) {
-    assertShotStatusTransition(existing.status, input.status);
+    throw new Error(
+      "SHOT_INVALID_STATUS_TRANSITION: status 不能通过 updateShot 修改，请使用 startGeneration / attachGeneratedVideo / submitForReview 等命令",
+    );
+  }
+  if (input.video_url !== undefined) {
+    throw new Error(
+      "SHOT_PROTECTED_FIELD: video_url 不能通过 updateShot 修改，请使用 attachGeneratedVideoToShot",
+    );
+  }
+  if (input.video_task_id !== undefined) {
+    throw new Error(
+      "SHOT_PROTECTED_FIELD: video_task_id 不能通过 updateShot 修改，请使用 startGeneration / attachGeneratedVideoToShot",
+    );
   }
 
-  // 仅接受镜头自身可编辑字段；project_id/storyboard_id 等归属字段禁止通过通用更新迁移。
-  const patch: Partial<Shot> = {
+  // 4. 构建合法 patch：仅允许元数据字段
+  const patch: EditShotRunnerInput["patch"] = {
     ...(input.scene_id !== undefined ? { scene_id: input.scene_id } : {}),
     ...(input.episode !== undefined ? { episode: input.episode } : {}),
     ...(input.shot_number !== undefined ? { shot_number: input.shot_number } : {}),
@@ -316,63 +379,118 @@ export async function updateShot(
     ...(input.dialogue !== undefined ? { dialogue: input.dialogue } : {}),
     ...(input.notes !== undefined ? { notes: input.notes } : {}),
     ...(input.image_url !== undefined ? { image_url: input.image_url } : {}),
-    ...(input.video_task_id !== undefined ? { video_task_id: input.video_task_id } : {}),
-    ...(input.video_url !== undefined ? { video_url: input.video_url } : {}),
-    ...(input.status !== undefined ? { status: input.status } : {}),
     ...(input.order !== undefined ? { order: input.order } : {}),
     ...(input.character_asset_ids !== undefined ? { character_asset_ids: input.character_asset_ids } : {}),
     ...(input.prop_asset_ids !== undefined ? { prop_asset_ids: input.prop_asset_ids } : {}),
-    version: (existing.version ?? 1) + 1,
-    updated_at: nowIso(),
   };
-
   // 校验枚举字段（如果传了的话）
   if (input.shot_size !== undefined) {
-    patch.shot_size = validateShotSize(input.shot_size);
+    const v = validateShotSize(input.shot_size);
+    if (v) patch.shot_size = v as any;
   }
   if (input.camera_angle !== undefined) {
-    patch.camera_angle = validateCameraAngle(input.camera_angle);
+    const v = validateCameraAngle(input.camera_angle);
+    if (v) patch.camera_angle = v as any;
   }
   if (input.camera_movement !== undefined) {
-    patch.camera_movement = validateCameraMovement(input.camera_movement);
+    const v = validateCameraMovement(input.camera_movement);
+    if (v) patch.camera_movement = v as any;
   }
   if (input.duration !== undefined) {
     patch.duration = validateDuration(input.duration);
   }
 
-  await ctx.shots.update(shotId, patch);
-  return { ...existing, ...patch } as Shot;
+  const runnerInput: EditShotRunnerInput = {
+    shotId,
+    actorId: input.actor_id ?? "system",
+    patch,
+  };
+  return runEditShot(ctx, runnerInput);
 }
 
 /**
  * attachGeneratedVideoToShot - 由镜头模块接收视频模块的完成结果。
- * 视频模块不得直接写 shots 仓储；生成成功只将镜头推进到 ready，不等同于审核通过。
+ *
+ * 走 AttachShotVideoCandidate 命令（generating -> ready），由聚合负责
+ * 状态推进、版本递增、快照写入和领域事件入队。
+ *
+ * 重要：
+ *  - 视频模块不得直接写 shots 仓储；只调用此入口。
+ *  - 生成成功只将镜头推进到 ready，不等同于审核通过。
+ *  - 重复 providerRequestId 回调被聚合识别为幂等，不重复写候选。
+ *
+ * 参数说明：
+ *  - generationRequestId：发起此次生成的请求 id，聚合用它做幂等校验。
+ *    旧调用方可能未传入；本函数会回退到 `taskId`（视频任务 id），
+ *    并在交付报告中标注该路径。
+ *  - attachedBy：写入候选时的操作者（默认 "system"）。
  */
 export async function attachGeneratedVideoToShot(
   ctx: AppContext,
-  input: { shotId: string; taskId: string; videoUrl: string },
+  input: { shotId: string; taskId: string; videoUrl: string; generationRequestId?: string; attachedBy?: string },
 ): Promise<Shot> {
-  const shot = await ctx.shots.findById(input.shotId);
-  if (!shot) throw new Error("镜头不存在");
-  assertShotStatusTransition(shot.status, "ready");
-  return updateShot(ctx, input.shotId, {
-    video_url: input.videoUrl,
-    video_task_id: input.taskId,
-    status: "ready",
-    expected_version: shot.version ?? 1,
-  });
+  const existing = await loadShotAggregate(ctx, input.shotId);
+  if (!existing) throw new Error("镜头不存在");
+  // 防御性：非 generating 状态直接拒绝（与原语义一致）。
+  if (existing.status !== "generating") {
+    throw new Error(
+      `SHOT_INVALID_STATUS_TRANSITION: ${existing.status} -> ready (attachGeneratedVideo 要求 generating 状态)`,
+    );
+  }
+  const generationRequestId = input.generationRequestId || input.taskId;
+  const providerRequestId = `${input.taskId}:${generationRequestId}`;
+  const runnerInput: AttachVideoCandidateRunnerInput = {
+    shotId: input.shotId,
+    providerRequestId,
+    videoUrl: input.videoUrl,
+    generationRequestId,
+    attachedBy: input.attachedBy ?? "system",
+  };
+  await runAttachVideoCandidate(ctx, runnerInput);
+  const reloaded = await loadShotAggregate(ctx, input.shotId);
+  if (!reloaded) throw new Error("镜头不存在");
+  return {
+    id: reloaded.id,
+    project_id: reloaded.projectId,
+    storyboard_id: reloaded.storyboardId,
+    scene_id: reloaded.sceneId,
+    episode: reloaded.episode,
+    shot_number: reloaded.shotNumber,
+    title: reloaded.title,
+    description: reloaded.description,
+    duration: reloaded.duration,
+    shot_size: (reloaded.shotSize || undefined) as Shot["shot_size"],
+    camera_angle: (reloaded.cameraAngle || undefined) as Shot["camera_angle"],
+    camera_movement: (reloaded.cameraMovement || undefined) as Shot["camera_movement"],
+    dialogue: reloaded.dialogue,
+    notes: reloaded.notes,
+    image_url: reloaded.imageUrl,
+    video_task_id: reloaded.videoTaskId,
+    video_url: reloaded.videoUrl,
+    status: reloaded.status as ShotStatus,
+    order: reloaded.order,
+    character_asset_ids: [...reloaded.characterAssetIds],
+    prop_asset_ids: [...reloaded.propAssetIds],
+    version: reloaded.version,
+    created_at: reloaded.createdAt,
+    updated_at: reloaded.updatedAt,
+    deleted_at: reloaded.deletedAt || undefined,
+  } as Shot;
 }
 
 export async function deleteShot(
   ctx: AppContext,
   shotId: string
 ): Promise<void> {
-  const shot = await ctx.shots.findById(shotId);
-  if (!shot) throw new Error("镜头不存在");
-  if (shot.status === "approved") {
+  const existing = await loadShotAggregate(ctx, shotId);
+  if (!existing) throw new Error("镜头不存在");
+  if (existing.status === "approved") {
     throw new Error("已审核的镜头不能删除");
   }
-  await ctx.shots.update(shotId, { deleted_at: nowIso() } as any);
+  await runSoftDeleteShot(ctx, {
+    shotId,
+    actorId: "system",
+  } satisfies SoftDeleteShotRunnerInput);
   log.info({ event: "shot.deleted", id: shotId }, `镜头删除：${shotId}`);
 }
 
@@ -384,11 +502,21 @@ export async function deleteShot(
 export async function batchDeleteStoryboards(ctx: AppContext, ids: string[]): Promise<void> {
   const ts = nowIso();
   for (const storyboardId of ids) {
-    // 级联软删除镜头
+    // 级联软删除镜头：走 Shot 聚合命令
     const shots = await ctx.shots.findMany({ storyboard_id: storyboardId } as any);
     for (const shot of shots) {
       if (!shot.deleted_at) {
-        await ctx.shots.update(shot.id, { deleted_at: ts } as any);
+        try {
+          await runSoftDeleteShot(ctx, {
+            shotId: shot.id,
+            actorId: "system:batchDeleteStoryboards",
+          } satisfies SoftDeleteShotRunnerInput);
+        } catch (err) {
+          log.warn(
+            { event: "shot.cascade_soft_delete_blocked", shotId: shot.id, err: String(err) },
+            `批量级联软删除镜头被聚合拦截：${shot.id}`,
+          );
+        }
       }
     }
     await ctx.storyboards.update(storyboardId, { deleted_at: ts } as any);
@@ -633,28 +761,40 @@ export async function autoSplitShots(
 
 // ==================== 镜头快照 ====================
 
+/**
+ * createShotSnapshot - 创建外部快照记录。
+ *
+ * 注意：
+ *  - 业务快照（版本、状态变更、change_note 关联）由 Shot 聚合在每次
+ *    状态变更时自动写入 shot_snapshots；本函数用于"用户主动打点"。
+ *  - 旧实现直接 `ctx.shots.update(shotId, { version })` 自增版本号；
+ *    该写入绕过聚合——已在权限外 Shot 写入口报告。
+ *  - 本函数仅负责新增 shot_snapshots 行，不修改 shots.version。
+ *    version 由后续业务命令递增。
+ */
 export async function createShotSnapshot(
   ctx: AppContext,
   shotId: string,
   changeNote?: string
 ): Promise<void> {
-  const shot = await ctx.shots.findById(shotId);
+  const shot = await loadShotAggregate(ctx, shotId);
   if (!shot) throw new Error("镜头不存在");
 
-  const version = (shot.version ?? 1) + 1;
   await ctx.shotSnapshots.insert({
     id: id("ss"),
-    project_id: shot.project_id,
+    project_id: shot.projectId,
     shot_id: shotId,
-    version,
-    data: JSON.stringify(shot),
+    version: shot.version,
+    data: JSON.stringify(shot.toPersistenceRow()),
     change_note: changeNote ?? "",
     created_by: "system",
     created_at: nowIso(),
   } as any);
 
-  await ctx.shots.update(shotId, { version } as any);
-  log.info({ event: "shot.snapshot", shotId, version }, `镜头快照：${shotId} v${version}`);
+  log.info(
+    { event: "shot.snapshot", shotId, version: shot.version },
+    `镜头外部快照：${shotId} v${shot.version}`,
+  );
 }
 
 export async function listShotSnapshots(

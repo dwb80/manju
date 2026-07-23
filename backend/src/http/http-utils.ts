@@ -3,6 +3,11 @@
  * @description HTTP 工具函数：JSON 请求体解析 + Body 错误类。
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
+import {
+  DOMAIN_ERROR_CODES,
+  isDomainError,
+  type DomainError,
+} from "../domain/shared/domain-error.js";
 
 export class HttpBodyError extends Error {
   status: number;
@@ -83,4 +88,33 @@ export function sendError(
   data?: unknown,
 ): void {
   sendJson(res, status, { ok: false, code, message, data: data ?? null });
+}
+
+/** Stable HTTP mapping for the shared V2.1 domain error contract. */
+export function domainErrorHttpStatus(error: DomainError): number {
+  switch (error.code) {
+    case DOMAIN_ERROR_CODES.aggregateNotFound:
+      return 404;
+    case DOMAIN_ERROR_CODES.invalidStateTransition:
+    case DOMAIN_ERROR_CODES.aggregateVersionConflict:
+    case DOMAIN_ERROR_CODES.commandAlreadyProcessed:
+      return 409;
+    case DOMAIN_ERROR_CODES.aggregateInvariantViolated:
+      return 422;
+  }
+}
+
+export function sendDomainError(
+  res: ServerResponse,
+  error: unknown,
+): boolean {
+  if (!isDomainError(error)) return false;
+  sendError(
+    res,
+    domainErrorHttpStatus(error),
+    error.code,
+    error.message,
+    error.details,
+  );
+  return true;
 }

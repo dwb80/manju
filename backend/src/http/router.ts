@@ -21,12 +21,14 @@ import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
+import { isDomainError } from "../domain/shared/domain-error.js";
 import { rootLogger, withLogContext, logLineToFile } from "../logger.js";
 import { getRuntimeConfig } from "../config/env.js";
 import type { AppContext } from "../services/app.js";
 import { AuthService, resolveAuthMode, type AuthPrincipal } from "../services/auth.js";
 import { getRawDatabase } from "../storage/sqlite.js";
 import { attachDebugHook } from "./request-debug.js";
+import { domainErrorHttpStatus } from "./http-utils.js";
 import { addFavorite, addMessage, createConversation, createLocalImageTask, deleteConversation, ensureConversation, generateImage, generateVideo, listConversations, listImages, listVideos, openProjectFolder, queryImage, queryVideo, updateConversation, updateSettings } from "../services/domain.js";
 import { enhancePrompt } from "../services/domain/image.js";
 import {
@@ -294,6 +296,16 @@ function errorStatusForMessage(message: string): number {
  * @returns {void}
  */
 function sendError(res: ServerResponse, error: unknown, status = 400): void {
+  if (isDomainError(error)) {
+    const domainStatus = domainErrorHttpStatus(error);
+    res.writeHead(domainStatus, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({
+      code: error.code,
+      message: error.message,
+      data: error.details,
+    }));
+    return;
+  }
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify({ code: errorCodeForStatus(status), message: (error as Error).message ?? "error", data: null }));
 }
@@ -1763,7 +1775,11 @@ async function handleApi(ctx: AppContext, req: IncomingMessage, res: ServerRespo
         canAccessProject: (projectId) => canAccessProject(ctx, principal, projectId),
       });
     }
-    if (parts[0] === "api" && parts[1] === "models") {
+    if (
+      parts[0] === "api" &&
+      parts[1] === "models" &&
+      parts[2] !== "capabilities"
+    ) {
       return handleModelsRouter(ctx, req, res);
     }
     if (parts[0] === "api" && parts[1] === "publish") {

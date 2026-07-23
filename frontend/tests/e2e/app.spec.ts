@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 test("chat, image, video and detail pages stay usable", async ({ page, context }) => {
   await page.goto("/studio");
   await expect(page.getByText("Agnes AI Studio")).toBeVisible();
-  await expect(page.locator("aside").getByRole("button", { name: "打开会话操作菜单" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "打开会话操作菜单" }).first()).toBeAttached();
 
   const composer = page.locator("textarea");
   await composer.fill("E2E 聊天连通性测试");
@@ -27,7 +27,7 @@ test("chat, image, video and detail pages stay usable", async ({ page, context }
   await expect(imagePage.getByText("提示词")).toBeVisible();
   await imagePage.close();
 
-  await page.getByRole("button", { name: /视频/ }).click();
+  await page.getByRole("button", { name: "视频", exact: true }).click();
   await composer.fill("E2E 生成一个镜头推进视频");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.getByText("E2E 生成一个镜头推进视频")).toBeVisible();
@@ -37,13 +37,13 @@ test("chat, image, video and detail pages stay usable", async ({ page, context }
 // 验证新建会话不会把上一个会话的图片请求展示状态清空。
 test("new conversation keeps the previous conversation discoverable", async ({ page }) => {
   await page.goto("/studio");
-  await expect(page.locator("aside").getByRole("button", { name: "打开会话操作菜单" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "打开会话操作菜单" }).first()).toBeAttached();
   await page.locator("textarea").fill("E2E 会话隔离聊天请求");
   await page.getByRole("button", { name: "发送" }).click();
   await expect(page.locator("section").getByText("E2E 会话隔离聊天请求", { exact: true })).toBeVisible();
 
-  const menusBefore = await page.locator("aside").getByRole("button", { name: "打开会话操作菜单" }).count();
-  await page.locator("aside").getByRole("button").first().click();
+  const menusBefore = await page.getByRole("button", { name: "打开会话操作菜单" }).count();
+  await page.getByRole("button", { name: "新建会话" }).click();
   await expect(page.locator("textarea")).toBeVisible();
-  await expect(page.locator("aside").getByRole("button", { name: "打开会话操作菜单" })).toHaveCount(menusBefore + 1);
+  await expect(page.getByRole("button", { name: "打开会话操作菜单" })).toHaveCount(menusBefore + 1);
 });

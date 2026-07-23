@@ -1,0 +1,68 @@
+{
+  "shot": {
+    "states": ["draft", "generating", "ready", "in_review", "approved", "needs_fix", "rejected", "archived"],
+    "transitions": [
+      ["draft", "markReady", "ready"],
+      ["draft", "startGeneration", "generating"],
+      ["ready", "startGeneration", "generating"],
+      ["needs_fix", "startGeneration", "generating"],
+      ["rejected", "startGeneration", "generating"],
+      ["generating", "attachGeneratedVideo", "ready"],
+      ["ready", "submitForReview", "in_review"],
+      ["needs_fix", "submitForReview", "in_review"],
+      ["in_review", "approve", "approved"],
+      ["in_review", "reject", "rejected"],
+      ["in_review", "requestFix", "needs_fix"],
+      ["approved", "requestFix", "needs_fix"],
+      ["rejected", "requestFix", "needs_fix"],
+      ["ready", "archive", "archived"],
+      ["approved", "archive", "archived"],
+      ["needs_fix", "archive", "archived"],
+      ["rejected", "archive", "archived"],
+      ["archived", "restore", "draft"]
+    ]
+  },
+  "review": {
+    "states": ["pending", "in_review", "approved", "rejected", "needs_fix", "closed", "cancelled"],
+    "transitions": [
+      ["pending", "start", "in_review"],
+      ["pending", "cancel", "cancelled"],
+      ["in_review", "approve", "approved"],
+      ["in_review", "reject", "rejected"],
+      ["rejected", "markNeedsFix", "needs_fix"],
+      ["needs_fix", "resubmit", "pending"],
+      ["approved", "close", "closed"],
+      ["rejected", "close", "closed"]
+    ]
+  },
+  "pipelineRun": {
+    "states": ["pending", "running", "completed", "failed", "paused"],
+    "transitions": [
+      ["pending", "startRun", "running"],
+      ["running", "pauseRun", "paused"],
+      ["paused", "resumeRun", "running"],
+      ["running", "finalizeCompleted", "completed"],
+      ["running", "finalizeFailed", "failed"],
+      ["failed", "recoverRun", "running"]
+    ]
+  },
+  "pipelineNode": {
+    "states": ["pending", "running", "completed", "failed", "skipped", "retrying", "paused"],
+    "transitions": [
+      ["pending", "startNode", "running"],
+      ["pending", "pauseNode", "paused"],
+      ["pending", "skipNode", "skipped"],
+      ["pending", "reuseCompletedResult", "completed"],
+      ["running", "completeNode", "completed"],
+      ["running", "retryNodeExecution", "retrying"],
+      ["running", "failNode", "failed"],
+      ["retrying", "startNode", "running"],
+      ["retrying", "pauseNode", "paused"],
+      ["retrying", "skipNode", "skipped"],
+      ["retrying", "failNode", "failed"],
+      ["paused", "resumeNode", "pending"],
+      ["paused", "skipNode", "skipped"],
+      ["failed", "retryNode", "pending"]
+    ]
+  }
+}

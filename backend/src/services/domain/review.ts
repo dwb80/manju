@@ -49,14 +49,15 @@ export async function listProjectReviews(ctx: AppContext, projectId: string, fil
 export async function createProjectReview(ctx: AppContext, projectId: string, input: ProjectReviewInput): Promise<ProjectReview> {
   if (!await ctx.projects.findById(projectId)) throw new Error("project not found");
   const now = nowIso();
-  const targetType = ["storyboard", "image", "video", "asset", "clip"].includes(input.target_type ?? "") ? input.target_type as ProjectReview["target_type"] : "storyboard";
-  const targetId = requireString(input.target_id, "target_id");
+  const targetType = ["storyboard", "shot", "asset"].includes(String(input.target_type))
+    ? String(input.target_type) as ProjectReview["target_type"]
+    : "storyboard";
   const review: ProjectReview = {
     id: id("prv"),
     project_id: projectId,
     target_type: targetType,
-    target_id: targetId,
-    reviewer: input.reviewer?.trim() || "审核人",
+    target_id: requireString(input.target_id, "target_id"),
+    reviewer: input.reviewer ? String(input.reviewer) : "",
     status: normalizeProjectReviewStatus(input.status),
     comment: requireString(input.comment, "comment").trim(),
     created_at: now,
@@ -77,13 +78,13 @@ export async function createProjectReview(ctx: AppContext, projectId: string, in
  */
 export async function updateProjectReview(ctx: AppContext, projectId: string, reviewId: string, patch: ProjectReviewInput): Promise<ProjectReview> {
   const existing = await ctx.projectReviews.findById(reviewId);
-  if (!existing || existing.project_id !== projectId) throw new Error("project review not found");
+  if (!existing || existing.project_id !== projectId) throw new Error("review not found");
   const next: Partial<ProjectReview> = { updated_at: nowIso() };
-  if (typeof patch.reviewer === "string") next.reviewer = patch.reviewer.trim() || existing.reviewer;
-  if (typeof patch.status === "string") next.status = normalizeProjectReviewStatus(patch.status);
-  if (typeof patch.comment === "string") next.comment = patch.comment.trim();
+  if (patch.reviewer !== undefined) next.reviewer = String(patch.reviewer);
+  if (patch.status !== undefined) next.status = normalizeProjectReviewStatus(patch.status);
+  if (patch.comment !== undefined) next.comment = requireString(patch.comment, "comment").trim();
   await ctx.projectReviews.update(reviewId, next);
-  return (await ctx.projectReviews.findById(reviewId)) as ProjectReview;
+  return (await ctx.projectReviews.findById(reviewId))!;
 }
 
 /**
@@ -95,6 +96,6 @@ export async function updateProjectReview(ctx: AppContext, projectId: string, re
  */
 export async function deleteProjectReview(ctx: AppContext, projectId: string, reviewId: string): Promise<void> {
   const existing = await ctx.projectReviews.findById(reviewId);
-  if (!existing || existing.project_id !== projectId) throw new Error("project review not found");
+  if (!existing || existing.project_id !== projectId) throw new Error("review not found");
   await ctx.projectReviews.delete(reviewId);
 }

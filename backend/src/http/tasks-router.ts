@@ -215,15 +215,12 @@ export async function handleTasksRouter(
     try {
       const all = (await ctx.pipelineNodes.findMany({})) as Array<{
         id: string;
+        run_id?: string;
         status?: string;
       }>;
       for (const n of all) {
-        if (n && n.id === taskId && n.status === "failed") {
-          await ctx.pipelineNodes.update(n.id, {
-            status: "pending",
-            error: "",
-            updated_at: nowIso(),
-          } as any);
+        if (n && n.id === taskId && n.status === "failed" && n.run_id) {
+          await ctx.pipelineRunService.retryNode(n.run_id, n.id);
           pipelineNodeReset = true;
         }
       }

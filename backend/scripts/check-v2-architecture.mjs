@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import "./check-ddd-boundaries.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const violations = [];

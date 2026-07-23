@@ -79,7 +79,11 @@ export function LayoutShell({ children }: Readonly<{ children: React.ReactNode }
     <TooltipProvider delayDuration={200}>
       <div className="flex h-screen w-screen overflow-hidden bg-[#181818]">
         <AppSidebar />
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+        >
           <GlobalTopBar />
           <div className="min-h-0 flex-1 overflow-auto">{children}</div>
         </main>

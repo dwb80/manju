@@ -1,11 +1,22 @@
 /**
  * @file review-module.ts
- * @description 审核模块的增删查改服务，提供内容审核记录的创建、查询、更新、删除等功能
+ * @description 审核模块旧 CRUD 服务（V2.1 DDD 改造后已冻结）。
+ *
+ * ## 模型统一（迭代计划 §6.6）
+ *  - `review_items` 为本迭代权威审核聚合存储，由 ReviewAggregate 独占状态写入。
+ *  - 旧 `reviews` 表冻结为只读兼容层：本文件只保留读路径（listReviews），
+ *    写路径（createReview / updateReview / deleteReview）改为抛出弃用错误，
+ *    指引调用方改用 reviewService（基于 ReviewAggregate）。
+ *  - 不允许两个审核模型继续分别维护同一业务事实。
+ *
+ * 调用方迁移指引：
+ *  - 创建审核 → ctx.reviewService.submit(...)
+ *  - 通过 / 驳回 / 取消 / 关闭 / 重新提交 → ctx.reviewService.{approve|reject|...}
+ *  - 列表 / 统计 → ctx.reviewService.{listByStatus|stats}
  */
 
 import type { AppContext } from "../app.js";
 import type { Review } from "../../types/review.js";
-import { id, nowIso } from "../../utils.js";
 
 export type ReviewInput = {
   project_id?: string;
@@ -20,7 +31,7 @@ export type ReviewInput = {
 };
 
 /**
- * listReviews - 列出项目中的审核记录
+ * listReviews - 列出项目中的审核记录（只读，兼容旧 reviews 表）。
  * @param {AppContext} ctx - 应用上下文
  * @param {string} projectId - 可选的项目 ID 过滤条件
  * @returns {Promise<Review[]>} 审核记录列表
@@ -31,49 +42,35 @@ export async function listReviews(ctx: AppContext, projectId?: string): Promise<
 }
 
 /**
- * createReview - 创建新审核记录
- * @param {AppContext} ctx - 应用上下文
- * @param {ReviewInput} input - 审核输入数据
- * @returns {Promise<Review>} 创建的审核记录对象
+ * @deprecated 已冻结。审核写入由 ReviewAggregate 独占，请改用 ctx.reviewService.submit。
+ * 旧 reviews 表不再接受直接写入，避免与 review_items 权威模型分叉。
  */
-export async function createReview(ctx: AppContext, input: ReviewInput): Promise<Review> {
-  const review: Review = {
-    id: id("review"),
-    project_id: input.project_id ?? "",
-    content_type: (input.content_type as Review["content_type"]) ?? "image",
-    content_id: input.content_id ?? "",
-    content_title: input.content_title ?? "",
-    result: (input.result as Review["result"]) ?? "pending",
-    score: input.score,
-    comment: input.comment,
-    reviewer_id: input.reviewer_id ?? "",
-    reviewer_name: input.reviewer_name ?? "",
-    created_at: nowIso(),
-    updated_at: nowIso(),
-  };
-  await ctx.reviews.insert(review);
-  return review;
-}
-
-export async function updateReview(ctx: AppContext, reviewId: string, input: ReviewInput): Promise<Review> {
-  const existing = await ctx.reviews.findById(reviewId);
-  if (!existing) throw new Error("审核不存在");
-  const patch: Partial<Review> = {
-    ...input,
-    content_type: input.content_type ? (input.content_type as Review["content_type"]) : undefined,
-    result: input.result ? (input.result as Review["result"]) : undefined,
-    updated_at: nowIso(),
-  };
-  await ctx.reviews.update(reviewId, patch);
-  return { ...existing, ...patch } as Review;
+export async function createReview(_ctx: AppContext, _input: ReviewInput): Promise<Review> {
+  throw new Error(
+    "review_module_frozen: createReview 已弃用，请改用 ctx.reviewService.submit（基于 ReviewAggregate）",
+  );
 }
 
 /**
- * deleteReview - 删除指定审核记录
- * @param {AppContext} ctx - 应用上下文
- * @param {string} reviewId - 审核记录 ID
- * @returns {Promise<void>}
+ * @deprecated 已冻结。审核状态只能通过 ReviewAggregate 行为修改，
+ * 请改用 ctx.reviewService.{approve|reject|startReview|close|cancel|resubmit}。
  */
-export async function deleteReview(ctx: AppContext, reviewId: string): Promise<void> {
-  await ctx.reviews.delete(reviewId);
+export async function updateReview(
+  _ctx: AppContext,
+  reviewId: string,
+  _input: ReviewInput,
+): Promise<Review> {
+  throw new Error(
+    `review_module_frozen: updateReview(${reviewId}) 已弃用，审核状态由 ReviewAggregate 独占`,
+  );
+}
+
+/**
+ * @deprecated 已冻结。审核记录删除不在本迭代范围；如需终止审核请使用
+ * ctx.reviewService.cancel（pending → cancelled）或 ctx.reviewService.close（终态化）。
+ */
+export async function deleteReview(_ctx: AppContext, reviewId: string): Promise<void> {
+  throw new Error(
+    `review_module_frozen: deleteReview(${reviewId}) 已弃用，请改用 cancel/close 终态化审核`,
+  );
 }

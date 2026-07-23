@@ -241,6 +241,8 @@ export interface AppContext {
   internalAuth: import("./internal-auth.js").InternalAuthService;
   /** V2.1 REM-P1-008 跨模块事务/Outbox 管理器。 */
   transactionService: import("./horizontal/transaction-service.js").TransactionService;
+  /** V2.1 三聚合 Outbox 事件消费者。 */
+  aggregateEventDispatcher: import("../application/integration/aggregate-event-dispatcher.js").AggregateEventDispatcher;
   /** V2.1 REM-P1-009 节点级重试策略（质控低分自动重试）。 */
   retryPolicyService: import("./horizontal/retry-policy-service.js").RetryPolicyService;
 }
@@ -446,6 +448,12 @@ export async function createAppContext(
   });
   // REQ-PIPE-W0：pipelineRunService 需引用 ctx 里的所有 pipeline 仓储 + bus + tracker
   (ctxTyped as { pipelineRunService: unknown }).pipelineRunService = (await import("./module-domain/pipeline-run-service.js")).createPipelineRunService(ctxTyped);
+  (ctxTyped as { aggregateEventDispatcher: unknown }).aggregateEventDispatcher =
+    (await import("../application/integration/aggregate-event-dispatcher.js"))
+      .createAggregateEventDispatcher({
+        databaseFile,
+        transactionService: ctxTyped.transactionService,
+      });
   // V2 W6+ REQ-PIPE-004 质检中心服务
   (ctxTyped as { qualityDetectionService: unknown }).qualityDetectionService =
     (await import("./module-domain/quality-detection-service.js"))
@@ -457,6 +465,7 @@ export async function createAppContext(
     if (closePromise) return closePromise;
     try { (ctxTyped as { slaMonitor?: { stop?: () => void } }).slaMonitor?.stop?.(); } catch { /* ignore */ }
     closePromise = (async () => {
+      await ctxTyped.transactionService.stopBackgroundDispatcher();
       await ctxTyped.pipelineRunService.waitForIdle();
       try { (ctxTyped as { concurrencyTracker?: { dispose?: () => void } }).concurrencyTracker?.dispose?.(); } catch { /* ignore */ }
       closeDatabase(databaseFile);
@@ -558,7 +567,12 @@ export async function createAppContext(
   // 仅在非测试环境启动，避免测试用例被后台 timer 干扰；测试可显式调用 startBackgroundDispatcher。
   if (process.env.NODE_ENV !== "test" && process.env.MANJU_DISABLE_OUTBOX_DISPATCHER !== "1") {
     try {
-      (ctx as any).transactionService.startBackgroundDispatcher({ intervalMs: 2000, batchSize: 32 });
+      (ctx as any).transactionService.startBackgroundDispatcher({
+        intervalMs: 2000,
+        batchSize: 32,
+        publish: (event: import("./horizontal/transaction-service.js").OutboxRecord) =>
+          ctxTyped.aggregateEventDispatcher.publish(event),
+      });
       rootLogger.info({ event: "outbox.dispatcher_started", intervalMs: 2000 }, "Outbox 后台 dispatcher 已启动");
     } catch (e) {
       rootLogger.warn({ err: e }, "Outbox dispatcher 启动失败（不影响主流程）");

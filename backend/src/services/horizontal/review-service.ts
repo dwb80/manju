@@ -1,19 +1,26 @@
 /**
  * @file review-service.ts
- * @description 审核中心服务。7 状态机：pending → in_review → (approved | rejected) → (closed | needs_fix) → ...。
+ * @description 审核中心服务（V2.1 DDD 改造版）。
  *
- * ## 设计要点
- *  - submit() 自动 upsert：同 target_type + target_id 已存在则重置为 pending。
- *  - approve() 自动通知 submitter（如非审核员本人）。
- *  - reject() 连续 3 次打回时通知项目 owner（自动升级）。
- *  - reject() 同步创建 / 更新 review todo，让被打回方有明确跟进项。
- *  - 所有变更都走 review_histories 表存证，便于审计 / 复盘。
+ * ## 改造要点（迭代计划 §6）
+ *  - 状态、驳回次数、重新提交次数、审核历史只能通过 ReviewAggregate 修改。
+ *  - 所有变更走 Application Command Handler（submit/start/approve/reject/resubmit/
+ *    close/cancel），命令在 UnitOfWork 事务内执行：加载聚合 → 应用行为 → 乐观锁保存 →
+ *    记录幂等键 → 入队领域事件。状态/历史/快照/Outbox 在同一 SQLite 事务原子提交。
+ *  - 审核结果只产出领域事件（ReviewApproved/ReviewRejected/...），不直接修改 Shot；
+ *    跨聚合联动由事件消费者负责。
+ *  - SLA 元数据字段（sla_due_at / escalation_level / escalated_at / breached_at）由
+ *    SLA 服务独占，本服务不再写状态字段；submit 时的 sla_due_at 初始化仍保留为
+ *    非状态元数据写入（SLA 文件不在本任务授权范围，详见交付报告）。
+ *  - 旧 `reviews` 表（review-module.ts）冻结为只读，本服务不再使用。
  *
- * ## 表结构
- *  - review_items(id, target_type, target_id, project_id, status, rejected_count, ...)
- *  - review_histories(id, review_id, from_status, to_status, action, actor_id, comment, metadata, created_at)
- *  - todos（同步生成 review todo）
+ * ## 保留的横切副作用（非聚合状态）
+ *  - 通知 submitter / 项目 owner
+ *  - 审计日志（auditService.log）
+ *  - 返工 todo 创建 / 更新
+ *  这些副作用在命令事务提交后执行，失败不回滚聚合状态（与旧实现一致）。
  */
+
 import { id, nowIso } from "../../utils.js";
 import { rootLogger } from "../../logger.js";
 import type { AppContext } from "../app.js";
@@ -27,11 +34,28 @@ import type {
   ReviewTargetType,
   RejectionReasonCode,
   ReviewHistory,
-  ReviewAction,
-  ReviewConfig,
 } from "../../types/horizontal.js";
 import type { TodoStatus, TodoPriority } from "../../types/todo.js";
 import { computeSlaDueAt as computeSlaDueAtFn } from "./sla-utils.js";
+
+import { SqliteReviewRepository } from "../../infrastructure/persistence/sqlite-review.repository.js";
+import { createTransactionServiceUnitOfWork } from "../../infrastructure/unit-of-work/transaction-service-unit-of-work.js";
+import type { ReviewRepository } from "../../domain/review/review.repository.js";
+import type { ReviewAggregate } from "../../domain/review/review.aggregate.js";
+import type { UnitOfWork } from "../../application/shared/unit-of-work.js";
+import {
+  assertCommandNotProcessed,
+  enqueuePulledEvents,
+  loadReviewOrThrow,
+  type ReviewHandlerDeps,
+} from "../../application/review/review-command-handler.js";
+import { handleSubmitReview } from "../../application/review/submit-review.command.js";
+import { handleStartReview } from "../../application/review/start-review.command.js";
+import { handleApproveReview } from "../../application/review/approve-review.command.js";
+import { handleRejectReview } from "../../application/review/reject-review.command.js";
+import { handleResubmitReview } from "../../application/review/resubmit-review.command.js";
+import { handleCloseReview } from "../../application/review/close-review.command.js";
+import { handleCancelReview } from "../../application/review/cancel-review.command.js";
 
 /** 内部 helper：包装 sla-utils 的 computeSlaDueAt，单测可 mock。 */
 function computeSlaDueAtLocal(
@@ -41,7 +65,13 @@ function computeSlaDueAtLocal(
   return computeSlaDueAtFn(review, config);
 }
 
-/** 11 种打回原因（前端下拉框）。 */
+// 局部类型引用（避免循环导入 ReviewConfig）。
+type ReviewConfig = {
+  sla_pending_hours: number;
+  sla_review_hours: number;
+};
+
+/** 11 种打回原因（前端下拉框）。保留导出以兼容旧引用。 */
 export const REJECTION_REASONS: Array<{ code: RejectionReasonCode; label: string }> = [
   { code: "character_inconsistent", label: "人设偏离" },
   { code: "costume_wrong", label: "服装错" },
@@ -56,12 +86,15 @@ export const REJECTION_REASONS: Array<{ code: RejectionReasonCode; label: string
   { code: "other", label: "其他" },
 ];
 
-/** 合法状态转移矩阵。 */
+/**
+ * 旧状态转移矩阵（保留导出以兼容外部引用；权威状态机以 review-state-machine.ts 为准）。
+ * 注意：旧表允许 rejected -> pending；新冻结状态机要求 rejected -> needs_fix -> pending。
+ */
 export const VALID_TRANSITIONS: Record<ReviewStatus, ReviewStatus[]> = {
   pending: ["in_review", "cancelled"],
   in_review: ["approved", "rejected"],
   approved: ["closed"],
-  rejected: ["pending", "cancelled"],
+  rejected: ["needs_fix", "closed"],
   needs_fix: ["pending"],
   closed: [],
   cancelled: [],
@@ -105,264 +138,160 @@ export interface ReviewService {
 export function createReviewService(ctx: AppContext): ReviewService {
   const log = rootLogger.child({ module: "review-service" });
 
-  async function recordHistory(input: {
-    reviewId: string;
-    fromStatus: ReviewStatus | "";
-    toStatus: ReviewStatus;
-    action: ReviewAction;
-    actorId: string;
-    comment?: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<void> {
-    try {
-      const now = nowIso();
-      const entry: ReviewHistory = {
-        id: id("review_history"),
-        review_id: input.reviewId,
-        from_status: input.fromStatus,
-        to_status: input.toStatus,
-        action: input.action,
-        actor_id: input.actorId,
-        comment: input.comment ?? "",
-        metadata: input.metadata ? JSON.stringify(input.metadata) : "",
-        created_at: now,
-      };
-      await ctx.reviewHistories.insert(entry);
-    } catch (err) {
-      log.warn(
-        { event: "review.history_record_failed", reviewId: input.reviewId, err: String(err) },
-        "审核历史写入失败",
-      );
+  // 聚合命令依赖：Repository + UnitOfWork。惰性构造，避免启动期建表顺序问题。
+  let depsCache: ReviewHandlerDeps | null = null;
+  function deps(): ReviewHandlerDeps {
+    if (!depsCache) {
+      const repo: ReviewRepository = new SqliteReviewRepository(ctx.databaseFile);
+      const uow: UnitOfWork = createTransactionServiceUnitOfWork(ctx.transactionService);
+      depsCache = { repo, uow };
     }
+    return depsCache;
+  }
+
+  /** 命令事务提交后，回读完整 ReviewItem（含 SLA / 展示字段）返回给调用方。 */
+  async function reloadReview(reviewId: string): Promise<ReviewItem> {
+    const row = await ctx.reviewItems.findById(reviewId);
+    if (!row) throw new Error(`review_not_found: ${reviewId}`);
+    return row;
   }
 
   return {
     async submit({ targetType, targetId, projectId, submittedBy }) {
-      const all = await ctx.reviewItems.findMany();
-      const existing = all.find((r) => r.target_type === targetType && r.target_id === targetId);
-      const now = nowIso();
-      if (existing) {
-        const updated: ReviewItem = {
-          ...existing,
-          status: "pending",
-          approved_at: "",
-          project_id: projectId,
-          updated_at: now,
-        };
-        await ctx.reviewItems.update(existing.id, updated);
-        const reworkTodo = await ctx.todos.findOne({
-          owner: submittedBy,
-          link_type: "review",
-          link_id: existing.id,
+      const d = deps();
+      // 同目标已有 needs_fix 审核 → 走 resubmit（同链续审）；否则创建新审核。
+      const existing = await d.repo.findByTarget(targetType, targetId);
+      let aggregate: ReviewAggregate;
+      if (existing && existing.status === "needs_fix") {
+        aggregate = await handleResubmitReview(d, {
+          commandId: id("cmd"),
+          type: "ResubmitReview",
+          issuedAt: nowIso(),
+          reviewId: existing.id,
+          submittedBy,
         });
-        if (reworkTodo && reworkTodo.status !== "done") {
-          await ctx.todos.update(reworkTodo.id, { status: "done", updated_at: now });
-        }
-        log.info(
-          {
-            event: "review.resubmit",
-            reviewId: existing.id,
-            targetType,
-            targetId,
-            projectId,
-            rejectedCount: existing.rejected_count,
-          },
-          `审核重新提交：reviewId=${existing.id}，目标类型=${targetType}，累计退回=${existing.rejected_count}次`,
-        );
-        ctx.auditService.log(submittedBy, "review.submit", {
-          type: "review",
-          id: existing.id,
-          payload: { targetType, targetId, projectId, resubmit: true, rejected_count: existing.rejected_count },
+      } else {
+        aggregate = await handleSubmitReview(d, {
+          commandId: id("cmd"),
+          type: "SubmitReview",
+          issuedAt: nowIso(),
+          targetType,
+          targetId,
+          projectId,
+          submittedBy,
         });
-        return updated;
       }
-      const created: ReviewItem = {
-        id: id("rev"),
-        target_type: targetType,
-        target_id: targetId,
-        project_id: projectId,
-        status: "pending",
-        rejected_count: 0,
-        rejection_reason: "",
-        approved_at: "",
-        submitted_by: submittedBy,
-        reviewed_by: "",
-        created_at: now,
-        updated_at: now,
-        // V2 W8 REQ-PIPE-005-03 SLA 升级：初始化 4 个 SLA 字段
-        sla_due_at: "",       // 由 sla-monitor.tick() 在首次扫描时按 config 补算
-        escalation_level: 0,
-        escalated_at: "",
-        breached_at: "",
-        // V2 W12 P0 REQ-REVIEW-F16：前序 review 链（首次提交初始化）
-        previous_review_id: "",
-        chain_id: id("rc"),
-      };
-      await ctx.reviewItems.insert(created);
-      // V2 W8：创建后立即算一次 sla_due_at（用项目默认 config），
-      // 这样 24h 的 pending SLA 可以从入库瞬间开始计时，而不是等下次 tick。
+      // SLA due_at 初始化（非状态元数据；SLA 文件不在授权范围，保留此处的最小写入）。
       try {
         const config = await ctx.slaMonitor.getOrCreateConfig(projectId);
-        const due = computeSlaDueAtLocal(created, config);
+        const due = computeSlaDueAtLocal(
+          { status: "pending", created_at: aggregate.createdAt, updated_at: aggregate.updatedAt },
+          config,
+        );
         if (due) {
-          await ctx.reviewItems.update(created.id, { sla_due_at: due, updated_at: now } as any);
-          created.sla_due_at = due;
+          await ctx.reviewItems.update(aggregate.id, { sla_due_at: due } as Partial<ReviewItem>);
         }
       } catch (e) {
-        // SLA 初始化失败不应阻塞审核提交
-        rootLogger.warn({ err: e, reviewId: created.id }, "SLA 初始 due_at 写入失败（非阻塞）");
+        rootLogger.warn({ err: e, reviewId: aggregate.id }, "SLA 初始 due_at 写入失败（非阻塞）");
       }
       log.info(
-        { event: "review.submit", reviewId: created.id, targetType, targetId, projectId },
-        `审核提交：reviewId=${created.id}，目标类型=${targetType}，项目=${projectId}`,
+        { event: "review.submit", reviewId: aggregate.id, targetType, targetId, projectId },
+        `审核提交：reviewId=${aggregate.id}，目标类型=${targetType}，项目=${projectId}`,
       );
       ctx.auditService.log(submittedBy, "review.submit", {
         type: "review",
-        id: created.id,
+        id: aggregate.id,
         payload: { targetType, targetId, projectId },
       });
-      return created;
+      return reloadReview(aggregate.id);
     },
 
     async approve(reviewId, reviewerId) {
-      const all = await ctx.reviewItems.findMany();
-      const found = all.find((r) => r.id === reviewId);
-      if (!found) {
-        log.warn({ event: "review.approve_not_found", reviewId }, `审核通过失败：记录不存在，reviewId=${reviewId}`);
-        throw new Error(`review_not_found: ${reviewId}`);
-      }
-      if (found.status !== "pending" && found.status !== "in_review") {
-        log.warn(
-          { event: "review.approve_invalid_status", reviewId, currentStatus: found.status },
-          `审核通过失败：状态不是 pending/in_review，当前=${found.status}`,
-        );
-        throw new Error("只有待审/审核中记录可以通过");
-      }
-      const now = nowIso();
-      const updated: ReviewItem = {
-        ...found,
-        status: "approved",
-        approved_at: now,
-        reviewed_by: reviewerId,
-        rejection_reason: "",
-        updated_at: now,
-      };
-      await ctx.reviewItems.update(reviewId, updated);
-      await recordHistory({
+      const aggregate = await handleApproveReview(deps(), {
+        commandId: id("cmd"),
+        type: "ApproveReview",
+        issuedAt: nowIso(),
         reviewId,
-        fromStatus: found.status,
-        toStatus: "approved",
-        action: "approve",
-        actorId: reviewerId,
-        metadata: { rejectedCount: found.rejected_count },
+        reviewerId,
       });
+      const row = await reloadReview(reviewId);
       log.info(
-        {
-          event: "review.approve",
-          reviewId,
-          targetType: found.target_type,
-          targetId: found.target_id,
-          reviewerId,
-          rejectedCount: found.rejected_count,
-        },
+        { event: "review.approve", reviewId, reviewerId, rejectedCount: row.rejected_count },
         `审核通过：reviewId=${reviewId}，审核员=${reviewerId}`,
       );
       ctx.auditService.log(reviewerId, "review.approve", {
         type: "review",
         id: reviewId,
         payload: {
-          targetType: found.target_type,
-          targetId: found.target_id,
-          rejectedCount: found.rejected_count,
+          targetType: row.target_type,
+          targetId: row.target_id,
+          rejectedCount: row.rejected_count,
         },
       });
-      if (found.submitted_by && found.submitted_by !== reviewerId) {
+      if (row.submitted_by && row.submitted_by !== reviewerId) {
         ctx.notificationService.notify(
-          found.submitted_by,
+          row.submitted_by,
           "review.approved",
           "审核已通过",
-          `你的 ${found.target_type} 已通过审核`,
-          { reviewId, targetType: found.target_type, targetId: found.target_id },
+          `你的 ${row.target_type} 已通过审核`,
+          { reviewId, targetType: row.target_type, targetId: row.target_id },
         );
       }
-      return updated;
+      return row;
     },
 
     async reject(reviewId, reviewerId, reasonCode) {
-      const all = await ctx.reviewItems.findMany();
-      const found = all.find((r) => r.id === reviewId);
-      if (!found) {
-        log.warn({ event: "review.reject_not_found", reviewId }, `审核打回失败：记录不存在，reviewId=${reviewId}`);
-        throw new Error(`review_not_found: ${reviewId}`);
-      }
-      if (found.status !== "pending" && found.status !== "in_review") {
-        log.warn(
-          { event: "review.reject_invalid_status", reviewId, currentStatus: found.status },
-          `审核打回失败：状态不是 pending/in_review，当前=${found.status}`,
-        );
-        throw new Error("只有待审/审核中记录可以打回");
-      }
-      const now = nowIso();
-      const newRejectedCount = found.rejected_count + 1;
-      const updated: ReviewItem = {
-        ...found,
-        status: "rejected",
-        rejected_count: newRejectedCount,
-        rejection_reason: reasonCode,
-        approved_at: "",
-        reviewed_by: reviewerId,
-        updated_at: now,
-      };
-      await ctx.reviewItems.update(reviewId, updated);
-      await recordHistory({
-        reviewId,
-        fromStatus: found.status,
-        toStatus: "rejected",
-        action: "reject",
-        actorId: reviewerId,
-        metadata: { reasonCode, rejectedCount: newRejectedCount },
+      const d = deps();
+      // reject → rejected → markNeedsFix → needs_fix，在同一 UoW 事务内完成，
+      // 使被打回方可以直接 resubmit（与旧实现的"打回后可重新提交"语义一致）。
+      const aggregate = await d.uow.run(async (uowCtx) => {
+        const cmdId = id("cmd");
+        await assertCommandNotProcessed(d, cmdId, "reject");
+        const agg = await loadReviewOrThrow(d, reviewId);
+        const expectedVersion = agg.version;
+        agg.reject(reviewerId, reasonCode);
+        agg.markNeedsFix(reviewerId);
+        await d.repo.save(agg, expectedVersion);
+        await d.repo.recordCommand(cmdId, agg.id);
+        enqueuePulledEvents(uowCtx, agg);
+        return agg;
       });
+      const row = await reloadReview(reviewId);
+      const newRejectedCount = aggregate.rejectedCount;
       log.info(
-        {
-          event: "review.reject",
-          reviewId,
-          targetType: found.target_type,
-          targetId: found.target_id,
-          reviewerId,
-          reasonCode,
-          rejectedCount: newRejectedCount,
-        },
+        { event: "review.reject", reviewId, reviewerId, reasonCode, rejectedCount: newRejectedCount },
         `审核打回：reviewId=${reviewId}，原因=${reasonCode}，累计退回=${newRejectedCount}次`,
       );
       ctx.auditService.log(reviewerId, "review.reject", {
         type: "review",
         id: reviewId,
         payload: {
-          targetType: found.target_type,
-          targetId: found.target_id,
+          targetType: row.target_type,
+          targetId: row.target_id,
           reasonCode,
           rejectedCount: newRejectedCount,
         },
       });
-      // 同步打回 todo
+      // 同步打回 todo（非聚合状态，失败不回滚）。
       try {
+        const now = nowIso();
         const todoStatus: TodoStatus = "pending";
         const todoPriority: TodoPriority = newRejectedCount >= 3 ? "high" : "medium";
         const todoPatch = {
           title: `审核退回：${REJECTION_REASONS.find((r) => r.code === reasonCode)?.label ?? reasonCode}`,
-          description: `${found.target_type}（${found.target_id}）被退回，请修改后重新提交。`,
+          description: `${row.target_type}（${row.target_id}）被退回，请修改后重新提交。`,
           status: todoStatus,
           priority: todoPriority,
-          owner: found.submitted_by,
+          owner: row.submitted_by,
           due_date: "",
           link_type: "review",
           link_id: reviewId,
-          link_url: `/review?projectId=${encodeURIComponent(found.project_id)}&reviewId=${encodeURIComponent(reviewId)}`,
+          link_url: `/review?projectId=${encodeURIComponent(row.project_id)}&reviewId=${encodeURIComponent(reviewId)}`,
           updated_at: now,
           deleted_at: "",
         };
         const existingTodo = await ctx.todos.findOne({
-          owner: found.submitted_by,
+          owner: row.submitted_by,
           link_type: "review",
           link_id: reviewId,
         });
@@ -378,15 +307,15 @@ export function createReviewService(ctx: AppContext): ReviewService {
         );
       }
       // ===== V2 W8 REQ-PIPE-005-01 pipeline 返工 todo 自动创建 =====
-      if (isPipelineReworkTargetType(found.target_type)) {
+      if (isPipelineReworkTargetType(row.target_type)) {
         try {
           let run: { id: string; name?: string; project_id?: string } | null = null;
           let node: { id: string; name?: string; type?: string; error?: string; run_id?: string } | null = null;
-          if (found.target_type === "pipeline_run") {
-            const r = await ctx.pipelineRuns.findById(found.target_id);
+          if (row.target_type === "pipeline_run") {
+            const r = await ctx.pipelineRuns.findById(row.target_id);
             if (r) run = r;
-          } else if (found.target_type === "pipeline_node") {
-            const n = await ctx.pipelineNodes.findById(found.target_id);
+          } else if (row.target_type === "pipeline_node") {
+            const n = await ctx.pipelineNodes.findById(row.target_id);
             if (n) {
               node = n;
               if (n.run_id) {
@@ -398,17 +327,17 @@ export function createReviewService(ctx: AppContext): ReviewService {
           if (run) {
             const reasonLabel = REJECTION_REASONS.find((r) => r.code === reasonCode)?.label ?? reasonCode;
             await createPipelineReworkTodo(ctx, {
-              review: found,
+              review: row,
               run: run as { id: string; name?: string; project_id?: string },
               node: node as { id: string; name?: string; type?: string; error?: string; run_id?: string } | null,
               reasonCode,
               reasonLabel,
               rejectedCount: newRejectedCount,
-              submittedBy: found.submitted_by,
+              submittedBy: row.submitted_by,
             });
           } else {
             log.debug(
-              { event: "review.pipeline_rework_no_run", reviewId, targetType: found.target_type, targetId: found.target_id },
+              { event: "review.pipeline_rework_no_run", reviewId, targetType: row.target_type, targetId: row.target_id },
               "pipeline 返工 todo 跳过：找不到 run",
             );
           }
@@ -425,152 +354,83 @@ export function createReviewService(ctx: AppContext): ReviewService {
           {
             event: "review.frequent_rejection",
             reviewId,
-            targetType: found.target_type,
-            targetId: found.target_id,
+            targetType: row.target_type,
+            targetId: row.target_id,
             rejectedCount: newRejectedCount,
           },
           `审核反复被打回：reviewId=${reviewId}，累计退回 ${newRejectedCount} 次，将通知项目负责人`,
         );
-        const proj = await ctx.projects.findById(found.project_id);
+        const proj = await ctx.projects.findById(row.project_id);
         const ownerId = proj?.owner ?? "default";
         ctx.notificationService.notify(
           ownerId,
           "review.frequent_rejection",
           "审核反复被打回",
-          `${found.target_type}（${found.target_id}）已累计退回 ${newRejectedCount} 次，需要项目负责人介入`,
+          `${row.target_type}（${row.target_id}）已累计退回 ${newRejectedCount} 次，需要项目负责人介入`,
           {
             reviewId,
-            targetType: found.target_type,
-            targetId: found.target_id,
+            targetType: row.target_type,
+            targetId: row.target_id,
             rejectedCount: newRejectedCount,
           },
         );
       }
-      return updated;
+      return row;
     },
 
     async startReview(reviewId, actorId) {
-      const all = await ctx.reviewItems.findMany();
-      const found = all.find((r) => r.id === reviewId);
-      if (!found) throw new Error("review_not_found: " + reviewId);
-      if (!validateTransition(found.status, "in_review")) {
-        throw new Error("illegal transition: " + found.status + " -> in_review");
-      }
-      const now = nowIso();
-      const newStatus: ReviewStatus = "in_review";
-      const updated: ReviewItem = { ...found, status: newStatus, updated_at: now };
-      await ctx.reviewItems.update(reviewId, { ...updated, status: newStatus });
-      await recordHistory({
+      await handleStartReview(deps(), {
+        commandId: id("cmd"),
+        type: "StartReview",
+        issuedAt: nowIso(),
         reviewId,
-        fromStatus: found.status,
-        toStatus: newStatus,
-        action: "start_review",
-        actorId,
+        reviewerId: actorId,
       });
       log.info({ event: "review.startReview", reviewId, actorId }, "startReview review: " + reviewId);
-      return updated;
+      return reloadReview(reviewId);
     },
 
     async cancel(reviewId, actorId) {
-      const all = await ctx.reviewItems.findMany();
-      const found = all.find((r) => r.id === reviewId);
-      if (!found) throw new Error("review_not_found: " + reviewId);
-      if (!validateTransition(found.status, "cancelled")) {
-        throw new Error("illegal transition: " + found.status + " -> cancelled");
-      }
-      const now = nowIso();
-      const newStatus: ReviewStatus = "cancelled";
-      const updated: ReviewItem = { ...found, status: newStatus, updated_at: now };
-      await ctx.reviewItems.update(reviewId, { ...updated, status: newStatus });
-      await recordHistory({
+      await handleCancelReview(deps(), {
+        commandId: id("cmd"),
+        type: "CancelReview",
+        issuedAt: nowIso(),
         reviewId,
-        fromStatus: found.status,
-        toStatus: newStatus,
-        action: "cancel",
         actorId,
       });
       log.info({ event: "review.cancel", reviewId, actorId }, "cancel review: " + reviewId);
-      return updated;
+      return reloadReview(reviewId);
     },
 
     async close(reviewId, actorId) {
-      const all = await ctx.reviewItems.findMany();
-      const found = all.find((r) => r.id === reviewId);
-      if (!found) throw new Error("review_not_found: " + reviewId);
-      if (!validateTransition(found.status, "closed")) {
-        throw new Error("illegal transition: " + found.status + " -> closed");
-      }
-      const now = nowIso();
-      const newStatus: ReviewStatus = "closed";
-      const updated: ReviewItem = { ...found, status: newStatus, updated_at: now };
-      await ctx.reviewItems.update(reviewId, { ...updated, status: newStatus });
-      await recordHistory({
+      await handleCloseReview(deps(), {
+        commandId: id("cmd"),
+        type: "CloseReview",
+        issuedAt: nowIso(),
         reviewId,
-        fromStatus: found.status,
-        toStatus: newStatus,
-        action: "close",
         actorId,
       });
       log.info({ event: "review.close", reviewId, actorId }, "close review: " + reviewId);
-      return updated;
+      return reloadReview(reviewId);
     },
 
     async resubmit(reviewId, submittedBy) {
-      const all = await ctx.reviewItems.findMany();
-      const found = all.find((r) => r.id === reviewId);
-      if (!found) throw new Error("review_not_found: " + reviewId);
-      if (!validateTransition(found.status, "pending")) {
-        throw new Error("illegal transition: " + found.status + " -> pending");
-      }
-      const now = nowIso();
-      const newStatus: ReviewStatus = "pending";
-      const newResubmitCount = (found.re_submit_count ?? 0) + 1;
-      // V2 W12 P0 REQ-REVIEW-F16：前序 review 关联
-      // - previous_review_id：本次 resubmit 的"前一次 review"id（即当前这条）
-      // - chain_id：继承前序 chain_id（首次 submit 时生成）
-      const previous_review_id = found.id;
-      const chain_id = found.chain_id || previous_review_id || id("rc");
-      const updated: ReviewItem = {
-        ...found,
-        status: newStatus,
-        re_submit_count: newResubmitCount,
-        rejection_reason: "",
-        approved_at: "",
-        reviewed_by: "",
-        previous_review_id,
-        chain_id,
-        updated_at: now,
-      };
-      await ctx.reviewItems.update(reviewId, { ...updated, status: newStatus });
-      // V2 W12 P0 REQ-REVIEW-F01：写审核快照（记录 resubmit 前的状态）
-      try {
-        const { recordReviewSnapshot } = await import(
-          "../module-domain/review-snapshot-service.js"
-        );
-        await recordReviewSnapshot(ctx, found, "resubmit", submittedBy);
-      } catch {
-        // 快照失败不影响主流程
-      }
-      await recordHistory({
+      await handleResubmitReview(deps(), {
+        commandId: id("cmd"),
+        type: "ResubmitReview",
+        issuedAt: nowIso(),
         reviewId,
-        fromStatus: found.status,
-        toStatus: newStatus,
-        action: "resubmit",
-        actorId: submittedBy,
-        metadata: {
-          reSubmitCount: newResubmitCount,
-          previousReviewId: previous_review_id,
-          chainId: chain_id,
-        },
+        submittedBy,
       });
       log.info(
-        { event: "review.resubmit", reviewId, submittedBy, reSubmitCount: newResubmitCount },
+        { event: "review.resubmit", reviewId, submittedBy },
         "resubmit review: " + reviewId,
       );
-      return updated;
+      return reloadReview(reviewId);
     },
 
     async listHistory(reviewId) {
+      // 读路径走 Read Model（review_histories），无需加载聚合。
       const all = await ctx.reviewHistories.findMany();
       return all
         .filter((h) => h.review_id === reviewId)

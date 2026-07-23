@@ -1,6 +1,13 @@
 /**
  * @file video-generation.ts
  * @description 视频生成、TTS 生成、资产出现次数统计及模板预设查询服务
+ *
+ * DDD-SHOT 任务 A 改造点（迭代计划 §5.6）：
+ *  - `generateVideoFromShot` 中对 shots 表的"video_task_id 回填 + status:generating"
+ *    直写已替换为 `runStartGeneration` 命令，由 Shot 聚合负责状态推进、
+ *    版本递增和事件入队。
+ *  - 视频模块不再直接 `ctx.shots.update` 写入任何关键字段。
+ *  - TTS 路径、统计查询、模板预设查询与 Shot 状态无关，保留原实现。
  */
 
 import type { AppContext } from "../app.js";
@@ -12,6 +19,9 @@ import { createAudio } from "./audio-module.js";
 import { nowIso, safeAICall } from "../../utils.js";
 import { rootLogger } from "../../logger.js";
 import { resolveVideoParams } from "../../types/render-presets.js";
+import { runStartGeneration, type StartGenerationRunnerInput } from "./shot-command-runner.js";
+
+const log = rootLogger.child({ module: "video-generation" });
 
 /**
  * generateVideoFromStoryboard - 从分镜生成视频
@@ -63,6 +73,7 @@ export async function generateVideoFromStoryboard(
       format: "mp4",
       episode: storyboard.episode,
     });
+    // Storyboard 仍走直写（不在 Shot 任务范围）；video_task_id 由 Storyboard 自己拥有。
     await ctx.storyboards.update(storyboard.id, {
       video_task_id: task.id,
       status: "production",
@@ -74,6 +85,10 @@ export async function generateVideoFromStoryboard(
 
 /**
  * generateVideoFromShot - 从镜头生成视频（镜头级别图生视频）
+ *
+ * 重要：调用 ctx.shots.update 设置 video_task_id 和 status 的旧实现
+ * 已经替换为 StartShotGeneration 命令。视频模块不直接修改 shots 关键字段。
+ *
  * @param {AppContext} ctx - 应用上下文
  * @param {string} shotId - 镜头 ID
  * @param {object} options - 可选参数（ratio、duration、num_inference_steps）
@@ -112,6 +127,8 @@ export async function generateVideoFromShot(
     };
     const result = await ctx.ai.generateVideo(params);
     const aiTaskId = ((result as any).taskId || (result as any).id) ?? "";
+
+    // 1) 写 video_task 行
     const task = await createModuleVideoTask(ctx, {
       project_id: shot.project_id,
       storyboard_id: shot.storyboard_id ?? "",
@@ -128,12 +145,27 @@ export async function generateVideoFromShot(
       format: "mp4",
       episode: shot.episode,
     });
-    // 回填镜头 video_task_id
-    await ctx.shots.update(shot.id, {
-      video_task_id: task.id,
-      status: "generating",
-      updated_at: nowIso(),
-    } as any);
+
+    // 2) 走 StartShotGeneration 命令：聚合负责 draft/ready/needs_fix/rejected -> generating
+    //    以及 currentGenerationRequestId/videoTaskId 写入、版本递增、快照与事件入队。
+    //    旧直写 "ctx.shots.update({ video_task_id, status: 'generating' })" 已废弃。
+    const generationRequestId = `${task.id}:${aiTaskId}`;
+    const startInput: StartGenerationRunnerInput = {
+      shotId: shot.id,
+      actorId: "system:generateVideoFromShot",
+      generationRequestId,
+      videoTaskId: task.id,
+    };
+    try {
+      await runStartGeneration(ctx, startInput);
+    } catch (err) {
+      // 启动生成失败时记录 warning，保留 task 记录以便后续手动补偿。
+      log.warn(
+        { event: "shot.start_generation_failed", shotId: shot.id, err: String(err) },
+        `Shot 状态推进到 generating 失败：${shot.id}`,
+      );
+    }
+
     return { videoTask: task, remoteTaskId: aiTaskId };
   });
 }

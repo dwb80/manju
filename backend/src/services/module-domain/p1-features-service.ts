@@ -2,6 +2,10 @@
 import { getRawDatabase } from "../../storage/sqlite.js";
 import { id, nowIso } from "../../utils.js";
 import { ensureP2FeatureTables, getP2Template } from "./p2-features-service.js";
+import { SqliteReviewRepository } from "../../infrastructure/persistence/sqlite-review.repository.js";
+import { createTransactionService } from "../horizontal/transaction-service.js";
+import { createTransactionServiceUnitOfWork } from "../../infrastructure/unit-of-work/transaction-service-unit-of-work.js";
+import { handleAssignReviewer } from "../../application/review/assign-reviewer.command.js";
 
 function dbFor(file: string) { return getRawDatabase(file); }
 function runChanges(result: unknown): number { return Number((result as { changes?: number })?.changes ?? 0); }
@@ -48,16 +52,24 @@ function reviewRow(file: string, reviewId: string): Record<string, unknown> {
   return row;
 }
 
-export function assignReview(file: string, reviewId: string, reviewerId: string, actorId: string) {
+export async function assignReview(file: string, reviewId: string, reviewerId: string, actorId: string) {
   ensureP1FeatureTables(file); reviewRow(file, reviewId);
   if (!reviewerId) throw new Error("reviewerId 必填");
   const db = dbFor(file); const now = nowIso();
+  const transactions = createTransactionService({ databaseFile: file });
+  await handleAssignReviewer({
+    repo: new SqliteReviewRepository(file),
+    uow: createTransactionServiceUnitOfWork(transactions),
+  }, {
+    commandId: `assign-review:${reviewId}:${reviewerId}:${actorId}`,
+    type: "AssignReviewReviewer",
+    issuedAt: now,
+    reviewId,
+    reviewerId,
+  });
   db.prepare("UPDATE review_assignments SET status='transferred', completed_at=? WHERE review_id=? AND status IN ('pending','in_progress')").run(now, reviewId);
   const row = { id: id("rassign"), review_id: reviewId, reviewer_id: reviewerId, level: 1, status: "pending", assigned_at: now, completed_at: "", created_at: now };
   db.prepare("INSERT INTO review_assignments (id,review_id,reviewer_id,level,status,assigned_at,completed_at,created_at) VALUES (?,?,?,?,?,?,?,?)").run(...Object.values(row));
-  db.prepare("UPDATE review_items SET reviewed_by=?, updated_at=? WHERE id=?").run(reviewerId, now, reviewId);
-  db.prepare("INSERT INTO review_histories (id,review_id,from_status,to_status,action,actor_id,comment,metadata,created_at) SELECT ?,id,status,status,'assign',?,'',?,? FROM review_items WHERE id=?")
-    .run(id("review_history"), actorId, JSON.stringify({ reviewerId }), now, reviewId);
   return row;
 }
 

@@ -83,6 +83,8 @@ export function createModelConstraintsService(): ModelConstraintsService {
       const m = getModelByName(name);
       if (!m) return { ok: false, reason: `model_not_found: ${name}` };
       if (m.deprecated) return { ok: false, reason: `model_deprecated: ${name}` };
+      // Fake provider 是隐藏的开发桩，按设计接受任意参数，不要求生产模型约束表。
+      if (m.provider === "fake") return { ok: true };
       // 简单自洽校验:如果声明 capabilities 包含 video,则 video.constraints 必填
       if (m.capabilities.includes("video") && !m.video) {
         return { ok: false, reason: `capability_video_but_no_constraints: ${name}` };

@@ -4,7 +4,8 @@ backend/.e2e-data/
 backend/data/
 backend/.env
 backend/.env.*
-backend/tests
+backend/tests/*
+!backend/tests/ddd-*.test.mjs
 !backend/.env.example
 frontend/node_modules/
 frontend/.next/
