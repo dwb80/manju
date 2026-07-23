@@ -5,6 +5,33 @@
 
 ---
 
+## [2.1.0] - 2026-07-23
+
+### REFACTOR
+- 将 `PipelineRun`、`Shot`、`Review` 三个核心对象加固为独立聚合，关键状态只能通过领域行为和应用命令修改。
+- Scheduler 仅负责调度、Executor 仅返回执行结果；Run/Node 最终状态由 `PipelineRunAggregate` 决定。
+- `review_items` 成为审核聚合权威存储，审核历史、快照、驳回和重新提交统一由 `ReviewAggregate` 管理。
+- Shot 生成、送审、审核结果、归档和恢复统一进入 `ShotAggregate`。
+
+### FEATURE
+- 新增 `Review → Shot → Pipeline` Outbox 跨聚合事件链路及稳定 command ID 幂等消费。
+- 新增三个专属 SQLite Repository、聚合版本乐观锁和幂等迁移。
+- 新增 DDD 架构门禁，禁止白名单外直接修改三个聚合的受保护状态。
+
+### FIX
+- 修复模型能力路由被通用 `/api/models` 路由遮蔽的问题。
+- 模型约束 HTTP 测试改用隔离端口，并正确传播启动或断言失败。
+- 补齐前端主内容 skip-link 目标、会话按钮可访问名称及 E2E 精确定位。
+
+### TEST
+- DDD 领域与持久化测试、跨聚合集成测试全部通过。
+- 后端全量测试 `205/205`，受保护写入扫描结果为 `0`。
+- 前端生产构建通过，关键 Playwright E2E `21/21`。
+- SQLite 迁移、备份、恢复及敏感信息扫描通过。
+
+### DOCS
+- 完成 Gate 0 契约、状态机 JSON、三条任务线交接报告、协调者验收报告和迭代看板归档。
+
 ## [2.0.0-rc.1] - 2026-07-23
 
 ### FIX
