@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback } from "react";
-import { api, apiUrl } from "@/lib/api-client";
 
 export function useMediaActions({ showNotice }: { showNotice: (message: string) => void }) {
   /** 复制文本到剪贴板，失败时退回到传统 textarea 复制方式。 */

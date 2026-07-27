@@ -162,6 +162,10 @@ export const characterImageHistoryFields: FieldSpec<CharacterImageHistory>[] = [
   { key: "negative_prompt", type: "string" },
   { key: "response_format", type: "string" },
   { key: "n", type: "number" },
+  // S4.2 补：三厂同构；DEFAULT NULL（迁移向前兼容）；A↔B 双向导通用
+  { key: "shot_type", type: "string" },
+  { key: "angle", type: "string" },
+  { key: "view_type", type: "string" },
   { key: "is_applied", type: "boolean" },
   { key: "applied_at", type: "string" },
   { key: "created_at", type: "string" },
@@ -183,6 +187,10 @@ export const propImageHistoryFields: FieldSpec<PropImageHistory>[] = [
   { key: "negative_prompt", type: "string" },
   { key: "response_format", type: "string" },
   { key: "n", type: "number" },
+  // S4.2 补：同 character，三厂同构
+  { key: "shot_type", type: "string" },
+  { key: "angle", type: "string" },
+  { key: "view_type", type: "string" },
   { key: "is_applied", type: "boolean" },
   { key: "applied_at", type: "string" },
   { key: "created_at", type: "string" },
@@ -204,6 +212,10 @@ export const sceneImageHistoryFields: FieldSpec<SceneImageHistory>[] = [
   { key: "negative_prompt", type: "string" },
   { key: "response_format", type: "string" },
   { key: "n", type: "number" },
+  // S4.2 补：场景 view_type = 'overall' | 'detail' | 'transition'
+  { key: "shot_type", type: "string" },
+  { key: "angle", type: "string" },
+  { key: "view_type", type: "string" },
   { key: "is_applied", type: "boolean" },
   { key: "applied_at", type: "string" },
   { key: "created_at", type: "string" },

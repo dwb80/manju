@@ -8,7 +8,7 @@
  */
 
 import { useState } from "react";
-import type { PreviewEpisode, PreviewScene } from "./types";
+import type { PreviewEpisode } from "./types";
 import { formatSceneAnchor } from "./utils";
 
 interface EpisodePreviewProps {

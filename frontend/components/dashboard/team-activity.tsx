@@ -2,15 +2,7 @@
 
 import { memo } from "react";
 import {
-  GitCommit,
-  Image,
-  Video,
-  FileText,
-  CheckCircle2,
-  MessageSquare,
-  UserPlus,
-  Settings,
-  Clock,
+  GitCommit, Clock
 } from "lucide-react";
 import type { TeamActivity as TeamActivityData } from "@/lib/app-types";
 

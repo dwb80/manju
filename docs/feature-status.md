@@ -20,6 +20,30 @@ V2 发布范围内的 P0、P1、P2 功能均已实现并通过当前工作树门
 - 性能结论是单机健康端点烟测（100 请求、并发 10、P95 247.36ms），不替代生产容量规划、长稳压测或真实媒体生成负载测试。
 - 当前工作树包含用户既有的未提交改动；验收结论针对当前工作树内容，不等同于已生成 Git 发布标签。
 
+## 工厂模块校准（2026-07-24）
+
+三个工厂（角色 / 场景 / 道具）当前真实状态（与文档 [factories-assets-and-image-views.md](./factories-assets-and-image-views.md) 同步）：
+
+- ✅ CRUD / 回收站 / 批量 / 跨项目复制 / 引用查询 — 后端全有，前端 UI 完整暴露
+- ⚠️ 资产图片多视图（`/api/.../:id/images`）— 后端表 + service 都有，**前端 UI 未暴露**，按 [factories-assets-and-image-views.md](./factories-assets-and-image-views.md) 改造
+- ⚠️ 场景 / 道具独立编辑页路由（`/scenes/:id/edit` `/props/:id/edit`）— 缺失，按 P0-1 实施
+- ⚠️ AI 生图参数与 `images.txt` 漂移 — 按 [ai-image-config.md](./ai-image-config.md) 抽 `image-config.ts` 单一真相源
+- ⚠️ 文档与代码字段漂移（`asset-library.md` 5 字段 vs 代码 17 字段）— 已校准到 24 字段基线
+
+校准后工厂模块从"100% 完整"调整为"列表 / CRUD / AI 生成基线完整，多视图与编辑页待补"。
+
+## 三厂联调 e2e 收口（S4.0~S4.4，2026-07-24）
+
+- ✅ S4.0+S4.1 review 收口：image-provider 适配器 + 路由统一 + 错误检测 + requestId 取首条
+- ✅ S4.2 一致性包 A↔B 双向：history 三维字段（shot_type/angle/view_type）+ approved 导入回 history + entity.image 主图回灌
+- ✅ S4.3 端到端 5/5 全绿（`tests/s4-3-factory-e2e.test.mjs`）：character / scene / prop 三厂各跑一次 list→detail→edit→history append→apply→consistency-pack generate→pending_review→approved 主图回灌 + expression:neutral 落库
+- ✅ S4.4 跨文档同步：
+  - `factory-router.ts` 三套 `RESERVED_*_SUBPATHS` 合并为单一 `RESERVED_FACTORY_SUBPATHS`（7 个保留字）
+  - 新建 `getScene` / `getProp` service（与 `getCharacter` 同构），详情端点统一走 service 层
+  - 详情端点加 `!seg3` 守卫，避免 `/api/factories/<id>/foo` 误命中详情
+  - 新增 `pipeline_command_log` 表（幂等键权威源，跨进程重启可恢复）
+- 📌 遗留项：场景/道具前端编辑页 UI 仍未交付（路由已可走通），P0-1 排期。
+
 ## 验收证据
 
 完整命令、结果、已知限制和发布检查项见 [V2 RC 验收报告](release/v2-rc-acceptance.md)，升级与回退步骤见 [V2 回滚方案](release/v2-rollback.md)。

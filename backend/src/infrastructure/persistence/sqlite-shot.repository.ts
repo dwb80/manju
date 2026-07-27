@@ -95,6 +95,11 @@ export class SqliteShotRepository implements ShotRepository {
   }
 
   async isCommandProcessed(commandId: string): Promise<boolean> {
+    if (!commandId) {
+      // 空 commandId 在 recordCommand 之前必须被拒绝：既不查表也不应静默
+      // 走后续逻辑。让调用方在更早的入口（handler）抛 invariant。
+      return false;
+    }
     const row = this.database
       .prepare("SELECT id FROM shot_command_log WHERE id = ?")
       .get(commandId) as SqliteRow | undefined;
@@ -105,6 +110,13 @@ export class SqliteShotRepository implements ShotRepository {
     commandId: string,
     shotId: string,
   ): Promise<void> {
+    if (!commandId) {
+      throw new DomainError(
+        DOMAIN_ERROR_CODES.aggregateInvariantViolated,
+        "Shot command id is required",
+        { aggregateType: "Shot", shotId },
+      );
+    }
     try {
       this.database
         .prepare(

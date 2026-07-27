@@ -10,9 +10,8 @@
  * 3. 展示 AI 完整返回数据，导入时持久化到 ScriptDocument.ai_raw_data，不写入任何工厂。
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EpisodePreview } from "./EpisodePreview";
 import { CharacterAssetCards, SceneAssetCards, PropAssetCards } from "./AssetPreviewCards";

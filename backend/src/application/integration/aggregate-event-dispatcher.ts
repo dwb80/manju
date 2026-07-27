@@ -5,6 +5,7 @@ import type { ShotHandlerDeps } from "../storyboard/shot-command-handler.js";
 import {
   CompleteNodeHandler,
   FailNodeHandler,
+  type PipelineHandlerDeps,
 } from "../pipeline/pipeline-command-handler.js";
 import { createTransactionServiceUnitOfWork } from "../../infrastructure/unit-of-work/transaction-service-unit-of-work.js";
 import { SqliteReviewRepository } from "../../infrastructure/persistence/sqlite-review.repository.js";
@@ -12,10 +13,13 @@ import { SqliteShotRepository } from "../../infrastructure/persistence/sqlite-sh
 import { SqlitePipelineRunRepository } from "../../infrastructure/persistence/sqlite-pipeline-run.repository.js";
 import { DOMAIN_EVENT_TYPES } from "../../domain/shared/domain-event.js";
 import { isDomainError } from "../../domain/shared/domain-error.js";
+import { rootLogger } from "../../logger.js";
 import type {
   OutboxRecord,
   TransactionService,
 } from "../../services/horizontal/transaction-service.js";
+
+const log = rootLogger.child({ module: "aggregate-event-dispatcher" });
 
 export interface AggregateEventDispatcher {
   publish(event: OutboxRecord): Promise<void>;
@@ -45,8 +49,9 @@ export function createAggregateEventDispatcher(input: {
     uow,
   };
   const pipelineRepository = new SqlitePipelineRunRepository(input.databaseFile);
-  const completeNode = new CompleteNodeHandler(pipelineRepository);
-  const failNode = new FailNodeHandler(pipelineRepository);
+  const pipelineDeps: PipelineHandlerDeps = { repo: pipelineRepository, uow };
+  const completeNode = new CompleteNodeHandler(pipelineDeps);
+  const failNode = new FailNodeHandler(pipelineDeps);
 
   async function executeIdempotently(work: () => Promise<unknown>): Promise<void> {
     try {
@@ -64,7 +69,20 @@ export function createAggregateEventDispatcher(input: {
   ): Promise<void> {
     const runId = text(payload, "pipelineRunId");
     const nodeId = text(payload, "pipelineNodeId");
-    if (!runId || !nodeId) return;
+    if (!runId || !nodeId) {
+      log.warn(
+        {
+          event: "aggregate_event_dispatcher.update_pipeline.missing_target",
+          eventId: event.id,
+          topic: event.topic,
+          decision,
+          hasRunId: Boolean(runId),
+          hasNodeId: Boolean(nodeId),
+        },
+        "Review 事件缺少 pipelineRunId/pipelineNodeId，跳过 pipeline 联动（事件可能来自非 pipeline 触发的 review）",
+      );
+      return;
+    }
     if (decision === "approved") {
       await completeNode.execute({
         commandId: `event:${event.id}:complete-pipeline-review-node`,

@@ -16,11 +16,11 @@ export { listCharacters, getCharacter, createCharacter, updateCharacter, deleteC
 export type { CharacterInput } from "./module-domain/character-module.js";
 
 // ==================== 场景模块 ====================
-export { listScenes, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes } from "./module-domain/scene-module.js";
+export { listScenes, getScene, createScene, updateScene, deleteScene, restoreScene, listDeletedScenes, permanentDeleteScenes, batchDeleteScenes, batchUpdateScenes } from "./module-domain/scene-module.js";
 export type { SceneInput } from "./module-domain/scene-module.js";
 
 // ==================== 道具模块 ====================
-export { listProps, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps } from "./module-domain/prop-module.js";
+export { listProps, getProp, createProp, updateProp, deleteProp, restoreProp, listDeletedProps, permanentDeleteProps, batchDeleteProps, batchUpdateProps } from "./module-domain/prop-module.js";
 export type { PropInput } from "./module-domain/prop-module.js";
 
 // ==================== 跨项目资产复制 ====================

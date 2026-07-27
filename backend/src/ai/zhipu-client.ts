@@ -13,6 +13,7 @@
 import { rootLogger } from "../logger.js";
 import type { ChatChunk, ChatParams, ImageParams, TaskStatus, VideoParams } from "../types.js";
 import { safeProviderFetch } from "../services/security/hardening.js";
+import { DEFAULT_IMAGE_MODEL } from "./image-config.js";
 
 const ZHIPU_DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
 const ZHIPU_CHAT_PATH = "/chat/completions";
@@ -249,7 +250,7 @@ export class ZhipuClient {
 
   async generateImage(_params: ImageParams, _signal?: AbortSignal): Promise<{ imageUrls: string[] }> {
     throw new Error(
-      "智谱 glm-4.7-flash 是文本模型，不支持图片生成。请使用 agnes-image-2.1-flash。",
+      `智谱 glm-4.7-flash 是文本模型，不支持图片生成。请使用 ${DEFAULT_IMAGE_MODEL}。`,
     );
   }
 

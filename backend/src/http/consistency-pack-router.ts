@@ -2,6 +2,12 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import type { AppContext } from "../services/app.js";
 import { getRawDatabase } from "../storage/sqlite.js";
+import { DEFAULT_IMAGE_MODEL } from "../ai/image-config.js";
+import { findReusableCharacterImage } from "../services/character-image-history.js";
+import { findReusableSceneImage } from "../services/scene-image-history.js";
+import { findReusablePropImage } from "../services/prop-image-history.js";
+import { imageTypeToCriteria } from "../services/consistency-pack-history-bridge.js";
+import { nowIso } from "../utils.js";
 
 type EntityType = "character" | "scene" | "prop";
 type JsonBody = Record<string, unknown>;
@@ -97,15 +103,168 @@ export async function matchConsistencyPackRoute(
         db.prepare("INSERT INTO consistency_packs VALUES (?,?,?,?,?,?,?,?,?,?)")
           .run(packId, entity.project_id, entityId, entityType, "draft", version, "", now, now, now);
       }
-      const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : "agnes-image-2.1-flash";
+      const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : DEFAULT_IMAGE_MODEL;
+      // ============================================================
+      // S4.2 A→B 复用：generate 阶段优先从 *_image_history 找已设资产的图
+      //   - 命中：把 url + meta 拷到 consistency_pack_images，status=ready（不再调 AI）
+      //   - 未命中：保留 pending，让后台跑 AI 生图
+      //   - 用 imageTypeToCriteria 把 image_type 翻译成 (shot_type, angle, view_type)
+      // ============================================================
       const insert = db.prepare("INSERT INTO consistency_pack_images VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+      let reusedCount = 0;
+      const reusedTypes: string[] = [];
       for (const imageType of TYPES[entityType]) {
-        insert.run(`cpimg-${randomUUID()}`, entity.project_id, packId, imageType, `${entity.name ?? entityId} ${imageType}`, "", model, "pending", "", "", 1, now, now);
+        const criteria = imageTypeToCriteria(entityType, imageType);
+        let reused: { url: string; model: string; prompt: string; negative_prompt?: string } | null = null;
+        if (criteria) {
+          const lookup = entityType === "character"
+            ? await findReusableCharacterImage(ctx, entityId, criteria)
+            : entityType === "scene"
+              ? await findReusableSceneImage(ctx, entityId, criteria)
+              : await findReusablePropImage(ctx, entityId, criteria);
+          if (lookup) {
+            reused = { url: lookup.url, model: lookup.model, prompt: lookup.prompt, negative_prompt: lookup.negative_prompt };
+            reusedCount += 1;
+            reusedTypes.push(imageType);
+          }
+        }
+        insert.run(
+          `cpimg-${randomUUID()}`,
+          entity.project_id,
+          packId,
+          imageType,
+          reused ? reused.prompt : `${entity.name ?? entityId} ${imageType}`,
+          reused?.negative_prompt ?? "",
+          reused ? reused.model : model,
+          reused ? "ready" : "pending",
+          reused?.url ?? "",
+          "",
+          1,
+          now,
+          now,
+        );
       }
-      h.sendJson(res, { packId, total: TYPES[entityType].length, types: TYPES[entityType] }, 202);
+      h.sendJson(res, {
+        packId,
+        total: TYPES[entityType].length,
+        types: TYPES[entityType],
+        reused: reusedCount,
+        reusedTypes,
+        generated: TYPES[entityType].length - reusedCount,
+      }, 202);
       return true;
     }
     return false;
+  }
+
+  // ============================================================
+  // S4.2 B→A 状态机：approved 时把一致性包图导入 *_image_history
+  //   POST /api/consistency-pack/:packId/transition  body: { status: 'pending_review'|'approved'|'rejected'|'locked' }
+  //   approved 副作用（事务内）：
+  //     1) 对每张 status=ready 的图按 image_type 生成 history 记录（is_applied=1）
+  //     2) 第一张 ready 图自动设为该实体主图（is_primary=1）
+  // ============================================================
+  if (method === "POST" && parts[1] === "consistency-pack" && parts[2] && parts[3] === "transition" && parts.length === 4) {
+    ensureTables(ctx);
+    const db = getRawDatabase(ctx.databaseFile);
+    const pack = db.prepare("SELECT * FROM consistency_packs WHERE id=?").get(parts[2]) as
+      | { id: string; project_id: string; entity_id: string; entity_type: EntityType; status: string; version: number }
+      | undefined;
+    if (!pack) { h.sendError(res, new Error("consistency_pack_not_found"), 404); return true; }
+    if (!(await h.canAccessProject(pack.project_id))) { h.sendError(res, new Error("forbidden"), 403); return true; }
+    const body = await h.readJson(req);
+    const next = typeof body.status === "string" ? body.status.trim() : "";
+    const allowed: Record<string, string[]> = {
+      draft: ["pending_review"],
+      pending_review: ["approved", "rejected", "draft"],
+      approved: ["locked", "pending_review"],
+      rejected: ["pending_review", "draft"],
+      locked: [],
+    };
+    const from = pack.status;
+    const options = allowed[from] ?? [];
+    if (!options.includes(next)) {
+      h.sendError(res, new Error(`invalid_transition:${from}->${next}`), 400);
+      return true;
+    }
+    const now = nowIso();
+    // approved 副作用：把 ready 图导入 history + 设主图
+    let importedCount = 0;
+    if (next === "approved") {
+      const images = db.prepare("SELECT * FROM consistency_pack_images WHERE pack_id=? AND status='ready' ORDER BY created_at,image_type").all(pack.id) as Array<{
+        id: string; image_type: string; url: string; prompt: string; negative_prompt: string; model_id: string;
+      }>;
+      const idCol: "character_id" | "scene_id" | "prop_id" =
+        pack.entity_type === "character" ? "character_id"
+        : pack.entity_type === "scene" ? "scene_id"
+        : "prop_id";
+      const idPrefix = pack.entity_type === "character" ? "imhist"
+        : pack.entity_type === "scene" ? "simhist"
+        : "pimhist";
+      // image_type → (shot_type, angle, view_type)
+      const mapped = images.map((img) => ({ img, criteria: imageTypeToCriteria(pack.entity_type, img.image_type) }));
+
+      // 注：这里使用 raw SQL 而不是 historyRepo.insert，因为 SqliteRepository.insertBatch 内部已开 BEGIN/COMMIT，
+      // 再在外层包一个 BEGIN 会触发 "cannot start a transaction within a transaction"。
+      // raw SQL 让我们在外层显式开一个大事务，覆盖 history + entity.image + consistency_packs.status 3 张表的原子写入。
+      const historyTable = pack.entity_type === "character" ? "character_image_history"
+        : pack.entity_type === "scene" ? "scene_image_history"
+        : "prop_image_history";
+      const historyInsert = db.prepare(
+        `INSERT INTO ${historyTable} (id,${idCol},project_id,url,ratio,model,size,prompt,negative_prompt,response_format,n,shot_type,angle,view_type,is_applied,applied_at,created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      );
+      const entityTable = pack.entity_type === "character" ? "characters"
+        : pack.entity_type === "scene" ? "scenes"
+        : "props";
+      const entityUpdate = db.prepare(`UPDATE ${entityTable} SET image=?, updated_at=? WHERE id=?`);
+
+      db.exec("BEGIN");
+      try {
+        let firstUrl: string | null = null;
+        for (const { img, criteria: c } of mapped) {
+          if (!img.url) continue;
+          const historyId = `${idPrefix}-${randomUUID()}`;
+          historyInsert.run(
+            historyId,
+            pack.entity_id,
+            pack.project_id,
+            img.url,
+            "1:1",
+            img.model_id || DEFAULT_IMAGE_MODEL,
+            "1024x1024",
+            img.prompt,
+            img.negative_prompt ?? "",
+            "url",
+            1,
+            c?.shot_type ?? null,
+            c?.angle ?? null,
+            c?.view_type ?? null,
+            1,
+            now,
+            now,
+          );
+          importedCount += 1;
+          if (!firstUrl) firstUrl = img.url;
+        }
+        // 主图策略：第一张 ready 图自动设为实体主图
+        if (firstUrl) {
+          entityUpdate.run(firstUrl, now, pack.entity_id);
+        }
+        db.prepare("UPDATE consistency_packs SET status=?,last_progress_at=?,updated_at=? WHERE id=?")
+          .run(next, now, now, pack.id);
+        db.exec("COMMIT");
+      } catch (err) {
+        db.exec("ROLLBACK");
+        throw err;
+      }
+    } else {
+      // 其他状态：仅改 status
+      db.prepare("UPDATE consistency_packs SET status=?,last_progress_at=?,updated_at=? WHERE id=?")
+        .run(next, now, now, pack.id);
+    }
+    h.sendJson(res, { packId: pack.id, from, to: next, imported: importedCount });
+    return true;
   }
 
   if (method === "POST" && parts[1] === "consistency-pack" && parts[2] === "images" && parts[3] && parts[4] === "regenerate") {

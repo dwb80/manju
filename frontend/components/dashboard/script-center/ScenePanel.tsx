@@ -99,8 +99,6 @@ export function ScenePanel({
   onSelectScene,
   onDeleteScene,
   onViewSceneDetail,
-  projectId,
-  scriptId,
 }: ScenePanelProps) {
   const [searchQuery, setSearchQuery] = useState('')
   // 详情弹框：当前选中的场景 + 上下文

@@ -728,7 +728,7 @@ export const scriptCenterService = {
   },
 
   /** 恢复版本 */
-  restoreVersion: async (documentId: string, versionId: string): Promise<ScriptDocument> => {
+  restoreVersion: async (_documentId: string, versionId: string): Promise<ScriptDocument> => {
     const response = await fetch(`${API_BASE}/script-backups/${versionId}/restore`, {
       method: 'POST',
     })
@@ -988,7 +988,7 @@ export const scriptCenterService = {
   },
 
   /** 删除标签 */
-  removeTag: async (scriptId: string, tagId: string): Promise<void> => {
+  removeTag: async (_scriptId: string, tagId: string): Promise<void> => {
     const response = await fetch(`${API_BASE}/script-tags/${tagId}`, {
       method: 'DELETE',
     })

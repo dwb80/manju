@@ -11,23 +11,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Combobox } from "@/components/ui/combobox";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { LayoutGrid, Table as TableIcon } from "lucide-react";
 import { useState } from "react";
 import {
   Video,
   Play,
   Download,
-  Upload,
-  Filter,
-  Search,
+  Upload, Search,
   Calendar,
-  Clock,
-  MoreVertical,
-  Eye,
+  Clock, Eye,
   CheckCircle,
-  Package,
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

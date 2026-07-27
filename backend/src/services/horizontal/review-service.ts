@@ -386,7 +386,7 @@ export function createReviewService(ctx: AppContext): ReviewService {
         reviewId,
         reviewerId: actorId,
       });
-      log.info({ event: "review.startReview", reviewId, actorId }, "startReview review: " + reviewId);
+      log.info({ event: "review.start_review", reviewId, actorId }, "startReview review: " + reviewId);
       return reloadReview(reviewId);
     },
 

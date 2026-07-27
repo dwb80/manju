@@ -1,23 +1,31 @@
 "use client";
 
 /**
- * 角色图片编辑页（独立路由，/_全屏_/_独占_）
+ * 角色图片生成页（独立路由）
  *
  * 路由: /characters/[id]/edit
  * - 新标签页打开，不显示侧边栏（layout-shell 已识别）
- * - 拉取角色 → 渲染 CharacterImageGenerator 全屏编辑界面
+ * - 拉取角色 → 渲染极简生图界面
  * - 关闭按钮直接 window.close() 关闭当前标签页
+ *
+ * 生图参数严格遵循 `images.txt`（Agnes Image 2.1 Flash 接口文档）：
+ *   - model: agnes-image-2.1-flash
+ *   - size:  768x1152（与 9:16 比例匹配）
+ *   - n:     1（默认生成 1 张）
+ *   - extra_body.response_format: url
+ * 调用后端 /api/images/generate，后端会把这些参数映射到 Agnes API 规范。
  */
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Loader2, ArrowLeft, AlertTriangle, Sparkles, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CharacterImageGenerator } from "@/components/modules/character-image-generator";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
 import { getCharacter } from "@/services/character.service";
-import { clearApiCache } from "@/lib/api-client";
-import { toast } from "@/components/common/toast";
+import { api } from "@/lib/api-client";
 import type { Character } from "@/lib/module-types";
+import type { ImageTask } from "@/lib/app-types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -31,6 +39,13 @@ export default function CharacterEditPage({ params }: PageProps) {
   const [character, setCharacter] = useState<Character | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 提示词 + 生成状态
+  const [prompt, setPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [resultUrl, setResultUrl] = useState<string>("");
+  const [resultTaskId, setResultTaskId] = useState<string>("");
+  const [generateError, setGenerateError] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -73,14 +88,37 @@ export default function CharacterEditPage({ params }: PageProps) {
     }
   };
 
-  // 保存/删除成功时通知原标签页刷新
-  const handleCloseImageGenerator = () => {
-    clearApiCache();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("factory:reload"));
-      toast.success("已保存", "回到列表页查看最新内容");
+  /** 提交生图：按 images.txt 文档的默认参数（竖屏 9:16、1 张）。 */
+  const handleGenerate = async () => {
+    const text = prompt.trim();
+    if (!text || generating) return;
+    setGenerating(true);
+    setGenerateError("");
+    setResultUrl("");
+    setResultTaskId("");
+    try {
+      // 默认参数：竖屏 9:16、生成 1 张、url 输出
+      // 9:16 对应 size 768x1152（与后端 imageSizeOptions 一致）
+      const task = await api<ImageTask>("/api/images/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          model: "agnes-image-2.1-flash",
+          prompt: text,
+          size: "768x1152",
+          ratio: "9:16",
+          n: 1,
+          response_format: "url",
+        }),
+      });
+      const url = task.image_urls?.[0] ?? "";
+      if (!url) throw new Error("生图返回为空，请稍后重试");
+      setResultUrl(url);
+      setResultTaskId(task.id);
+    } catch (err) {
+      setGenerateError((err as Error)?.message ?? "生图失败");
+    } finally {
+      setGenerating(false);
     }
-    handleClose();
   };
 
   if (loading) {
@@ -109,9 +147,119 @@ export default function CharacterEditPage({ params }: PageProps) {
   }
 
   return (
-    <CharacterImageGenerator
-      character={character}
-      onClose={handleCloseImageGenerator}
-    />
+    <main className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* 顶栏：返回 + 标题 */}
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-white/10 bg-[#0a0a0a]/95 px-4 backdrop-blur">
+        <Button size="sm" variant="ghost" onClick={handleClose}>
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          返回
+        </Button>
+        <h1 className="truncate px-4 text-sm font-medium text-white">
+          {character.name} · 图片生成
+        </h1>
+        <div className="w-16" />
+      </header>
+
+      {/* 主体：左侧输入 + 右侧预览 */}
+      <section className="mx-auto grid max-w-6xl gap-6 p-6 lg:grid-cols-[420px_1fr]">
+        {/* 左：输入面板 */}
+        <Card className="space-y-4 border-white/10 bg-[#1a1a1a] p-5">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-200">
+              生成提示词
+            </label>
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder={`请描述要为「${character.name}」生成的图片，如：古风少年剑客，黑发高马尾，身披白袍...`}
+              rows={12}
+              disabled={generating}
+              className="bg-[#252525] border-white/10 text-sm resize-none"
+            />
+            <div className="mt-1.5 text-[11px] text-[#888]">
+              {prompt.length} 字符
+            </div>
+          </div>
+
+          {/* 默认参数展示（与 images.txt 文档对应） */}
+          <div className="rounded-md border border-white/10 bg-[#252525] px-3 py-2 text-[11px] text-[#aaa] space-y-0.5">
+            <div>模型：<span className="text-white">agnes-image-2.1-flash</span></div>
+            <div>比例：<span className="text-white">9:16（竖屏）</span></div>
+            <div>尺寸：<span className="text-white">768 × 1152</span></div>
+            <div>数量：<span className="text-white">1 张</span></div>
+          </div>
+
+          {generateError && (
+            <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] text-red-300">
+              {generateError}
+            </div>
+          )}
+
+          <Button
+            onClick={handleGenerate}
+            disabled={!prompt.trim() || generating}
+            className="w-full bg-emerald-500 hover:bg-emerald-600"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                生成中…
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                生成图片
+              </>
+            )}
+          </Button>
+        </Card>
+
+        {/* 右：预览面板 */}
+        <div className="grid min-h-[600px] place-items-center rounded-lg border border-white/10 bg-[#171717] p-4">
+          {generating ? (
+            <div className="flex flex-col items-center gap-3 text-[#888]">
+              <Loader2 className="h-10 w-10 animate-spin text-emerald-400" />
+              <div className="text-sm">AI 正在生成图片，请稍候…</div>
+            </div>
+          ) : resultUrl ? (
+            <div className="relative h-full w-full flex flex-col items-center gap-3">
+              <div
+                className="overflow-hidden rounded-lg border border-white/10"
+                style={{ maxHeight: "calc(100vh - 220px)", aspectRatio: "9 / 16" }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="h-full w-auto object-contain"
+                  src={resultUrl}
+                  alt={prompt}
+                />
+              </div>
+              <div className="flex gap-2">
+                <a
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-white/10 px-3 text-sm hover:bg-white/15"
+                  href={resultUrl}
+                  download={`${character.name}-${resultTaskId || "image"}.png`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Download className="h-4 w-4" />
+                  下载图片
+                </a>
+                <a
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-white/10 px-3 text-sm hover:bg-white/15"
+                  href={resultUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  新窗口打开
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-[#666]">填写提示词后点击「生成图片」</div>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }

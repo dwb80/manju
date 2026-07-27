@@ -5,7 +5,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BubbleMenu } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import type { Editor } from '@tiptap/react'
 import { scriptCenterService } from '@/services/script-center.service'
 import { createCharacter, createScene } from '@/services/module.service'
@@ -306,7 +306,7 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
     <>
       <BubbleMenu
         editor={editor}
-        tippyOptions={{ placement: 'top', offset: [0, 8] }}
+        options={{ placement: 'top', offset: { mainAxis: 8, crossAxis: 0 } }}
         shouldShow={({ editor: e, state }) => {
           if (diffView) return false
           const { from, to } = state.selection

@@ -153,7 +153,6 @@ type TypeConfig = {
 };
 
 export function ProjectAITasksTab({
-  projectId,
   tasks,
   onRefresh,
   onCancelTask,

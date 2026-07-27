@@ -19,25 +19,48 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type ConfirmDialogProps = {
+    /** 弹窗是否打开（受控）。 */
+    isOpen?: boolean;
     title: string;
     description: string;
     confirmLabel: string;
+    /** 取消按钮文案，默认 "取消"。 */
+    cancelLabel?: string;
+    /**
+     * 主操作视觉变体：
+     * - "destructive"：红色填充（删除、放弃等）
+     * - "default"：主色填充（默认）
+     */
+    variant?: "destructive" | "default";
     onClose: () => void;
     onConfirm: () => void;
 };
 
 /**
  * ConfirmDialog - 确认弹窗组件
- * @param {ConfirmDialogProps} props - 组件属性
- * @returns {JSX.Element} 渲染的确认弹窗元素
  */
-export function ConfirmDialog({ title, description, confirmLabel, onClose, onConfirm }: ConfirmDialogProps) {
+export function ConfirmDialog({
+    isOpen = true,
+    title,
+    description,
+    confirmLabel,
+    cancelLabel = "取消",
+    variant = "destructive",
+    onClose,
+    onConfirm,
+}: ConfirmDialogProps) {
     return (
-        <AlertDialog open onOpenChange={(open) => !open && onClose()}>
+        <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <div className="flex items-start gap-3">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-500/15 text-red-200">
+                        <div
+                            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
+                                variant === "destructive"
+                                    ? "bg-red-500/15 text-red-200"
+                                    : "bg-emerald-500/15 text-emerald-200"
+                            }`}
+                        >
                             <AlertTriangle className="h-5 w-5" />
                         </div>
                         <div>
@@ -50,10 +73,14 @@ export function ConfirmDialog({ title, description, confirmLabel, onClose, onCon
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel asChild>
-                        <Button size="sm" variant="secondary">取消</Button>
+                        <Button size="sm" variant="secondary">{cancelLabel}</Button>
                     </AlertDialogCancel>
                     <AlertDialogAction asChild>
-                        <Button size="sm" variant="destructive" onClick={onConfirm}>
+                        <Button
+                            size="sm"
+                            variant={variant === "destructive" ? "destructive" : "default"}
+                            onClick={onConfirm}
+                        >
                             {confirmLabel}
                         </Button>
                     </AlertDialogAction>

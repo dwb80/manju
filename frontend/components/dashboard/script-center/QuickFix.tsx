@@ -14,12 +14,11 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronRight,
-  Zap,
-  Check,
-  Wand2,
+  Zap, Wand2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { scriptCenterService } from '@/services/script-center.service'
+import { notify } from '@/lib/notify'
 
 interface FixIssue {
   id: string
@@ -174,7 +173,7 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
     async (issue: FixIssue) => {
       if (!issue.autoFixAvailable) {
         // 对于不可自动修复的问题，提示用户手动修改
-        alert('此问题需要手动修改')
+        notify.warn('此问题需要手动修改')
         return
       }
 
@@ -205,7 +204,7 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
     const autoFixableIssues = selectedFixes.filter((issue) => issue.autoFixAvailable)
 
     if (autoFixableIssues.length === 0) {
-      alert('所选问题中没有可自动修复的')
+      notify.warn('所选问题中没有可自动修复的')
       return
     }
 
@@ -390,7 +389,7 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
                   onClick={() => toggleType(type)}
                 >
                   <div className="flex items-center gap-2">
-                    <span>{getIssueTypeIcon(type)}</span>
+                    {getIssueTypeIcon(type)}
                     <span className="text-sm font-medium text-white">
                       {getIssueTypeLabel(type)}
                     </span>
@@ -409,28 +408,22 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
                     {typeIssues.map((issue) => (
                       <div
                         key={issue.id}
-                        className={`p-3 ${
-                          issue.severity === 'error'
+                        className={`p-3 ${issue.severity === 'error'
                             ? 'bg-red-500/5'
                             : issue.severity === 'warning'
-                            ? 'bg-yellow-500/5'
-                            : 'bg-blue-500/5'
-                        } ${selectedIssues.has(issue.id) ? 'ring-1 ring-purple-500' : ''}`}
+                              ? 'bg-yellow-500/5'
+                              : 'bg-blue-500/5'
+                          } ${selectedIssues.has(issue.id) ? 'ring-1 ring-purple-500' : ''}`}
                       >
                         <div className="flex items-start gap-2">
                           {batchFixMode && (
-                            <div
-                              className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer ${
-                                selectedIssues.has(issue.id)
-                                  ? 'bg-purple-500 border-purple-500'
-                                  : 'border-[#666]'
-                              }`}
-                              onClick={() => toggleIssueSelection(issue.id)}
-                            >
-                              {selectedIssues.has(issue.id) && (
-                                <Check className="h-3 w-3 text-white" />
-                              )}
-                            </div>
+                            <input
+                              type="checkbox"
+                              checked={selectedIssues.has(issue.id)}
+                              onChange={() => toggleIssueSelection(issue.id)}
+                              className="mt-1 w-4 h-4 rounded border-[#666] bg-transparent text-emerald-500 focus:ring-emerald-500 focus:ring-1 cursor-pointer"
+                              aria-label={`选择问题：${issue.message}`}
+                            />
                           )}
                           <div className="flex-shrink-0 mt-0.5">
                             {issue.severity === 'error' ? (

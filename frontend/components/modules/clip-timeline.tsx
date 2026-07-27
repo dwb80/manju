@@ -15,7 +15,7 @@
 
 import { Scissors, Clock } from "lucide-react";
 import type { ProjectClip } from "@/lib/app-types";
-import { PROJECT_CLIP_STATUS_COLORS, PROJECT_CLIP_STATUS_LABELS } from "@/lib/module-dictionaries";
+import { PROJECT_CLIP_STATUS_COLORS } from "@/lib/module-dictionaries";
 import { Tip } from "@/components/ui/tip";
 
 interface BlockMeta {

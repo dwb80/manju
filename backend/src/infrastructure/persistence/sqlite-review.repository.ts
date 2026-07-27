@@ -105,6 +105,11 @@ export class SqliteReviewRepository implements ReviewRepository {
   }
 
   async isCommandProcessed(commandId: string): Promise<boolean> {
+    if (!commandId) {
+      // 空 commandId 必须被 handler 入口拒绝；这里返回 false 不掩盖错误，
+      // 由 recordCommand 抛 invariant 触发 UoW 回滚。
+      return false;
+    }
     const row = this.database
       .prepare("SELECT id FROM review_command_log WHERE id = ?")
       .get(commandId) as SqliteRow | undefined;
@@ -115,6 +120,13 @@ export class SqliteReviewRepository implements ReviewRepository {
     commandId: string,
     reviewId: string,
   ): Promise<void> {
+    if (!commandId) {
+      throw new DomainError(
+        DOMAIN_ERROR_CODES.aggregateInvariantViolated,
+        "Review command id is required",
+        { aggregateType: "Review", reviewId },
+      );
+    }
     try {
       this.database
         .prepare(

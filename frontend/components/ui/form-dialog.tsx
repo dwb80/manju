@@ -16,7 +16,7 @@
  * - tags：使用 TagInput
  */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z, type ZodTypeAny } from "zod";
@@ -36,9 +36,9 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import {
   Select,
   SelectContent,
@@ -99,6 +99,37 @@ export interface FormFieldConfig {
   /** entity-multi 专用配置：传入 fetcher / formatLabel 等。 */
   entityMultiConfig?: EntityMultiFieldConfig<{ id: string; name?: string; title?: string }>;
   hint?: string;
+  /**
+   * 字段所属分组（用于在表单中渲染分组小标题）。
+   * 同组字段会聚集在一起渲染，小标题显示在组首字段之上。
+   * 不传则归入 "default" 组，置于最后。
+   */
+  group?: "basic" | "progress" | "description" | "default" | string;
+  /**
+   * 字段布局方式。
+   * - vertical（默认）：标签在上、控件在下，堆叠显示（适合弹窗 / 移动端）。
+   * - horizontal：左侧标签、右侧控件，左右结构（适合详情页、PC 后台）。
+   *
+   * 对于 textarea / image / tags / entity-multi 等"长字段"，即使在 horizontal 模式下，
+   * 标签与控件仍会占满整行（不再压缩为 4+8），以保证信息密度合理。
+   */
+  layout?: "vertical" | "horizontal";
+  /**
+   * horizontal 布局下左侧标签的栅格宽度（Tailwind col-span）。
+   * 默认 3（即 3:9 比例）。可填 3/4/5 等。
+   * 仅当 layout === "horizontal" 且当前字段不是"长字段"时生效。
+   */
+  labelColSpan?: 3 | 4 | 5;
+  /**
+   * 输入框右侧单位文本（如 "集"、"%"、"px"），仅在 type=text/number 时生效。
+   * 不参与提交值，仅作为视觉单位提示。
+   */
+  unit?: string;
+  /**
+   * 当值为空时是否在控件内显示空占位符（仅 type=select 时生效）。
+   * 默认为 true，select 会自动在首项插入 disabled 的 placeholder option。
+   */
+  showPlaceholderWhenEmpty?: boolean;
 }
 
 /** 表单对话框属性 */
@@ -115,6 +146,11 @@ export interface FormDialogProps {
   submitLabel?: string;
   /** 加载中按钮文案，默认 `${submitLabel}中...` */
   loadingLabel?: string;
+  /**
+   * 自定义分组配置：覆盖默认 DEFAULT_GROUPS。
+   * 不传则使用内置默认分组（基础信息 / 进度管理 / 描述 / 其他）。
+   */
+  groups?: Array<{ key: string; title: string; order: number }>;
 }
 
 /** 根据字段配置动态生成 zod schema。 */
@@ -187,6 +223,19 @@ function buildDefaults(fields: FormFieldConfig[], initialValues: Record<string, 
   return defaults;
 }
 
+/**
+ * 表单分组（用于字段聚合显示）。
+ * - key：与 FormFieldConfig.group 字段对应
+ * - title：分组小标题（11px uppercase + 渐变分隔线）
+ * - order：数字越小排得越靠前
+ */
+const DEFAULT_GROUPS: Array<{ key: string; title: string; order: number }> = [
+  { key: "basic", title: "基础信息", order: 1 },
+  { key: "progress", title: "进度管理", order: 2 },
+  { key: "description", title: "描述", order: 3 },
+  { key: "default", title: "其他", order: 99 },
+];
+
 /** 通用表单对话框组件 */
 export function FormDialog({
   title,
@@ -199,6 +248,8 @@ export function FormDialog({
   isLoading = false,
   submitLabel = "保存",
   loadingLabel,
+  /** 自定义分组配置（覆盖默认）。 */
+  groups,
 }: FormDialogProps) {
   const schema = useMemo(() => buildSchema(fields), [fields]);
   const defaults = useMemo(
@@ -211,13 +262,30 @@ export function FormDialog({
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: defaults,
+    // P0-4：实时校验（onChange）+ 首次失焦校验 + 提交后校验
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
+
+  // 跟踪表单脏状态：用于取消时二次确认
+  const initialSnapshotRef = useRef<Record<string, string | number | string[]>>(defaults);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      setIsDirty(form.formState.isDirty);
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const prevIsOpenRef = useRef(false);
   // 仅在对话框从关闭变为打开时重置一次表单
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
-      form.reset(buildDefaults(fields, initialValues));
+      const newDefaults = buildDefaults(fields, initialValues);
+      form.reset(newDefaults);
+      initialSnapshotRef.current = newDefaults;
+      setIsDirty(false);
     }
     prevIsOpenRef.current = isOpen;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -227,59 +295,295 @@ export function FormDialog({
     onSave(values as Record<string, string | number | string[]>);
   });
 
+  // 尝试关闭：脏状态触发二次确认，否则直接关闭
+  const tryClose = () => {
+    if (isDirty) {
+      setShowCancelConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
+  // 提交按钮禁用条件：正在加载 或 表单无效（必填未填 / 校验失败）
+  const isSubmitDisabled = isLoading || !form.formState.isValid;
+
+  // 是否存在必填项：用于决定是否渲染"必填项"图例
+  const hasRequired = fields.some((f) => f.required);
+  const requiredCount = fields.filter((f) => f.required).length;
+
+  // 字段分组（按 order 排序）
+  const groupMap = useMemo(() => {
+    const list = groups ?? DEFAULT_GROUPS;
+    return new Map(list.map((g) => [g.key, g]));
+  }, [groups]);
+
+  const sortedFields = useMemo(() => {
+    return [...fields].sort((a, b) => {
+      const ga = groupMap.get(a.group ?? "default")?.order ?? 99;
+      const gb = groupMap.get(b.group ?? "default")?.order ?? 99;
+      return ga - gb;
+    });
+  }, [fields, groupMap]);
+
+  // 按分组聚合字段，保留原始顺序
+  const groupedFields = useMemo(() => {
+    const result: Array<{ groupKey: string; groupTitle: string; fields: FormFieldConfig[] }> = [];
+    sortedFields.forEach((field) => {
+      const key = field.group ?? "default";
+      const last = result[result.length - 1];
+      if (last && last.groupKey === key) {
+        last.fields.push(field);
+      } else {
+        result.push({
+          groupKey: key,
+          groupTitle: groupMap.get(key)?.title ?? "其他",
+          fields: [field],
+        });
+      }
+    });
+    return result;
+  }, [sortedFields, groupMap]);
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent size="wide" className="border-border">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description ? <DialogDescription>{description}</DialogDescription> : null}
-        </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-1">
-              {fields.map((field) => {
-                const isFullSpan =
-                  field.type === "textarea" ||
-                  field.type === "image" ||
-                  field.type === "tags" ||
-                  field.type === "entity-multi";
-                return (
-                  <div key={field.name} className={isFullSpan ? "md:col-span-2" : ""}>
-                    <FormField
-                      control={form.control}
-                      name={field.name}
-                      render={({ field: f }) => (
-                        <FormItem>
-                          <FormLabel>
-                            {field.label}
-                            {field.required && <span className="text-destructive ml-1">*</span>}
-                          </FormLabel>
-                          <FormControl>
-                            {renderFieldControl(field, f)}
-                          </FormControl>
-                          {field.hint && <p className="text-xs text-muted-foreground mt-1">{field.hint}</p>}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                );
-              })}
+    <>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) tryClose();
+        }}
+      >
+        <DialogContent size="wide" className="border-border max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-4">
+            <div className="space-y-1">
+              <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
+                {title}
+              </DialogTitle>
+              {description ? (
+                <DialogDescription className="text-[12px] leading-5 text-muted-foreground/80">
+                  {description}
+                </DialogDescription>
+              ) : null}
             </div>
+          </DialogHeader>
 
-            <DialogFooter className="mt-4">
-              <Button type="button" size="sm" variant="secondary" onClick={onClose} disabled={isLoading}>
-                取消
-              </Button>
-              <Button type="submit" size="sm" disabled={isLoading}>
-                {isLoading ? (loadingLabel ?? `${submitLabel}中...`) : submitLabel}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <Form {...form}>
+            <form
+              onSubmit={handleSubmit}
+              className="flex flex-col min-h-0 flex-1"
+              noValidate
+            >
+              {/* P0-1：必填图例移到表单顶部第一行（在字段组之上） */}
+              {hasRequired && (
+                <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span aria-hidden className="form-required-dot" />
+                    <span>为必填项（共 {requiredCount} 项）</span>
+                  </span>
+                  <span className="hidden sm:inline opacity-50">·</span>
+                  <span>标注 <span aria-hidden className="form-required-dot" /> 的字段需填写后才能保存</span>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto pr-1 -mr-1">
+                <FormFieldsRenderer form={form} groups={groupedFields} />
+              </div>
+
+              <DialogFooter className="mt-6 gap-2 border-t border-white/[0.06] bg-white/[0.01] -mx-6 px-6 -mb-6 pb-4 pt-4">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={tryClose}
+                  disabled={isLoading}
+                >
+                  取消
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSubmitDisabled}
+                  className="shadow-sm"
+                >
+                  {isLoading ? (loadingLabel ?? `${submitLabel}中...`) : submitLabel}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 取消二次确认（P1-9） */}
+      <ConfirmDialog
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={() => {
+          setShowCancelConfirm(false);
+          setIsDirty(false);
+          onClose();
+        }}
+        title="放弃未保存的修改？"
+        description="当前表单存在未保存的更改，关闭后将丢失这些内容。"
+        confirmLabel="放弃修改"
+        cancelLabel="继续编辑"
+        variant="destructive"
+      />
+    </>
+  );
+}
+
+/** 是否属于"长字段"——需要独占整行展示（在两种布局下都占满）。 */
+function isLongField(field: FormFieldConfig): boolean {
+  return (
+    field.type === "textarea" ||
+    field.type === "image" ||
+    field.type === "tags" ||
+    field.type === "entity-multi"
+  );
+}
+
+/**
+ * 字段标签（左右结构专用）。
+ *
+ * 视觉规范：
+ * - 必填项：标签前 emerald 圆点（避免与"错误/警告"的红色星号语义冲突）。
+ * - 非必填：纯文字标签，靠颜色字重区分。
+ * - 标签左对齐 + 垂直居中（短字段）/ 顶部对齐（长字段）。
+ * - 字号 13px、字重 500，颜色 text-foreground/80。
+ */
+function FormFieldLabel({
+  label,
+  required,
+  for: htmlFor,
+  isLong = false,
+}: {
+  label: string;
+  required?: boolean;
+  for?: string;
+  isLong?: boolean;
+}) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={`flex items-start gap-2 text-[13px] font-medium leading-5 text-foreground/80 ${
+        isLong ? "pt-2.5" : "pt-[7px]"
+      }`}
+    >
+      {required && (
+        <span
+          aria-hidden
+          className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
+        />
+      )}
+      {!required && (
+        <span aria-hidden className="mt-2 inline-block h-1.5 w-1.5 shrink-0" />
+      )}
+      <span>{label}</span>
+    </label>
+  );
+}
+
+/**
+ * 字段渲染器：根据每个字段的 layout 决定是"标签上 / 控件下"（vertical）还是
+ * "标签左 / 控件右"（horizontal）。
+ *
+ * 设计规范（v2 视觉升级）：
+ * - 必填项：标签前 emerald 圆点，代替红色星号（避免与错误色冲突）。
+ * - 标签左对齐 + 13px + font-medium + text-foreground/80。
+ * - horizontal 短字段：3:9 栅格，items-center；长字段：3:9 栅格，items-start，标签加 padding-top。
+ * - 字段行间距 gap-y-5（20px），控件行内间距 gap-x-4。
+ * - 错误提示：text-red-400，固定高度区域（避免抖动），顶部 6px 间距。
+ * - 提示文案：text-muted-foreground/80，12px。
+ */
+function FormFieldsRenderer({
+  form,
+  groups,
+}: {
+  form: import("react-hook-form").UseFormReturn<Record<string, unknown>>;
+  groups: Array<{ groupKey: string; groupTitle: string; fields: FormFieldConfig[] }>;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      {groups.map((group) => (
+        <section key={group.groupKey} className="flex flex-col gap-4">
+          <div className="form-group-title" aria-hidden>
+            <span>{group.groupTitle}</span>
+          </div>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5">
+            {group.fields.map((field) => {
+              const isHorizontal = field.layout === "horizontal";
+              const long = isLongField(field);
+
+              if (isHorizontal && !long) {
+                return (
+                  <FormField
+                    key={field.name}
+                    control={form.control}
+                    name={field.name}
+                    render={({ field: f }) => (
+                      <FormItem className="grid grid-cols-12 items-start gap-x-4 space-y-0">
+                        <div className="col-span-12 md:col-span-3">
+                          <FormFieldLabel label={field.label} required={field.required} for={f.name} />
+                        </div>
+                        <div className="col-span-12 md:col-span-9 space-y-1.5">
+                          <FormControl>{renderFieldControl(field, f)}</FormControl>
+                          {field.hint && (
+                            <p className="text-[12px] leading-4 text-muted-foreground/80">{field.hint}</p>
+                          )}
+                          <FormMessage className="text-[12px] leading-4" />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                );
+              }
+
+              if (isHorizontal && long) {
+                return (
+                  <FormField
+                    key={field.name}
+                    control={form.control}
+                    name={field.name}
+                    render={({ field: f }) => (
+                      <FormItem className="grid grid-cols-12 items-start gap-x-4 space-y-0">
+                        <div className="col-span-12 md:col-span-3">
+                          <FormFieldLabel label={field.label} required={field.required} for={f.name} isLong />
+                        </div>
+                        <div className="col-span-12 md:col-span-9 space-y-1.5">
+                          <FormControl>{renderFieldControl(field, f)}</FormControl>
+                          {field.hint && (
+                            <p className="text-[12px] leading-4 text-muted-foreground/80">{field.hint}</p>
+                          )}
+                          <FormMessage className="text-[12px] leading-4" />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                );
+              }
+
+              // vertical（默认）：与原行为一致，但视觉风格同步升级
+              return (
+                <FormField
+                  key={field.name}
+                  control={form.control}
+                  name={field.name}
+                  render={({ field: f }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormFieldLabel label={field.label} required={field.required} for={f.name} />
+                      <FormControl>{renderFieldControl(field, f)}</FormControl>
+                      {field.hint && (
+                        <p className="text-[12px] leading-4 text-muted-foreground/80">{field.hint}</p>
+                      )}
+                      <FormMessage className="text-[12px] leading-4" />
+                    </FormItem>
+                  )}
+                />
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }
 

@@ -4,7 +4,7 @@
  */
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import type { Editor } from '@tiptap/react'
 import {
   Sparkles,
@@ -17,8 +17,8 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { notify } from '@/lib/notify'
 
 interface AIPanelProps {
   editor: Editor | null
@@ -157,7 +157,7 @@ export function AIPanel({
       }
     } else {
       // 无选区：优化全篇，直接替换
-      if (!confirm('当前未选中文字，将对整篇剧本进行优化。是否继续？')) return
+      notify.warn('当前未选中文字，将对整篇剧本进行优化。', '请在编辑器中选中要优化的片段，或继续全篇优化')
       setIsLoading(true)
       setCurrentAction('全篇-' + (TARGET_LABELS[target] || target))
       try {

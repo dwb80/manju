@@ -12,6 +12,7 @@ import {
   Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { scriptCenterService, type ScriptComment as ApiComment } from '@/services/script-center.service'
 import { toast } from '@/components/common/toast'
 
@@ -99,6 +100,7 @@ export function CommentSystem({
   const [replyText, setReplyText] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [filter, setFilter] = useState<'all' | 'active' | 'resolved'>('all')
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   // 加载评论列表（任务8：刷新不丢失）
   useEffect(() => {
@@ -205,24 +207,25 @@ export function CommentSystem({
     [scriptId]
   )
 
-  // 删除评论（带确认）
-  const handleDeleteComment = useCallback(
-    async (commentId: string) => {
-      if (!scriptId) return
-      const ok = typeof window === 'undefined' || window.confirm('确定要删除这条评论吗？回复也会一并删除。')
-      if (!ok) return
-      try {
-        await scriptCenterService.deleteComment(commentId)
-        // 顺带清理孤儿回复（前端兜底）
-        const list = await scriptCenterService.getComments(scriptId)
-        setComments(groupApiCommentsToTree(list))
-        toast.success('评论已删除')
-      } catch (err) {
-        toast.error('删除失败', (err as Error).message)
-      }
-    },
-    [scriptId]
-  )
+  // 删除评论（带确认）：由 ConfirmDialog 接管，pendingDeleteId 表示当前待删除的评论
+  const requestDeleteComment = useCallback((commentId: string) => {
+    setPendingDeleteId(commentId);
+  }, []);
+
+  const confirmDeleteComment = useCallback(async () => {
+    if (!scriptId || !pendingDeleteId) return;
+    const commentId = pendingDeleteId;
+    setPendingDeleteId(null);
+    try {
+      await scriptCenterService.deleteComment(commentId)
+      // 顺带清理孤儿回复（前端兜底）
+      const list = await scriptCenterService.getComments(scriptId)
+      setComments(groupApiCommentsToTree(list))
+      toast.success('评论已删除')
+    } catch (err) {
+      toast.error('删除失败', (err as Error).message)
+    }
+  }, [scriptId, pendingDeleteId]);
 
   const filteredComments = useMemo(
     () => comments.filter((c) => (filter === 'all' ? true : c.status === filter)),
@@ -454,7 +457,7 @@ export function CommentSystem({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeleteComment(comment.id)}
+                    onClick={() => requestDeleteComment(comment.id)}
                     className="h-6 text-xs text-red-400 hover:text-red-300"
                   >
                     <Trash2 className="h-3 w-3 mr-1" />
@@ -466,6 +469,15 @@ export function CommentSystem({
           </div>
         )}
       </div>
+      {pendingDeleteId && (
+        <ConfirmDialog
+          title="删除评论"
+          description="确定要删除这条评论吗？回复也会一并删除。"
+          confirmLabel="删除"
+          onClose={() => setPendingDeleteId(null)}
+          onConfirm={() => void confirmDeleteComment()}
+        />
+      )}
     </div>
   )
 }

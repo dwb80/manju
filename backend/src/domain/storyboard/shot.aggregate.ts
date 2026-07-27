@@ -330,6 +330,8 @@ export class ShotAggregate implements AggregateRoot {
     propAssetIds?: string[];
     pipelineRunId?: string;
     pipelineNodeId?: string;
+    /** 创建者 actor id；用于审计与 createdBy 字段落库。默认 'system'。 */
+    createdBy?: string;
   }): ShotAggregate {
     const now = nowIso();
     const agg = new ShotAggregate({
@@ -371,7 +373,7 @@ export class ShotAggregate implements AggregateRoot {
       pipelineNodeId: input.pipelineNodeId,
     });
     agg.lastAction = "create";
-    agg.markSnapshot("create", "create-shot");
+    agg.markSnapshot("create", "create-shot", input.createdBy);
     return agg;
   }
 
@@ -603,7 +605,7 @@ export class ShotAggregate implements AggregateRoot {
     this.lastAction = "attach";
     this.updatedAt = nowIso();
     this.status = result.to;
-    this.markSnapshot("attach", `attach:${input.candidateId}`);
+    this.markSnapshot("attach", `attach:${input.candidateId}`, input.attachedBy);
     this.events.push(
       shotVideoCandidateAttachedEvent({
         shotId: this.id,
@@ -772,7 +774,7 @@ export class ShotAggregate implements AggregateRoot {
     this.bumpVersion();
     this.lastAction = "softDelete";
     this.updatedAt = nowIso();
-    this.markSnapshot("softDelete", `softDelete:${actorId}`);
+    this.markSnapshot("softDelete", `softDelete:${actorId}`, actorId);
     return this;
   }
 
@@ -786,7 +788,7 @@ export class ShotAggregate implements AggregateRoot {
     this.bumpVersion();
     this.lastAction = "restore";
     this.updatedAt = nowIso();
-    this.markSnapshot("restore", `restoreFromSoftDelete:${actorId}`);
+    this.markSnapshot("restore", `restoreFromSoftDelete:${actorId}`, actorId);
     return this;
   }
 
@@ -812,7 +814,7 @@ export class ShotAggregate implements AggregateRoot {
     this.bumpVersion();
     this.lastAction = action;
     this.updatedAt = nowIso();
-    this.markSnapshot(action, `${command}:${actorId}`);
+    this.markSnapshot(action, `${command}:${actorId}`, actorId);
     if (command === "submitForReview") {
       // 事件层专门发，送审由 aggregate 自行 enqueue（无外部 reviewer）。
       this.events.push(
@@ -836,6 +838,8 @@ export class ShotAggregate implements AggregateRoot {
   private markSnapshot(
     action: typeof this.lastAction,
     changeNote: string,
+    /** 触发本次变更的 actorId；未提供时落 "system"（保留旧默认值）。 */
+    createdBy: string = "system",
   ): void {
     this.snapshots.push({
       id: snapshotId(),
@@ -844,7 +848,7 @@ export class ShotAggregate implements AggregateRoot {
       version: this.version,
       data: JSON.stringify(this.toPersistenceRow()),
       changeNote: `${action}|${changeNote}`,
-      createdBy: "system",
+      createdBy: createdBy || "system",
       createdAt: nowIso(),
     });
   }

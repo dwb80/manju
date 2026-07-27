@@ -6,27 +6,18 @@
 "use client";
 
 import type {
-    Project,
-    ProjectSummary,
-    ProjectTask,
-    ProjectTaskStatus,
-    ProjectMember,
-    ProjectEpisode,
-    ProjectIssue,
-    ProjectIssueSeverity,
-    ProjectIssueStatus,
-    ProjectMilestone,
-    ProjectMilestoneStatus,
-    ProjectScript,
-    ProjectStoryboard,
-    ProjectStoryboardStatus,
-    ProjectClip,
-    ProjectClipStatus,
-    ProjectReview,
-    ProjectAsset,
-    ProjectAssetKind,
-    WorkbenchTab,
-    ProjectHealth,
+  Project,
+  ProjectSummary,
+  ProjectTask, ProjectMember,
+  ProjectEpisode,
+  ProjectIssue, ProjectMilestone, ProjectScript,
+  ProjectStoryboard,
+  ProjectStoryboardStatus,
+  ProjectClip, ProjectReview,
+  ProjectAsset,
+  ProjectAssetKind,
+  WorkbenchTab,
+  ProjectHealth
 } from "@/lib/app-types";
 import { ProjectSidebar } from "@/components/project/project-sidebar";
 import { ProjectHeader } from "@/components/project/project-header";
@@ -34,13 +25,13 @@ import { ProjectToolbar } from "@/components/project/project-toolbar";
 import { ProjectWorkbenchTabs } from "@/components/project/project-workbench-tabs";
 import { ProjectListView } from "@/components/project/project-list-view";
 import {
-    clipStatuses,
-    clipStatusText,
-    projectAssetKinds,
-    projectTaskColumns,
-    scriptStatusText,
-    storyboardStatuses,
-    storyboardStatusText,
+  clipStatuses,
+  clipStatusText,
+  projectAssetKinds,
+  projectTaskColumns,
+  scriptStatusText,
+  storyboardStatuses,
+  storyboardStatusText,
 } from "@/lib/project-workflow";
 
 export interface ProjectWorkbenchSectionProps {

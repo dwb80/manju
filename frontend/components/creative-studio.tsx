@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Check, Copy, Download, ExternalLink, ImagePlus, Loader2, MessageSquare, Paperclip, RefreshCw, Send, Square, Trash2, Video, Wand2, X } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, ImagePlus, Loader2, MessageSquare, Paperclip, RefreshCw, Send, Trash2, Video, Wand2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShadcnSelect } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
 import { ChatPanel } from "@/components/layout/workspace-panels";
 import { Tip } from "@/components/ui/tip";
 import { imageSizeOptions, defaultVideoSize, estimateVideoSeconds, statusText } from "@/lib/project-workflow";
@@ -495,7 +494,6 @@ function ImageCanvas({
   requests,
   onOpenDetail,
   onDownload,
-  onOpenRaw,
   onCopy,
   onAddToAsset,
   onContinueEdit,

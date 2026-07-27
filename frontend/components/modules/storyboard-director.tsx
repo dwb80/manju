@@ -17,8 +17,13 @@ import { FactoryCRUDPage, type FactoryCRUDPageProps, getEntityLabel } from "@/co
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import { toast } from "@/components/common/toast";
 import { useProjectStore } from "@/lib/stores/project-store";
+import { useFactorySelection } from "@/lib/stores/factory-selection-store";
 import { clearApiCache } from "@/lib/api-client";
 import { useNameLookup } from "@/hooks/use-name-lookup";
+import {
+  useStoryboardExpandedStore,
+  useStoryboardExpandedIds,
+} from "@/lib/stores/storyboard-expanded-store";
 import type { Storyboard, Shot, Scene, Character, Prop } from "@/lib/module-types";
 import {
   listStoryboards,
@@ -30,11 +35,9 @@ import {
   permanentDeleteStoryboards,
   copyStoryboardToProjects,
   generateVideoFromStoryboard,
-  generateVideoFromShot,
-  listShots,
-  createShot,
+  generateVideoFromShot, createShot,
   deleteShot,
-  autoSplitShots,
+  autoSplitShots
 } from "@/services/storyboard.service";
 import { getScenesByIds } from "@/services/scene.service";
 import { listCharacters } from "@/services/character.service";
@@ -124,6 +127,7 @@ const episodeOptions: { value: string; label: string }[] = [
 const config: FactoryCRUDPageProps<Storyboard> = {
   title: "分镜导演台",
   description: "设计与编排漫剧分镜（V2 父子结构：分镜 → 镜头）",
+  entityType: "storyboard",
   entityLabel: "分镜",
   listTitle: "分镜时间轴",
   emptyTitle: "未找到分镜",
@@ -163,7 +167,7 @@ const config: FactoryCRUDPageProps<Storyboard> = {
   },
 
   // 占位渲染（真正的渲染在 <StoryboardDirectorPage /> 中以 JSX 形式提供）
-  renderCard: (sb, actions) => (
+  renderCard: (sb) => (
     <div className="rounded-lg border border-white/10 bg-[#202020] p-4 text-xs text-[#666]">
       {sb.title || sb.description || getEntityLabel(sb, "占位分镜")}
     </div>
@@ -231,7 +235,11 @@ function StoryboardRow({
   isGeneratingVideo: boolean;
   generatingShotId: string | null;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  // P1-8: 折叠状态持久化（localStorage + 按 projectId 隔离），
+  // 避免用户切走页面 / 刷新后丢失已展开的分镜。
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
+  const expanded = useStoryboardExpandedIds(selectedProjectId).has(sb.id);
+  const toggleExpanded = useStoryboardExpandedStore((s) => s.toggle);
   const status = sb.status ?? "draft";
   const color =
     STORYBOARD_STATUS_COLORS[status as keyof typeof STORYBOARD_STATUS_COLORS] ??
@@ -264,7 +272,7 @@ function StoryboardRow({
         className={`absolute left-2 top-2 z-10 grid h-5 w-5 place-items-center rounded border transition-opacity ${
           actions.selected
             ? "border-emerald-500 bg-emerald-500 opacity-100"
-            : "border-white/40 bg-black/30 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
+            : "border-white/40 bg-black/30 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:border-emerald-400"
         }`}
         aria-label={actions.selected ? "取消选择" : "选择"}
       >
@@ -388,7 +396,11 @@ function StoryboardRow({
         </div>
       )}
 
-      <div className="mt-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* 操作区：P1-9 修复键盘可达性。除了 hover，键盘聚焦到卡片内任意元素时也必须可见。
+          - group-hover:opacity-100：鼠标悬停
+          - group-focus-within:opacity-100：键盘 Tab 进入卡片内任意按钮
+          - focus-within:opacity-100：兜底，确保按钮被聚焦时操作区一定可见 */}
+      <div className="mt-3 flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:focus-within:opacity-100">
         <Button variant="ghost" size="sm" onClick={actions.onEdit} className="flex-1">
           <Pencil className="mr-1 h-3 w-3" />
           编辑
@@ -403,7 +415,12 @@ function StoryboardRow({
           <Video className={`mr-1 h-3 w-3 ${isGeneratingVideo ? "animate-pulse" : ""}`} />
           {isGeneratingVideo ? "生成中..." : "图生视频"}
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)} className="flex-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => toggleExpanded(selectedProjectId ?? "", sb.id)}
+          className="flex-1"
+        >
           {expanded ? "收起镜头" : `展开镜头 (${storyboardShots.length})`}
         </Button>
         <Button variant="ghost" size="sm" onClick={actions.onDelete} className="text-red-400">
@@ -427,28 +444,9 @@ export function StoryboardDirectorPage() {
    */
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingVideoId, setGeneratingVideoId] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  // 监听 FactoryCRUDPage 内的 selectedIds 变化
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = setInterval(() => {
-      const container = document.querySelector("[data-factory-selected]");
-      if (!container) return;
-      try {
-        const raw = container.getAttribute("data-factory-selected") ?? "[]";
-        const ids: string[] = JSON.parse(raw);
-        setSelectedIds((prev) => {
-          const next = new Set(ids);
-          if (next.size === prev.size && Array.from(next).every((x) => prev.has(x))) return prev;
-          return next;
-        });
-      } catch {
-        // ignore parse errors
-      }
-    }, 500);
-    return () => clearInterval(id);
-  }, []);
+  // P0-8：直接从 useFactorySelectionStore 订阅"storyboard"工厂的选中态，
+  // 替代旧版 setInterval 轮询 [data-factory-selected] DOM 属性的方案。
+  const selectedIds = useFactorySelection("storyboard");
 
   // 拉取分镜列表
   useEffect(() => {

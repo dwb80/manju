@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { Star, Award, FileCheck, Lightbulb, Code, MessageSquare } from "lucide-react";
+import { notify } from "@/lib/notify";
 
 /**
  * 审核质量评分组件：用于审核中心的质量评分界面。
@@ -326,7 +327,7 @@ export function ReviewScoreCard({
     // 验证是否所有维度都已评分
     const allScored = Object.values(scores).every((score) => score > 0);
     if (!allScored) {
-      alert("请为所有维度评分");
+      notify.warn("请为所有维度评分");
       return;
     }
 

@@ -8,12 +8,14 @@ import type { AppContext } from "../app.js";
 import { DOMAIN_ERROR_CODES, isDomainError } from "../../domain/shared/domain-error.js";
 import type { PipelineNode } from "../../domain/pipeline/pipeline-node.entity.js";
 import { SqlitePipelineRunRepository } from "../../infrastructure/persistence/sqlite-pipeline-run.repository.js";
+import { createTransactionServiceUnitOfWork } from "../../infrastructure/unit-of-work/transaction-service-unit-of-work.js";
 import {
   CompleteNodeHandler,
   FailNodeHandler,
   FinalizeRunHandler,
   SkipNodeHandler,
   StartNodeHandler,
+  type PipelineHandlerDeps,
 } from "../../application/pipeline/pipeline-command-handler.js";
 import { rootLogger } from "../../logger.js";
 import { assertBudgetCapacityForNodes } from "./pipeline-budget.js";
@@ -78,11 +80,13 @@ export function createPipelineRunScheduler(
   _deps: { readonly recordEvent?: unknown } = {},
 ): PipelineRunScheduler {
   const repository = new SqlitePipelineRunRepository(ctx.databaseFile);
-  const startNode = new StartNodeHandler(repository);
-  const completeNode = new CompleteNodeHandler(repository);
-  const failNode = new FailNodeHandler(repository);
-  const skipNode = new SkipNodeHandler(repository);
-  const finalize = new FinalizeRunHandler(repository);
+  const uow = createTransactionServiceUnitOfWork(ctx.transactionService);
+  const deps: PipelineHandlerDeps = { repo: repository, uow };
+  const startNode = new StartNodeHandler(deps);
+  const completeNode = new CompleteNodeHandler(deps);
+  const failNode = new FailNodeHandler(deps);
+  const skipNode = new SkipNodeHandler(deps);
+  const finalize = new FinalizeRunHandler(deps);
   const executor = createNodeExecutor(ctx);
   const activeRuns = new Map<string, Promise<void>>();
   const mutationTails = new Map<string, Promise<void>>();

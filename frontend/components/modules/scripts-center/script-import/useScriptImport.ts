@@ -32,10 +32,7 @@ import {
 import type { ImportFormat } from "../types";
 import type {
   PreviewCharacter,
-  PreviewEpisode,
-  PreviewPropAsset,
-  PreviewResult,
-  PreviewSceneAsset,
+  PreviewResult
 } from "./types";
 
 /** 模型中心 - 剧本分析可用的聊天模型（仅取 is_enabled=true 的子集） */
@@ -223,7 +220,7 @@ export function useScriptImport({
     // 异步查现有角色做资产匹配（只读，不写入）
     void matchCharactersWithFactory(projectId, characters);
     // 异步匹配场景/道具（只读，不写入）
-    void matchScenesAndPropsWithFactory(projectId, sceneAssets, propAssets);
+    void matchScenesAndPropsWithFactory(projectId);
   }, [importText, importFileName, importFormat, projectId, selectedModelId, chatModels, isLoadingModels, loadChatModels]);
 
   /**
@@ -284,8 +281,6 @@ export function useScriptImport({
    */
   const matchScenesAndPropsWithFactory = useCallback(async (
     projId: string | null,
-    sceneAssets: PreviewSceneAsset[],
-    propAssets: PreviewPropAsset[]
   ) => {
     if (!projId) return;
     try {
@@ -544,23 +539,16 @@ export function useScriptImport({
   }, []);
 
   /**
-   * 关闭整个对话框
-   * - 若正在 AI 分析或导入中，弹确认对话框询问是否中断
-   * - 否则直接重置状态
+   * 关闭整个对话框时清理内部状态
+   * - 中断确认由调用方（ScriptImportDialog）通过 ConfirmDialog 统一处理，
+   *   这样键盘快捷键、X 按钮、底部取消三处行为可以共用同一个确认态。
    */
   const handleClose = useCallback(() => {
-    if (isAnalyzingScript || isImporting) {
-      const action = isImporting ? "导入" : "AI 解析";
-      const ok = window.confirm(
-        `${action}正在进行中，确定要中断并关闭吗？\n已输入的内容将被丢弃。`
-      );
-      if (!ok) return;
-    }
     setShowPreview(false);
     setPreview(null);
     setImportText("");
     setImportFileName("");
-  }, [isAnalyzingScript, isImporting]);
+  }, []);
 
   /** 同步更新预览中的标题（用户在预览弹窗里编辑） */
   const updatePreviewTitle = useCallback((title: string) => {

@@ -7,7 +7,6 @@ import type { Project, ProjectFormDraft, ProjectFormMode } from "@/lib/app-types
 
 export function useProjects({
   showNotice,
-  requestConfirm,
 }: {
   showNotice: (message: string) => void;
   requestConfirm: (title: string, description: string, confirmLabel: string, action: () => Promise<void> | void) => void;

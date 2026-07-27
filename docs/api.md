@@ -34,7 +34,8 @@
 | 图片 | `POST /api/images/generate`、`POST /api/images/local`、`GET /api/images`、`GET/DELETE /api/images/:id` | 图片生成、落库和任务管理 |
 | 视频 | `POST /api/videos/generate`、`GET /api/videos`、`GET/DELETE /api/videos/:id` | 异步视频任务 |
 | 工厂资产 | `/api/characters`、`/api/scenes`、`/api/props`、`/api/storyboards`、`/api/audios`、`/api/module-videos`、`/api/clips` | 角色、场景、道具、分镜、音视频和剪辑 CRUD |
-| 图片历史 | `/api/character-image-history`、`/api/scene-image-history`、`/api/prop-image-history` | 历史图、应用/取消应用、清理 |
+| 资产图片 | `/api/characters/:id/images`、`/api/scenes/:id/images`、`/api/props/:id/images` | 每个实体的多视图图片：GET（按景别/角度/视图类型筛选）/ POST / PATCH / DELETE / PUT primary / POST apply（标记为资产）。完整契约见 [factories-assets-and-image-views.md](./factories-assets-and-image-views.md) |
+| 图片历史 | `/api/character-image-history`、`/api/scene-image-history`、`/api/prop-image-history` | 历史图、应用/取消应用、清理。**S4.2 补：** POST 入参支持 `shot_type` / `angle` / `view_type` 三维字段；**S4.4 收口：** `view_type` 表情类使用 `expression:<name>` 命名空间避免与 `costume/overall/single` 冲突 |
 | 审核 | `GET/POST /api/reviews`、`GET /api/reviews/stats`、`POST /api/reviews/:id/approve`、`/reject` | 审核队列和状态流 |
 | 发布准备 | `GET /api/publish/videos`、`GET/POST /api/publish/plans`、`PUT/DELETE /api/publish/plans/:id` | 成片和发布计划；不等于第三方自动发布 |
 | 数据 | `/api/data/metrics`、`/api/data/ai-cost`、`/api/data/production-efficiency`、`/api/data/project-overview` | 指标、AI 成本、效率和项目概览 |
@@ -61,6 +62,8 @@
 
 生成图片：
 
+请求：
+
 ```json
 {
   "conversationId": "c-xxx",
@@ -70,6 +73,23 @@
   "n": 2
 }
 ```
+
+响应（标准 envelope）：
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "imageUrls": ["https://cdn.../img-1.png", "https://cdn.../img-2.png"],
+    "requestId": "agn-abc123"   // 顶层（V1.4 / S3.2 起），厂商对账 ID（Agnes 走 X-Request-Id）；用于排障与厂商对账
+  }
+}
+```
+
+- `imageUrls`：成功图片 URL 列表（按入参顺序）。
+- `requestId`：**顶层字段**（S4.1.2 补），与 `providerMeta.requestId` 同源。n>1 时取成功集**第一个**的 requestId（与"主图 = 第 1 张"对齐）。厂商未返回时为 `undefined`。
+- 超时默认值：单次生图 **180s**（`utils.ts:282` 的 `AI_TIMEOUTS.generateImage`，可由 `AGNES_TIMEOUT_GENERATE_IMAGE_MS` 环境变量覆盖）。
 
 创建视频任务：
 

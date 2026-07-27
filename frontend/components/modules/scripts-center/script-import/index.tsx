@@ -11,12 +11,13 @@
  * 状态机和导入逻辑封装在 useScriptImport 中。
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { DialogOverlay } from "../ScriptsCenterPage";
 import { ImportFormPanel } from "./ImportFormPanel";
 import { PreviewDialog } from "./PreviewDialog";
 import { useScriptImport } from "./useScriptImport";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 
 export function ScriptImportDialog({
   isOpen,
@@ -52,6 +53,29 @@ export function ScriptImportDialog({
     reloadChatModels,
   } = useScriptImport({ projectId, onImported });
 
+  // 中断确认对话框：AI 解析/导入进行中时关闭/取消/Esc 都先弹此确认
+  const [pendingAbort, setPendingAbort] = useState<{
+    action: string;
+  } | null>(null);
+
+  /**
+   * 统一的关闭请求：AI 解析/导入进行中先弹 ConfirmDialog，用户确认后
+   * 重置内部状态 + 调用父组件的 onClose。X 按钮、Esc 键、底部"取消"按钮
+   * 三处行为完全一致。
+   */
+  const performClose = () => {
+    handleCloseWithConfirm();
+    onClose();
+  };
+
+  const requestClose = () => {
+    if (isAnalyzingScript || isImporting) {
+      setPendingAbort({ action: isImporting ? "导入" : "AI 解析" });
+      return;
+    }
+    performClose();
+  };
+
   // 键盘快捷键
   // - Esc：关闭对话框（loading 时会二次确认）
   // - Cmd/Ctrl + Enter：触发解析预览
@@ -61,14 +85,7 @@ export function ScriptImportDialog({
       if (e.key === "Escape") {
         e.preventDefault();
         // 与右上角 X 按钮共用同一条路径，保持三处行为一致
-        if (isAnalyzingScript || isImporting) {
-          const action = isImporting ? "导入" : "AI 解析";
-          const ok = window.confirm(
-            `${action}正在进行中，确定要中断并关闭吗？\n已输入的内容将被丢弃。`
-          );
-          if (!ok) return;
-        }
-        onClose();
+        requestClose();
       } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         // 仅在表单阶段生效，预览阶段不重复触发
         if (!showPreview && !isAnalyzingScript && importText.trim()) {
@@ -86,31 +103,13 @@ export function ScriptImportDialog({
     isImporting,
     importText,
     handleParsePreview,
-    onClose,
+    requestClose,
   ]);
 
   if (!isOpen) return null;
 
-  /**
-   * 统一的关闭请求：先弹二次确认（仅在 AI 解析/导入 进行中时），
-   * 用户确认后再重置内部状态 + 调用父组件的 onClose 把 isOpen 设为 false。
-   * 这样右上角 X 按钮、Esc 键、底部"取消"按钮三处行为完全一致。
-   */
-  const handleRequestClose = () => {
-    if (isAnalyzingScript || isImporting) {
-      const action = isImporting ? "导入" : "AI 解析";
-      const ok = window.confirm(
-        `${action}正在进行中，确定要中断并关闭吗？\n已输入的内容将被丢弃。`
-      );
-      if (!ok) return;
-    }
-    // 重置内部状态（与 hook 内 handleClose 行为一致）
-    handleCloseWithConfirm();
-    onClose();
-  };
-
   return (
-    <DialogOverlay title="导入剧本" onClose={handleRequestClose} wide>
+    <DialogOverlay title="导入剧本" onClose={requestClose} wide>
       {!showPreview && (
         <ImportFormPanel
           importFormat={importFormat}
@@ -145,6 +144,19 @@ export function ScriptImportDialog({
             onCancel={handleCancelPreview}
           />
         </ErrorBoundary>
+      )}
+
+      {pendingAbort && (
+        <ConfirmDialog
+          title="确认中断？"
+          description={`${pendingAbort.action}正在进行中，确定要中断并关闭吗？\n已输入的内容将被丢弃。`}
+          confirmLabel="中断并关闭"
+          onClose={() => setPendingAbort(null)}
+          onConfirm={() => {
+            setPendingAbort(null);
+            performClose();
+          }}
+        />
       )}
     </DialogOverlay>
   );

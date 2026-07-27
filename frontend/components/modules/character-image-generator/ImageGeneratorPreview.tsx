@@ -5,7 +5,7 @@
  * @description 角色图片生成器预览区域组件，展示生成结果和候选图片
  */
 
-import { useCallback } from "react";
+import { type CSSProperties } from "react";
 import {
   Loader2,
   X,
@@ -16,10 +16,8 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ratioToAspectRatio } from "./types";
-import type { CandidateImage } from "./types";
+import { ratioToAspectRatio, type CandidateImage } from "./types";
 import type { ImageRatio } from "@/lib/module-types";
-import type { CSSProperties } from "react";
 
 export interface ImageGeneratorPreviewProps {
   isGenerating: boolean;

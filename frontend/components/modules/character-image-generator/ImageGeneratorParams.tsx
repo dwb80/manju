@@ -21,26 +21,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tip } from "@/components/ui/tip";
 import { Input } from "@/components/ui/input";
 import {
-  aspectRatioOptions,
-  defaultSizeFromRatio,
-  findStyleOption,
+  aspectRatioOptions, findStyleOption,
   imageSizeOptions,
-  styleOptions,
+  styleOptions
 } from "@/lib/project-workflow";
 import { AspectRatioSelect } from "@/components/modules/image-picker-aspect-ratio-select";
 import { StylePicker } from "@/components/modules/image-picker-style";
 import {
-  MAX_REFERENCE_IMAGES,
-  MAX_REFERENCE_IMAGE_MB,
-  MAX_REFERENCE_IMAGE_SIZE,
+  MAX_REFERENCE_IMAGES, MAX_REFERENCE_IMAGE_SIZE,
   ALLOWED_IMAGE_TYPES,
-  ALLOWED_IMAGE_EXTS,
-  DEFAULT_MODEL,
-  DEFAULT_FORMAT,
+  ALLOWED_IMAGE_EXTS, DEFAULT_FORMAT,
   DEFAULT_COUNT,
   MODEL_OPTIONS,
   RESPONSE_FORMAT_OPTIONS,
-  COUNT_OPTIONS,
+  COUNT_OPTIONS
 } from "./types";
 import { ThumbnailImage, CountHighlight } from "./utils";
 import type { ImageModel, ImageRatio, ImageResponseFormat, ImageSize, StyleValue } from "@/lib/module-types";
@@ -92,7 +86,6 @@ export interface ImageGeneratorParamsProps {
 }
 
 export function ImageGeneratorParams({
-  character,
   scriptInfo,
   prompt,
   onPromptChange,
@@ -122,10 +115,8 @@ export function ImageGeneratorParams({
   onGenerate,
   onRegenerateSame,
   onEnhancePrompt,
-  onResetParams,
 }: ImageGeneratorParamsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const uploadingRef = false; // 由父组件管理，这里简化
 
   const handleUploadReference = async (files: FileList | null) => {
     if (!files || files.length === 0) return;

@@ -63,6 +63,16 @@ export function ensurePipelineAggregateSchema(databaseFile: string): void {
         not_before INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL
       );
+      -- S4.3 收口：PipelineRun 幂等键权威源；与 recordCommand / isCommandProcessed 同生命周期。
+      -- 跨进程重启可恢复（与 pipeline_runs.processed_command_ids 内存缓存无依赖）。
+      CREATE TABLE IF NOT EXISTS pipeline_command_log (
+        id TEXT PRIMARY KEY,
+        run_id TEXT NOT NULL,
+        command_type TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS pipeline_command_log_run_idx
+        ON pipeline_command_log(run_id, created_at);
     `);
     ensureColumn(database, "pipeline_runs", "version", "INTEGER NOT NULL DEFAULT 1");
     ensureColumn(
@@ -93,6 +103,8 @@ export function ensurePipelineAggregateSchema(databaseFile: string): void {
       CREATE INDEX IF NOT EXISTS idx_pipeline_dependencies_run ON pipeline_dependencies(run_id);
       CREATE INDEX IF NOT EXISTS idx_pipeline_nodes_idempotency
         ON pipeline_nodes(project_id, idempotency_key, status);
+      CREATE INDEX IF NOT EXISTS idx_pipeline_command_log_run
+        ON pipeline_command_log(run_id, created_at);
       CREATE INDEX IF NOT EXISTS idx_outbox_events_status
         ON outbox_events(status, created_at);
     `);

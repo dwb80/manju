@@ -9,14 +9,6 @@ import { useEffect, useCallback } from "react";
 
 type ShortcutAction = () => void;
 
-type ShortcutConfig = {
-  key: string;
-  ctrl?: boolean;
-  shift?: boolean;
-  alt?: boolean;
-  action: ShortcutAction;
-  description?: string;
-};
 
 /**
  * useShortcuts - 全局快捷键监听 Hook

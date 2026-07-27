@@ -26,7 +26,6 @@ interface ProjectToolbarProps {
  * @returns {JSX.Element} 渲染的工具栏元素
  */
 export function ProjectToolbar({
-    projectWorkbenchTab,
     workbenchSearch,
     workbenchStatusFilter,
     workbenchOwnerFilter,

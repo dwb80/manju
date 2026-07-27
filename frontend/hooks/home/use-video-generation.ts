@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useRef } from "react";
 import { api } from "@/lib/api-client";
-import { defaultVideoSize, validVideoFrames } from "@/lib/project-workflow";
-import type { VideoSettings, VideoTask, VideoRatio, Attachment } from "@/lib/app-types";
+import { validVideoFrames } from "@/lib/project-workflow";
+import type { VideoSettings, VideoTask, Attachment } from "@/lib/app-types";
 
 export function useVideoGeneration({
   conversationId,

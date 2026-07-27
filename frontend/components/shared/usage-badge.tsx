@@ -14,7 +14,6 @@
 import { useEffect, useState } from "react";
 import { Link2, X, ExternalLink, Loader2 } from "lucide-react";
 import { getCharacterUsage, getSceneUsage, getPropUsage, type AssetUsage, type UsageReferenceItem } from "@/services/module.service";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tip } from "@/components/ui/tip";
 
 /** 资产类型，决定调用哪个引用查询接口。 */

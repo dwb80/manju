@@ -127,7 +127,7 @@ export function ReviewCenterPage() {
 
   // 根据 selectedProjectId 加载审核数据
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedProjectId) { setReviews([]); return; }

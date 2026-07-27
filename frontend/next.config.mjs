@@ -10,6 +10,10 @@ const createNextConfig = (phase) => ({
   devIndicators: false,
   distDir: process.env.NEXT_DIST_DIR || (phase === PHASE_DEVELOPMENT_SERVER ? ".next" : ".next-build"),
   outputFileTracingRoot: __dirname,
+  // 显式声明 Turbopack 根目录，避免在 monorepo 中向上扫描并消除 webpack/turbopack 配置告警。
+  turbopack: {
+    root: __dirname,
+  },
   webpack(config) {
     config.watchOptions = {
       ...(config.watchOptions ?? {}),

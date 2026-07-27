@@ -3,8 +3,8 @@
 import { useState, useCallback } from "react";
 import { api, uploadImages } from "@/lib/api-client";
 import { cropReferenceImageToPortrait, shouldUseLocalCrop } from "@/lib/media-tools";
-import { findStyleOption, imageRatioFromSize } from "@/lib/project-workflow";
-import type { Attachment, ImageSettings, ImageSize, ImageTask, ImageRequest } from "@/lib/app-types";
+import { imageRatioFromSize } from "@/lib/project-workflow";
+import type { Attachment, ImageSettings, ImageTask, ImageRequest } from "@/lib/app-types";
 
 export function useImageGeneration({
   conversationId,

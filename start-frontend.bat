@@ -24,11 +24,6 @@ if not exist "node_modules" (
   )
 )
 
-if exist ".next" (
-  echo [frontend] Cleaning stale Next.js cache...
-  rmdir /s /q ".next"
-)
-
 echo [frontend] Starting on http://localhost:%PORT%
 echo [frontend] Next.js dev logs will appear in this window.
 set "AGNES_BACKEND_URL=http://127.0.0.1:3000"

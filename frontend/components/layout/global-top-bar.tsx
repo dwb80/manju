@@ -73,9 +73,9 @@ export function GlobalTopBar() {
   );
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-[#202020] px-6">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6">
       <div className="flex min-w-0 items-center gap-4">
-        <h2 className="shrink-0 text-lg font-semibold text-white">当前项目</h2>
+        <h2 className="shrink-0 text-lg font-semibold text-card-foreground">当前项目</h2>
         <ShadcnSelect
           value={selectedProjectId ?? ""}
           onChange={(value) => setSelectedProjectId(value)}

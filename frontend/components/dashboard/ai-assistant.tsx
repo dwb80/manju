@@ -6,7 +6,6 @@
 
 import { memo, useState } from "react";
 import { MessageCircle, X, Sparkles, FileText, Clapperboard, Image, Video, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface AIAssistantProps {
   onCreateProject?: () => void;

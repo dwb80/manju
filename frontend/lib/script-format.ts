@@ -555,7 +555,6 @@ export function markdownToEditorJson(md: string): EditorNode {
 function parseInlineMarkdown(text: string): EditorNode[] {
   const nodes: EditorNode[] = []
   let remaining = text
-  let currentMarks: Array<{ type: string }> = []
   
   const patterns = [
     { regex: /\*\*(.*?)\*\*/, type: 'bold' },

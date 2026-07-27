@@ -18,6 +18,22 @@ import { ZhipuClient } from "./zhipu-client.js";
 import { CerebrasClient, type CerebrasClientConfig } from "./cerebras-client.js";
 import { SenseNovaClient, type SenseNovaClientConfig } from "./sensenova-client.js";
 import { createEdgeTTSProvider } from "./tts-provider.js";
+import {
+  getGlobalImageRouter,
+  ModelNotFoundError,
+  ModelProviderError,
+  type ImageProviderRequest,
+  type ImageProviderAdapter,
+  type ImageProviderRouter,
+} from "./image-provider.js";
+import { AgnesImageProvider } from "./agnes-image-provider.js";
+import {
+  DEFAULT_RATIO,
+  DEFAULT_N,
+  DEFAULT_SIZE,
+  DEFAULT_IMAGE_MODEL,
+  recommendedSizeForRatio,
+} from "./image-config.js";
 import { rootLogger } from "../logger.js";
 import type { ChatParams, ChatChunk, ImageParams, VideoParams, TaskStatus } from "../types.js";
 import type { AgnesClient } from "./agnes-client.js";
@@ -76,6 +92,17 @@ export interface AIClientFactoryOptions {
   cerebrasConfig?: CerebrasConfig;
   sensenovaConfig?: SenseNovaConfig;
   ttsConfig?: TTSProviderConfig;
+  /**
+   * 自定义图片 Provider 路由器（仅测试用）。
+   * 不传 → 走 `getGlobalImageRouter()` 全局单例，构造时自动注册 `AgnesImageProvider`。
+   * 传 mock router → 跳过默认注册（mock router 自身已注册好 fake provider）。
+   */
+  imageRouter?: ImageProviderRouter;
+  /**
+   * 是否跳过默认 `AgnesImageProvider` 注册（仅测试 / 演示用）。
+   * 默认 `false`（注册）。`imageRouter` 是 mock 时建议同时设 `true`。
+   */
+  skipDefaultImageProvider?: boolean;
 }
 
 export class RoutedAIClient implements AgnesClient {
@@ -90,6 +117,12 @@ export class RoutedAIClient implements AgnesClient {
   private sensenovaModelIds: Set<string> = new Set();
   private readonly ttsProvider: ReturnType<typeof createEdgeTTSProvider> | null;
   private readonly ttsProviderType: TTSProviderType;
+  /**
+   * 图片 Provider 路由器。
+   * - 默认走全局单例 `getGlobalImageRouter()`，构造时自动注册 `AgnesImageProvider`。
+   * - 测试可通过构造选项 `imageRouter` + `skipDefaultImageProvider: true` 注入 fake router。
+   */
+  private readonly imageRouter: ImageProviderRouter;
 
   constructor(options: AIClientFactoryOptions = {}) {
     const env = options.env ?? process.env;
@@ -137,6 +170,32 @@ export class RoutedAIClient implements AgnesClient {
       rootLogger.info(
         { event: "ai.tts.provider.init", provider: "agnes" },
         "TTS Provider 设置为 Agnes（需 Agnes 支持 TTS）",
+      );
+    }
+
+    // 图片路由初始化
+    this.imageRouter = options.imageRouter ?? getGlobalImageRouter();
+    if (!options.skipDefaultImageProvider) {
+      this.registerDefaultImageProvider();
+    }
+  }
+
+  /**
+   * 注册默认 `AgnesImageProvider` 到 imageRouter（幂等）。
+   * 复用已构造的 `RealAgnesClient` 实例（避免重复读 env / 重复构造）。
+   * 重复注册会被 router 内部日志告警（不阻断），因此测试场景需要 `skipDefaultImageProvider: true`。
+   */
+  private registerDefaultImageProvider(): void {
+    const provider = new AgnesImageProvider(this.agnes);
+    this.imageRouter.register(provider);
+    if (rootLogger.isLevelEnabled("debug")) {
+      rootLogger.debug(
+        {
+          event: "ai.route.image_provider_registered",
+          providerId: provider.providerId,
+          models: [...provider.supportedModels],
+        },
+        `已注册默认图片 Provider "${provider.providerId}"`,
       );
     }
   }
@@ -314,8 +373,69 @@ export class RoutedAIClient implements AgnesClient {
   async generateImage(
     params: ImageParams,
     signal?: AbortSignal,
-  ): Promise<{ imageUrls: string[] }> {
-    return this.agnes.generateImage(params, signal);
+  ): Promise<{ imageUrls: string[]; requestId?: string }> {
+    // 默认 model 委托给 image-config.DEFAULT_IMAGE_MODEL（单一真相源）
+    const model = (params.model ?? "").trim() || DEFAULT_IMAGE_MODEL;
+    const request = this.toImageProviderRequest(model, params);
+    try {
+      const resp = await this.imageRouter.generateImage(request, signal);
+      // S3.2：把 providerMeta.requestId 提升到 RoutedAIClient.generateImage 返回顶层，
+      // 上层（domain/image.ts 的 generateImage）拿到后写入 ImageTask.params 便于历史排障。
+      return {
+        imageUrls: resp.imageUrls,
+        ...(resp.providerMeta?.requestId ? { requestId: resp.providerMeta.requestId } : {}),
+      };
+    } catch (err) {
+      // ModelNotFoundError / ModelProviderError 由 router 已包装，向上透传
+      if (err instanceof ModelNotFoundError || err instanceof ModelProviderError) throw err;
+      // 兜底：其他未包装错误
+      throw new ModelProviderError({
+        providerId: "router",
+        code: "invoke_failed",
+        message: err instanceof Error ? err.message : String(err),
+        retryable: false,
+        cause: err,
+      });
+    }
+  }
+
+  /**
+   * ImageParams（Agnes 私有入参）→ ImageProviderRequest（厂商无关）。
+   * 字段映射与 `AgnesImageProvider.toAgnesParams` 互逆。
+   * S1 阶段 router 只支持 Agnes，等价于直接转译；
+   * V2 阶段接其他 Provider 后，调用方传 model 即可自动分发。
+   *
+   * 默认值委托给 `image-config.ts`（SINGLE SOURCE OF TRUTH）：
+   * - ratio 未传 → DEFAULT_RATIO
+   * - size 未传 → recommendedSizeForRatio(ratio)（与 DEFAULT_RATIO 联动）
+   * - n 未传 → DEFAULT_N；n 越界校验交给 router（不在此处 clamp）
+   */
+  private toImageProviderRequest(
+    model: string,
+    params: ImageParams,
+  ): ImageProviderRequest {
+    const ratio = (params.ratio ?? DEFAULT_RATIO) as ImageProviderRequest["ratio"];
+    const size = params.size ?? recommendedSizeForRatio(ratio) ?? DEFAULT_SIZE;
+    const request: ImageProviderRequest = {
+      model,
+      prompt: params.prompt,
+      ratio,
+      size,
+      n: params.n ?? DEFAULT_N,
+      responseFormat: params.response_format === "b64_json" ? "b64_json" : "url",
+    };
+    if (params.negative_prompt) request.negative_prompt = params.negative_prompt;
+    if (params.images && params.images.length > 0) {
+      request.referenceImages = [...params.images];
+    } else if (params.image) {
+      request.referenceImages = [params.image];
+    }
+    if (typeof params.seed === "number") request.seed = params.seed;
+    const extras: Record<string, unknown> = {};
+    if (typeof params.steps === "number") extras.steps = params.steps;
+    if (typeof params.cfg === "number") extras.cfg = params.cfg;
+    if (Object.keys(extras).length > 0) request.providerExtras = extras;
+    return request;
   }
 
   async generateVideo(

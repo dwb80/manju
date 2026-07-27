@@ -52,6 +52,18 @@ export async function listProps(
 }
 
 /**
+ * getProp - 按 ID 查询道具（排除已删除）。S4.4 收口补：与 getCharacter 同构。
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} propId - 道具 ID
+ * @returns {Promise<Prop | null>} 道具对象，未找到或已删除返回 null
+ */
+export async function getProp(ctx: AppContext, propId: string): Promise<Prop | null> {
+  const pr = await ctx.props.findById(propId);
+  if (!pr || pr.deleted_at) return null;
+  return pr;
+}
+
+/**
  * createProp - 创建新道具，支持 AI 剧本分析扩展字段
  * @param {AppContext} ctx - 应用上下文
  * @param {PropInput} input - 道具输入数据

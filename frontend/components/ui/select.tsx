@@ -16,7 +16,15 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      // 高度统一 40px；与 Input 一致
+      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background transition-colors",
+      // 占位符与焦点色与 Input 对齐
+      "data-[placeholder]:text-muted-foreground/70",
+      "focus:outline-none focus:ring-2 focus:ring-sky-400/40 focus:border-sky-400",
+      "disabled:cursor-not-allowed disabled:opacity-50",
+      // 错误态
+      "aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-500/20",
+      "[&>span]:line-clamp-1",
       className
     )}
     {...props}

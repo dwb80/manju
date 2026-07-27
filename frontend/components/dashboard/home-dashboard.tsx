@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import {
   Film, FileText, Users, Image, Video, Sparkles,
   AlertTriangle, Clock, CheckCircle2, TrendingUp,
-  Loader2, ChevronRight, Play, Pause
+  Loader2, ChevronRight, Play
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -591,19 +591,20 @@ function ProductionPipeline({
       <Card className="bg-[#202020] border-white/10">
         <CardHeader>
           <CardTitle className="text-white text-base">资源消耗</CardTitle>
+          <CardDescription className="text-[#888]">GPU / 任务 / 成本（数据接入中）</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4">
             <div className="flex flex-col items-center gap-2">
-              <div className="text-2xl font-bold text-emerald-400">12</div>
+              <div className="text-2xl font-bold text-emerald-400">—</div>
               <div className="text-sm text-[#888]">GPU 使用率</div>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <div className="text-2xl font-bold text-blue-400">856</div>
+              <div className="text-2xl font-bold text-blue-400">—</div>
               <div className="text-sm text-[#888]">任务完成数</div>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <div className="text-2xl font-bold text-purple-400">$1,234</div>
+              <div className="text-2xl font-bold text-purple-400">—</div>
               <div className="text-sm text-[#888]">AI成本消耗</div>
             </div>
           </div>
@@ -658,34 +659,6 @@ function MetricCard({
   );
 }
 
-/** 待办事项项 */
-function TodoItem({
-  title,
-  type,
-  urgent,
-  onClick,
-}: {
-  title: string;
-  type: string;
-  urgent?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <div
-      className="flex items-center justify-between py-2 px-3 rounded bg-[#252525] hover:bg-[#2a2a2a] cursor-pointer"
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-2">
-        {urgent && <AlertTriangle className="h-4 w-4 text-orange-400" />}
-        <span className="text-sm text-white">{title}</span>
-      </div>
-      <span className={`px-2 py-0.5 rounded text-xs ${urgent ? "bg-orange-500/20 text-orange-400" : "bg-white/5 text-[#888]"
-        }`}>
-        {type}
-      </span>
-    </div>
-  );
-}
 
 /** 风险项 */
 function RiskItem({

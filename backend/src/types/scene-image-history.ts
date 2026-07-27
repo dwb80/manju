@@ -1,20 +1,8 @@
 /**
  * @file scene-image-history.ts
- * @description 场景图生成历史，结构与 prop-image-history 对称。
+ * @description 场景图生成历史。
+ *
+ * 该类型在 `character-image-history.ts` 中定义（与 prop / character 同构），
+ * 这里 re-export 出去，保持 `types/scene-image-history` 这条历史 import 路径仍然有效。
  */
-export interface SceneImageHistory {
-  id: string;
-  scene_id: string;
-  project_id: string;
-  url: string;
-  ratio: string;
-  model: string;
-  size: string;
-  prompt: string;
-  negative_prompt?: string;
-  response_format: string;
-  n: number;
-  is_applied: boolean;
-  applied_at: string;
-  created_at: string;
-}
+export type { SceneImageHistory } from "./character-image-history.js";

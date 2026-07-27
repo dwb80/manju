@@ -1,5 +1,7 @@
 "use client";
-import * as React from "react"; import { Controller, FormProvider, useFormContext, type ControllerProps, type FieldPath, type FieldValues } from "react-hook-form"; import { cn } from "@/lib/utils";
+import * as React from "react";
+import { Controller, FormProvider, useFormContext, type ControllerProps, type FieldPath, type FieldValues } from "react-hook-form";
+import { cn } from "@/lib/utils";
 export const Form = FormProvider;
 const FieldContext = React.createContext<{ name: string }>({ name: "" });
 export function FormField<T extends FieldValues, N extends FieldPath<T>>(props: ControllerProps<T, N>) { return <FieldContext.Provider value={{ name: props.name }}><Controller {...props} /></FieldContext.Provider>; }

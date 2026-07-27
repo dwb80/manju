@@ -1,5 +1,4 @@
-import type { ImageModel, ImageRatio, ImageResponseFormat, ImageSize, StyleValue } from "@/lib/module-types";
-import type { CharacterImageHistory } from "@/lib/module-types";
+import type { ImageModel, ImageRatio, ImageResponseFormat, ImageSize, StyleValue, CharacterImageHistory } from "@/lib/module-types";
 
 export interface ImageTask {
   id: string;

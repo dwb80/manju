@@ -1,6 +1,6 @@
 import { Plus, FolderOpen, Download, RefreshCw, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Project, ProjectFormDraft, ProjectHealth, ProjectMilestone, ProjectTask } from "@/lib/app-types";
+import type { Project, ProjectHealth, ProjectMilestone, ProjectTask } from "@/lib/app-types";
 
 interface ProjectHeaderProps {
     selectedProject: Project;

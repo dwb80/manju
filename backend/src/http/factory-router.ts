@@ -22,6 +22,7 @@ import {
   getCharacterUsage,
   copyCharactersToProjects,
   listScenes,
+  getScene,
   createScene,
   updateScene,
   deleteScene,
@@ -33,6 +34,7 @@ import {
   getSceneUsage,
   copyScenesToProjects,
   listProps,
+  getProp,
   createProp,
   updateProp,
   deleteProp,
@@ -125,8 +127,8 @@ import {
 } from "../services/factory/asset-image-service.js";
 import { requireString } from "../utils.js";
 
-/** 角色子路径保留字，避免与具体 ID 冲突 */
-const RESERVED_CHARACTER_SUBPATHS = new Set<string>([
+/** 工厂子路径保留字（三厂共用）：避免与具体 ID 冲突。S4.3 review 收口。 */
+const RESERVED_FACTORY_SUBPATHS = new Set<string>([
   "deleted",
   "permanent",
   "copy",
@@ -278,7 +280,7 @@ export async function matchFactoryRoute(
       sendJson(res, await copyCharactersToProjects(ctx, sourceId, targetProjectIds));
       return true;
     }
-    if (method === "GET" && seg2 && !RESERVED_CHARACTER_SUBPATHS.has(seg2)) {
+    if (method === "GET" && seg2 && !seg3 && !RESERVED_FACTORY_SUBPATHS.has(seg2)) {
       const ch = await getCharacter(ctx, seg2);
       if (!ch) {
         sendError(res, new Error("角色不存在"), 404);
@@ -326,6 +328,16 @@ export async function matchFactoryRoute(
       const body = await readJson(req);
       if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
       sendJson(res, await createScene(ctx, body as any));
+      return true;
+    }
+    // S4.4 收口：场景详情端点（与 character 同构，走 getScene service）。
+    if (method === "GET" && seg2 && !seg3 && !RESERVED_FACTORY_SUBPATHS.has(seg2)) {
+      const sc = await getScene(ctx, seg2);
+      if (!sc) {
+        sendError(res, new Error("场景不存在"), 404);
+        return true;
+      }
+      sendJson(res, sc);
       return true;
     }
     if (method === "PUT" && seg2) {
@@ -430,6 +442,16 @@ export async function matchFactoryRoute(
       const body = await readJson(req);
       if (!(await requireProjectAccess(res, h, body.project_id as string | undefined))) return true;
       sendJson(res, await createProp(ctx, body as any));
+      return true;
+    }
+    // S4.4 收口：道具详情端点（与 character 同构，走 getProp service）。
+    if (method === "GET" && seg2 && !seg3 && !RESERVED_FACTORY_SUBPATHS.has(seg2)) {
+      const pr = await getProp(ctx, seg2);
+      if (!pr) {
+        sendError(res, new Error("道具不存在"), 404);
+        return true;
+      }
+      sendJson(res, pr);
       return true;
     }
     if (method === "PUT" && seg2) {
@@ -806,6 +828,10 @@ export async function matchFactoryRoute(
         negative_prompt: typeof body.negative_prompt === "string" ? body.negative_prompt : "",
         response_format: typeof body.response_format === "string" ? body.response_format : "url",
         n: typeof body.n === "number" ? body.n : 1,
+        // S4.2 补：三维筛选维度。前端生图表单提交时携带，null 视为"未指定维度"
+        shot_type: typeof body.shot_type === "string" ? body.shot_type : null,
+        angle: typeof body.angle === "string" ? body.angle : null,
+        view_type: typeof body.view_type === "string" ? body.view_type : null,
       });
       sendJson(res, record);
       return true;
@@ -947,6 +973,10 @@ export async function matchFactoryRoute(
         negative_prompt: typeof body.negative_prompt === "string" ? body.negative_prompt : "",
         response_format: typeof body.response_format === "string" ? body.response_format : "url",
         n: typeof body.n === "number" ? body.n : 1,
+        // S4.2 补：三维筛选维度（与 character 同构）
+        shot_type: typeof body.shot_type === "string" ? body.shot_type : null,
+        angle: typeof body.angle === "string" ? body.angle : null,
+        view_type: typeof body.view_type === "string" ? body.view_type : null,
       });
       sendJson(res, record);
       return true;
@@ -1018,6 +1048,10 @@ export async function matchFactoryRoute(
         negative_prompt: typeof body.negative_prompt === "string" ? body.negative_prompt : "",
         response_format: typeof body.response_format === "string" ? body.response_format : "url",
         n: typeof body.n === "number" ? body.n : 1,
+        // S4.2 补：三维筛选维度（与 character 同构）
+        shot_type: typeof body.shot_type === "string" ? body.shot_type : null,
+        angle: typeof body.angle === "string" ? body.angle : null,
+        view_type: typeof body.view_type === "string" ? body.view_type : null,
       });
       sendJson(res, record);
       return true;

@@ -25,7 +25,7 @@ export function useScriptItems({
   state: WorkbenchState;
   showNotice: (message: string) => void;
 }) {
-  const { scriptForm, setScriptForm, editingScriptId, setEditingScriptId, projectScripts, setProjectScripts, storyboardDraft } = state;
+  const { scriptForm, setScriptForm, editingScriptId, setEditingScriptId, projectScripts } = state;
 
   const create = useCallback(async (selectedProject: Project | undefined) => {
     if (!selectedProject) return;

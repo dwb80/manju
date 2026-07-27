@@ -54,6 +54,11 @@
 
 | 文档 | 说明 |
 |------|------|
+| **[factories-assets-and-image-views.md](factories-assets-and-image-views.md)** | 三个工厂（角色 / 场景 / 道具）资产图片多视图契约基线。**改造的单一真相源**——DB schema / 后端 API / 前端 service / 组件 / 字段 / 状态机任何修改先改本文档。 |
+| **[ai-image-config.md](ai-image-config.md)** | AI 图片生成参数单一真相源（`frontend/lib/image-config.ts` 的同步文档）。 |
+| **[ux-report/factories-list-edit-ai-review-2026-07-24.md](ux-report/factories-list-edit-ai-review-2026-07-24.md)** | 三个工厂"列表 / 编辑 / AI 生图"旧版差异分析与修复方案（评审日：2026-07-24）。 |
+| **[ux-report/frontend-ux-review-2026-07-23.md](ux-report/frontend-ux-review-2026-07-23.md)** | 前端整体 UX 评审（2026-07-23）。 |
+| **[ux-report/script-center-ux-review-2026-07-24.md](ux-report/script-center-ux-review-2026-07-24.md)** | 剧本中心 UX 评审（2026-07-24）。 |
 
 ### 迭代计划
 

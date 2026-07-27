@@ -34,7 +34,7 @@ export function StoryboardsTab(props: Pick<
     storyboardStatuses, storyboardStatusText,
     characterAssets, sceneAssets, projectReviews, reviewDrafts, setReviewDrafts,
     createProjectStoryboardItem, editProjectStoryboard, deleteProjectStoryboardItem,
-    useStoryboardForGeneration, createStoryboardReview, updateProjectReviewItem, deleteProjectReviewItem,
+    useStoryboardForGeneration: generateStoryboard, createStoryboardReview, updateProjectReviewItem, deleteProjectReviewItem,
     scriptDraft, setScriptDraft, breakdownScriptToStoryboards, batchUpdateStoryboards,
     downloadStoryboardCsv, copy,
   } = props;
@@ -187,10 +187,10 @@ export function StoryboardsTab(props: Pick<
                 )}
                 {/* 快捷操作按钮（hover时显示） */}
                 <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2 z-10">
-                  <Button size="sm" variant="secondary" className="h-7 px-2.5 text-xs" onClick={() => useStoryboardForGeneration(storyboard, "image")}>
+                  <Button size="sm" variant="secondary" className="h-7 px-2.5 text-xs" onClick={() => generateStoryboard(storyboard, "image")}>
                     🎨 图片
                   </Button>
-                  <Button size="sm" variant="secondary" className="h-7 px-2.5 text-xs" onClick={() => useStoryboardForGeneration(storyboard, "video")}>
+                  <Button size="sm" variant="secondary" className="h-7 px-2.5 text-xs" onClick={() => generateStoryboard(storyboard, "video")}>
                     🎬 视频
                   </Button>
                   <Button size="sm" variant="secondary" className="h-7 px-2.5 text-xs" onClick={() => editProjectStoryboard(storyboard)}>
@@ -228,8 +228,8 @@ export function StoryboardsTab(props: Pick<
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button size="sm" variant="secondary" onClick={() => editProjectStoryboard(storyboard)}><Pencil className="h-4 w-4" />编辑</Button>
-                <Button size="sm" variant="secondary" onClick={() => useStoryboardForGeneration(storyboard, "image")}>生成底图</Button>
-                <Button size="sm" variant="secondary" onClick={() => useStoryboardForGeneration(storyboard, "video")}>图生视频</Button>
+                <Button size="sm" variant="secondary" onClick={() => generateStoryboard(storyboard, "image")}>生成底图</Button>
+                <Button size="sm" variant="secondary" onClick={() => generateStoryboard(storyboard, "video")}>图生视频</Button>
                 <Button size="sm" variant="secondary" onClick={() => void copy(storyboard.prompt || storyboard.description)}>复制提示词</Button>
                 <Button size="sm" variant="destructive" onClick={() => void deleteProjectStoryboardItem(storyboard)}><Trash2 className="h-4 w-4" /></Button>
               </div>

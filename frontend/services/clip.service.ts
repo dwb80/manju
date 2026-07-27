@@ -17,7 +17,6 @@ export async function createClip(projectId: string, draft: Partial<ProjectClip>)
 
 /** 更新剪辑。 */
 export async function updateClip(
-  projectId: string,
   clipId: string,
   patch: Partial<ProjectClip>,
 ): Promise<ProjectClip> {
@@ -28,7 +27,7 @@ export async function updateClip(
 }
 
 /** 软删除剪辑（5 秒内可撤销 / 进入回收站）。 */
-export async function deleteClip(projectId: string, clipId: string): Promise<void> {
+export async function deleteClip(clipId: string): Promise<void> {
   await api(`/api/clips/${clipId}`, { method: "DELETE" });
 }
 

@@ -27,7 +27,6 @@ import { CheckSquare, Square } from "lucide-react";
 export function SelectAllRow({
   isAllSelected,
   isPartial,
-  allCount,
   onToggle,
   totalSelectedLabel,
   showSelectAll = true,

@@ -1,9 +1,9 @@
 /** 项目相关的业务服务，封装项目 CRUD、导出、文件夹操作 */
 import { api, apiUrl } from "./api-client";
 import type {
-    Project,
-    ProjectSummary,
-    ProjectFormDraft,
+  Project,
+  ProjectSummary,
+  ProjectFormDraft,
 } from "@/lib/app-types";
 
 /** 项目服务接口 */

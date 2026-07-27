@@ -3,10 +3,9 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-// 注意:@tiptap/starter-kit v3 已默认包含 Underline,无需单独导入,
-// 否则会触发 "Duplicate extension names found: ['underline']" 警告
-import TextAlign from '@tiptap/extension-text-align'
+// TipTap v3 的 StarterKit 不包含 Underline,需显式注册
 import Underline from '@tiptap/extension-underline'
+import TextAlign from '@tiptap/extension-text-align'
 import Highlight from '@tiptap/extension-highlight'
 import CharacterCount from '@tiptap/extension-character-count'
 import Focus from '@tiptap/extension-focus'
@@ -25,7 +24,7 @@ import {
 } from '@/lib/tiptap/extensions'
 import { AIBubbleMenu } from './AIBubbleMenu'
 import { SlashCommandMenu } from './SlashCommandMenu'
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { debounce } from '@/lib/utils'
 
 // 导航树节点类型（Feature 2.10 实时同步）
@@ -194,7 +193,6 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
       Placeholder.configure({
         placeholder: '开始编写你的剧本...',
       }),
-      // Underline：项目使用 @tiptap/starter-kit@2.x（不含 Underline），需显式注册
       Underline,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
@@ -239,13 +237,13 @@ export function ScriptEditor({ document, onSave, onEditorReady, onTreeUpdate }: 
   useEffect(() => {
     if (editor && document.editor_json) {
       try {
-        // setContent 第二参数在 v2.6 中是 boolean（emitUpdate），
-        // 新版是 Partial<SetContentOptions>，两者签名不同；这里统一只传 boolean。
-        editor.commands.setContent(document.editor_json, false)
+        // v3 setContent 签名为 (content, options?: Partial<SetContentOptions>)
+        // emitUpdate:false 避免触发 onUpdate 回调导致重复保存
+        editor.commands.setContent(document.editor_json, { emitUpdate: false })
       } catch (err) {
         // 内容格式不合法时不崩溃，回退到空文档
         console.warn('编辑器内容加载失败，回退到空文档:', err)
-        editor.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] }, false)
+        editor.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] }, { emitUpdate: false })
       }
       // 文档加载后立即生成一次导航树（Feature 2.10）
       if (onTreeUpdate) {

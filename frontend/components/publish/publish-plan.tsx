@@ -6,7 +6,9 @@
 "use client";
 
 import { ShadcnSelect } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { useState } from "react";
+import { notify } from "@/lib/notify";
 import {
   Calendar,
   Plus,
@@ -17,10 +19,7 @@ import {
   Video,
   CheckCircle,
   PlayCircle,
-  XCircle,
-  AlertCircle,
-  ChevronDown,
-  Save,
+  XCircle, Save
 } from "lucide-react";
 import {
   PublishedVideo,
@@ -177,7 +176,7 @@ export function PublishPlan({
    */
   const handleCreate = () => {
     if (!form.name || !form.date || !form.owner) {
-      alert("请填写完整的计划信息");
+      notify.warn("请填写完整的计划信息");
       return;
     }
     onCreatePlan?.(form);
@@ -190,7 +189,7 @@ export function PublishPlan({
    */
   const handleEdit = (planId: string) => {
     if (!form.name || !form.date || !form.owner) {
-      alert("请填写完整的计划信息");
+      notify.warn("请填写完整的计划信息");
       return;
     }
     onEditPlan?.(planId, form);
@@ -201,10 +200,15 @@ export function PublishPlan({
   /**
    * 处理删除计划
    */
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const handleDelete = (planId: string) => {
-    if (confirm("确定要删除这个发布计划吗？")) {
-      onDeletePlan?.(planId);
+    setPendingDeleteId(planId);
+  };
+  const confirmDelete = () => {
+    if (pendingDeleteId) {
+      onDeletePlan?.(pendingDeleteId);
     }
+    setPendingDeleteId(null);
   };
 
   /**
@@ -642,6 +646,16 @@ export function PublishPlan({
             </div>
           </div>
         </div>
+      )}
+
+      {pendingDeleteId && (
+        <ConfirmDialog
+          title="删除发布计划"
+          description="确定要删除这个发布计划吗？此操作不可撤销。"
+          confirmLabel="确认删除"
+          onClose={() => setPendingDeleteId(null)}
+          onConfirm={confirmDelete}
+        />
       )}
     </div>
   );

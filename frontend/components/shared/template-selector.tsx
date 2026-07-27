@@ -22,7 +22,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { LayoutTemplate, X, Loader2 } from "lucide-react";
+import { LayoutTemplate, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

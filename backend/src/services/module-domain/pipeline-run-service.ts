@@ -26,12 +26,14 @@ import {
   SetNodePriorityHandler,
   SkipNodeHandler,
   StartRunHandler,
+  type PipelineHandlerDeps,
 } from "../../application/pipeline/pipeline-command-handler.js";
 import type {
   CreatePipelineNode,
 } from "../../domain/pipeline/pipeline-run.aggregate.js";
 import type { PipelineDependency } from "../../domain/pipeline/dag-policy.js";
 import { SqlitePipelineRunRepository } from "../../infrastructure/persistence/sqlite-pipeline-run.repository.js";
+import { createTransactionServiceUnitOfWork } from "../../infrastructure/unit-of-work/transaction-service-unit-of-work.js";
 import { assertBudgetCapacityForNodes } from "./pipeline-budget.js";
 import { createPipelineEventService } from "./pipeline-event-service.js";
 import { computeNodeIdempotencyKey } from "./pipeline-idempotency.js";
@@ -189,17 +191,19 @@ function toDependency(input: any): PipelineDependency {
 
 export function createPipelineRunService(ctx: AppContext): PipelineRunService {
   const repository = new SqlitePipelineRunRepository(ctx.databaseFile);
-  const createRunHandler = new CreateRunHandler(repository);
-  const startRunHandler = new StartRunHandler(repository);
-  const pauseRunHandler = new PauseRunHandler(repository);
-  const resumeRunHandler = new ResumeRunHandler(repository);
-  const pauseNodeHandler = new PauseNodeHandler(repository);
-  const resumeNodeHandler = new ResumeNodeHandler(repository);
-  const skipNodeHandler = new SkipNodeHandler(repository);
-  const retryNodeHandler = new RetryNodeHandler(repository);
-  const failNodeHandler = new FailNodeHandler(repository);
-  const priorityHandler = new SetNodePriorityHandler(repository);
-  const addNodesHandler = new AddNodesHandler(repository);
+  const uow = createTransactionServiceUnitOfWork(ctx.transactionService);
+  const deps: PipelineHandlerDeps = { repo: repository, uow };
+  const createRunHandler = new CreateRunHandler(deps);
+  const startRunHandler = new StartRunHandler(deps);
+  const pauseRunHandler = new PauseRunHandler(deps);
+  const resumeRunHandler = new ResumeRunHandler(deps);
+  const pauseNodeHandler = new PauseNodeHandler(deps);
+  const resumeNodeHandler = new ResumeNodeHandler(deps);
+  const skipNodeHandler = new SkipNodeHandler(deps);
+  const retryNodeHandler = new RetryNodeHandler(deps);
+  const failNodeHandler = new FailNodeHandler(deps);
+  const priorityHandler = new SetNodePriorityHandler(deps);
+  const addNodesHandler = new AddNodesHandler(deps);
   const eventService = createPipelineEventService(ctx);
   const scheduler = createPipelineRunScheduler(ctx, {
     recordEvent: eventService.recordEvent,

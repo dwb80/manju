@@ -12,10 +12,11 @@
  */
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, FileText, Pencil, Trash2, Eye, RefreshCw, Loader2, X } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Eye, RefreshCw, Loader2 } from "lucide-react";
 import { PageContainer, PageCard } from "@/components/layout/page-container";
-import { ModuleToolbar, SearchInput, FilterSelect, EmptyState, Pagination } from "@/components/shared";
+import { ModuleToolbar, SearchInput, FilterSelect } from "@/components/shared/module-toolbar";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Pagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,13 +45,18 @@ import {
 } from "@/components/ui/tooltip";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { listProjects, createProject as createProjectApi, updateProject as updateProjectApi, deleteProject as deleteProjectApi } from "@/services/project.service";
-import { scriptCenterService } from "@/services/script-center.service";
-import { clearApiCache } from "@/lib/api-client";
+import { api, clearApiCache } from "@/lib/api-client";
 import type { Project } from "@/lib/app-types";
+import { notify } from "@/lib/notify";
 
-/** 项目表单字段配置 */
+interface ProjectScriptSummary {
+  id: string;
+  updated_at?: string;
+}
+
+/** 项目表单字段配置（左右结构：标签左、控件右）。 */
 const projectFields: FormFieldConfig[] = [
-  { name: "name", label: "项目名称", type: "text", required: true, placeholder: "请输入项目名称" },
+  { name: "name", label: "项目名称", type: "text", required: true, placeholder: "请输入项目名称", layout: "horizontal", labelColSpan: 3 },
   {
     name: "category",
     label: "项目类型",
@@ -70,6 +76,8 @@ const projectFields: FormFieldConfig[] = [
       { value: "音乐励志剧", label: "音乐励志剧" },
     ],
     defaultValue: "科幻冒险漫剧",
+    layout: "horizontal",
+    labelColSpan: 3,
   },
   {
     name: "status",
@@ -82,11 +90,13 @@ const projectFields: FormFieldConfig[] = [
       { value: "archived", label: "已归档" },
     ],
     defaultValue: "active",
+    layout: "horizontal",
+    labelColSpan: 3,
   },
-  { name: "owner", label: "负责人", type: "text", required: true, placeholder: "请输入负责人姓名" },
-  { name: "episode_count", label: "集数", type: "number", placeholder: "0", min: 0 },
-  { name: "due_date", label: "截止日期", type: "text", placeholder: "YYYY-MM-DD" },
-  { name: "description", label: "项目描述", type: "textarea", placeholder: "请输入项目简介", rows: 3 },
+  { name: "owner", label: "负责人", type: "text", required: true, placeholder: "请输入负责人姓名", layout: "horizontal", labelColSpan: 3 },
+  { name: "episode_count", label: "集数", type: "number", placeholder: "0", min: 0, layout: "horizontal", labelColSpan: 3 },
+  { name: "due_date", label: "截止日期", type: "text", placeholder: "YYYY-MM-DD", layout: "horizontal", labelColSpan: 3 },
+  { name: "description", label: "项目描述", type: "textarea", placeholder: "请输入项目简介", rows: 3, layout: "horizontal", labelColSpan: 3 },
 ];
 
 export function ProjectsCenterPage() {
@@ -107,7 +117,7 @@ export function ProjectsCenterPage() {
 
   // 删除确认状态
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [, setIsDeleting] = useState(false);
 
   // 查看详情状态
   const [viewingProject, setViewingProject] = useState<Project | null>(null);
@@ -148,28 +158,6 @@ export function ProjectsCenterPage() {
     reloadProjects();
   }, [reloadProjects]);
 
-  // 加载所有项目下的剧本数量
-  const reloadScriptCounts = useCallback(async () => {
-    if (projects.length === 0) return;
-    const counts: Record<string, number> = {};
-    // 并行拉取每个项目的剧本列表
-    await Promise.all(
-      projects.map(async (p) => {
-        try {
-          const scripts = await scriptCenterService.getDocuments(p.id);
-          counts[p.id] = Array.isArray(scripts) ? scripts.length : 0;
-        } catch {
-          counts[p.id] = 0;
-        }
-      })
-    );
-    setScriptCounts(counts);
-  }, [projects]);
-
-  useEffect(() => {
-    reloadScriptCounts();
-  }, [reloadScriptCounts]);
-
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
       const matchesSearch =
@@ -185,6 +173,33 @@ export function ProjectsCenterPage() {
     const start = (currentPage - 1) * pageSize;
     return filteredProjects.slice(start, start + pageSize);
   }, [filteredProjects, currentPage, pageSize]);
+
+  // 剧本数量不是首屏关键数据，只查询当前页，避免项目较多时产生全量 N+1 请求。
+  useEffect(() => {
+    let cancelled = false;
+    if (paginatedProjects.length === 0) return;
+
+    void Promise.all(
+      paginatedProjects.map(async (project) => {
+        try {
+          const scripts = await api<ProjectScriptSummary[]>(
+            `/api/script-documents?projectId=${encodeURIComponent(project.id)}`,
+          );
+          return [project.id, Array.isArray(scripts) ? scripts.length : 0] as const;
+        } catch {
+          return [project.id, 0] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (!cancelled) {
+        setScriptCounts((current) => ({ ...current, ...Object.fromEntries(entries) }));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [paginatedProjects]);
 
   // 计算总页数
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / pageSize));
@@ -217,7 +232,9 @@ export function ProjectsCenterPage() {
     setSelectedProjectId(project.id);
     setOpeningScriptFor(project.id);
     try {
-      const list = await scriptCenterService.getDocuments(project.id);
+      const list = await api<ProjectScriptSummary[]>(
+        `/api/script-documents?projectId=${encodeURIComponent(project.id)}`,
+      );
       const targetUrl =
         Array.isArray(list) && list.length > 0
           ? `/scripts/${[...list].sort((a: any, b: any) => {
@@ -259,7 +276,7 @@ export function ProjectsCenterPage() {
       await reloadProjects();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "保存失败";
-      alert(`保存失败：${msg}`);
+      notify.error("保存失败", msg);
     } finally {
       setIsSaving(false);
     }
@@ -276,7 +293,7 @@ export function ProjectsCenterPage() {
       await reloadProjects();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "删除失败";
-      alert(`删除失败：${msg}`);
+      notify.error("删除失败", msg);
     } finally {
       setIsDeleting(false);
     }
@@ -499,12 +516,18 @@ export function ProjectsCenterPage() {
           <DialogContent size="wide" className="border-border">
             {viewingProject && (
               <>
-                <DialogHeader>
-                  <DialogTitle>项目详情</DialogTitle>
-                  <DialogDescription>查看项目 {viewingProject.name} 的完整信息</DialogDescription>
+                <DialogHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-4">
+                  <div className="space-y-1">
+                    <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
+                      项目详情
+                    </DialogTitle>
+                    <DialogDescription className="text-[12px] leading-5 text-muted-foreground/80">
+                      查看项目 {viewingProject.name} 的完整信息
+                    </DialogDescription>
+                  </div>
                 </DialogHeader>
-                {/* 详情内容 - 两列布局 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 px-6">
+                {/* 详情内容 - 左右结构（标签左、值右） */}
+                <div className="grid grid-cols-1 gap-x-4 gap-y-4 px-6 py-2">
                   <DetailRow label="项目名称" value={viewingProject.name} />
                   <DetailRow label="项目类型" value={viewingProject.category} />
                   <DetailRow
@@ -530,12 +553,10 @@ export function ProjectsCenterPage() {
                   <DetailRow label="剧本数量" value={`${scriptCounts[viewingProject.id] ?? 0} 个`} />
                   <DetailRow label="创建时间" value={new Date(viewingProject.created_at).toLocaleString()} />
                   <DetailRow label="更新时间" value={new Date(viewingProject.updated_at).toLocaleString()} />
-                  <div className="md:col-span-2">
-                    <DetailRow label="项目描述" value={viewingProject.description || "-"} />
-                  </div>
+                  <DetailRow label="项目描述" value={viewingProject.description || "-"} long />
                 </div>
-                <DialogFooter className="gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => setViewingProject(null)}>
+                <DialogFooter className="mt-6 gap-2 border-t border-white/5 pt-4">
+                  <Button size="sm" variant="secondary" onClick={() => setViewingProject(null)} className="px-4">
                     关闭
                   </Button>
                   <Button
@@ -544,6 +565,7 @@ export function ProjectsCenterPage() {
                       handleEdit(viewingProject);
                       setViewingProject(null);
                     }}
+                    className="px-4"
                   >
                     编辑
                   </Button>
@@ -557,13 +579,36 @@ export function ProjectsCenterPage() {
   );
 }
 
-/** 详情行组件 */
-function DetailRow({ label, value }: { label: string; value: string }) {
+/**
+ * 详情行组件（左右结构 · v2 UI）。
+ * - 短字段：标签 col-span-3、值 col-span-9，标签前预留对齐占位（非必填）。
+ * - 长字段（long）：标签与值均占 3:9 栅格，标签顶部对齐便于阅读多行内容。
+ * - 标签：13px、font-medium、text-foreground/80，与表单统一。
+ * - 值：13px、text-foreground。
+ */
+function DetailRow({ label, value, long = false }: { label: string; value: string; long?: boolean }) {
+  if (long) {
+    return (
+      <div className="grid grid-cols-12 items-start gap-x-4">
+        <span className="col-span-12 md:col-span-3 flex items-start gap-2 pt-[7px] text-[13px] font-medium leading-5 text-foreground/80">
+          <span aria-hidden className="mt-[7px] inline-block h-1.5 w-1.5 shrink-0" />
+          <span>{label}</span>
+        </span>
+        <span className="col-span-12 md:col-span-9 whitespace-pre-wrap text-[13px] leading-6 text-foreground break-words">
+          {value}
+        </span>
+      </div>
+    );
+  }
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm text-foreground break-words">{value}</span>
+    <div className="grid grid-cols-12 items-start gap-x-4">
+      <span className="col-span-12 md:col-span-3 flex items-start gap-2 pt-[9px] text-[13px] font-medium leading-5 text-foreground/80">
+        <span aria-hidden className="mt-[7px] inline-block h-1.5 w-1.5 shrink-0" />
+        <span>{label}</span>
+      </span>
+      <span className="col-span-12 md:col-span-9 text-[13px] leading-5 text-foreground break-words">
+        {value}
+      </span>
     </div>
   );
 }
-

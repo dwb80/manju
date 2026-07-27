@@ -6,6 +6,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { notify } from '@/lib/notify'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import {
   Database,
   Save,
@@ -68,6 +70,7 @@ export function BackupManager({
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [backupDescription, setBackupDescription] = useState('')
   const [showRestoreConfirm, setShowRestoreConfirm] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [autoBackupEnabled, setAutoBackupEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
 
@@ -94,7 +97,7 @@ export function BackupManager({
       setShowCreateDialog(false)
     } catch (error) {
       console.error('Failed to create backup:', error)
-      alert('创建备份失败')
+      notify.error('创建备份失败', '请稍后重试')
     } finally {
       setIsCreating(false)
     }
@@ -106,10 +109,10 @@ export function BackupManager({
       try {
         await onRestoreBackup(backupId)
         setShowRestoreConfirm(null)
-        alert('恢复成功！')
+        notify.success('恢复成功')
       } catch (error) {
         console.error('Failed to restore backup:', error)
-        alert('恢复失败')
+        notify.error('恢复失败', '请稍后重试')
       } finally {
         setIsRestoring(false)
       }
@@ -123,7 +126,7 @@ export function BackupManager({
         await onDownloadBackup(backupId)
       } catch (error) {
         console.error('Failed to download backup:', error)
-        alert('下载失败')
+        notify.error('下载失败', '请稍后重试')
       }
     },
     [onDownloadBackup]
@@ -131,13 +134,11 @@ export function BackupManager({
 
   const handleDeleteBackup = useCallback(
     async (backupId: string) => {
-      if (!confirm('确定要删除这个备份吗？')) return
-
       try {
         await onDeleteBackup(backupId)
       } catch (error) {
         console.error('Failed to delete backup:', error)
-        alert('删除失败')
+        notify.error('删除失败', '请稍后重试')
       }
     },
     [onDeleteBackup]
@@ -206,15 +207,16 @@ export function BackupManager({
           </div>
           <div className="flex items-center gap-2">
             <button
+              role="switch"
+              aria-checked={autoBackupEnabled}
               onClick={() => setAutoBackupEnabled(!autoBackupEnabled)}
-              className={`w-10 h-5 rounded-full transition-colors ${
-                autoBackupEnabled ? 'bg-emerald-500' : 'bg-white/10'
-              }`}
+              className={`w-10 h-5 rounded-full transition-colors ${autoBackupEnabled ? 'bg-emerald-500' : 'bg-white/10'
+                }`}
             >
               <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                  autoBackupEnabled ? 'translate-x-5' : 'translate-x-0.5'
-                }`}
+                aria-hidden="true"
+                className={`w-4 h-4 rounded-full bg-white transition-transform ${autoBackupEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
               />
             </button>
           </div>
@@ -295,7 +297,7 @@ export function BackupManager({
                     backup={backup}
                     onRestore={() => setShowRestoreConfirm(backup.id)}
                     onDownload={() => handleDownloadBackup(backup.id)}
-                    onDelete={() => handleDeleteBackup(backup.id)}
+                    onDelete={() => setPendingDeleteId(backup.id)}
                     isRestoring={isRestoring && showRestoreConfirm === backup.id}
                     formatFileSize={formatFileSize}
                   />
@@ -316,7 +318,7 @@ export function BackupManager({
                     backup={backup}
                     onRestore={() => setShowRestoreConfirm(backup.id)}
                     onDownload={() => handleDownloadBackup(backup.id)}
-                    onDelete={() => handleDeleteBackup(backup.id)}
+                    onDelete={() => setPendingDeleteId(backup.id)}
                     isRestoring={isRestoring && showRestoreConfirm === backup.id}
                     formatFileSize={formatFileSize}
                   />
@@ -335,7 +337,12 @@ export function BackupManager({
       {/* 恢复确认对话框 */}
       {showRestoreConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#1a1a1a] rounded-lg border border-white/10 p-4 w-full max-w-md">
+          <div
+            className="bg-[#1a1a1a] rounded-lg border border-white/10 p-4 w-full max-w-md"
+            role="dialog"
+            aria-modal="true"
+            aria-label="确认恢复备份"
+          >
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-medium text-white">确认恢复</div>
               <Button
@@ -343,8 +350,9 @@ export function BackupManager({
                 size="sm"
                 onClick={() => setShowRestoreConfirm(null)}
                 className="h-6 w-6 p-0"
+                aria-label="取消恢复"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3" aria-hidden="true" />
               </Button>
             </div>
             <div className="text-sm text-white mb-2">
@@ -376,6 +384,19 @@ export function BackupManager({
             </div>
           </div>
         </div>
+      )}
+
+      {pendingDeleteId && (
+        <ConfirmDialog
+          title="删除备份"
+          description="确定要删除这个备份吗？此操作不可撤销。"
+          confirmLabel="确认删除"
+          onClose={() => setPendingDeleteId(null)}
+          onConfirm={async () => {
+            if (pendingDeleteId) await handleDeleteBackup(pendingDeleteId);
+            setPendingDeleteId(null);
+          }}
+        />
       )}
 
       {/* 统计信息 */}
@@ -416,13 +437,12 @@ function BackupItem({
 }) {
   return (
     <div
-      className={`p-2 hover:bg-white/5 transition-colors ${
-        backup.status === 'creating'
-          ? 'bg-emerald-500/10'
-          : backup.status === 'failed'
+      className={`p-2 hover:bg-white/5 transition-colors ${backup.status === 'creating'
+        ? 'bg-emerald-500/10'
+        : backup.status === 'failed'
           ? 'bg-red-500/10'
           : ''
-      }`}
+        }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -473,9 +493,10 @@ function BackupItem({
               size="sm"
               onClick={onDownload}
               className="h-6 w-6 p-0"
+              aria-label="下载备份"
               title="下载备份"
             >
-              <Download className="h-3 w-3" />
+              <Download className="h-3 w-3" aria-hidden="true" />
             </Button>
             <Button
               variant="ghost"
@@ -483,18 +504,20 @@ function BackupItem({
               onClick={onRestore}
               disabled={isRestoring}
               className="h-6 w-6 p-0"
+              aria-label="恢复到此备份"
               title="恢复到此备份"
             >
-              <RotateCcw className="h-3 w-3" />
+              <RotateCcw className="h-3 w-3" aria-hidden="true" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={onDelete}
               className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
+              aria-label="删除备份"
               title="删除备份"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-3 w-3" aria-hidden="true" />
             </Button>
           </div>
         )}

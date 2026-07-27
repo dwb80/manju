@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, RefreshCcw, Filter } from "lucide-react";
+import { RefreshCcw, Filter } from "lucide-react";
 import { StandalonePageHeader, Alert } from "@/components/layout";
 import { api } from "@/lib/api-client";
 import { createLogger } from "@/lib/logger";

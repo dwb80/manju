@@ -13,8 +13,8 @@
 import { useState } from "react";
 import { Plus, X, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useProjectStore } from "@/lib/stores/project-store";
 import { clearApiCache } from "@/lib/api-client";
+import { notify } from "@/lib/notify";
 import { scriptCenterService } from "@/services/script-center.service";
 import type { Script } from "@/lib/module-types";
 
@@ -25,7 +25,6 @@ export function SimpleTagManager({
   script: Script;
   onTagsUpdated: (script: Script) => void;
 }) {
-  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
   const [tags, setTags] = useState<string[]>(script.tags ?? []);
   const [newTag, setNewTag] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -49,7 +48,7 @@ export function SimpleTagManager({
       clearApiCache();
     } catch (err) {
       console.error("保存标签失败:", err);
-      alert("保存标签失败");
+      notify.error("保存标签失败", (err as Error).message);
     } finally {
       setIsSaving(false);
     }

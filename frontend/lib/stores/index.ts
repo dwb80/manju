@@ -4,3 +4,8 @@
 
 export { useProjectStore } from "./project-store";
 export { useScriptStore } from "./script-store";
+export {
+  useFactorySelectionStore,
+  useFactorySelection,
+  syncFactorySelection,
+} from "./factory-selection-store";

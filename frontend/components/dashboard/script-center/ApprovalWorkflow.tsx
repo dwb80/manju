@@ -12,9 +12,7 @@ import {
   AlertCircle,
   Clock,
   User,
-  MessageSquare,
-  ArrowRight,
-  Loader,
+  MessageSquare, Loader
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -154,7 +152,6 @@ export function ApprovalWorkflow({ scriptId, onWorkflowUpdate }: ApprovalWorkflo
         <div className="space-y-2">
           {workflow.steps.map((step, index) => {
             const isCurrentStep = index === workflow.currentStep
-            const isCompleted = step.status === 'approved' || step.status === 'rejected'
 
             return (
               <div key={step.id} className="relative">

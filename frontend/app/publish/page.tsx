@@ -36,17 +36,9 @@ import {
 } from "@/components/layout";
 import { notify } from "@/lib/notify";
 import { createLogger } from "@/lib/logger";
+import { api } from "@/lib/api-client";
 
 const log = createLogger('publish-page')
-
-/**
- * API响应格式
- */
-interface ApiResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-}
 
 /**
  * 成片响应格式（来自后端）
@@ -125,19 +117,16 @@ export default function PublishCenterPage() {
     log.debug('load data')
 
     try {
-      const [videosResponse, plansResponse] = await Promise.all([
-        fetch("/api/publish/videos"),
-        fetch("/api/publish/plans"),
+      const [videos, plans] = await Promise.all([
+        api<PublishedVideoResponse[]>("/api/publish/videos"),
+        api<PublishPlanResponse[]>("/api/publish/plans"),
       ]);
-
-      const videosResult: ApiResponse<PublishedVideoResponse[]> = await videosResponse.json();
-      const plansResult: ApiResponse<PublishPlanResponse[]> = await plansResponse.json();
 
       let loadedVideos: PublishedVideo[] = [];
       // 处理成片
-      if (videosResult.code === 0 && videosResult.data) {
-        const videos = videosResult.data;
-        const convertedVideos: PublishedVideo[] = videos.map(video => ({
+      if (videos && Array.isArray(videos)) {
+        const videosData = videos;
+        const convertedVideos: PublishedVideo[] = videosData.map(video => ({
           id: video.id,
           name: video.name,
           projectId: video.projectId,
@@ -155,22 +144,20 @@ export default function PublishCenterPage() {
 
         const now = new Date();
         const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const thisMonthVideos = videos.filter(v => new Date(v.createdAt) >= thisMonthStart);
+        const thisMonthVideos = videosData.filter(v => new Date(v.createdAt) >= thisMonthStart);
 
         setStatistics({
-          totalVideos: videos.length,
-          publishedCount: videos.filter(v => v.publishStatus === "published").length,
-          pendingCount: videos.filter(v => v.publishStatus === "unpublished" || v.publishStatus === "scheduled").length,
+          totalVideos: videosData.length,
+          publishedCount: videosData.filter(v => v.publishStatus === "published").length,
+          pendingCount: videosData.filter(v => v.publishStatus === "unpublished" || v.publishStatus === "scheduled").length,
           thisMonthCount: thisMonthVideos.length,
         });
-        log.info('videos loaded', { total: videos.length })
-      } else {
-        log.warn('videos load failed', { message: videosResult.message })
+        log.info('videos loaded', { total: videosData.length })
       }
 
       // 处理计划
-      if (plansResult.code === 0 && plansResult.data) {
-        const plansData = plansResult.data;
+      if (plans && Array.isArray(plans)) {
+        const plansData = plans;
         const convertedPlans: PublishPlan[] = plansData.map(plan => ({
           id: plan.id,
           name: plan.name,
@@ -184,12 +171,6 @@ export default function PublishCenterPage() {
         }));
         setPlans(convertedPlans);
         log.info('plans loaded', { total: plansData.length })
-      } else {
-        log.warn('plans load failed', { message: plansResult.message })
-      }
-
-      if (videosResult.code !== 0 || plansResult.code !== 0) {
-        setLoadError("部分数据加载失败")
       }
     } catch (err) {
       log.error('API call failed', { error: (err as Error).message })
@@ -227,35 +208,39 @@ export default function PublishCenterPage() {
     const selectedProjectId = recentVideos.find((video) => form.videoIds.includes(video.id))?.projectId
       || recentVideos[0]?.projectId;
     if (!selectedProjectId) return notify.error("当前没有可用于创建计划的项目成片");
-    const response = await fetch("/api/publish/plans", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ projectId: selectedProjectId, name: form.name, status: toApiStatus(form.status), plannedDate: form.date, videos: form.videoIds, platforms: form.platforms.map(toApiPlatform), assignee: form.owner }),
-    });
-    const result: ApiResponse<PublishPlanResponse> = await response.json();
-    if (result.code !== 0) return notify.error(result.message || "创建发布计划失败");
-    notify.success("发布计划已创建");
-    await loadData();
+    try {
+      await api<PublishPlanResponse>("/api/publish/plans", {
+        method: "POST",
+        body: JSON.stringify({ projectId: selectedProjectId, name: form.name, status: toApiStatus(form.status), plannedDate: form.date, videos: form.videoIds, platforms: form.platforms.map(toApiPlatform), assignee: form.owner }),
+      });
+      notify.success("发布计划已创建");
+      await loadData();
+    } catch (err) {
+      notify.error("创建发布计划失败", (err as Error).message);
+    }
   }
 
   async function editPlan(planId: string, form: PublishPlanForm) {
-    const response = await fetch(`/api/publish/plans/${planId}`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: form.name, status: toApiStatus(form.status), plannedDate: form.date, videos: form.videoIds, platforms: form.platforms.map(toApiPlatform), assignee: form.owner }),
-    });
-    const result: ApiResponse<PublishPlanResponse> = await response.json();
-    if (result.code !== 0) return notify.error(result.message || "更新发布计划失败");
-    notify.success("发布计划已更新");
-    await loadData();
+    try {
+      await api<PublishPlanResponse>(`/api/publish/plans/${planId}`, {
+        method: "PUT",
+        body: JSON.stringify({ name: form.name, status: toApiStatus(form.status), plannedDate: form.date, videos: form.videoIds, platforms: form.platforms.map(toApiPlatform), assignee: form.owner }),
+      });
+      notify.success("发布计划已更新");
+      await loadData();
+    } catch (err) {
+      notify.error("更新发布计划失败", (err as Error).message);
+    }
   }
 
   async function deletePlan(planId: string) {
-    const response = await fetch(`/api/publish/plans/${planId}`, { method: "DELETE" });
-    const result: ApiResponse<{ deleted: boolean }> = await response.json();
-    if (result.code !== 0) return notify.error(result.message || "删除发布计划失败");
-    notify.success("发布计划已删除");
-    await loadData();
+    try {
+      await api<{ deleted: boolean }>(`/api/publish/plans/${planId}`, { method: "DELETE" });
+      notify.success("发布计划已删除");
+      await loadData();
+    } catch (err) {
+      notify.error("删除发布计划失败", (err as Error).message);
+    }
   }
 
   function handleViewStatistics() {

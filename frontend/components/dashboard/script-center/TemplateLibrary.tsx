@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { notify } from '@/lib/notify'
 import {
   BookOpen,
   Eye,
@@ -18,8 +19,7 @@ import {
   ChevronRight,
   X,
   Clock,
-  User,
-  Tag,
+  User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -51,7 +51,6 @@ interface TemplateLibraryProps {
  * @returns {JSX.Element} 渲染的模板库界面
  */
 export function TemplateLibrary({
-  onSelectTemplate,
   onCreateFromTemplate,
 }: TemplateLibraryProps) {
   const [templates, setTemplates] = useState<Template[]>([])
@@ -188,7 +187,7 @@ export function TemplateLibrary({
       setPreviewingTemplate(null)
     } catch (error) {
       console.error('Failed to create from template:', error)
-      alert('创建失败')
+      notify.error('创建失败', '请检查网络后重试')
     } finally {
       setCreating(false)
     }

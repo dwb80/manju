@@ -27,6 +27,7 @@ import {
   VersionHistoryDialog,
   CopyToProjectDialog,
 } from "@/components/shared";
+import { SafeImage } from "@/components/ui/safe-image";
 import { TemplateSelector, type AssetTemplate, type TemplateEntityType } from "@/components/shared/template-selector";
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/ui/form-dialog";
@@ -34,8 +35,7 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { toast } from "@/components/common/toast";
 import { clearApiCache } from "@/lib/api-client";
 import { useFactoryEntity } from "./useFactoryEntity";
-import type { FactoryCRUDPageProps, FactoryEntity, FactoryEntityType, FilterOption } from "./types";
-import { getEntityLabel } from "./types";
+import { getEntityLabel, type FactoryCRUDPageProps, type FactoryEntity, type FilterOption } from "./types";
 
 const DEFAULT_GRID_CLASS = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
 
@@ -135,7 +135,6 @@ function FactoryBatchActionsBar({
 function SelectAllRow({
   isAllSelected,
   isPartial,
-  allCount,
   onToggle,
   totalSelectedLabel,
   showSelectAll = true,
@@ -215,13 +214,13 @@ function RecycleBinRow<TEntity extends FactoryEntity>({
       >
         {selected && <CheckSquare className="h-3 w-3 text-white" />}
       </button>
-      <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-[#2a2a2a]">
-        {image ? (
-          <img src={image} alt={item.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-        ) : (
-          <span className="text-xs text-[#888]">{item.name?.slice(0, 2) || entityLabel.slice(0, 2)}</span>
-        )}
-      </div>
+      <SafeImage
+        src={image}
+        alt={item.name || entityLabel}
+        className="h-10 w-10 rounded-md bg-[#2a2a2a]"
+        fallbackIcon={false}
+        fallbackLabel={item.name?.slice(0, 2) || entityLabel.slice(0, 2)}
+      />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 text-sm text-white truncate">
           {item.name}
@@ -253,6 +252,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   const {
     title,
     description,
+    entityType,
     entityLabel,
     listTitle,
     emptyTitle,
@@ -297,7 +297,10 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   } = props;
 
   // ===== 数据加载 =====
-  const { selectedProjectId, items, isLoading, reload, selectedIds, setSelectedIds } = useFactoryEntity(fetchList);
+  const { selectedProjectId, items, isLoading, reload, selectedIds, setSelectedIds } = useFactoryEntity(
+    entityType ?? entityLabel,
+    fetchList,
+  );
 
   // ===== 视图模式：normal / recycleBin =====
   const [activeView, setActiveView] = useState<"normal" | "recycleBin">("normal");
@@ -355,7 +358,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
 
   // ===== AI 生成弹窗 =====
   const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
-  const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [, setIsAIGenerating] = useState(false);
 
   // ===== 删除确认 =====
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; usageCount: number } | null>(null);
@@ -700,7 +703,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
   );
 
   const handleBatchPermanentDelete = useCallback(
-    async (count: number) => {
+    async () => {
       if (!permanentDelete) return;
       const ids = Array.from(selectedIds);
       setBatchPermanentDeleteConfirm(null);
@@ -856,7 +859,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
               />
 
               {/* 列表 */}
-              <PageCard title={listTitle} data-factory-selected={JSON.stringify(Array.from(selectedIds))}>
+              <PageCard title={listTitle}>
                 {isLoading && loadingView ? (
                   loadingView
                 ) : filteredItems.length > 0 ? (
@@ -1185,7 +1188,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
               description={`⚠️ 你即将永久删除 ${batchPermanentDeleteConfirm} 个${entityLabel}，该操作不可恢复！\n\n请再次确认。`}
               confirmLabel="永久删除"
               onClose={() => setBatchPermanentDeleteConfirm(null)}
-              onConfirm={() => handleBatchPermanentDelete(batchPermanentDeleteConfirm)}
+              onConfirm={() => handleBatchPermanentDelete()}
             />
           )}
 

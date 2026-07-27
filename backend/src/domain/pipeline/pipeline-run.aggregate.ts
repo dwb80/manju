@@ -81,6 +81,12 @@ export class PipelineRunAggregate implements AggregateRoot {
   private _version: number;
   private _persistedVersion: number;
   private readonly nodeMap: Map<string, PipelineNode>;
+  /**
+   * 本进程内的快速幂等去重缓存（与 pipeline_command_log 表共同构成幂等防线）。
+   * - 权威源是 `pipeline_command_log(id PK)`，跨进程重启后可恢复；
+   * - 内存 Set 仅用于减少每次 `isCommandProcessed` 的 DB 查询，进程崩溃时丢失不影响正确性。
+   * 不再做 512 自动淘汰——落表后无需担心内存膨胀。
+   */
   private readonly processedCommandIds: Set<string>;
   private domainEvents: DomainEvent[] = [];
 
@@ -401,6 +407,14 @@ export class PipelineRunAggregate implements AggregateRoot {
     at: string,
   ): boolean {
     if (!this.acceptCommand(commandId)) return false;
+    // 入口守门：拒绝 NaN / Infinity；clamp 由 PipelineNode.setPriority 内部负责。
+    // 之前漏这一道会让 NaN 直接落到 JSON 与调度器比较里，行为未定义。
+    if (!Number.isFinite(priority)) {
+      throw pipelineInvariant(
+        "setNodePriority 收到非有限数",
+        { runId: this.id, nodeId, priority: String(priority) },
+      );
+    }
     this.requireNode(nodeId).setPriority(priority, at);
     this.touch(at);
     return true;
@@ -524,7 +538,9 @@ export class PipelineRunAggregate implements AggregateRoot {
   markPersisted(): void {
     this._persistedVersion = this._version;
     for (const node of this.nodes) node.markPersisted();
-    this.domainEvents = [];
+    // 领域事件的清空由 `pullDomainEvents` 负责——
+    // 仓储在 `save` 期间调用 `markPersisted` 仅同步持久化版本，事件本身留待
+    // handler 在 UoW 事务内 `ctx.enqueueDomainEvent` 入队后再清空。
   }
 
   toSnapshot(): PipelineRunSnapshot {
@@ -548,16 +564,17 @@ export class PipelineRunAggregate implements AggregateRoot {
     };
   }
 
+  /**
+   * 快速幂等检查（仅基于本进程内 Set）。
+   *
+   * 注意：权威幂等源是 pipeline_command_log 表（由 Repository.recordCommand 落表），
+   * 调用方应在 UoW.run 内部先调 `repo.isCommandProcessed(commandId)`（持久化检查），
+   * 再调本方法（本进程快速去重）。两层都通过才接受命令。
+   */
   private acceptCommand(commandId: string): boolean {
     if (!commandId) throw pipelineInvariant("Pipeline command id is required");
     if (this.processedCommandIds.has(commandId)) return false;
     this.processedCommandIds.add(commandId);
-    if (this.processedCommandIds.size > 512) {
-      const oldest = this.processedCommandIds.values().next().value as
-        | string
-        | undefined;
-      if (oldest) this.processedCommandIds.delete(oldest);
-    }
     return true;
   }
 

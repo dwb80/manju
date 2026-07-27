@@ -13,9 +13,7 @@ import {
   Clock,
   ChevronRight,
   BarChart3,
-  Users,
-  Calendar,
-  Activity,
+  Users, Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AICostStats, type AICostData } from "./ai-cost-stats";

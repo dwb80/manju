@@ -19,6 +19,7 @@
 
 import type { FieldSpec } from "../storage/repository.js";
 import { MODEL_CATALOG, getModelsForCapability, type ModelCapability } from "./model-capabilities.js";
+import { DEFAULT_IMAGE_MODEL } from "../ai/image-config.js";
 
 /* ==================== 策略 / 决策 / 日志 基础类型 ==================== */
 
@@ -206,13 +207,13 @@ export const BUILTIN_POLICIES: RoutePolicy[] = (() => {
   });
   return [
     mk("image_default_balanced", "图片-综合优先", "图片生成默认策略,综合质量/速度/成本",
-       "image", [{ kind: "balanced", weight: 1 }], "agnes-image-2.1-flash"),
+       "image", [{ kind: "balanced", weight: 1 }], DEFAULT_IMAGE_MODEL),
     mk("image_premium_quality", "图片-质量优先", "高优先级图片任务,要求 quality_score>=85",
        "image", [{ kind: "quality", weight: 1.5, options: { minQualityScore: 85 } },
-                  { kind: "balanced", weight: 1 }], "agnes-image-2.1-flash"),
+                  { kind: "balanced", weight: 1 }], DEFAULT_IMAGE_MODEL),
     mk("image_fast_speed", "图片-速度优先", "快速预览场景,要求 latency_ms<=8000",
        "image", [{ kind: "speed", weight: 1.5, options: { maxLatencyMs: 8000 } },
-                  { kind: "balanced", weight: 1 }], "agnes-image-2.1-flash"),
+                  { kind: "balanced", weight: 1 }], DEFAULT_IMAGE_MODEL),
     mk("video_default_balanced", "视频-综合优先", "视频生成默认策略,综合 3 维",
        "video", [{ kind: "balanced", weight: 1 }], "agnes-video-v2.0"),
     mk("video_premium_quality", "视频-质量优先", "高优先级成片,要求 quality_score>=90",

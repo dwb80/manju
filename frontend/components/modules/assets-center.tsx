@@ -78,7 +78,7 @@ export function AssetsCenterPage() {
 
   // 根据 selectedProjectId 加载资产数据
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedProjectId) { setAssets([]); return; }

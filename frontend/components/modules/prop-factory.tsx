@@ -87,9 +87,9 @@ const propAIExtraFields = [
   { name: "camera_usage", label: "镜头使用（可留空，逗号分隔）", placeholder: "如：特写, 手持镜头" },
 ];
 
-/** 道具表单字段配置 */
+/** 道具表单字段配置（左右结构：标签左、控件右）。 */
 const propFields: FormFieldConfig[] = [
-  { name: "name", label: "道具名称", type: "text", required: true, placeholder: "请输入道具名称" },
+  { name: "name", label: "道具名称", type: "text", required: true, placeholder: "请输入道具名称", layout: "horizontal", labelColSpan: 3 },
   {
     name: "category",
     label: "道具类别",
@@ -106,23 +106,25 @@ const propFields: FormFieldConfig[] = [
       { value: "other", label: "其他" },
     ],
     defaultValue: "other",
+    layout: "horizontal",
+    labelColSpan: 3,
   },
-  { name: "description", label: "道具描述", type: "textarea", required: true, placeholder: "请输入道具描述、用途等", rows: 3 },
-  { name: "appearance", label: "外观描述", type: "textarea", placeholder: "请输入道具的外观描述", rows: 2 },
-  { name: "material", label: "材质", type: "text", placeholder: "如：金属、木质、水晶" },
-  { name: "size", label: "尺寸", type: "text", placeholder: "如：长30cm、高1.5m" },
-  { name: "color", label: "颜色", type: "text", placeholder: "如：金色、暗红色" },
+  { name: "description", label: "道具描述", type: "textarea", required: true, placeholder: "请输入道具描述、用途等", rows: 3, layout: "horizontal", labelColSpan: 3 },
+  { name: "appearance", label: "外观描述", type: "textarea", placeholder: "请输入道具的外观描述", rows: 2, layout: "horizontal", labelColSpan: 3 },
+  { name: "material", label: "材质", type: "text", placeholder: "如：金属、木质、水晶", layout: "horizontal", labelColSpan: 3 },
+  { name: "size", label: "尺寸", type: "text", placeholder: "如：长30cm、高1.5m", layout: "horizontal", labelColSpan: 3 },
+  { name: "color", label: "颜色", type: "text", placeholder: "如：金色、暗红色", layout: "horizontal", labelColSpan: 3 },
   // === AI 剧本分析扩展字段 ===
-  { name: "importance_level", label: "重要性级别", type: "text", placeholder: "核心道具 / 普通道具 / 背景道具" },
-  { name: "owner", label: "所属角色", type: "text", placeholder: "如：主角、反派A" },
-  { name: "shape", label: "形状", type: "text", placeholder: "如：圆形、长条形、不规则" },
-  { name: "texture", label: "纹理", type: "text", placeholder: "如：光滑、粗糙、鳞片状" },
-  { name: "story_function", label: "故事功能", type: "text", placeholder: "如：信物、武器、线索" },
-  { name: "visual_features", label: "视觉特征", type: "text", placeholder: "如：发光, 磨损, 镶嵌宝石" },
-  { name: "camera_usage", label: "镜头使用", type: "text", placeholder: "如：特写, 手持镜头" },
-  { name: "generation_prompt", label: "生成提示词", type: "textarea", placeholder: "AI 生图标准化提示词", rows: 2 },
-  { name: "first_appearance", label: "首次出现", type: "text", placeholder: "如：EP01-Scene01" },
-  { name: "confidence", label: "可信度", type: "text", placeholder: "confirmed / inferred" },
+  { name: "importance_level", label: "重要性级别", type: "text", placeholder: "核心道具 / 普通道具 / 背景道具", layout: "horizontal", labelColSpan: 3 },
+  { name: "owner", label: "所属角色", type: "text", placeholder: "如：主角、反派A", layout: "horizontal", labelColSpan: 3 },
+  { name: "shape", label: "形状", type: "text", placeholder: "如：圆形、长条形、不规则", layout: "horizontal", labelColSpan: 3 },
+  { name: "texture", label: "纹理", type: "text", placeholder: "如：光滑、粗糙、鳞片状", layout: "horizontal", labelColSpan: 3 },
+  { name: "story_function", label: "故事功能", type: "text", placeholder: "如：信物、武器、线索", layout: "horizontal", labelColSpan: 3 },
+  { name: "visual_features", label: "视觉特征", type: "text", placeholder: "如：发光, 磨损, 镶嵌宝石", layout: "horizontal", labelColSpan: 3 },
+  { name: "camera_usage", label: "镜头使用", type: "text", placeholder: "如：特写, 手持镜头", layout: "horizontal", labelColSpan: 3 },
+  { name: "generation_prompt", label: "生成提示词", type: "textarea", placeholder: "AI 生图标准化提示词", rows: 2, layout: "horizontal", labelColSpan: 3 },
+  { name: "first_appearance", label: "首次出现", type: "text", placeholder: "如：EP01-Scene01", layout: "horizontal", labelColSpan: 3 },
+  { name: "confidence", label: "可信度", type: "text", placeholder: "confirmed / inferred", layout: "horizontal", labelColSpan: 3 },
 ];
 
 /** 道具类别颜色映射 */

@@ -56,6 +56,18 @@ export async function listScenes(
   return items.filter((item) => !item.deleted_at);
 }
 
+/**
+ * getScene - 按 ID 查询场景（排除已删除）。S4.4 收口补：与 getCharacter 同构。
+ * @param {AppContext} ctx - 应用上下文
+ * @param {string} sceneId - 场景 ID
+ * @returns {Promise<Scene | null>} 场景对象，未找到或已删除返回 null
+ */
+export async function getScene(ctx: AppContext, sceneId: string): Promise<Scene | null> {
+  const sc = await ctx.scenes.findById(sceneId);
+  if (!sc || sc.deleted_at) return null;
+  return sc;
+}
+
 export async function createScene(ctx: AppContext, input: SceneInput): Promise<Scene> {
   const projectId = input.project_id ?? "";
   const name = (input.name ?? "").trim();

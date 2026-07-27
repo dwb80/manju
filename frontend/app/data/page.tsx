@@ -21,7 +21,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Database, DollarSign, Zap, TrendingUp, BarChart3, Factory, ShieldCheck } from "lucide-react";
+import { Database, DollarSign, Zap, TrendingUp } from "lucide-react";
 import { DataCenter } from "@/components/data/data-center";
 import { ProjectOverviewSection } from "@/components/data/project-overview-section";
 import type { AICostData } from "@/components/data/ai-cost-stats";
@@ -32,19 +32,11 @@ import {
   Alert,
 } from "@/components/layout";
 import { createLogger } from "@/lib/logger";
-import { useProjectStore } from "@/lib/stores/project-store";
+import { api } from "@/lib/api-client";
 
 // 模块级 logger
 const log = createLogger('data-page')
 
-/**
- * API响应格式
- */
-interface ApiResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-}
 
 /**
  * 数据概览指标响应格式
@@ -158,19 +150,19 @@ export default function DataCenterPage() {
     log.debug('load data', { range })
 
     try {
-      const [metricsResponse, aiCostResponse, productionResponse] = await Promise.all([
-        fetch(`/api/data/metrics?timeRange=${range}`),
-        fetch(`/api/data/ai-cost?timeRange=${range}`),
-        fetch(`/api/data/production-efficiency?timeRange=${range}`),
+      // P1-4: 改用 api() 统一处理响应 / 错误 / 缓存；
+      // 三个接口允许任一失败，用 allSettled 收集每个的成败
+      const results = await Promise.allSettled([
+        api<DataMetricsResponse>(`/api/data/metrics?timeRange=${range}`),
+        api<AICostResponse>(`/api/data/ai-cost?timeRange=${range}`),
+        api<ProductionEfficiencyResponse>(`/api/data/production-efficiency?timeRange=${range}`),
       ]);
 
-      const metricsResult: ApiResponse<DataMetricsResponse> = await metricsResponse.json();
-      const aiCostResult: ApiResponse<AICostResponse> = await aiCostResponse.json();
-      const productionResult: ApiResponse<ProductionEfficiencyResponse> = await productionResponse.json();
+      const [metricsResult, aiCostResult, productionResult] = results;
 
       // 处理概览指标
-      if (metricsResult.code === 0 && metricsResult.data) {
-        const m = metricsResult.data;
+      if (metricsResult.status === "fulfilled" && metricsResult.value) {
+        const m = metricsResult.value;
         setMetrics({
           monthlyAICost: m.monthlyAICost,
           monthlyTasks: m.monthlyTaskCount,
@@ -179,13 +171,13 @@ export default function DataCenterPage() {
           costTrend: [],
           efficiencyTrend: [],
         });
-      } else {
-        log.warn('metrics load failed', { message: metricsResult.message })
+      } else if (metricsResult.status === "rejected") {
+        log.warn('metrics load failed', { error: metricsResult.reason?.message })
       }
 
       // 处理AI成本
-      if (aiCostResult.code === 0 && aiCostResult.data) {
-        const a = aiCostResult.data;
+      if (aiCostResult.status === "fulfilled" && aiCostResult.value) {
+        const a = aiCostResult.value;
         setAICostData({
           totalCost: a.totalCost,
           imageCost: a.imageCost,
@@ -201,13 +193,13 @@ export default function DataCenterPage() {
           })),
           suggestions: a.optimizationSuggestions,
         });
-      } else {
-        log.warn('ai cost load failed', { message: aiCostResult.message })
+      } else if (aiCostResult.status === "rejected") {
+        log.warn('ai cost load failed', { error: aiCostResult.reason?.message })
       }
 
       // 处理生产效率
-      if (productionResult.code === 0 && productionResult.data) {
-        const p = productionResult.data;
+      if (productionResult.status === "fulfilled" && productionResult.value) {
+        const p = productionResult.value;
         setProductionData({
           avgCompletionTime: p.avgCompletionTime,
           successRate: p.successRate,
@@ -227,12 +219,16 @@ export default function DataCenterPage() {
           bottlenecks: [p.bottleneckAnalysis.issue],
           suggestions: p.optimizationSuggestions,
         });
-      } else {
-        log.warn('production load failed', { message: productionResult.message })
+      } else if (productionResult.status === "rejected") {
+        log.warn('production load failed', { error: productionResult.reason?.message })
       }
 
       // 任一接口失败则提示
-      if (metricsResult.code !== 0 || aiCostResult.code !== 0 || productionResult.code !== 0) {
+      if (
+        metricsResult.status === "rejected" ||
+        aiCostResult.status === "rejected" ||
+        productionResult.status === "rejected"
+      ) {
         setLoadError("部分数据加载失败，显示的可能是历史缓存")
       }
     } catch (err) {

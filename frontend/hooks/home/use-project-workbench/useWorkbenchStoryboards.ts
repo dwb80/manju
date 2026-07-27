@@ -20,7 +20,7 @@ export function useStoryboardItems({
   state: WorkbenchState;
   showNotice: (message: string) => void;
 }) {
-  const { storyboardDraft, setStoryboardDraft, editingStoryboardId, setEditingStoryboardId, selectedStoryboardIds, setSelectedStoryboardIds, scriptDraft } = state;
+  const { storyboardDraft, setStoryboardDraft, editingStoryboardId, setEditingStoryboardId, selectedStoryboardIds, setSelectedStoryboardIds } = state;
 
   /** 提交分镜表单：editingStoryboardId 存在则更新，否则新建 */
   const submit = useCallback(async (selectedProject: Project | undefined) => {

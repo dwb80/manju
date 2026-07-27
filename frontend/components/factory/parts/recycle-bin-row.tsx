@@ -9,6 +9,7 @@
 
 import { CheckSquare, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SafeImage } from "@/components/ui/safe-image";
 import { getEntityLabel, type FactoryEntity } from "../types";
 
 /**
@@ -63,13 +64,13 @@ export function RecycleBinRow<TEntity extends FactoryEntity>({
       >
         {selected && <CheckSquare className="h-3 w-3 text-white" />}
       </button>
-      <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-[#2a2a2a]">
-        {image ? (
-          <img src={image} alt={getEntityLabel(item)} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-        ) : (
-          <span className="text-xs text-[#888]">{getEntityLabel(item).slice(0, 2) || entityLabel.slice(0, 2)}</span>
-        )}
-      </div>
+      <SafeImage
+        src={image}
+        alt={getEntityLabel(item)}
+        className="h-10 w-10 rounded-md bg-[#2a2a2a]"
+        fallbackIcon={false}
+        fallbackLabel={getEntityLabel(item).slice(0, 2) || entityLabel.slice(0, 2)}
+      />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 text-sm text-white truncate">
           {getEntityLabel(item)}

@@ -51,7 +51,6 @@ export interface EntityPickerProps<T extends { id: string; name?: string; title?
 export function EntityPicker<T extends { id: string; name?: string; title?: string }>({
   name,
   label,
-  placeholder = "请选择",
   required = false,
   value,
   onChange,

@@ -21,7 +21,7 @@ export function useAssetItems({
   state: WorkbenchState;
   showNotice: (message: string) => void;
 }) {
-  const { assetComposerKind, setAssetComposerKind, assetDrafts, setAssetDrafts, editingAssetId, setEditingAssetId, projectAssets, setProjectAssets } = state;
+  const { assetComposerKind, setAssetComposerKind, assetDrafts, setAssetDrafts, editingAssetId, setEditingAssetId, setProjectAssets } = state;
 
   /** 提交资产表单：editingAssetId 存在则更新，否则新建 */
   const submit = useCallback(async (selectedProject: Project | undefined) => {

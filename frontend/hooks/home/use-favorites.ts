@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import type { Favorite, FavoriteView, ImageTask, VideoTask } from "@/lib/app-types";
 

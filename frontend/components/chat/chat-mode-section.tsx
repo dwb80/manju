@@ -7,13 +7,13 @@
 
 import type { RefObject } from "react";
 import type {
-    Mode,
-    Message,
-    Attachment,
-    ChatSettings,
-    ImageSettings,
-    VideoSettings,
-    FavoriteView,
+  Mode,
+  Message,
+  Attachment,
+  ChatSettings,
+  ImageSettings,
+  VideoSettings,
+  FavoriteView,
 } from "@/lib/app-types";
 import { ChatView } from "@/components/chat/chat-view";
 import { FavoritesView } from "@/components/common/favorites-view";
@@ -95,7 +95,6 @@ export function ChatModeSection(props: ChatModeSectionProps) {
         onContinueEditImage,
         onRemoveFavorite,
         onImageLoad,
-        scrollToLatest,
         projectWorkbenchProps,
     } = props;
 

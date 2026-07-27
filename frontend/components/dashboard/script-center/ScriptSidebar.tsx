@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import {
   Plus,
   Trash2,
@@ -102,6 +103,8 @@ export function ScriptSidebar({
   onReorderEpisodes,
 }: ScriptSidebarProps) {
   const [expandedEpisodes, setExpandedEpisodes] = useState<Set<string>>(new Set())
+  // 全局确认对话框（替换 window.confirm）
+  const confirm = useConfirm()
   // 编辑器实时树优先（Feature 2.10）；为空时回退到 episodes
   const useTreeData = false
   // 右键菜单
@@ -192,16 +195,21 @@ export function ScriptSidebar({
     setContextMenu(null)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!contextMenu) return
+    const ok = await confirm({
+      title: '删除',
+      description:
+        contextMenu.item.kind === 'episode' && contextMenu.item.episode
+          ? `确定删除"${contextMenu.item.episode.title || `第${contextMenu.item.episode.episodeNo}集`}"？`
+          : '确定删除该场景？',
+      confirmLabel: '删除',
+    })
+    if (!ok) return
     if (contextMenu.item.kind === 'episode' && onDeleteEpisode) {
-      if (confirm(`确定删除"${contextMenu.item.episode.title || `第${contextMenu.item.episode.episodeNo}集`}"？`)) {
-        onDeleteEpisode(contextMenu.item.episode.id)
-      }
+      onDeleteEpisode(contextMenu.item.episode.id)
     } else if (contextMenu.item.kind === 'scene' && onDeleteScene) {
-      if (confirm('确定删除该场景？')) {
-        onDeleteScene(contextMenu.item.scene.id)
-      }
+      onDeleteScene(contextMenu.item.scene.id)
     }
     setContextMenu(null)
   }
@@ -244,8 +252,8 @@ export function ScriptSidebar({
                   <div key={node.id} className="rounded-lg overflow-hidden">
                     <div
                       className={`flex items-center gap-1 p-2 rounded cursor-pointer transition-colors ${selectedEpisode === node.id
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'hover:bg-white/5 text-gray-300'
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'hover:bg-white/5 text-gray-300'
                         }`}
                       onClick={() => {
                         // 单击：选中 + 跳转
@@ -291,8 +299,8 @@ export function ScriptSidebar({
                           <div
                             key={scene.id}
                             className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors ${selectedScene === scene.id
-                                ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'hover:bg-white/5 text-gray-400'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'hover:bg-white/5 text-gray-400'
                               }`}
                             onClick={() => {
                               onSelectScene(scene.id)
@@ -315,8 +323,8 @@ export function ScriptSidebar({
                   <div
                     key={node.id}
                     className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors ${selectedScene === node.id
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'hover:bg-white/5 text-gray-300'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'hover:bg-white/5 text-gray-300'
                       }`}
                     onClick={() => {
                       onSelectScene(node.id)
@@ -384,8 +392,8 @@ export function ScriptSidebar({
                     setDragOverId(null)
                   }}
                   className={`flex items-center gap-1 p-2 rounded cursor-pointer transition-colors group ${selectedEpisode === episode.id
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : 'hover:bg-white/5 text-gray-300'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'hover:bg-white/5 text-gray-300'
                     }`}
                   onClick={() => {
                     // 单击：选中 + 跳转到正文中该剧集对应位置
@@ -455,8 +463,8 @@ export function ScriptSidebar({
                         <div
                           key={scene.id}
                           className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors ${selectedScene === scene.id
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'hover:bg-white/5 text-gray-400'
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : 'hover:bg-white/5 text-gray-400'
                             }`}
                           onClick={() => {
                             // 单击：选中 + 跳转到正文中该场景对应位置

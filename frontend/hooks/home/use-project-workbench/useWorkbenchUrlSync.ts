@@ -14,7 +14,8 @@ import type { WorkbenchState } from "./useWorkbenchState";
 
 const VALID_TABS: ReadonlySet<WorkbenchTab> = new Set<WorkbenchTab>([
   "overview", "tasks", "members", "episodes", "issues",
-  "milestones", "scripts", "reviews", "storyboards", "clips", "assets",
+  "milestones", "scripts", "reviews", "storyboards", "clips",
+  "assets", "exports",
 ]);
 
 export function useWorkbenchUrlSync({

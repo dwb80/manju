@@ -33,6 +33,7 @@ import {
 import { AdminPanels } from "@/components/admin/admin-panels";
 import { createLogger } from "@/lib/logger";
 import { notify } from "@/lib/notify";
+import { useConfirm } from "@/lib/hooks/use-confirm";
 import { api } from "@/lib/api-client";
 import { AdminRouteGuard } from "@/components/auth/admin-route-guard";
 
@@ -69,6 +70,7 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 function SettingsContent() {
+  const confirm = useConfirm();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -114,16 +116,26 @@ function SettingsContent() {
     }
   }
 
-  function handleReset() {
-    if (!confirm("确定重置为默认设置？")) return;
+  async function handleReset() {
+    const ok = await confirm({
+      title: "重置为默认设置",
+      description: "确定要重置为默认设置吗？",
+      confirmLabel: "确认重置",
+    });
+    if (!ok) return;
     setSettings(DEFAULT_SETTINGS);
     log.debug("reset settings to defaults");
     notify.info("已重置为默认设置（请保存以生效）");
   }
 
-  function handleClearApiKey() {
+  async function handleClearApiKey() {
     if (!settings.apiKey && !settings.apiKeyConfigured) return;
-    if (!confirm("确定清除 API Key？清除后需要重新配置。")) return;
+    const ok = await confirm({
+      title: "清除 API Key",
+      description: "确定要清除 API Key 吗？清除后需要重新配置。",
+      confirmLabel: "确认清除",
+    });
+    if (!ok) return;
     update("apiKey", "");
     update("apiKeyConfigured", false);
     update("clearApiKey", true);

@@ -1,6 +1,6 @@
 /** 资产相关的业务服务 */
 import { api } from "./api-client";
-import type { ProjectAsset, ProjectAssetKind, AssetDraft } from "@/lib/app-types";
+import type { ProjectAsset } from "@/lib/app-types";
 
 /** 资产服务接口 */
 export interface AssetService {

@@ -8,6 +8,7 @@
 import type { ChatChunk, ChatParams, ImageParams, TaskStatus, VideoParams } from "../types.js";
 import { rootLogger } from "../logger.js";
 import { safeProviderFetch } from "../services/security/hardening.js";
+import { DEFAULT_IMAGE_MODEL, recommendedSizeForRatio, DEFAULT_RATIO } from "./image-config.js";
 
 /**
  * Agnes API 限流错误（HTTP 429 / 配额用尽）。
@@ -24,10 +25,16 @@ export class AgnesRateLimitError extends Error {
   }
 }
 
-/** 识别一个错误是否为 Agnes 限流错误（兼容旧代码用字符串前缀抛错的情况）。 */
+/** 识别一个错误是否为 Agnes 限流错误（兼容旧代码用字符串前缀抛错的情况）。
+ *  匹配策略（按优先级）：
+ *  1. `AgnesRateLimitError` 实例 → true
+ *  2. 普通对象 `name === "AgnesRateLimitError"` → true（兼容跨模块/序列化的"鸭子类型"）
+ *  3. 字符串类型：直接正则匹配（兼容"我用 `throw "Agnes API 429 ..."` 的旧代码"）
+ *  4. `Error` 子类：message 命中 `Agnes API 429|rate.?limit|quota.?exceed` → true */
 export function isAgnesRateLimitError(err: unknown): boolean {
   if (err instanceof AgnesRateLimitError) return true;
   if (err && typeof err === "object" && (err as { name?: string }).name === "AgnesRateLimitError") return true;
+  if (typeof err === "string" && /Agnes API 429|rate.?limit|quota.?exceed/i.test(err)) return true;
   if (err instanceof Error) return /Agnes API 429|rate.?limit|quota.?exceed/i.test(err.message);
   return false;
 }
@@ -35,8 +42,16 @@ export function isAgnesRateLimitError(err: unknown): boolean {
 export interface AgnesClient {
   /** 发送聊天请求，并以文本片段形式返回回复。 */
   chat(params: ChatParams, signal?: AbortSignal): AsyncIterable<ChatChunk>;
-  /** 发送图片生成请求，返回图片地址列表。 */
-  generateImage(params: ImageParams, signal?: AbortSignal): Promise<{ imageUrls: string[] }>;
+  /**
+   * 发送图片生成请求，返回图片地址列表。
+   * - `requestId`：透传 Agnes 响应头 `X-Request-Id`（S3.2 新增），便于排障时与厂商对账。
+   *   n===1 时为单次请求的 requestId；n>1 时取成功集中**第一个**请求的 requestId
+   *   （与前端"主图 = 第 1 张"的心智模型对齐；"用户看到的那张图"的 requestId
+   *   与请求下标一致）。Agnes 未返回时为 `undefined`，调用方应容错。
+   * - `requestIds`：n>1 时所有成功请求的 requestId 列表（按入参顺序），
+   *   供排障需要时按"哪张图失败/哪张图重试"做精细对账。n===1 时为单元素或空数组。
+   */
+  generateImage(params: ImageParams, signal?: AbortSignal): Promise<{ imageUrls: string[]; requestId?: string; requestIds?: string[] }>;
   /** 发送视频生成请求，返回异步任务 ID。 */
   generateVideo(params: VideoParams, signal?: AbortSignal): Promise<{ taskId: string; providerTaskId?: string; videoId?: string; progress?: number; seconds?: string; size?: string }>;
   /** 查询视频任务状态和结果地址。 */
@@ -63,6 +78,19 @@ function normalizeBaseUrl(baseUrl: string): string {
     return "https://apihub.agnes-ai.com";
   }
   return baseUrl;
+}
+
+/**
+ * 从 Response 头里提取 X-Request-Id（Agnes 自定义排障 ID）。
+ * - 大小写不敏感（`headers.get` 已处理）
+ * - 头缺失或为空 → undefined（不抛错）
+ * - V2 接入新 Provider 时，每个 Provider 实现各自从自家响应头提取，统一塞进 `providerMeta.requestId`
+ */
+function extractRequestId(response: Response): string | undefined {
+  const value = response.headers.get("x-request-id");
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 /** 从 Node fetch/undici 的 cause 链中提取网络错误码，避免只暴露无信息量的 `fetch failed`。 */
@@ -275,8 +303,12 @@ export class RealAgnesClient implements AgnesClient {
    *  根据 images.txt 文档:响应 `data: [{url, b64_json, ...}]` 是单元素数组,无 `n` 参数文档,
    *  因此 n>1 时必须由客户端并发调用 N 次,然后合并 URL 列表。
    *  使用 Promise.allSettled 保证"部分失败"也能拿到部分结果(2/4 比 0/4 强),
-   *  限流错误 (429) 立即 reject 全部 + abort,避免继续打 API 加重限流。 */
-  async generateImage(params: ImageParams, signal?: AbortSignal): Promise<{ imageUrls: string[] }> {
+   *  限流错误 (429) 立即 reject 全部 + abort,避免继续打 API 加重限流。
+   *  返回值:
+   *  - `imageUrls`：所有成功请求的 URL 拼接（按入参顺序）
+   *  - `requestId`：成功集**第一个**的 requestId（与"主图 = 第 1 张"对齐）
+   *  - `requestIds`：所有成功请求的 requestId 列表（按入参顺序），供排障对账 */
+  async generateImage(params: ImageParams, signal?: AbortSignal): Promise<{ imageUrls: string[]; requestId?: string; requestIds?: string[] }> {
     // response_format 必须是 extra_body.response_format（顶层会被忽略），
     // 默认 url；调用方可通过 params.response_format 显式切换为 b64_json。
     const responseFormat = params.response_format === "b64_json" ? "b64_json" : "url";
@@ -290,9 +322,9 @@ export class RealAgnesClient implements AgnesClient {
     // 单张:n === 1,保持原行为(单次 POST,简单快速)
     if (n === 1) {
       const response = await this.post(this.imagePath, {
-        model: params.model ?? "agnes-image-2.1-flash",
+        model: params.model ?? DEFAULT_IMAGE_MODEL,
         prompt: params.prompt,
-        size: params.size ?? "1024x768",
+        size: params.size ?? recommendedSizeForRatio(DEFAULT_RATIO),
         n: 1,
         quality: "standard",
         extra_body: {
@@ -308,7 +340,8 @@ export class RealAgnesClient implements AgnesClient {
       const payload = await readJsonSafe(response, "image generation");
       const imageUrls = parseImageUrls(payload);
       if (imageUrls.length === 0) throw new Error("Agnes image API returned no image URLs");
-      return { imageUrls };
+      const requestId = extractRequestId(response);
+      return { imageUrls, requestId, requestIds: requestId ? [requestId] : [] };
     }
 
     // 多张:N 次并行 POST(每张独立随机种子,得到差异化的图;同时请求耗时从 N×30s 缩到 ~30s)
@@ -325,14 +358,25 @@ export class RealAgnesClient implements AgnesClient {
       }
     }
 
-    // 合并成功的 URL
+    // 合并成功的 URL；requestId 取成功集中"第一个 fulfilled"对应的 requestId。
+    // - 选"第一个"而非"最后一个"的语义：与前端"主图 = 第 1 张"的心智模型对齐；
+    //   排障时"用户看到的那张图"的 requestId 与请求下标一致（allSettled 按入参顺序遍历 results，
+    //   下标 0 是用户提交的第 1 张图）。
+    // - 全量 `requestIds` 数组随 `providerMeta` 一并透传（见 agnes-image-provider.ts），
+    //   供排障需要时按"哪张图失败/哪张图重试"做精细对账。
     const imageUrls: string[] = [];
     let successCount = 0;
     let failCount = 0;
     const firstError = (results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined)?.reason;
+    const requestIds: string[] = [];
+    let firstRequestId: string | undefined;
     for (const result of results) {
       if (result.status === "fulfilled") {
-        imageUrls.push(...result.value);
+        imageUrls.push(...result.value.urls);
+        if (result.value.requestId) {
+          requestIds.push(result.value.requestId);
+          if (firstRequestId === undefined) firstRequestId = result.value.requestId;
+        }
         successCount += 1;
       } else {
         failCount += 1;
@@ -355,7 +399,7 @@ export class RealAgnesClient implements AgnesClient {
         `Agnes 图片部分生成失败：请求 ${n} 张，成功 ${successCount} 张，失败 ${failCount} 张；仅返回成功部分`,
       );
     }
-    return { imageUrls };
+    return { imageUrls, requestId: firstRequestId, requestIds };
   }
 
   /** 单次图片生成 POST 调用,供 generateImage 并发复用。 */
@@ -364,11 +408,11 @@ export class RealAgnesClient implements AgnesClient {
     referenceImages: string[] | undefined,
     responseFormat: "url" | "b64_json",
     signal?: AbortSignal
-  ): Promise<string[]> {
+  ): Promise<{ urls: string[]; requestId?: string }> {
     const response = await this.post(this.imagePath, {
-      model: params.model ?? "agnes-image-2.1-flash",
+      model: params.model ?? DEFAULT_IMAGE_MODEL,
       prompt: params.prompt,
-      size: params.size ?? "1024x768",
+      size: params.size ?? recommendedSizeForRatio(DEFAULT_RATIO),
       n: 1,
       quality: "standard",
       // 不传 seed:让 API 自己随机,这样 N 次并行能产生不同结果
@@ -382,7 +426,7 @@ export class RealAgnesClient implements AgnesClient {
       },
     }, signal);
     const payload = await readJsonSafe(response, "image generation");
-    return parseImageUrls(payload);
+    return { urls: parseImageUrls(payload), requestId: extractRequestId(response) };
   }
 
   /** 调用 Agnes 视频生成接口，创建异步视频任务并返回任务 ID。 */

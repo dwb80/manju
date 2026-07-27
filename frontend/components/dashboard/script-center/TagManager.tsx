@@ -10,9 +10,7 @@ import {
   Tag,
   Plus,
   X,
-  Search,
-  Filter,
-  BarChart3,
+  Search, BarChart3
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

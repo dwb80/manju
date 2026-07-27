@@ -377,7 +377,10 @@ export class ReviewAggregate implements AggregateRoot {
     nonEmpty(submittedBy, "submittedBy");
     const previousReviewId = this.id;
     this.applyTransition("resubmit", "resubmit", submittedBy, () => {
-      this.reSubmitCount += 1;
+      // 上溢保护：resubmit 次数超过 2^16 时冻结在最大值，避免 JSON 序列化失败
+      // 与监控指标（histogram）桶位错位。生产上出现该量级说明有异常的循环提交，
+      // 由上游告警触发人工干预。
+      if (this.reSubmitCount < 65_536) this.reSubmitCount += 1;
       this.rejectionReasonCode = null;
       this.approvedAt = "";
       this.reviewedBy = "";

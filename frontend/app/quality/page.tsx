@@ -2,17 +2,21 @@
 
 /**
  * @file app/quality/page.tsx
- * @description V2 W6 REQ-PIPE-004-05 质检报告查看页（轻量版）
+ * @description V2 W6 REQ-PIPE-004-05 质检报告查看页
  *
  * 功能：
- * - 顶部：项目 ID 输入 + 自动质检配置（启用/目标类型/阈值/失败处理）+ 汇总（总/通过/失败/平均分）
+ * - 顶部：项目选择（默认从 useProjectStore 取）+ 自动质检配置（启用/目标类型/阈值/失败处理）+ 汇总
  * - 主体：报告列表（runId/nodeId/targetType/score/status/items 数/时间）
  * - 单条展开：可查看 details.items 每项 rule / status / score / message
  *
- * 复用 pipeline/page.tsx 的轻量设计：HTML 原生 + inline style。
+ * P1 评审修复：
+ * - 迁移 inline style 到 Card / Table / Button / Input / Badge 统一设计系统组件
+ * - 改用 useProjectStore.selectedProjectId 替代硬编码 DEFAULT_PROJECT_ID
+ * - 修复 React.Fragment + 双 tr 的 key warning
+ * - 引入 StandalonePageHeader 头部
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import {
   fetchAutoConfig,
   saveAutoConfig,
@@ -21,70 +25,56 @@ import {
   fetchReport,
   triggerDetect,
   fetchSummary,
+  type QualityAutoConfig,
+  type QualityReport,
+  type QualitySummary,
+  type QualityTargetType,
+  type QualityOnFailure,
 } from "@/services/quality.service";
-import type {
-  QualityAutoConfig,
-  QualityReport,
-  QualitySummary,
-  QualityTargetType,
-  QualityOnFailure,
-} from "@/services/quality.service";
-
-const cardStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.10)",
-  borderRadius: 8,
-  padding: 16,
-  marginBottom: 16,
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: "6px 10px",
-  fontSize: 13,
-  background: "rgba(0,0,0,0.30)",
-  border: "1px solid rgba(255,255,255,0.15)",
-  borderRadius: 6,
-  color: "white",
-  fontFamily: "ui-monospace, SFMono-Regular, monospace",
-};
-
-const btnPrimary: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "6px 14px",
-  borderRadius: 6,
-  background: "linear-gradient(135deg, rgb(59,130,246) 0%, rgb(96,165,250) 100%)",
-  color: "white",
-  border: "none",
-  cursor: "pointer",
-  fontSize: 13,
-  fontWeight: 500,
-};
-
-const btnDanger: React.CSSProperties = {
-  ...btnPrimary,
-  background: "linear-gradient(135deg, rgb(220,38,38) 0%, rgb(248,113,113) 100%)",
-};
-
-const statusColor: Record<string, string> = {
-  passed: "rgb(34,197,94)",
-  warning: "rgb(234,179,8)",
-  failed: "rgb(220,38,38)",
-  unknown: "rgb(148,163,184)",
-};
+import { useProjectStore } from "@/lib/stores/project-store";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { StandalonePageHeader } from "@/components/layout/standalone-page-header";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { notify } from "@/lib/notify";
+import { Loader2, Trash2, Save, Play, AlertTriangle } from "lucide-react";
+import { StatCard } from "@/components/shared/stat-card";
 
 const TARGET_TYPES: QualityTargetType[] = ["image", "video", "audio", "composition"];
 const ON_FAILURE: QualityOnFailure[] = ["log", "review", "block"];
 
-const DEFAULT_PROJECT_ID = "p-171a35d8-0c63-40a3-8ece-d69e6ee39764";
+const STATUS_VARIANT: Record<
+  string,
+  "success" | "warning" | "destructive" | "muted"
+> = {
+  passed: "success",
+  warning: "warning",
+  failed: "destructive",
+  unknown: "muted",
+};
+
+function statusVariant(status: string) {
+  return STATUS_VARIANT[status] ?? "muted";
+}
+
+function scoreColor(score: number): "success" | "warning" | "destructive" {
+  if (score >= 80) return "success";
+  if (score >= 60) return "warning";
+  return "destructive";
+}
 
 /**
  * 构造一个"占位"默认配置，用于 SSR 首次渲染 / 等待 fetch 完成期间。
- * 关键点：让 useState 初值非 null，render 立即能看到自动配置区，
- * 等 useEffect 中 fetchAutoConfig 拿到真实值后再覆盖。
- *  - id 为空串（表示尚未持久化）
- *  - updated_at 标为 "loading..."，方便前端 UI 区分
  */
 function buildDefaultConfig(projectId: string): QualityAutoConfig {
   return {
@@ -100,8 +90,11 @@ function buildDefaultConfig(projectId: string): QualityAutoConfig {
 }
 
 export default function QualityPage() {
-  const [projectId, setProjectId] = useState(DEFAULT_PROJECT_ID);
-  const [config, setConfig] = useState<QualityAutoConfig>(() => buildDefaultConfig(DEFAULT_PROJECT_ID));
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
+  const [projectId, setProjectId] = useState(selectedProjectId || "");
+  const [config, setConfig] = useState<QualityAutoConfig>(() =>
+    buildDefaultConfig(selectedProjectId || ""),
+  );
   const [summary, setSummary] = useState<QualitySummary | null>(null);
   const [reports, setReports] = useState<QualityReport[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -109,13 +102,26 @@ export default function QualityPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // 手动 detect 表单
   const [detectTargetId, setDetectTargetId] = useState("");
   const [detectTargetType, setDetectTargetType] = useState<QualityTargetType>("image");
 
+  // 监听全局项目选择变化
+  useEffect(() => {
+    if (selectedProjectId && selectedProjectId !== projectId) {
+      setProjectId(selectedProjectId);
+      setConfig(buildDefaultConfig(selectedProjectId));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProjectId]);
+
   const reload = async (pid = projectId) => {
-    if (!pid) return;
+    if (!pid) {
+      notify.info("请先选择项目");
+      return;
+    }
     setBusy(true);
     setError(null);
     setInfo(null);
@@ -130,15 +136,18 @@ export default function QualityPage() {
       setReports(rep.reports);
     } catch (e) {
       setError((e as Error).message);
+      notify.error("加载失败", (e as Error).message);
     } finally {
       setBusy(false);
     }
   };
 
   useEffect(() => {
-    reload();
+    if (projectId) {
+      void reload(projectId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [projectId]);
 
   const handleSaveConfig = async () => {
     setBusy(true);
@@ -153,14 +162,17 @@ export default function QualityPage() {
       });
       setConfig(next.config);
       setInfo("配置已保存");
+      notify.success("配置已保存");
     } catch (e) {
       setError((e as Error).message);
+      notify.error("保存失败", (e as Error).message);
     } finally {
       setBusy(false);
     }
   };
 
   const handleDeleteConfig = async () => {
+    setConfirmDelete(false);
     setBusy(true);
     setError(null);
     try {
@@ -168,8 +180,10 @@ export default function QualityPage() {
       const cfg = await fetchAutoConfig(projectId);
       setConfig(cfg.config);
       setInfo("配置已删除，已回退默认");
+      notify.success("配置已删除");
     } catch (e) {
       setError((e as Error).message);
+      notify.error("删除失败", (e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -184,7 +198,11 @@ export default function QualityPage() {
 
   const handleTriggerDetect = async () => {
     if (!detectTargetId.trim()) {
-      setError("请填写 targetId");
+      notify.warn("请填写 targetId");
+      return;
+    }
+    if (!projectId) {
+      notify.warn("请先选择项目");
       return;
     }
     setBusy(true);
@@ -195,10 +213,14 @@ export default function QualityPage() {
         targetId: detectTargetId.trim(),
         targetType: detectTargetType,
       });
-      setInfo(`已触发检测，reportId=${result.report.reportId}，分数=${result.report.overallScore}，状态=${result.report.status}`);
+      setInfo(
+        `已触发检测，reportId=${result.report.reportId}，分数=${result.report.overallScore}，状态=${result.report.status}`,
+      );
+      notify.success("检测完成", `分数 ${result.report.overallScore}`);
       await reload();
     } catch (e) {
       setError((e as Error).message);
+      notify.error("检测失败", (e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -216,297 +238,341 @@ export default function QualityPage() {
       setDetail(d);
     } catch (e) {
       setError((e as Error).message);
+      notify.error("加载报告失败", (e as Error).message);
     }
   };
-
-  const statusBadge = (status: string) => ({
-    display: "inline-block",
-    padding: "2px 8px",
-    fontSize: 11,
-    fontWeight: 600,
-    borderRadius: 4,
-    background: statusColor[status] ?? statusColor.unknown,
-    color: "white",
-  });
 
   const sortedReports = useMemo(() => reports, [reports]);
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto", color: "white" }}>
-      <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>质检中心</h1>
-
-      {/* 项目选择 */}
-      <div style={cardStyle}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <label style={{ fontSize: 13, color: "rgb(148,163,184)" }}>项目 ID：</label>
-          <input
-            style={{ ...inputStyle, minWidth: 320 }}
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value.trim())}
-            placeholder="p-xxxxx"
-          />
-          <button style={btnPrimary} disabled={busy} onClick={() => reload()}>
-            {busy ? "加载中..." : "刷新"}
-          </button>
-          {error && (
-            <span style={{ color: "rgb(248,113,113)", fontSize: 12, marginLeft: 8 }}>错误：{error}</span>
-          )}
-          {info && (
-            <span style={{ color: "rgb(134,239,172)", fontSize: 12, marginLeft: 8 }}>{info}</span>
-          )}
-        </div>
-      </div>
-
-      {/* 自动配置 — 总是渲染（useState 初值是 buildDefaultConfig，保证 SSR 立即可见） */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>
-          自动质检配置
-          {config.id === "" && (
-            <span style={{ fontSize: 11, color: "rgb(234,179,8)", marginLeft: 8 }}>（使用默认，待后端返回后覆盖）</span>
-          )}
-        </h2>
-        <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input
-              type="checkbox"
-              checked={config.enabled}
-              onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
-            />
-            启用
-          </label>
-          <div style={{ fontSize: 13 }}>
-            目标类型：
-            {TARGET_TYPES.map((t) => (
-              <label key={t} style={{ marginLeft: 8, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <input
-                  type="checkbox"
-                  checked={config.target_types.includes(t)}
-                  onChange={() => handleToggleTargetType(t)}
-                />
-                {t}
-              </label>
-            ))}
-          </div>
-          <label style={{ fontSize: 13, display: "inline-flex", alignItems: "center", gap: 6 }}>
-            阈值：
-            <input
-              type="number"
-              min={0}
-              max={100}
-              style={{ ...inputStyle, width: 80 }}
-              value={config.threshold}
-              onChange={(e) => setConfig({ ...config, threshold: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
-            />
-          </label>
-          <label style={{ fontSize: 13, display: "inline-flex", alignItems: "center", gap: 6 }}>
-            失败处理：
-            <select
-              style={inputStyle}
-              value={config.on_failure}
-              onChange={(e) => setConfig({ ...config, on_failure: e.target.value as QualityOnFailure })}
-            >
-              {ON_FAILURE.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </select>
-          </label>
-          <button style={btnPrimary} disabled={busy} onClick={handleSaveConfig}>
-            保存
-          </button>
-          <button style={btnDanger} disabled={busy || config.id === ""} onClick={handleDeleteConfig} title={config.id === "" ? "当前为默认占位，无可删除的持久化记录" : "删除项目自动质检配置"}>
-            删除
-          </button>
-          <span style={{ fontSize: 11, color: "rgb(148,163,184)" }}>
-            updated_at: {config.updated_at}
-          </span>
-        </div>
-      </div>
-
-      {/* 汇总 */}
-      {summary && (
-        <div style={cardStyle}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>质检汇总</h2>
-          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-            <Stat label="总报告" value={summary.total} color="rgb(148,163,184)" />
-            <Stat label="通过" value={summary.passed} color="rgb(34,197,94)" />
-            <Stat label="失败" value={summary.failed} color="rgb(220,38,38)" />
-            <Stat label="平均分" value={summary.avgScore} color="rgb(59,130,246)" />
-            <div style={{ fontSize: 12, color: "rgb(148,163,184)" }}>
-              按目标类型：
-              {Object.entries(summary.byTargetType).map(([k, v]) => (
-                <span key={k} style={{ marginLeft: 8 }}>{k}={v}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 手动触发检测 */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>手动触发检测</h2>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <label style={{ fontSize: 13, color: "rgb(148,163,184)" }}>targetId：</label>
-          <input
-            style={{ ...inputStyle, minWidth: 280 }}
-            value={detectTargetId}
-            onChange={(e) => setDetectTargetId(e.target.value)}
-            placeholder="img-xxx / vid-xxx / comp-xxx"
-          />
-          <label style={{ fontSize: 13, color: "rgb(148,163,184)" }}>类型：</label>
-          <select
-            style={inputStyle}
-            value={detectTargetType}
-            onChange={(e) => setDetectTargetType(e.target.value as QualityTargetType)}
+    <div className="min-h-screen bg-background text-foreground">
+      <StandalonePageHeader
+        title="质检中心"
+        description="查看项目维度的质检报告与自动配置"
+        breadcrumbs={["首页", "质检中心"]}
+        extraRight={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void reload()}
+            disabled={busy || !projectId}
           >
-            {TARGET_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-          <button style={btnPrimary} disabled={busy} onClick={handleTriggerDetect}>
-            {busy ? "检测中..." : "执行检测"}
-          </button>
-        </div>
-      </div>
+            <Loader2 className={`mr-1 h-3 w-3 ${busy ? "animate-spin" : "hidden"}`} />
+            刷新
+          </Button>
+        }
+      />
 
-      {/* 报告列表 */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>
-          报告列表 <span style={{ fontSize: 12, color: "rgb(148,163,184)" }}>({sortedReports.length})</span>
-        </h2>
-        {sortedReports.length === 0 ? (
-          <p style={{ fontSize: 13, color: "rgb(148,163,184)" }}>暂无报告</p>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                <tr style={{ textAlign: "left", color: "rgb(148,163,184)" }}>
-                  <th style={th}>报告 ID</th>
-                  <th style={th}>目标</th>
-                  <th style={th}>类型</th>
-                  <th style={th}>分数</th>
-                  <th style={th}>状态</th>
-                  <th style={th}>Run/Node</th>
-                  <th style={th}>时间</th>
-                  <th style={th}>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedReports.map((r) => {
-                  const status = String(r.details?.status ?? (r.passed ? "passed" : "failed"));
-                  const ttype = String(r.details?.targetType ?? "unknown");
-                  const tid = String(r.details?.targetId ?? "");
-                  const isOpen = expandedId === r.id;
-                  return (
-                    <>
-                      <tr key={r.id} style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                        <td style={td}><code style={{ fontSize: 11 }}>{r.id}</code></td>
-                        <td style={td}><code style={{ fontSize: 11 }}>{tid || "-"}</code></td>
-                        <td style={td}>{ttype}</td>
-                        <td style={td}>
-                          <span style={scoreBar(r.score)}>{r.score}</span>
-                        </td>
-                        <td style={td}><span style={statusBadge(status)}>{status}</span></td>
-                        <td style={td}><code style={{ fontSize: 11 }}>{r.run_id || "-"} / {r.node_id || "-"}</code></td>
-                        <td style={td}><code style={{ fontSize: 11 }}>{r.created_at}</code></td>
-                        <td style={td}>
-                          <button
-                            style={{ ...btnPrimary, padding: "2px 8px", fontSize: 11 }}
-                            onClick={() => handleExpand(r.id)}
-                          >
-                            {isOpen ? "收起" : "详情"}
-                          </button>
-                        </td>
-                      </tr>
-                      {isOpen && detail && detail.id === r.id && (
-                        <tr>
-                          <td colSpan={8} style={{ ...td, background: "rgba(0,0,0,0.20)" }}>
-                            <ReportDetail report={detail} />
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  );
-                })}
-              </tbody>
-            </table>
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-6 sm:px-8">
+        {error && (
+          <div
+            role="alert"
+            className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-red-200"
+          >
+            <AlertTriangle className="h-3.5 w-3.5" />
+            {error}
           </div>
         )}
+        {info && (
+          <div
+            role="status"
+            className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-200"
+          >
+            {info}
+          </div>
+        )}
+
+        {/* 自动配置 */}
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base">自动质检配置</CardTitle>
+              {config.id === "" && (
+                <Badge variant="warning" className="text-[10px]">
+                  使用默认，待后端返回后覆盖
+                </Badge>
+              )}
+            </div>
+            <span className="text-[11px] text-muted-foreground">
+              updated_at: {config.updated_at || "—"}
+            </span>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-0">
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
+                  checked={config.enabled}
+                  onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
+                />
+                启用
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-muted-foreground">目标类型：</span>
+                {TARGET_TYPES.map((t) => (
+                  <label key={t} className="inline-flex items-center gap-1.5 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
+                      checked={config.target_types.includes(t)}
+                      onChange={() => handleToggleTargetType(t)}
+                    />
+                    {t}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <label className="inline-flex items-center gap-2">
+                <span className="text-muted-foreground">阈值：</span>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="h-8 w-20 text-xs"
+                  value={config.threshold}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      threshold: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                    })
+                  }
+                />
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <span className="text-muted-foreground">失败处理：</span>
+                <select
+                  className="h-8 rounded-md border border-input bg-muted px-2 text-xs"
+                  value={config.on_failure}
+                  onChange={(e) =>
+                    setConfig({ ...config, on_failure: e.target.value as QualityOnFailure })
+                  }
+                >
+                  {ON_FAILURE.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleSaveConfig} disabled={busy}>
+                  <Save className="mr-1 h-3.5 w-3.5" />
+                  保存
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={busy || config.id === ""}
+                  title={config.id === "" ? "当前为默认占位，无可删除的持久化记录" : ""}
+                >
+                  <Trash2 className="mr-1 h-3.5 w-3.5" />
+                  删除
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 汇总 */}
+        {summary && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">质检汇总</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <StatCard label="总报告" value={summary.total} color="orange" />
+                <StatCard label="通过" value={summary.passed} color="emerald" />
+                <StatCard label="失败" value={summary.failed} color="orange" />
+                <StatCard label="平均分" value={summary.avgScore} color="blue" />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                <span>按目标类型：</span>
+                {Object.entries(summary.byTargetType).map(([k, v]) => (
+                  <Badge key={k} variant="muted">
+                    {k}={v}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 手动触发检测 */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">手动触发检测</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">targetId：</span>
+                <Input
+                  className="h-8 w-72 text-xs"
+                  value={detectTargetId}
+                  onChange={(e) => setDetectTargetId(e.target.value)}
+                  placeholder="img-xxx / vid-xxx / comp-xxx"
+                />
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">类型：</span>
+                <select
+                  className="h-8 rounded-md border border-input bg-muted px-2 text-xs"
+                  value={detectTargetType}
+                  onChange={(e) => setDetectTargetType(e.target.value as QualityTargetType)}
+                >
+                  {TARGET_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button size="sm" onClick={handleTriggerDetect} disabled={busy}>
+                <Play className="mr-1 h-3.5 w-3.5" />
+                {busy ? "检测中..." : "执行检测"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 报告列表 */}
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-base">报告列表</CardTitle>
+            <span className="text-xs text-muted-foreground">
+              共 {sortedReports.length} 条
+            </span>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {sortedReports.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">暂无报告</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>报告 ID</TableHead>
+                    <TableHead>目标</TableHead>
+                    <TableHead>类型</TableHead>
+                    <TableHead>分数</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead>Run/Node</TableHead>
+                    <TableHead>时间</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedReports.map((r) => {
+                    const status = String(r.details?.status ?? (r.passed ? "passed" : "failed"));
+                    const ttype = String(r.details?.targetType ?? "unknown");
+                    const tid = String(r.details?.targetId ?? "");
+                    const isOpen = expandedId === r.id;
+                    return (
+                      <Fragment key={r.id}>
+                        <TableRow className={isOpen ? "bg-white/[0.03]" : undefined}>
+                          <TableCell>
+                            <code className="font-mono text-[11px]">{r.id}</code>
+                          </TableCell>
+                          <TableCell>
+                            <code className="font-mono text-[11px]">{tid || "-"}</code>
+                          </TableCell>
+                          <TableCell>{ttype}</TableCell>
+                          <TableCell>
+                            <Badge variant={scoreColor(r.score)}>{r.score}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={statusVariant(status)}>{status}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <code className="font-mono text-[11px]">
+                              {r.run_id || "-"} / {r.node_id || "-"}
+                            </code>
+                          </TableCell>
+                          <TableCell>
+                            <code className="font-mono text-[11px]">{r.created_at}</code>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() => handleExpand(r.id)}
+                              aria-label={isOpen ? "收起详情" : "查看详情"}
+                            >
+                              {isOpen ? "收起" : "详情"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                        {isOpen && detail && detail.id === r.id && (
+                          <TableRow>
+                            <TableCell colSpan={8} className="bg-black/20 p-0">
+                              <ReportDetail report={detail} />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="删除项目自动质检配置"
+          description="删除后该项目将不再自动执行质检。确认要继续吗？"
+          confirmLabel="确认删除"
+          onClose={() => setConfirmDelete(false)}
+          onConfirm={handleDeleteConfig}
+        />
+      )}
     </div>
   );
-}
-
-const th: React.CSSProperties = {
-  padding: "8px 10px",
-  borderBottom: "1px solid rgba(255,255,255,0.15)",
-  fontWeight: 500,
-  fontSize: 12,
-};
-
-const td: React.CSSProperties = {
-  padding: "8px 10px",
-  fontSize: 13,
-};
-
-function Stat({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-      <span style={{ fontSize: 11, color: "rgb(148,163,184)" }}>{label}</span>
-      <span style={{ fontSize: 20, fontWeight: 700, color }}>{value}</span>
-    </div>
-  );
-}
-
-function scoreBar(score: number): React.CSSProperties {
-  const color = score >= 80 ? "rgb(34,197,94)" : score >= 60 ? "rgb(234,179,8)" : "rgb(220,38,38)";
-  return {
-    display: "inline-block",
-    padding: "2px 8px",
-    borderRadius: 4,
-    background: color,
-    color: "white",
-    fontWeight: 600,
-    fontSize: 12,
-    minWidth: 36,
-    textAlign: "center",
-  };
 }
 
 function ReportDetail({ report }: { report: QualityReport }) {
   const d = report.details;
   return (
-    <div style={{ padding: 8, fontSize: 12, color: "rgb(203,213,225)" }}>
-      <div style={{ marginBottom: 8 }}>
-        <strong>总体：</strong> 技术 {d.technicalScore} / 美学 {d.aestheticScore} / 一致性 {d.consistencyScore}
+    <div className="p-4 text-xs text-neutral-300">
+      <div className="mb-3 flex flex-wrap gap-4">
+        <span>
+          <strong>技术</strong> {d.technicalScore}
+        </span>
+        <span>
+          <strong>美学</strong> {d.aestheticScore}
+        </span>
+        <span>
+          <strong>一致性</strong> {d.consistencyScore}
+        </span>
       </div>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ color: "rgb(148,163,184)", textAlign: "left" }}>
-            <th style={{ ...th, padding: "4px 6px" }}>规则</th>
-            <th style={{ ...th, padding: "4px 6px" }}>状态</th>
-            <th style={{ ...th, padding: "4px 6px" }}>分数</th>
-            <th style={{ ...th, padding: "4px 6px" }}>说明</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>规则</TableHead>
+            <TableHead>状态</TableHead>
+            <TableHead>分数</TableHead>
+            <TableHead>说明</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {d.items.map((it) => (
-            <tr key={it.rule} style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-              <td style={{ ...td, padding: "4px 6px" }}>{it.rule}</td>
-              <td style={{ ...td, padding: "4px 6px" }}>
-                <span style={{
-                  padding: "1px 6px",
-                  borderRadius: 3,
-                  background: it.status === "passed" ? "rgb(34,197,94)" : it.status === "warning" ? "rgb(234,179,8)" : "rgb(220,38,38)",
-                  color: "white",
-                  fontSize: 11,
-                }}>{it.status}</span>
-              </td>
-              <td style={{ ...td, padding: "4px 6px" }}>{it.score}</td>
-              <td style={{ ...td, padding: "4px 6px" }}>{it.message}</td>
-            </tr>
+            <TableRow key={it.rule}>
+              <TableCell>{it.rule}</TableCell>
+              <TableCell>
+                <Badge variant={statusVariant(it.status)}>{it.status}</Badge>
+              </TableCell>
+              <TableCell>{it.score}</TableCell>
+              <TableCell>{it.message}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

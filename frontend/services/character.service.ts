@@ -8,7 +8,7 @@
  *   其他工厂可复用，无需重复定义。
  */
 
-import { api, apiUrl } from "./api-client";
+import { api } from "./api-client";
 import type { Character } from "@/lib/module-types";
 
 /** 角色被哪些内容引用。 */

@@ -1,13 +1,19 @@
 /**
  * @file prop-image-history.ts
- * @description 道具图片生成历史（list/append/apply/unapply/delete/clear + 自动 trim）
+ * @description 道具图片生成历史（list/append/apply/unapply/delete/clear/findReusable）
+ *
+ * S2.2：取消历史图自动裁剪（V1.2 决策）。is_applied 资产图与普通历史图均不限数量；
+ * 删除/清空由用户显式操作；DB 单实体历史条数无上限。
+ *
+ * S4.2：三厂同构——prop / scene / character 的 image_history 都补齐 shot_type / angle / view_type 三个维度。
+ * 这些维度用于：
+ * 1) 前端"多视图"按景别/角度/视图类型筛选
+ * 2) 一致性包生成时按 image_type 复用 history（`findReusablePropImage`）
  */
 import { randomUUID } from "node:crypto";
 import { nowIso } from "../utils.js";
 import type { AppContext } from "./app.js";
 import type { PropImageHistory } from "../types/character-image-history.js";
-
-const MAX_HISTORY_PER_PROP = 100;
 
 export async function listPropImageHistory(
   ctx: AppContext,
@@ -17,20 +23,26 @@ export async function listPropImageHistory(
   return all.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
 }
 
+export interface AppendPropImageHistoryInput {
+  prop_id: string;
+  project_id: string;
+  url: string;
+  ratio: string;
+  model: string;
+  size: string;
+  prompt: string;
+  negative_prompt?: string;
+  response_format: string;
+  n: number;
+  /** S4.2：三维筛选维度（nullable，纯 prompt 生图时三个字段都为 null） */
+  shot_type?: string | null;
+  angle?: string | null;
+  view_type?: string | null;
+}
+
 export async function appendPropImageHistory(
   ctx: AppContext,
-  input: {
-    prop_id: string;
-    project_id: string;
-    url: string;
-    ratio: string;
-    model: string;
-    size: string;
-    prompt: string;
-    negative_prompt?: string;
-    response_format: string;
-    n: number;
-  },
+  input: AppendPropImageHistoryInput,
 ): Promise<PropImageHistory> {
   const existing = await ctx.propImageHistory.findMany({
     prop_id: input.prop_id,
@@ -49,13 +61,35 @@ export async function appendPropImageHistory(
     negative_prompt: input.negative_prompt ?? "",
     response_format: input.response_format,
     n: input.n,
+    shot_type: input.shot_type ?? null,
+    angle: input.angle ?? null,
+    view_type: input.view_type ?? null,
     is_applied: false,
     applied_at: "",
     created_at: nowIso(),
   };
   await ctx.propImageHistory.insert(record);
-  void trimPropHistory(ctx, input.prop_id);
   return record;
+}
+
+/**
+ * S4.2 A→B 复用：在已设为资产的 history 中查匹配 (shot_type, angle, view_type) 的图。
+ * 语义与 scene 同构；详见 scene-image-history.ts 同名函数注释。
+ */
+export async function findReusablePropImage(
+  ctx: AppContext,
+  propId: string,
+  criteria: { shot_type?: string | null; angle?: string | null; view_type?: string | null },
+): Promise<PropImageHistory | null> {
+  const all = await ctx.propImageHistory.findMany({ prop_id: propId } as Partial<PropImageHistory>);
+  const match = all.find((h) => {
+    if (!h.is_applied) return false;
+    if ((criteria.shot_type ?? null) !== (h.shot_type ?? null)) return false;
+    if ((criteria.angle ?? null) !== (h.angle ?? null)) return false;
+    if ((criteria.view_type ?? null) !== (h.view_type ?? null)) return false;
+    return true;
+  });
+  return match ?? null;
 }
 
 export async function markPropImageApplied(
@@ -79,23 +113,17 @@ export async function deletePropImageHistory(ctx: AppContext, id: string): Promi
   return true;
 }
 
+/**
+ * 清空某道具的"未应用"历史图片（**S4.0.7 B4 收口**）。
+ * 语义：只删 `is_applied=0`；`is_applied=1`（已设为道具资产的图）保留不动。
+ */
 export async function clearPropImageHistory(ctx: AppContext, propId: string): Promise<number> {
   const all = await ctx.propImageHistory.findMany({ prop_id: propId });
+  let removed = 0;
   for (const item of all) {
+    if (item.is_applied) continue;
     await ctx.propImageHistory.delete(item.id);
+    removed += 1;
   }
-  return all.length;
-}
-
-async function trimPropHistory(ctx: AppContext, propId: string): Promise<void> {
-  const all = await ctx.propImageHistory.findMany({ prop_id: propId });
-  const ordinary = all.filter((item) => !item.is_applied);
-  if (ordinary.length <= MAX_HISTORY_PER_PROP) return;
-  const sorted = [...ordinary].sort((a, b) =>
-    (b.created_at || "").localeCompare(a.created_at || ""),
-  );
-  const toDelete = sorted.slice(MAX_HISTORY_PER_PROP);
-  for (const item of toDelete) {
-    await ctx.propImageHistory.delete(item.id);
-  }
+  return removed;
 }

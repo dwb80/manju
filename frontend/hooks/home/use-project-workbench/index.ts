@@ -35,12 +35,11 @@ import type {
   ProjectEpisode,
   ProjectIssue,
   ProjectMember,
-  ProjectMilestone,
-  ProjectReview,
-  ProjectScript,
+  ProjectMilestone, ProjectScript,
   ProjectStoryboard,
   ProjectTask,
-  WorkbenchTab,
+  WorkbenchPage,
+  WorkbenchTab
 } from "@/lib/app-types";
 
 import { useWorkbenchState } from "./useWorkbenchState";
@@ -61,7 +60,7 @@ import {
 } from "./useWorkbenchStoryboards";
 import { useAssetItems } from "./useWorkbenchAssets";
 import {
-  useGenerateStoryboardImage, useGenerateStoryboardVideo, useStoryboardForGeneration,
+  useStoryboardForGeneration,
 } from "./useWorkbenchGeneration";
 import { useExportProject } from "./useWorkbenchExports";
 import { useWorkbenchUrlSync } from "./useWorkbenchUrlSync";
@@ -122,8 +121,6 @@ export function useProjectWorkbench({
   const assets = useAssetItems({ state, showNotice });
 
   // ===== 9) 生成 =====
-  const generateImage = useGenerateStoryboardImage({ state, showNotice });
-  const generateVideo = useGenerateStoryboardVideo({ state, showNotice });
   const useStoryboardForGenerationFn = useStoryboardForGeneration({ state, showNotice });
 
   // ===== 10) 导出 =====
@@ -426,9 +423,23 @@ export function useProjectWorkbench({
     productionProgressItems: state.projectMilestones.map((m) => ({ id: m.id, title: m.title, status: m.status, owner: m.owner, due_date: m.due_date })),
     productionProgress: state.projectSummary?.open_milestones ?? 0,
     nextMilestone: state.projectMilestones.find((m) => m.status === "planned" || m.status === "doing") ?? null,
-    workbenchPages: Math.max(1, Math.ceil(derived.tasks.total / 10)),
+    // 侧边栏"制作流程"组：与项目工作台内"实际数据"绑定的 tab
+    // 顺序与生产链路一致：概览 → 任务 → 成员 → 剧集 → 问题 → 计划 → 审核
+    // 剧本/分镜/剪辑/资产在主导航已有独立路由，这里不重复挂
+    workbenchPages: [
+      { key: "overview",   label: "项目概览",   metric: `${state.projectEpisodes.length}集` },
+      { key: "tasks",      label: "项目任务",   metric: `${derived.tasks.total}项` },
+      { key: "members",    label: "项目成员",   metric: `${state.projectMembers.length}人` },
+      { key: "episodes",   label: "项目剧集",   metric: `${state.projectEpisodes.length}集` },
+      { key: "issues",     label: "问题与风险", metric: `${state.projectIssues.length}项` },
+      { key: "milestones", label: "项目计划",   metric: `${state.projectMilestones.length}个` },
+      { key: "reviews",    label: "项目审核",   metric: `${state.projectReviews.length}条` },
+    ] satisfies WorkbenchPage[],
     productionStageRows: state.projectMilestones,
-    supportWorkbenchPages: Math.max(1, Math.ceil(derived.episodes.total / 10)),
+    // 侧边栏"项目管理"组：导出/资产类辅助 tab
+    supportWorkbenchPages: [
+      { key: "exports", label: "项目导出", metric: "清单/CSV" },
+    ] satisfies WorkbenchPage[],
     currentWorkbenchPage: workbenchPageByTab[state.projectWorkbenchTab] ?? 1,
   };
 }

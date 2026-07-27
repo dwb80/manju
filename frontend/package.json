@@ -8,15 +8,33 @@
   },
   "packageManager": "npm@11.4.2",
   "browserslist": {
-    "production": ["Chrome >= 109", "Edge >= 109", "Firefox >= 115", "Safari >= 16", "not dead"],
-    "development": ["last 1 Chrome version", "last 1 Firefox version", "last 1 Safari version"]
+    "production": [
+      "Chrome >= 109",
+      "Edge >= 109",
+      "Firefox >= 115",
+      "Safari >= 16",
+      "not dead"
+    ],
+    "development": [
+      "last 1 Chrome version",
+      "last 1 Firefox version",
+      "last 1 Safari version"
+    ]
   },
   "scripts": {
-    "dev": "node ../scripts/clean-next-cache.mjs && next dev -p 3001",
-    "dev:turbopack": "node ../scripts/clean-next-cache.mjs && next dev --turbopack -p 3001",
+    "dev": "next dev --turbopack -p 3001",
+    "dev:turbopack": "next dev --turbopack -p 3001",
+    "dev:webpack": "next dev -p 3001",
+    "dev:clean": "node ../scripts/clean-next-cache.mjs && next dev --turbopack -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "tsc --noEmit",
+    "lint": "eslint . && tsc --noEmit",
+    "lint:eslint": "eslint .",
+    "lint:eslint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "lint:duplicates": "node scripts/eslint-scan.mjs",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
     "test:e2e": "node scripts/run-smoke-e2e.mjs",
     "test:e2e:prepared": "node scripts/run-smoke-e2e.mjs --skip-build",
     "test:e2e:legacy": "playwright test --reporter=line"
@@ -36,15 +54,15 @@
     "@radix-ui/react-toggle": "^1.1.14",
     "@radix-ui/react-toggle-group": "^1.1.15",
     "@radix-ui/react-tooltip": "^1.2.12",
-    "@tiptap/extension-character-count": "^2.6.0",
-    "@tiptap/extension-focus": "^2.6.0",
-    "@tiptap/extension-highlight": "^2.6.0",
-    "@tiptap/extension-placeholder": "^2.6.0",
-    "@tiptap/extension-text-align": "^2.6.0",
-    "@tiptap/extension-underline": "^2.6.0",
-    "@tiptap/pm": "^2.6.0",
-    "@tiptap/react": "^2.6.0",
-    "@tiptap/starter-kit": "^2.6.0",
+    "@tiptap/extension-character-count": "^3.28.0",
+    "@tiptap/extension-focus": "^3.28.0",
+    "@tiptap/extension-highlight": "^3.28.0",
+    "@tiptap/extension-placeholder": "^3.28.0",
+    "@tiptap/extension-text-align": "^3.28.0",
+    "@tiptap/extension-underline": "^3.28.0",
+    "@tiptap/pm": "^3.28.0",
+    "@tiptap/react": "^3.28.0",
+    "@tiptap/starter-kit": "^3.28.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -58,13 +76,21 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@next/eslint-plugin-next": "^15.5.19",
     "@playwright/test": "^1.51.1",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
+    "@typescript-eslint/parser": "^8.0.0",
     "autoprefixer": "^10.4.20",
+    "eslint": "^9.18.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^4.1.10"
   }
 }

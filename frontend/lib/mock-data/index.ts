@@ -399,7 +399,6 @@ export function generateStoryboards(): Storyboard[] {
 // 生成剧本数据
 export function generateScripts(): Script[] {
   const scripts: Script[] = [];
-  const statuses: Script["status"][] = ["draft", "active", "review", "completed"];
 
   const scriptTitles = [
     "星际迷航：新纪元 - 剧本集",
@@ -462,7 +461,6 @@ export function generateAssets(): Asset[] {
 export function generateVideos(): Video[] {
   const videos: Video[] = [];
   const resolutions = ["1080p", "2K", "4K"];
-  const statuses: Video["status"][] = ["draft", "processing", "completed", "failed"];
 
   projects.filter(p => p.status === "active").forEach((project) => {
     for (let i = 0; i < 10; i++) {
@@ -491,7 +489,6 @@ export function generateVideos(): Video[] {
 export function generateReviews(): Review[] {
   const reviews: Review[] = [];
   const targetTypes: Review["target_type"][] = ["script", "storyboard", "video", "asset"];
-  const statuses: Review["status"][] = ["pending", "approved", "rejected"];
   const reviewers = ["王导演", "李制片", "张编辑", "刘导演", "赵编剧", "陈导演", "周导演"];
 
   projects.filter(p => p.status === "active").forEach((project, pIndex) => {

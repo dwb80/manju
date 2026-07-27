@@ -15,9 +15,7 @@ import {
   AlertCircle,
   X,
   Loader2,
-  Trash2,
-  RefreshCw,
-  ArrowRight,
+  Trash2, ArrowRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { scriptCenterService } from '@/services/script-center.service'

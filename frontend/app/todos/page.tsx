@@ -31,6 +31,7 @@ import {
 } from "@/components/layout";
 import { createLogger } from "@/lib/logger";
 import { notify } from "@/lib/notify";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import {
   listTodos,
   createTodo,
@@ -71,11 +72,17 @@ const PRIORITY_COLOR: Record<TodoPriority, string> = {
 
 export default function TodosPage() {
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | TodoStatus>("all");
   const [editing, setEditing] = useState<Todo | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showRecycle, setShowRecycle] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
 
   async function reload() {
     setLoading(true);
@@ -153,16 +160,22 @@ export default function TodosPage() {
     }
   };
 
-  const handleDelete = async (t: Todo) => {
-    if (!confirm(`确定删除待办「${t.title}」？可在回收站恢复。`)) return;
-    try {
-      await deleteTodo(t.id, false);
-      log.info("soft delete todo", { id: t.id });
-      notify.success("已移入回收站", t.title);
-      await reload();
-    } catch (err) {
-      notify.error("删除失败", (err as Error).message);
-    }
+  const handleDelete = (t: Todo) => {
+    setPendingConfirm({
+      title: "删除待办",
+      description: `确定删除待办「${t.title}」？可在回收站恢复。`,
+      confirmLabel: "删除",
+      onConfirm: async () => {
+        try {
+          await deleteTodo(t.id, false);
+          log.info("soft delete todo", { id: t.id });
+          notify.success("已移入回收站", t.title);
+          await reload();
+        } catch (err) {
+          notify.error("删除失败", (err as Error).message);
+        }
+      },
+    });
   };
 
   const handleRestore = async (t: Todo) => {
@@ -176,16 +189,22 @@ export default function TodosPage() {
     }
   };
 
-  const handlePermanentDelete = async (t: Todo) => {
-    if (!confirm(`永久删除待办「${t.title}」？此操作不可撤销。`)) return;
-    try {
-      await deleteTodo(t.id, true);
-      log.info("permanent delete todo", { id: t.id });
-      notify.warn("已永久删除", t.title);
-      await reload();
-    } catch (err) {
-      notify.error("删除失败", (err as Error).message);
-    }
+  const handlePermanentDelete = (t: Todo) => {
+    setPendingConfirm({
+      title: "永久删除待办",
+      description: `永久删除待办「${t.title}」？此操作不可撤销。`,
+      confirmLabel: "永久删除",
+      onConfirm: async () => {
+        try {
+          await deleteTodo(t.id, true);
+          log.info("permanent delete todo", { id: t.id });
+          notify.warn("已永久删除", t.title);
+          await reload();
+        } catch (err) {
+          notify.error("删除失败", (err as Error).message);
+        }
+      },
+    });
   };
 
   return (
@@ -337,6 +356,16 @@ export default function TodosPage() {
             setEditing(null);
           }}
           onSave={handleSave}
+        />
+      )}
+
+      {pendingConfirm && (
+        <ConfirmDialog
+          title={pendingConfirm.title}
+          description={pendingConfirm.description}
+          confirmLabel={pendingConfirm.confirmLabel}
+          onClose={() => setPendingConfirm(null)}
+          onConfirm={pendingConfirm.onConfirm}
         />
       )}
     </main>

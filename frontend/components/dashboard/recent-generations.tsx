@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { Image, Video, Mic, Clock, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Image, Video, Mic, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import type { RecentGeneration as RecentGenerationData } from "@/lib/app-types";
 
 /** 最近生成组件Props */

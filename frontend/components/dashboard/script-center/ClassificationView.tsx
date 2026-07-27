@@ -15,8 +15,7 @@ import {
   FileText,
   CheckCircle,
   AlertCircle,
-  Loader,
-  Archive,
+  Loader
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 

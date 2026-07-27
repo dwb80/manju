@@ -1,6 +1,6 @@
 /** 任务相关的业务服务 */
 import { api } from "./api-client";
-import type { ProjectTask, ProjectTaskStatus } from "@/lib/app-types";
+import type { ProjectTask } from "@/lib/app-types";
 
 /** 任务服务接口 */
 export interface TaskService {

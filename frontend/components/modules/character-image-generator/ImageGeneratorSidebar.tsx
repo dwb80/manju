@@ -8,9 +8,7 @@ import {
   History as HistoryIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MAX_ASSET_HISTORY, MAX_HISTORY } from "./types";
-import type { HistoryImage, AssetHistoryItem } from "./types";
-import type { ImageRatio } from "@/lib/module-types";
+import { MAX_ASSET_HISTORY, MAX_HISTORY, type HistoryImage, type AssetHistoryItem } from "./types";
 
 export interface ImageGeneratorSidebarProps {
   character: { name: string };

@@ -96,15 +96,6 @@ type AssetStats = {
   videos: number;
 };
 
-/** 进度条配置类型 */
-type ProgressConfig = {
-  /** 百分比(0-100) */
-  percentage: number;
-  /** 背景颜色 */
-  bgColor: string;
-  /** 进度条颜色 */
-  barColor: string;
-};
 
 /** 统计卡片配置类型 */
 type StatCardConfig = {
@@ -152,7 +143,6 @@ type ProjectDataTabProps = {
 };
 
 export function ProjectDataTab({
-  projectId,
   projectSummary,
   aiUsageStats,
   assetStats,

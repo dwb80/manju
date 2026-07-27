@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ChevronRight, ChevronLeft, X, Sparkles, FolderOpen, BarChart3, Rocket, CheckCircle, Video, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

@@ -13,9 +13,7 @@ import {
   MessageSquare,
   TrendingUp,
   TrendingDown,
-  AlertCircle,
-  CheckCircle,
-  Info,
+  AlertCircle, Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tip } from "@/components/ui/tip";

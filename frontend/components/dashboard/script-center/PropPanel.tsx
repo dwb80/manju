@@ -96,8 +96,6 @@ export function PropPanel({
   onSelectProp,
   onDeleteProp,
   onViewPropDetail,
-  projectId,
-  scriptId,
 }: PropPanelProps) {
   const [searchQuery, setSearchQuery] = useState('')
   // 详情弹框：当前选中的道具 + 上下文

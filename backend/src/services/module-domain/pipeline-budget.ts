@@ -12,6 +12,7 @@
  *  - 在 createRun / batchCreateNodes / executeNode 之前都会被调用（fail-closed）
  */
 import type { AppContext } from "../app.js";
+import { DEFAULT_IMAGE_MODEL } from "../../ai/image-config.js";
 
 type BillableNodeEstimate = {
   kind: "image" | "video" | "tts";
@@ -30,7 +31,7 @@ export function billableEstimateForNode(node: any): BillableNodeEstimate | null 
   if (type === "image_generation" || type === "generate_image") {
     return {
       kind: "image",
-      model: String(value("model") ?? "agnes-image-2.1-flash"),
+      model: String(value("model") ?? DEFAULT_IMAGE_MODEL),
       count: Math.max(1, Number(value("count") ?? value("n") ?? 1)),
     };
   }

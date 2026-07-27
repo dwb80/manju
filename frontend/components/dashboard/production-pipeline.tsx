@@ -129,7 +129,6 @@ const StageCard = memo(function StageCard({ stage }: { stage: PipelineStage }) {
 /** 连接箭头 */
 const ConnectorArrow = memo(function ConnectorArrow({
   fromStatus,
-  toStatus,
 }: {
   fromStatus: PipelineStageStatus;
   toStatus: PipelineStageStatus;

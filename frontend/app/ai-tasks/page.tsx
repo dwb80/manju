@@ -33,18 +33,11 @@ import {
   StatsOverview,
 } from "@/components/layout";
 import { createLogger } from "@/lib/logger";
+import { api } from "@/lib/api-client";
 
 // 模块级 logger
 const log = createLogger('ai-tasks-page')
 
-/**
- * API响应格式
- */
-interface ApiResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-}
 
 /**
  * AI任务列表响应格式
@@ -86,18 +79,12 @@ export default function AITasksPage() {
     log.debug('load tasks')
 
     try {
-      const response = await fetch("/api/ai/tasks?page=1&pageSize=50");
-      const result: ApiResponse<AITaskListResponse> = await response.json();
+      // P1-4: 改用 api() 统一处理响应 / 错误 / 缓存
+      const data = await api<AITaskListResponse>("/api/ai/tasks?page=1&pageSize=50");
 
-      if (result.code === 0 && result.data) {
-        setTasks(result.data.tasks);
-        setTotalCount(result.data.total);
-        log.info('load tasks success', { count: result.data.total })
-      } else {
-        log.warn('load tasks failed', { message: result.message })
-        setTasks([]);
-        setTotalCount(0);
-      }
+      setTasks(data.tasks);
+      setTotalCount(data.total);
+      log.info('load tasks success', { count: data.total })
     } catch (err) {
       log.error('API call failed', { error: (err as Error).message })
       setTasks([]);
@@ -119,33 +106,28 @@ export default function AITasksPage() {
   async function handleCancel(taskIds: string[]) {
     log.info('cancel tasks', { count: taskIds.length })
     try {
-      const response = await fetch("/api/ai/tasks/cancel", {
+      // P1-4: 改用 api() 统一处理响应 / 错误 / 缓存
+      const data = await api<BatchOperationResponse>("/api/ai/tasks/cancel", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskIds }),
       });
-      const result: ApiResponse<BatchOperationResponse> = await response.json();
 
-      if (result.code === 0 && result.data) {
-        setTasks(prevTasks =>
-          prevTasks.map(task => {
-            if (result.data.success.includes(task.id)) {
-              return {
-                ...task,
-                status: "failed",
-                error: "任务已被用户取消",
-                updatedAt: new Date().toISOString(),
-              };
-            }
-            return task;
-          })
-        );
-        log.info('cancel tasks success', { count: result.data.success.length })
-        if (result.data.failed.length > 0) {
-          log.warn('cancel tasks partial failure', { failed: result.data.failed.length })
-        }
-      } else {
-        log.error('cancel tasks failed', { message: result.message })
+      setTasks(prevTasks =>
+        prevTasks.map(task => {
+          if (data.success.includes(task.id)) {
+            return {
+              ...task,
+              status: "failed",
+              error: "任务已被用户取消",
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return task;
+        })
+      );
+      log.info('cancel tasks success', { count: data.success.length })
+      if (data.failed.length > 0) {
+        log.warn('cancel tasks partial failure', { failed: data.failed.length })
       }
     } catch (err) {
       log.error('cancel API call failed', { error: (err as Error).message })
@@ -155,30 +137,25 @@ export default function AITasksPage() {
   async function handleRetry(taskIds: string[]) {
     log.info('retry tasks', { count: taskIds.length })
     try {
-      const response = await fetch("/api/ai/tasks/retry", {
+      // P1-4: 改用 api() 统一处理响应 / 错误 / 缓存
+      const data = await api<BatchOperationResponse>("/api/ai/tasks/retry", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskIds }),
       });
-      const result: ApiResponse<BatchOperationResponse> = await response.json();
 
-      if (result.code === 0 && result.data) {
-        setTasks(prevTasks =>
-          prevTasks.map(task => {
-            if (result.data.success.includes(task.id)) {
-              return {
-                ...task,
-                status: "pending" as const,
-                updatedAt: new Date().toISOString(),
-              };
-            }
-            return task;
-          }) as AITask[]
-        );
-        log.info('retry tasks success', { count: result.data.success.length })
-      } else {
-        log.error('retry tasks failed', { message: result.message })
-      }
+      setTasks(prevTasks =>
+        prevTasks.map(task => {
+          if (data.success.includes(task.id)) {
+            return {
+              ...task,
+              status: "pending" as const,
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return task;
+        }) as AITask[]
+      );
+      log.info('retry tasks success', { count: data.success.length })
     } catch (err) {
       log.error('retry API call failed', { error: (err as Error).message })
     }
@@ -186,22 +163,26 @@ export default function AITasksPage() {
 
   async function handleDelete(taskIds: string[]) {
     log.info('delete tasks', { count: taskIds.length })
-    try {
-      for (const taskId of taskIds) {
-        const response = await fetch(`/api/ai/tasks/${taskId}`, {
-          method: "DELETE",
-        });
-        const result: ApiResponse<{ deleted: boolean }> = await response.json();
-        if (result.code !== 0) {
-          log.warn('delete task partial failure', { taskId, message: result.message })
-        }
+    // P1-4: 改用 api() 统一处理响应 / 错误 / 缓存
+    const results = await Promise.allSettled(
+      taskIds.map((taskId) =>
+        api<{ deleted: boolean }>(`/api/ai/tasks/${taskId}`, { method: "DELETE" }),
+      ),
+    );
+    results.forEach((r, idx) => {
+      if (r.status === "rejected") {
+        log.warn('delete task failed', { taskId: taskIds[idx], error: r.reason?.message })
       }
-      setTasks(prevTasks => prevTasks.filter(task => !taskIds.includes(task.id)));
-      setTotalCount(prev => prev - taskIds.length);
-      log.info('delete tasks done', { count: taskIds.length })
-    } catch (err) {
-      log.error('delete API call failed', { error: (err as Error).message })
-    }
+    });
+    // 成功删除的任务（fulfilled）从列表移除
+    const successIds = new Set(
+      results
+        .map((r, idx) => (r.status === "fulfilled" ? taskIds[idx] : null))
+        .filter((id): id is string => Boolean(id)),
+    );
+    setTasks(prevTasks => prevTasks.filter(task => !successIds.has(task.id)));
+    setTotalCount(prev => prev - successIds.size);
+    log.info('delete tasks done', { count: successIds.size })
   }
 
   // 统计计算

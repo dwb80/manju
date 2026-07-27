@@ -25,8 +25,7 @@ import type {
   ProjectTask,
   WorkbenchTab,
 } from "@/lib/app-types";
-import { matchesWorkbenchFilters } from "./useWorkbenchState";
-import type { WorkbenchState } from "./useWorkbenchState";
+import { matchesWorkbenchFilters, type WorkbenchState } from "./useWorkbenchState";
 
 const PAGE_SIZE = 10;
 

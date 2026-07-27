@@ -14,7 +14,6 @@
  */
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import {
   Sparkles,
   Trash2,
@@ -49,13 +48,7 @@ import {
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { useProjectStore } from "@/lib/stores/project-store";
 import {
-  createCharacter,
-  createScene,
-  createProp,
   createReview,
-  listCharacters,
-  listScenes,
-  listProps,
 } from "@/services/module.service";
 import { clearApiCache } from "@/lib/api-client";
 import { scriptCenterService } from "@/services/script-center.service";
@@ -90,7 +83,6 @@ export function ScriptsCenterPage({
   /** 自动行为：import = 自动打开导入对话框 */
   initialAction?: string;
 } = {}) {
-  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -124,11 +116,10 @@ export function ScriptsCenterPage({
   const [extractedAssets, setExtractedAssets] = useState<ExtractedAsset[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeStatus, setAnalyzeStatus] = useState("分析中...");
-  const [isTransferring, setIsTransferring] = useState(false);
 
   // 从 store 获取选中的项目ID
   const storeProjectId = useProjectStore((state) => state.selectedProjectId);
-  const setStoreProjectId = useProjectStore((s) => s.setSelectedProjectId);
+  const setStoreProjectId = useProjectStore((state) => state.setSelectedProjectId);
 
   // 有效选中项目：URL > store
   const selectedProjectId = initialProjectId || storeProjectId;
@@ -233,7 +224,7 @@ export function ScriptsCenterPage({
       console.log("剧本已移到回收站");
     } catch (err) {
       console.error("剧本删除失败:", err);
-      alert("剧本删除失败，请重试");
+      notify.error("剧本删除失败", "请稍后重试");
     }
   };
 
@@ -247,7 +238,7 @@ export function ScriptsCenterPage({
       setDeletedScripts(data as unknown as Script[]);
     } catch (err) {
       console.error("加载回收站失败:", err);
-      alert("加载回收站失败");
+      notify.error("加载回收站失败");
     } finally {
       setIsRecycleBinLoading(false);
     }
@@ -263,7 +254,7 @@ export function ScriptsCenterPage({
       await reloadScripts();
     } catch (err) {
       console.error("恢复失败:", err);
-      alert(`恢复失败：${(err as Error).message}`);
+      notify.error("恢复失败", (err as Error).message);
     }
   };
 
@@ -276,7 +267,7 @@ export function ScriptsCenterPage({
       console.log(`剧本已彻底删除（联动删除 ${total} 条记录）`);
     } catch (err) {
       console.error("彻底删除失败:", err);
-      alert(`彻底删除失败：${(err as Error).message}`);
+      notify.error("彻底删除失败", (err as Error).message);
     }
   };
 
@@ -291,7 +282,7 @@ export function ScriptsCenterPage({
   // AI生成剧本
   const handleAIGenerate = async (values: Record<string, string | number | string[]>) => {
     if (!selectedProjectId) {
-      alert("请先选择一个项目");
+      notify.warn("请先选择一个项目");
       return;
     }
     setIsAIGenerating(true);
@@ -326,7 +317,7 @@ export function ScriptsCenterPage({
       await reloadScripts();
     } catch (err) {
       console.error("AI生成剧本失败:", err);
-      alert("AI生成剧本失败，请重试");
+      notify.error("AI生成剧本失败", "请重试");
     } finally {
       setIsAIGenerating(false);
     }
@@ -359,7 +350,7 @@ export function ScriptsCenterPage({
       await reloadScripts();
     } catch (err) {
       console.error("从模板创建失败:", err);
-      alert("从模板创建失败，请重试");
+      notify.error("从模板创建失败", "请重试");
     }
   };
 
@@ -752,17 +743,10 @@ export function ScriptsCenterPage({
     } catch (err) {
       console.error("分析失败:", err);
       const message = (err as Error)?.message || "请重试";
-      alert(`剧本分析失败：${message}\n\n请检查网络或 AI 配置后重试。`);
+      notify.error("剧本分析失败", `${message}\n请检查网络或 AI 配置后重试。`);
     } finally {
       setIsAnalyzing(false);
     }
-  };
-
-  // 确认单个资产
-  const toggleAssetConfirmed = (assetId: string) => {
-    setExtractedAssets((prev) =>
-      prev.map((a) => (a.id === assetId ? { ...a, confirmed: !a.confirmed } : a))
-    );
   };
 
   // 编辑保存资产内容
@@ -770,230 +754,6 @@ export function ScriptsCenterPage({
     setExtractedAssets((prev) =>
       prev.map((a) => (a.id === assetId ? { ...a, ...patch } : a))
     );
-  };
-
-  // 批量确认/取消确认
-  const confirmAllAssets = (type: "character" | "scene" | "prop", confirm: boolean) => {
-    setExtractedAssets((prev) =>
-      prev.map((a) => (a.type === type ? { ...a, confirmed: confirm } : a))
-    );
-  };
-
-  // 将指定类型的已确认资产流转到对应工厂
-  const transferAssetsByType = async (type: "character" | "scene" | "prop") => {
-    if (!selectedProjectId) {
-      alert("请先选择一个项目");
-      return;
-    }
-    const targets = extractedAssets.filter((a) => a.type === type && a.confirmed && !a.id.startsWith("transferred-"));
-    if (targets.length === 0) {
-      alert("请先勾选要流转的资产");
-      return;
-    }
-    const factoryName = type === "character" ? "角色工厂" : type === "scene" ? "场景工厂" : "道具工厂";
-    setIsTransferring(true);
-    try {
-      // 流转前查询工厂已有资产，按 name 去重
-      const existingNames = new Set<string>();
-      if (type === "character") {
-        const existing = await listCharacters(selectedProjectId);
-        existing.forEach((c) => existingNames.add(c.name));
-      } else if (type === "scene") {
-        const existing = await listScenes(selectedProjectId);
-        existing.forEach((s) => existingNames.add(s.name));
-      } else {
-        const existing = await listProps(selectedProjectId);
-        existing.forEach((p) => existingNames.add(p.name));
-      }
-
-      let successCount = 0;
-      let skipCount = 0;
-      for (const asset of targets) {
-        // 跳过工厂中已存在的同名资产
-        if (existingNames.has(asset.name)) {
-          skipCount++;
-          continue;
-        }
-        try {
-          if (type === "character") {
-            await createCharacter({
-              name: asset.name,
-              role: asset.role || "minor",
-              gender: (asset.gender as any) || "other",
-              age: asset.age || 0,
-              traits: asset.traits || [],
-              description: asset.description,
-              project_id: selectedProjectId,
-              tags: ["剧本分析提取"],
-              // === AI 剧本分析扩展字段 ===
-              identity: asset.identity,
-              face: asset.face,
-              hair: asset.hair,
-              body: asset.body,
-              temperament: asset.temperament,
-              costume_name: asset.costumeName,
-              costume_description: asset.costumeDescription,
-              costume_color: asset.costumeColor,
-              costume_material: asset.costumeMaterial,
-              costume_style: asset.costumeStyle,
-              accessories: asset.accessories,
-              emotion_states: asset.emotionStates,
-              action_assets: asset.actionAssets,
-              relationships: asset.relationships,
-              first_appearance: asset.firstAppearance,
-              dialogue_count: asset.dialogueCount,
-              generation_prompt: asset.generationPrompt,
-              confidence: asset.confidence,
-            } as any);
-          } else if (type === "scene") {
-            await createScene({
-              name: asset.name,
-              type: (asset.sceneType as any) || "indoor",
-              description: asset.description,
-              lighting: asset.lighting || "",
-              time_of_day: asset.timeOfDay || "",
-              weather: asset.weather || "",
-              project_id: selectedProjectId,
-              tags: ["剧本分析提取"],
-              // === AI 剧本分析扩展字段 ===
-              generation_prompt: asset.generationPrompt,
-              confidence: asset.confidence,
-            } as any);
-          } else if (type === "prop") {
-            await createProp({
-              name: asset.name,
-              category: (asset.category as any) || "other",
-              description: asset.description,
-              material: asset.material || "",
-              color: asset.color || "",
-              project_id: selectedProjectId,
-              tags: ["剧本分析提取"],
-              // === AI 剧本分析扩展字段 ===
-              appearance: `${asset.shape || ""} ${asset.texture || ""}`.trim() || undefined,
-              generation_prompt: asset.generationPrompt,
-              confidence: asset.confidence,
-            } as any);
-          }
-          successCount++;
-        } catch (err) {
-          console.error(`流转资产 ${asset.name} 失败:`, err);
-        }
-      }
-      const skipMsg = skipCount > 0 ? `\n（跳过 ${skipCount} 个已存在资产）` : "";
-      alert(`成功流转 ${successCount} 个资产到${factoryName}！${skipMsg}`);
-      // 标记已流转的资产（包括跳过的，因为它们已存在于工厂）
-      const transferredIds: string[] = [];
-      setExtractedAssets((prev) =>
-        prev.map((a) => {
-          if (a.type === type && a.confirmed && !a.id.startsWith("transferred-")) {
-            transferredIds.push(a.id);
-            return { ...a, confirmed: false, id: `transferred-${a.id}` };
-          }
-          return a;
-        })
-      );
-      // 同步更新后端关联表状态为 transferred
-      for (const assetId of transferredIds) {
-        if (!assetId.startsWith("character-") && !assetId.startsWith("scene-") && !assetId.startsWith("prop-")) {
-          try {
-            if (type === "character") {
-              await scriptCenterService.updateAnalyzedCharacter(assetId, { status: "transferred" });
-            } else if (type === "scene") {
-              await scriptCenterService.updateAnalyzedScene(assetId, { status: "transferred" });
-            } else if (type === "prop") {
-              await scriptCenterService.updateAnalyzedProp(assetId, { status: "transferred" });
-            }
-          } catch (err) {
-            console.warn(`更新后端分析资产状态失败 (${assetId}):`, err);
-          }
-        }
-      }
-    } finally {
-      setIsTransferring(false);
-    }
-  };
-
-  // 将确认的资产流转到对应工厂（全部类型）
-  const handleTransferAssets = async () => {
-    if (!selectedProjectId) {
-      alert("请先选择一个项目");
-      return;
-    }
-    const confirmedAssets = extractedAssets.filter((a) => a.confirmed && !a.id.startsWith("transferred-"));
-    if (confirmedAssets.length === 0) {
-      alert("请先勾选要流转的资产");
-      return;
-    }
-    setIsTransferring(true);
-    try {
-      // 流转前查询三种工厂已有资产，按 name 去重
-      const [existingCharacters, existingScenes, existingProps] = await Promise.all([
-        listCharacters(selectedProjectId),
-        listScenes(selectedProjectId),
-        listProps(selectedProjectId),
-      ]);
-      const existingNamesByType: Record<string, Set<string>> = {
-        character: new Set(existingCharacters.map((c) => c.name)),
-        scene: new Set(existingScenes.map((s) => s.name)),
-        prop: new Set(existingProps.map((p) => p.name)),
-      };
-
-      let successCount = 0;
-      let skipCount = 0;
-      for (const asset of confirmedAssets) {
-        // 跳过工厂中已存在的同名资产
-        if (existingNamesByType[asset.type]?.has(asset.name)) {
-          skipCount++;
-          continue;
-        }
-        try {
-          if (asset.type === "character") {
-            await createCharacter({
-              name: asset.name,
-              role: asset.role || "minor",
-              gender: (asset.gender as any) || "other",
-              age: asset.age || 0,
-              traits: asset.traits || [],
-              description: asset.description,
-              project_id: selectedProjectId,
-              tags: ["剧本分析提取"],
-            } as any);
-          } else if (asset.type === "scene") {
-            await createScene({
-              name: asset.name,
-              type: (asset.sceneType as any) || "indoor",
-              description: asset.description,
-              lighting: asset.lighting || "",
-              time_of_day: asset.timeOfDay || "",
-              weather: asset.weather || "",
-              project_id: selectedProjectId,
-              tags: ["剧本分析提取"],
-            } as any);
-          } else if (asset.type === "prop") {
-            await createProp({
-              name: asset.name,
-              category: (asset.category as any) || "other",
-              description: asset.description,
-              material: asset.material || "",
-              color: asset.color || "",
-              project_id: selectedProjectId,
-              tags: ["剧本分析提取"],
-            } as any);
-          }
-          successCount++;
-        } catch (err) {
-          console.error(`流转资产 ${asset.name} 失败:`, err);
-        }
-      }
-      const skipMsg = skipCount > 0 ? `\n（跳过 ${skipCount} 个已存在资产）` : "";
-      alert(`成功流转 ${successCount} 个资产到对应工厂！\n- 角色工厂\n- 场景工厂\n- 道具工厂${skipMsg}`);
-      // 标记已流转的资产（包括跳过的，因为它们已存在于工厂）
-      setExtractedAssets((prev) =>
-        prev.map((a) => (a.confirmed && !a.id.startsWith("transferred-") ? { ...a, confirmed: false, id: `transferred-${a.id}` } : a))
-      );
-    } finally {
-      setIsTransferring(false);
-    }
   };
 
   const statusOptions = [

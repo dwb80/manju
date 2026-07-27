@@ -12,8 +12,7 @@ import {
   PieChart,
   Sparkles,
   TrendingUp,
-  AlertTriangle,
-  CheckCircle,
+  AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { scriptCenterService } from '@/services/script-center.service'

@@ -16,11 +16,15 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ScriptsCenterPage } from "@/components/modules/scripts-center";
+import { useProjectStore } from "@/lib/stores/project-store";
 
 function ScriptsPageInner() {
   const searchParams = useSearchParams();
-  const projectId = searchParams.get("projectId") || undefined;
+  const urlProjectId = searchParams.get("projectId") || undefined;
   const action = searchParams.get("action") || undefined;
+  // URL 优先；未指定时回退到顶部导航栏的当前项目
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
+  const projectId = urlProjectId || selectedProjectId || undefined;
   return (
     <ScriptsCenterPage
       initialProjectId={projectId}

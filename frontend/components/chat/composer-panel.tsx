@@ -5,8 +5,7 @@
 
 "use client";
 
-import { useEffect } from "react";
-import type { RefObject } from "react";
+import { useEffect, type RefObject } from "react";
 import { ImagePlus, Loader2, Paperclip, Pencil, Send, Video, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";

@@ -55,8 +55,6 @@ export function OutlineView({
   onNodeClick,
   onNodeReorder,
   onAddNode,
-  onNodeDelete,
-  onNodeRename,
   onBackToEdit,
 }: OutlineViewProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())

@@ -29,7 +29,6 @@ import type { Script } from "@/lib/module-types";
 import type { ExtractedAsset } from "./types";
 
 export function ScriptAnalysisPanel({
-  script,
   extractedAssets,
   isAnalyzing,
   analyzeStatus,

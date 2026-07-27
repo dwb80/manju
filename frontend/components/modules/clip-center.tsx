@@ -67,7 +67,7 @@ const config: FactoryCRUDPageProps<ProjectClip> = {
 
   fetchList: listClips,
   createItem: ((input: Record<string, unknown>) => createClip(String(input.project_id ?? ""), input as Partial<ProjectClip>)) as unknown as (input: Record<string, unknown>) => Promise<ProjectClip>,
-  updateItem: ((id: string, input: Record<string, unknown>) => updateClip(String(input.project_id ?? ""), id, input as Partial<ProjectClip>)) as unknown as (id: string, input: Record<string, unknown>) => Promise<ProjectClip>,
+  updateItem: ((id: string, input: Record<string, unknown>) => updateClip(id, input as Partial<ProjectClip>)) as unknown as (id: string, input: Record<string, unknown>) => Promise<ProjectClip>,
   deleteItem: deleteClip as unknown as (id: string) => Promise<void>,
   restoreItem: restoreClip,
   fetchDeleted: listDeletedClips,

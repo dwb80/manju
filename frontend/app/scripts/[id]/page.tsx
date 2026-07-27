@@ -20,16 +20,14 @@
 
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { ScriptEditor, ScriptToolbar, ScriptSidebar, OutlineView } from '@/components/dashboard/script-center'
+import { ScriptEditor, ScriptToolbar, ScriptSidebar, OutlineView, type NavTreeNode } from '@/components/dashboard/script-center'
 import type { SidebarJumpTarget } from '@/components/dashboard/script-center/ScriptSidebar'
-import type { NavTreeNode } from '@/components/dashboard/script-center'
 import { ScriptEditRightPanel } from '@/components/dashboard/script-center/ScriptEditRightPanel'
 import { VersionHistoryModal } from '@/components/dashboard/script-center/modals/VersionHistoryModal'
 import { VersionPreviewModal } from '@/components/dashboard/script-center/modals/VersionPreviewModal'
 import { AnalyzePreviewModal } from '@/components/dashboard/script-center/modals/AnalyzePreviewModal'
 import { useScriptSave } from '@/components/dashboard/script-center/hooks/useScriptSave'
-import { useScriptStore } from '@/lib/stores/script-store'
-import type { ScriptVersion } from '@/lib/stores/script-store'
+import { useScriptStore, type ScriptVersion } from '@/lib/stores/script-store'
 import { scriptCenterService } from '@/services/script-center.service'
 import {
   listCharacterImages,
@@ -282,12 +280,9 @@ export default function ScriptEditPage() {
     selectScene,
     addCharacter,
     updateCharacter: updateScriptCharacter,
-    removeCharacter,
     addProp,
     updateProp: updateScriptProp,
-    removeProp,
     appendFactoryAsset,
-    removeFactoryAsset,
     loadVersions,
     restoreVersion,
     deleteVersion,
@@ -1118,7 +1113,8 @@ export default function ScriptEditPage() {
                 ])
                 const scripts = await scriptsRes.json()
                 const doc = docRes.ok ? await docRes.json() : await docRes.text()
-                alert(
+                notify.info(
+                  "API 调试",
                   `/api/scripts: ${scriptsRes.status}\n` +
                     `总剧本数: ${(scripts?.data ?? []).length}\n` +
                     `含此 ID: ${(scripts?.data ?? []).some((s: any) => s.id === scriptId)}\n\n` +
@@ -1126,7 +1122,7 @@ export default function ScriptEditPage() {
                     `响应: ${JSON.stringify(doc).slice(0, 200)}`,
                 )
               } catch (err) {
-                alert('测试 API 失败：' + (err as Error).message)
+                notify.error('测试 API 失败', (err as Error).message)
               }
             }}
           >
@@ -1407,7 +1403,7 @@ export default function ScriptEditPage() {
             onClose={() => setShowImportExport(false)}
             editorJson={currentDocument.editor_json}
             title={currentDocument.title || '剧本'}
-            onExport={(format, content, filename) => {
+            onExport={(_format, content, filename) => {
               const blob = new Blob(['\ufeff' + content], { type: 'text/plain;charset=utf-8' })
               const url = URL.createObjectURL(blob)
               const a = document.createElement('a')

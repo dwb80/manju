@@ -29,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 
 type Mode = "chat" | "image" | "video" | "favorites";
 type Status = "pending" | "processing" | "success" | "failed";
@@ -129,13 +130,7 @@ interface ImageRequest {
   error?: string;
 }
 
-const apiBaseUrl = (process.env.NEXT_PUBLIC_AGNES_BACKEND_URL ?? "").replace(/\/+$/, "");
 
-/** 根据环境变量拼出后端接口地址。 */
-function apiUrl(path: string): string {
-  if (/^https?:\/\//.test(path)) return path;
-  return `${apiBaseUrl}${path}`;
-}
 
 /** 生成接口候选地址，兼容前端代理和直连后端两种开发方式。 */
 function apiCandidates(path: string): string[] {
@@ -337,6 +332,12 @@ export default function Home() {
   const [submittingConversationIds, setSubmittingConversationIds] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef("");
@@ -943,28 +944,42 @@ export default function Home() {
   }
 
   /** 软归档项目下的对话，让它们从项目列表和全部项目中隐藏。 */
-  async function archiveProject(project: Project) {
-    if (!window.confirm(`归档项目“${project.name}”下的对话？`)) return;
-    await api<Project>(`/api/projects/${project.id}`, {
-      method: "PUT",
-      body: JSON.stringify({ archived_at: new Date().toISOString() }),
+  function archiveProject(project: Project) {
+    setPendingConfirm({
+      title: "归档项目对话",
+      description: `归档项目“${project.name}”下的对话？归档后可在「归档」视图查看。`,
+      confirmLabel: "归档",
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        await api<Project>(`/api/projects/${project.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ archived_at: new Date().toISOString() }),
+        });
+        setProjectActionMenuId("");
+        if (projectScope === project.id) setProjectScope("all");
+        await loadProjects();
+        await loadConversations("", projectScope === project.id ? "all" : projectScope);
+        showNotice("已归档对话");
+      },
     });
-    setProjectActionMenuId("");
-    if (projectScope === project.id) setProjectScope("all");
-    await loadProjects();
-    await loadConversations("", projectScope === project.id ? "all" : projectScope);
-    showNotice("已归档对话");
   }
 
   /** 移除项目归属，项目下的会话会变为不使用项目。 */
-  async function removeProject(project: Project) {
-    if (!window.confirm(`移除项目“${project.name}”？项目下的会话会转为不使用项目。`)) return;
-    await api(`/api/projects/${project.id}`, { method: "DELETE" });
-    setProjectActionMenuId("");
-    if (projectScope === project.id) setProjectScope("all");
-    await loadProjects();
-    await loadConversations("", projectScope === project.id ? "all" : projectScope);
-    showNotice("已移除项目");
+  function removeProject(project: Project) {
+    setPendingConfirm({
+      title: "移除项目",
+      description: `移除项目“${project.name}”？项目下的会话会转为不使用项目。`,
+      confirmLabel: "移除",
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        await api(`/api/projects/${project.id}`, { method: "DELETE" });
+        setProjectActionMenuId("");
+        if (projectScope === project.id) setProjectScope("all");
+        await loadProjects();
+        await loadConversations("", projectScope === project.id ? "all" : projectScope);
+        showNotice("已移除项目");
+      },
+    });
   }
 
   /** 在新标签页打开图片详情页。 */
@@ -1060,19 +1075,26 @@ export default function Home() {
   }
 
   /** 删除会话以及它关联的消息、图片、视频和收藏记录。 */
-  async function deleteConversationItem(conversation: Conversation) {
-    if (!window.confirm(`删除会话“${conversation.title}”？`)) return;
-    await api(`/api/conversations/${conversation.id}`, { method: "DELETE" });
-    setConversationMenuId("");
-    const nextId = conversation.id === conversationId ? conversations.find((item) => item.id !== conversation.id)?.id ?? "" : conversationId;
-    if (!nextId) {
-      setImages([]);
-      setVideos([]);
-      setMessages([]);
-    }
-    setConversationId(nextId);
-    await loadConversations(nextId, projectScope);
-    setNotice("已删除会话");
+  function deleteConversationItem(conversation: Conversation) {
+    setPendingConfirm({
+      title: "删除会话",
+      description: `删除会话“${conversation.title}”？关联的消息、图片和视频会一并删除。`,
+      confirmLabel: "删除",
+      onConfirm: async () => {
+        setPendingConfirm(null);
+        await api(`/api/conversations/${conversation.id}`, { method: "DELETE" });
+        setConversationMenuId("");
+        const nextId = conversation.id === conversationId ? conversations.find((item) => item.id !== conversation.id)?.id ?? "" : conversationId;
+        if (!nextId) {
+          setImages([]);
+          setVideos([]);
+          setMessages([]);
+        }
+        setConversationId(nextId);
+        await loadConversations(nextId, projectScope);
+        setNotice("已删除会话");
+      },
+    });
   }
 
   const currentImageRequests = imageRequests.filter((request) => request.conversationId === conversationId);
@@ -1631,6 +1653,16 @@ export default function Home() {
           </div>
         </footer>}
       </section>
+
+      {pendingConfirm && (
+        <ConfirmDialog
+          title={pendingConfirm.title}
+          description={pendingConfirm.description}
+          confirmLabel={pendingConfirm.confirmLabel}
+          onClose={() => setPendingConfirm(null)}
+          onConfirm={pendingConfirm.onConfirm}
+        />
+      )}
 
     </main>
   );

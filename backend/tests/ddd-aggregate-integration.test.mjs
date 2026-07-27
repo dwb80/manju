@@ -53,9 +53,14 @@ test("Review -> Shot -> Pipeline approval chain is idempotent", async () => {
     const { SqlitePipelineRunRepository } = await import(
       "../dist/src/infrastructure/persistence/sqlite-pipeline-run.repository.js"
     );
+    const { createTransactionServiceUnitOfWork } = await import(
+      "../dist/src/infrastructure/unit-of-work/transaction-service-unit-of-work.js"
+    );
     const pipelineRepository = new SqlitePipelineRunRepository(f.ctx.databaseFile);
+    const uow = createTransactionServiceUnitOfWork(f.ctx.transactionService);
+    const pipelineDeps = { repo: pipelineRepository, uow };
     const runId = "run-review-chain";
-    await new CreateRunHandler(pipelineRepository).execute({
+    await new CreateRunHandler(pipelineDeps).execute({
       commandId: "integration:create-run",
       type: "CreatePipelineRun",
       issuedAt: new Date().toISOString(),
@@ -67,13 +72,13 @@ test("Review -> Shot -> Pipeline approval chain is idempotent", async () => {
         dependencies: [],
       },
     });
-    await new StartRunHandler(pipelineRepository).execute({
+    await new StartRunHandler(pipelineDeps).execute({
       commandId: "integration:start-run",
       type: "StartPipelineRun",
       issuedAt: new Date().toISOString(),
       runId,
     });
-    await new StartNodeHandler(pipelineRepository).execute({
+    await new StartNodeHandler(pipelineDeps).execute({
       commandId: "integration:start-review-node",
       type: "StartPipelineNode",
       issuedAt: new Date().toISOString(),

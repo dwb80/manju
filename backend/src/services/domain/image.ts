@@ -10,6 +10,7 @@ import { rootLogger } from "../../logger.js";
 import { cacheMediaUrls, resolveMediaInputs } from "../media.js";
 import { maybeTitleConversation } from "../chat.js";
 import { incrementUnreadCount } from "../../http/assistant-router.js";
+import { DEFAULT_RATIO, DEFAULT_N, DEFAULT_IMAGE_MODEL, recommendedSizeForRatio, DEFAULT_RESPONSE_FORMAT } from "../../ai/image-config.js";
 
 type EnhancePromptInput = {
   prompt?: string;
@@ -153,19 +154,23 @@ export async function generateImage(ctx: AppContext, body: Record<string, unknow
       : [];
     if (typeof body.image === "string" && body.image.length > 0) inputImages.push(body.image);
     const aiImages = await resolveMediaInputs(ctx, inputImages);
-    const responseFormat = body.response_format === "b64_json" ? "b64_json" : "url";
-    // 显式接受 model 字段（默认 agnes-image-2.1-flash），允许前端切换
+    // 默认值委托给 image-config.ts（单一真相源；S2.1 落地）
+    const responseFormat = body.response_format === "b64_json" ? "b64_json" : DEFAULT_RESPONSE_FORMAT;
+    // 显式接受 model 字段（默认 DEFAULT_IMAGE_MODEL，V2 接入新 Provider 后此值会变成"默认首选"），允许前端切换
     const rawModel = typeof body.model === "string" ? body.model.trim() : "";
-    const model: ImageParams["model"] = rawModel === "agnes-image-2.1-flash" ? rawModel : "agnes-image-2.1-flash";
+    const model = rawModel || DEFAULT_IMAGE_MODEL;
+    const ratio = (typeof body.ratio === "string" ? (body.ratio as ImageParams["ratio"]) : null) ?? DEFAULT_RATIO;
     const params: ImageParams = {
-      model,
+      // model 走 DEFAULT_IMAGE_MODEL；ImageParams.model 类型上仍是窄字面量联合（向后兼容历史 API），
+      // 这里 cast 一次：路由层会在执行前校验 model 是否在 supportedModels 内。
+      model: model as ImageParams["model"],
       prompt,
       negative_prompt: typeof body.negative_prompt === "string" ? body.negative_prompt : "",
       image: inputImages[0],
       images: inputImages,
-      size: (body.size as ImageParams["size"]) ?? "1024x768",
-      ratio: (body.ratio as ImageParams["ratio"]) ?? "1:1",
-      n: clampNumber(body.n, 1, 1, 4),
+      size: (typeof body.size === "string" ? body.size : recommendedSizeForRatio(ratio)) ?? recommendedSizeForRatio(ratio),
+      ratio,
+      n: clampNumber(body.n, DEFAULT_N, 1, 4),
       seed: clampNumber(body.seed, -1, -1, Number.MAX_SAFE_INTEGER),
       steps: clampNumber(body.steps, 25, 1, 50),
       cfg: clampNumber(body.cfg, 7, 1, 20),
@@ -215,7 +220,7 @@ export async function generateImage(ctx: AppContext, body: Record<string, unknow
         id: id("m"),
         conversation_id: conversationId,
         role: "assistant",
-        content: `已生成 ${task.image_urls.length} 张图片（${params.ratio ?? "1:1"} · ${params.model ?? "default"}）`,
+        content: `已生成 ${task.image_urls.length} 张图片（${params.ratio ?? DEFAULT_RATIO} · ${params.model ?? "default"}）`,
         tokens: 0,
         meta: {
           taskId: task.id,

@@ -12,7 +12,7 @@
 import { Bot, Sparkles, MessageSquare, Lightbulb, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { StandalonePageHeader } from "@/components/layout";
+import { StandalonePageHeader } from "@/components/layout/standalone-page-header";
 const quickActions = [
   {
     icon: Sparkles,

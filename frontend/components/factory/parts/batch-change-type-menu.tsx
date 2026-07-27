@@ -11,14 +11,13 @@
  * - 保留旧 API：{ options, onSelect, label }，调用方零迁移
  */
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check } from "lucide-react";
 import type { FilterOption } from "../types";
 
 /**

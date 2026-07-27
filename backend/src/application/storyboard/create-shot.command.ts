@@ -36,6 +36,8 @@ export interface CreateShotCommand extends Command {
   propAssetIds?: string[];
   pipelineRunId?: string;
   pipelineNodeId?: string;
+  /** 创建者 actor id（命令层透传给聚合，最终落到 snapshot.createdBy）。 */
+  createdBy?: string;
 }
 
 export async function handleCreateShot(
@@ -65,6 +67,7 @@ export async function handleCreateShot(
       propAssetIds: command.propAssetIds,
       pipelineRunId: command.pipelineRunId,
       pipelineNodeId: command.pipelineNodeId,
+      createdBy: command.createdBy,
     });
     await deps.repo.save(aggregate, 0);
     await deps.repo.recordCommand(command.commandId, aggregate.id);

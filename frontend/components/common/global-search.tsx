@@ -6,7 +6,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Command, X, ArrowRight, FolderOpen, MessageSquare, Image, Video } from "lucide-react";
+import { Search, Command, X, ArrowRight, FolderOpen, MessageSquare, Image } from "lucide-react";
 
 /**
  * 全局搜索组件

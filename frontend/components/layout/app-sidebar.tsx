@@ -28,8 +28,11 @@ import {
   CheckSquare,
   Bot,
   ShieldCheck,
+  MessageSquare,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { useProjectStore } from "@/lib/stores/project-store";
+import { toast } from "@/components/common/toast";
 
 /**
  * 主应用侧边栏导航组件
@@ -65,6 +68,20 @@ type MenuGroup = {
 //     · 生产创作：直接产生内容的链路（剧本 → 工厂 → 后期）
 //     · 资产与数据：沉淀的资产与监控数据
 //     · 运营与管控：流程闭环（项目、审核、发布）
+// - v3 (P0)：将"智能助手"升级为可折叠分组（与生产创作/资产与数据/运营与管控同构），
+//     在其下挂"项目工作台"一级入口。
+//     · AI 对话    → /assistant（卡片页）
+//     · 项目工作台 → /projects/workbench（独立路由；未选项目时跳 /projects 提示）
+const ASSISTANT_GROUP: MenuGroup = {
+  id: "assistant",
+  name: "智能助手",
+  icon: Bot,
+  items: [
+    { id: "assistant", name: "AI 对话", icon: MessageSquare, href: "/assistant" },
+    { id: "project-workbench", name: "项目工作台", icon: FolderOpen, href: "/projects/workbench" },
+  ],
+};
+
 const MENU_GROUPS: MenuGroup[] = [
   // 第一组：生产创作（按内容生产链路）
   {
@@ -106,6 +123,8 @@ const MENU_GROUPS: MenuGroup[] = [
       { id: "publish", name: "发布准备", icon: Rocket, href: "/publish" },
     ],
   },
+  // 第四组：智能助手（含项目工作台快捷入口）
+  ASSISTANT_GROUP,
 ];
 
 interface AppSidebarProps {
@@ -122,6 +141,8 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   // 内部使用 usePathname 获取真实当前路径，避免 layout 传入空字符串导致菜单不高亮
   const pathname = usePathname();
+  // 全局当前项目：侧栏"项目工作台"快捷入口优先使用顶部导航当前项目
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
 
   useEffect(() => {
     let active = true;
@@ -136,6 +157,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
     "production",
     "assets",
     "operations",
+    "assistant",
   ]);
 
   const handleToggleGroup = (groupId: string) => {
@@ -147,13 +169,23 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
   };
 
   const handleItemClick = (item: MenuItem) => {
-    if (item.href) {
-      router.push(item.href);
+    if (!item.href) return;
+    // 项目工作台快捷入口：未选项目时提示先去项目中心；
+    // 已选项目时带 projectId+tab 跳到 /projects/workbench
+    if (item.id === "project-workbench") {
+      if (!selectedProjectId) {
+        toast.error("暂未选择项目", "请先到「项目中心」选择或创建一个项目");
+        router.push("/projects");
+        return;
+      }
+      router.push(`/projects/workbench?projectId=${encodeURIComponent(selectedProjectId)}&tab=overview`);
+      return;
     }
+    router.push(item.href);
   };
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-white/10 bg-[#181818]">
+    <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
       {/* Logo区域 */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
@@ -193,22 +225,9 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
             <CheckSquare className={`h-4 w-4 ${activePath.startsWith("/todos") ? "text-emerald-400" : "text-[#888]"}`} />
             <span className="flex-1 text-left">我的待办</span>
           </button>
-
-          {/* 智能助手：AI 交互中心 */}
-          <button
-            onClick={() => router.push("/assistant")}
-            className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${activePath.startsWith("/assistant")
-                ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500"
-                : "text-[#ccc] hover:bg-white/5 hover:text-white"
-              }`}
-            aria-current={activePath.startsWith("/assistant") ? "page" : "false"}
-          >
-            <Bot className={`h-4 w-4 ${activePath.startsWith("/assistant") ? "text-emerald-400" : "text-[#888]"}`} />
-            <span className="flex-1 text-left">智能助手</span>
-          </button>
         </div>
 
-        {/* 其他分组菜单 */}
+        {/* 其他分组菜单（生产创作 / 资产与数据 / 运营与管控 / 智能助手） */}
         {MENU_GROUPS.map((group) => {
           const isExpanded = expandedGroups.includes(group.id);
           const GroupIcon = group.icon;
@@ -250,7 +269,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
                           ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500"
                           : "text-[#ccc] hover:bg-white/5 hover:text-white"
                           }`}
-                        aria-current={isActive ? "page" : "false"}
+                        aria-current={isActive ? "page" : undefined}
                       >
                         <ItemIcon className={`h-4 w-4 ${isActive ? "text-emerald-400" : "text-[#888]"}`} />
                         <span className="flex-1 text-left">{item.name}</span>

@@ -4,7 +4,8 @@
  *
  * 受保护字段（status / version / reviewId / approvedAt / rejectedAt /
  * reviewerId / submittedAt / submittedBy / lastGenerationRequestId）由
- * Command Handler 入口强制剥离，避免调用方通过 DTO 绕过聚合。
+ * Command Handler 入口统一守门（`assertNoProtectedFields` in shot-command-handler），
+ * 避免调用方通过 DTO 绕过聚合。本文件命令仍显式调一次，确保语义自描述。
  */
 
 import type { Command } from "../shared/command.js";
@@ -13,14 +14,8 @@ import {
   type ShotEditableMetadata,
 } from "../../domain/storyboard/shot.aggregate.js";
 import {
-  SHOT_PROTECTED_FIELDS,
-} from "../../domain/storyboard/shot-state-machine.js";
-import {
-  DOMAIN_ERROR_CODES,
-  DomainError,
-} from "../../domain/shared/domain-error.js";
-import {
   assertCommandNotProcessed,
+  assertNoProtectedFields,
   enqueuePulledEvents,
   loadShotOrThrow,
   type ShotHandlerDeps,
@@ -34,18 +29,11 @@ export interface EditShotCommand extends Command {
   patch: ShotEditableMetadata;
 }
 
-/** 入口守一道：拒绝受保护字段进入命令。 */
-export function assertNoProtectedFields(patch: Record<string, unknown>): void {
-  for (const key of SHOT_PROTECTED_FIELDS) {
-    if (key in patch && patch[key] !== undefined) {
-      throw new DomainError(
-        DOMAIN_ERROR_CODES.aggregateInvariantViolated,
-        `edit-shot 拒绝受保护字段：${key}`,
-        { field: key, aggregateType: "Shot" },
-      );
-    }
-  }
-}
+// re-export：历史调用方仍可从 edit-shot 模块引用
+// @deprecated 请直接从 `./shot-command-handler.js` 引用 `assertNoProtectedFields`；
+// 本兼容 re-export 将在下个主版本移除。详见 v2.1-ddd-pipeline-uow-migration.md 后续清理条目。
+// eslint-disable-next-line @typescript-eslint/no-deprecated
+export { assertNoProtectedFields };
 
 export async function handleEditShot(
   deps: ShotHandlerDeps,

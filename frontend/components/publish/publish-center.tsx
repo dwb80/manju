@@ -9,14 +9,9 @@ import { useState, useMemo } from "react";
 import {
   Video,
   Upload,
-  Calendar,
-  TrendingUp,
-  PlayCircle,
-  Clock,
-  CheckCircle,
-  BarChart3,
+  Calendar, PlayCircle, BarChart3,
   ChevronRight,
-  Package,
+  Package
 } from "lucide-react";
 import { Pagination } from "@/components/shared";
 import { Button } from "@/components/ui/button";
@@ -89,7 +84,6 @@ export type PublishCenterProps = {
  * @param onDownloadVideo - 下载视频回调
  */
 export function PublishCenter({
-  statistics,
   recentVideos,
   plans,
   onViewAllVideos,

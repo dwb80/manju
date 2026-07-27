@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 构建 Docker 镜像
         run: |
@@ -79,7 +79,7 @@ jobs:
     name: Trivy 文件系统扫描（fsroot）
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Trivy FS 扫描
         uses: aquasecurity/trivy-action@0.24.0
         with:

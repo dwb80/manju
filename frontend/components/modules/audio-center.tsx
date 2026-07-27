@@ -31,6 +31,7 @@ import { createLogger } from "@/lib/logger";
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import type { AudioItem, AudioType, Character, Storyboard } from "@/lib/module-types";
 import { useProjectStore } from "@/lib/stores/project-store";
+import { useFactorySelection } from "@/lib/stores/factory-selection-store";
 import { clearApiCache } from "@/lib/api-client";
 import {
   listAudios,
@@ -532,6 +533,7 @@ function AudioCard({
 const config: FactoryCRUDPageProps<AudioItem> = {
   title: "音频中心",
   description: "管理音频素材与配音",
+  entityType: "audio",
   entityLabel: "音频",
   listTitle: "音频素材",
   emptyTitle: "未找到音频",
@@ -611,10 +613,12 @@ export function AudioCenterPage() {
   const [timelineOpen, setTimelineOpen] = useState<boolean>(false);
 
   // 监听 FactoryCRUDPage 内的选中状态变化（用于批量 TTS）
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // P0-8：废弃 setInterval 轮询 [data-factory-selected] DOM 属性，
+  // 改为直接订阅 useFactorySelectionStore，组件卸载自动停止订阅。
   const [audioList, setAudioList] = useState<AudioItem[]>([]);
   const [isBatchTTSLoading, setIsBatchTTSLoading] = useState(false);
   const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
+  const selectedIds = useFactorySelection("audio");
 
   // 拉取音频列表（用于批量 TTS 时获取选中项的详细信息）
   useEffect(() => {
@@ -626,27 +630,6 @@ export function AudioCenterPage() {
       .then((data) => setAudioList(data))
       .catch((err) => console.warn("listAudios failed", err));
   }, [selectedProjectId]);
-
-  // 监听选中状态变化
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = setInterval(() => {
-      const container = document.querySelector("[data-factory-selected]");
-      if (!container) return;
-      try {
-        const raw = container.getAttribute("data-factory-selected") ?? "[]";
-        const ids: string[] = JSON.parse(raw);
-        setSelectedIds((prev) => {
-          const next = new Set(ids);
-          if (next.size === prev.size && Array.from(next).every((x) => prev.has(x))) return prev;
-          return next;
-        });
-      } catch {
-        // ignore parse errors
-      }
-    }, 500);
-    return () => clearInterval(id);
-  }, []);
 
   // 批量 TTS 处理
   const handleBatchTTS = useCallback(async () => {

@@ -48,7 +48,7 @@ export function useConversations({
       setConversationId(id);
       conversationIdRef.current = id;
       if (callbacks) {
-        const [nextMessages, nextImages, nextVideos] = await Promise.all([
+        const [,] = await Promise.all([
           callbacks.onLoadMessages?.(id) ?? Promise.resolve([]),
           callbacks.onLoadImages?.(id) ?? Promise.resolve([]),
           callbacks.onLoadVideos?.(id) ?? Promise.resolve([]),

@@ -30,8 +30,10 @@ import {
   type ModelFormData,
 } from "@/components/model/model-form-dialog";
 import { useModuleCrud } from "@/hooks/use-module-crud";
-import { clearApiCache } from "@/lib/api-client";
+import { clearApiCache, api } from "@/lib/api-client";
 import { StandalonePageHeader, StatsOverview, Alert } from "@/components/layout";
+import { notify } from "@/lib/notify";
+import { useConfirm } from "@/lib/hooks/use-confirm";
 
 /**
  * 将表单数据转换为后端 API 请求体
@@ -128,6 +130,9 @@ export default function ModelsPage() {
   const { items: models, isLoading, error, load, create, update, remove, refresh } =
     useModuleCrud<ModelInfo>("/api/models");
 
+  // 全局确认对话框（替换 window.confirm）
+  const confirm = useConfirm();
+
   // 表单对话框状态
   const [formOpen, setFormOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<ModelInfo | null>(null);
@@ -136,10 +141,10 @@ export default function ModelsPage() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((response) => response.json())
+    // P1-4: 改用 api() 统一处理响应 / 错误 / 缓存
+    api<{ user: { role: string } }>("/api/auth/me", { cache: "no-store" })
       .then((result) => {
-        if (active) setCanManage(result?.data?.user?.role === "admin");
+        if (active) setCanManage(result?.user?.role === "admin");
       })
       .catch(() => {
         if (active) setCanManage(false);
@@ -148,7 +153,7 @@ export default function ModelsPage() {
   }, []);
 
   // 删除确认状态
-  const [deleteTarget, setDeleteTarget] = useState<ModelInfo | null>(null);
+  const [] = useState<ModelInfo | null>(null);
 
   /** 打开新建模型对话框 */
   const handleCreate = useCallback(() => {
@@ -178,7 +183,7 @@ export default function ModelsPage() {
         refresh();
       } catch (err) {
         console.error("保存模型失败:", err);
-        alert(err instanceof Error ? err.message : "保存失败");
+        notify.error("保存失败", err instanceof Error ? err.message : undefined);
       } finally {
         setSaving(false);
       }
@@ -189,13 +194,18 @@ export default function ModelsPage() {
   /** 删除模型 */
   const handleDelete = useCallback(
     async (model: ModelInfo) => {
-      if (!confirm(`确定删除模型「${model.name}」吗？此操作不可撤销。`)) return;
+      const ok = await confirm({
+        title: "删除模型",
+        description: `确定删除模型「${model.name}」吗？此操作不可撤销。`,
+        confirmLabel: "确认删除",
+      });
+      if (!ok) return;
       try {
         await remove(model.id);
         refresh();
       } catch (err) {
         console.error("删除模型失败:", err);
-        alert(err instanceof Error ? err.message : "删除失败");
+        notify.error("删除失败", err instanceof Error ? err.message : undefined);
       }
     },
     [remove, refresh]
@@ -205,15 +215,12 @@ export default function ModelsPage() {
   const handleSetDefault = useCallback(
     async (modelId: string) => {
       try {
-        const response = await fetch(`/api/models/${modelId}/set-default`, { method: "POST" });
-        const result = await response.json();
-        if (!response.ok || result.code !== 0) {
-          throw new Error(result.message || "设置默认失败");
-        }
+        // P1-4: 改用 api() 统一处理响应 / 错误 / 缓存
+        await api<{ success: boolean }>(`/api/models/${modelId}/set-default`, { method: "POST" });
         refresh();
       } catch (err) {
         console.error("设置默认模型失败:", err);
-        alert(err instanceof Error ? err.message : "设置失败");
+        notify.error("设置失败", err instanceof Error ? err.message : undefined);
       }
     },
     [refresh]
@@ -223,19 +230,15 @@ export default function ModelsPage() {
   const handleToggleEnabled = useCallback(
     async (modelId: string, enabled: boolean) => {
       try {
-        const response = await fetch(`/api/models/${modelId}/toggle`, {
+        // P1-4: 改用 api() 统一处理响应 / 错误 / 缓存
+        await api<{ success: boolean }>(`/api/models/${modelId}/toggle`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ enabled }),
         });
-        const result = await response.json();
-        if (!response.ok || result.code !== 0) {
-          throw new Error(result.message || "切换状态失败");
-        }
         refresh();
       } catch (err) {
         console.error("切换模型状态失败:", err);
-        alert(err instanceof Error ? err.message : "操作失败");
+        notify.error("操作失败", err instanceof Error ? err.message : undefined);
       }
     },
     [refresh]

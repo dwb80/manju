@@ -16,9 +16,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tip } from '@/components/ui/tip'
-import { ConfirmDialog } from '@/components/common/confirm-dialog'
-import { exportScript, importScript, detectFormat } from '@/lib/script-format'
-import type { ScriptFormat } from '@/lib/script-format'
+import { exportScript, importScript, detectFormat, type ScriptFormat } from '@/lib/script-format'
 
 interface ImportExportDialogProps {
   isOpen: boolean

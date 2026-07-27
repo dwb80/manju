@@ -294,6 +294,27 @@ export async function handlePipelineRouter(
       return;
     }
 
+    // GET /api/pipeline/runs?projectId=xxx  —— 列出 run（可按项目过滤；用于 Pipeline 入口）
+    if (
+      method === "GET" &&
+      parts.length === 3 &&
+      parts[0] === "api" &&
+      parts[1] === "pipeline" &&
+      parts[2] === "runs"
+    ) {
+      const projectId = url.searchParams.get("projectId")?.trim() ?? "";
+      if (access && !access.isAdmin && projectId) {
+        const allowed = await access.canAccessProject(projectId);
+        if (!allowed) {
+          sendError(res, new Error("forbidden: not project member"), 403);
+          return;
+        }
+      }
+      const runs = await ctx.pipelineRunService.listRuns(projectId || undefined);
+      sendJson(res, { projectId: projectId || null, runs });
+      return;
+    }
+
     // V2 W11 TASK-F17: POST /api/pipeline/runs (创建 run + 节点 + 依赖)
     //   body = { projectId, name, nodes: [...], dependencies: [...] }
     if (
