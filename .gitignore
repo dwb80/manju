@@ -33,3 +33,8 @@ backend/tests/.tmp-*/
 
 # SEC-SUP-02 SBOM 由 CI 生成（artifacts/sbom/）
 artifacts/
+
+# 本地工具/缓存产物，不入库
+.pnpm-store/
+.trae-html-share-packages/
+.workbuddy/

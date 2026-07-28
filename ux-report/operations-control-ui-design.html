@@ -1,0 +1,1946 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>运营与管控 — UI/UX 设计稿</title>
+<style>
+ /* ============ 设计系统变量 ============ */
+ :root {
+ --bg-app: #0d0d0d;
+ --bg-sidebar: #0a0a0a;
+ --bg-surface: #181818;
+ --bg-elevated: #1e1e1e;
+ --bg-hover: #232323;
+ --border-subtle: rgba(255,255,255,0.06);
+ --border-default: rgba(255,255,255,0.1);
+ --text-primary: #ececec;
+ --text-secondary: #888;
+ --text-muted: #555;
+ --accent: #10b981;
+ --accent-dim: rgba(16,185,129,0.15);
+ --accent-glow: rgba(16,185,129,0.08);
+ --warning: #f59e0b;
+ --warning-dim: rgba(245,158,11,0.15);
+ --danger: #ef4444;
+ --danger-dim: rgba(239,68,68,0.15);
+ --info: #3b82f6;
+ --info-dim: rgba(59,130,246,0.15);
+ --purple: #a855f7;
+ --purple-dim: rgba(168,85,247,0.15);
+ --radius-sm: 6px;
+ --radius-md: 8px;
+ --radius-lg: 12px;
+ --radius-xl: 16px;
+ --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+ --mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+ }
+
+ * { margin: 0; padding: 0; box-sizing: border-box; }
+ body { font-family: var(--font); background: var(--bg-app); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+ /* ============ 导航条 ============ */
+ .doc-nav {
+ position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 100;
+ background: var(--bg-sidebar); border-bottom: var(--border-default);
+ display: flex; align-items: center; padding: 0 24px; gap: 8px;
+ }
+ .doc-nav-brand { font-size: 14px; font-weight: 700; color: var(--accent); margin-right: 16px; white-space: nowrap; }
+ .doc-nav a {
+ font-size: 12px; color: var(--text-secondary); text-decoration: none;
+ padding: 6px 12px; border-radius: var(--radius-md); transition: all .15s; white-space: nowrap;
+ }
+ .doc-nav a:hover { background: var(--bg-hover); color: var(--text-primary); }
+ .doc-nav a.active { background: var(--accent-dim); color: var(--accent); }
+
+ /* ============ 布局 ============ */
+ .doc-body { padding-top: 56px; }
+ .section { padding: 48px 48px 24px; border-bottom: var(--border-subtle); }
+ .section:last-child { border-bottom: none; }
+ .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px; }
+ .section h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+ .section h2 { font-size: 18px; font-weight: 600; margin-top: 32px; margin-bottom: 12px; color: var(--text-primary); }
+ .section h3 { font-size: 14px; font-weight: 600; margin-top: 20px; margin-bottom: 10px; color: var(--text-primary); }
+ .section p { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.7; }
+ .section .lead { font-size: 15px; color: var(--text-secondary); margin-bottom: 24px; max-width: 800px; }
+
+ /* ============ 框架结构 ============ */
+ .frame {
+ background: var(--bg-surface); border: 1px solid var(--border-default);
+ border-radius: var(--radius-lg); overflow: hidden; margin: 16px 0 24px;
+ box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+ }
+ .frame-label {
+ display: flex; align-items: center; justify-content: space-between;
+ padding: 10px 16px; background: var(--bg-elevated); border-bottom: var(--border-subtle);
+ font-size: 12px; color: var(--text-secondary);
+ }
+ .frame-label .tag { background: var(--accent-dim); color: var(--accent); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+ .frame-body { padding: 0; }
+
+ /* ============ Mockup 通用 ============ */
+ .mockup { display: flex; min-height: 520px; background: var(--bg-app); }
+ .mockup-sidebar {
+ width: 200px; min-width: 200px; background: var(--bg-sidebar);
+ border-right: var(--border-subtle); display: flex; flex-direction: column;
+ }
+ .mockup-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+ /* 侧边栏 */
+ .sb-logo { padding: 16px; display: flex; align-items: center; gap: 10px; border-bottom: var(--border-subtle); }
+ .sb-logo .logo-text { font-size: 11px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+ .sb-nav { flex: 1; padding: 8px; overflow-y: auto; }
+ .sb-group { margin-bottom: 12px; }
+ .sb-group-title { font-size: 10px; font-weight: 600; color: var(--text-muted); padding: 8px 10px 4px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px; }
+ .sb-item {
+ display: flex; align-items: center; gap: 10px; padding: 7px 10px;
+ border-radius: var(--radius-md); font-size: 12px; color: var(--text-secondary);
+ cursor: pointer; transition: all .12s; margin-bottom: 1px;
+ }
+ .sb-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+ .sb-item.active { background: var(--accent-dim); color: var(--accent); border-left: 2px solid var(--accent); }
+
+ /* 顶部栏 */
+ .mockup-topbar {
+ height: 48px; min-height: 48px; border-bottom: var(--border-subtle);
+ display: flex; align-items: center; justify-content: space-between;
+ padding: 0 20px; background: var(--bg-surface);
+ }
+ .tb-left { display: flex; align-items: center; gap: 12px; }
+ .tb-breadcrumb { font-size: 12px; color: var(--text-secondary); }
+ .tb-breadcrumb span { color: var(--text-primary); font-weight: 500; }
+ .tb-right { display: flex; align-items: center; gap: 8px; }
+ .tb-btn {
+ font-size: 11px; color: var(--text-secondary); background: var(--bg-elevated);
+ border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+ padding: 5px 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all .12s;
+ }
+ .tb-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+ .tb-btn.primary { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+
+ /* 内容区 */
+ .mockup-content { flex: 1; padding: 20px; overflow-y: auto; }
+
+ /* 工具栏 */
+ .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+ .tb-search {
+ background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+ border-radius: var(--radius-md); padding: 6px 12px; font-size: 12px;
+ color: var(--text-muted); width: 200px; display: flex; align-items: center; gap: 6px;
+ }
+ .tb-filter {
+ background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+ border-radius: var(--radius-md); padding: 6px 10px; font-size: 11px;
+ color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 4px;
+ }
+ .tb-filter:hover { background: var(--bg-hover); }
+ .tb-filter.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+ .tb-spacer { flex: 1; }
+
+ /* 表格 */
+ .table-wrap { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; }
+ table { width: 100%; border-collapse: collapse; font-size: 12px; }
+ thead tr { background: rgba(255,255,255,0.02); border-bottom: var(--border-subtle); }
+ th { text-align: left; padding: 10px 12px; font-weight: 600; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+ td { padding: 10px 12px; border-bottom: var(--border-subtle); color: var(--text-primary); }
+ tbody tr:hover { background: var(--bg-hover); }
+ tbody tr:last-child td { border-bottom: none; }
+ .td-mono { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); }
+ .td-name { font-weight: 500; color: var(--text-primary); }
+
+ /* 徽章 */
+ .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+ .badge-success { background: var(--accent-dim); color: var(--accent); }
+ .badge-warning { background: var(--warning-dim); color: var(--warning); }
+ .badge-danger { background: var(--danger-dim); color: var(--danger); }
+ .badge-info { background: var(--info-dim); color: var(--info); }
+ .badge-purple { background: var(--purple-dim); color: var(--purple); }
+ .badge-muted { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+
+ /* 进度条 */
+ .progress { width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+ .progress-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+ .progress-fill.green { background: var(--accent); }
+ .progress-fill.amber { background: var(--warning); }
+ .progress-fill.red { background: var(--danger); }
+ .progress-fill.blue { background: var(--info); }
+
+ /* 按钮 */
+ .btn { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; border-radius: var(--radius-md); padding: 6px 12px; cursor: pointer; border: 1px solid var(--border-subtle); background: var(--bg-elevated); color: var(--text-secondary); transition: all .12s; }
+ .btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+ .btn-primary { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+ .btn-primary:hover { background: #059669; color: #fff; }
+ .btn-danger { color: var(--danger); border-color: var(--danger-dim); }
+ .btn-danger:hover { background: var(--danger-dim); }
+ .btn-sm { font-size: 10px; padding: 4px 8px; }
+ .btn-icon { width: 26px; height: 26px; padding: 0; justify-content: center; }
+
+ /* 卡片网格 */
+ .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+ .project-card {
+ background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+ border-radius: var(--radius-md); padding: 16px; cursor: pointer; transition: all .15s;
+ }
+ .project-card:hover { border-color: var(--accent-dim); background: var(--bg-hover); }
+ .pc-header { display: flex; align-items: start; justify-content: space-between; margin-bottom: 10px; }
+ .pc-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+ .pc-meta { font-size: 10px; color: var(--text-muted); }
+ .pc-progress { margin: 12px 0 8px; }
+ .pc-progress-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-secondary); margin-bottom: 4px; }
+ .pc-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+ .pc-team { display: flex; gap: -4px; }
+ .pc-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--bg-hover); border: 2px solid var(--bg-elevated); margin-left: -6px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-secondary); }
+ .pc-avatar:first-child { margin-left: 0; }
+
+ /* Tab */
+ .tabs { display: flex; gap: 2px; border-bottom: var(--border-subtle); margin-bottom: 16px; }
+ .tab { padding: 8px 14px; font-size: 12px; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all .12s; }
+ .tab:hover { color: var(--text-primary); }
+ .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+ .tab .count { font-size: 10px; background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 8px; margin-left: 4px; }
+ .tab.active .count { background: var(--accent-dim); color: var(--accent); }
+
+ /* 空状态 */
+ .empty-state { text-align: center; padding: 48px 20px; }
+ .empty-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+ .empty-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; max-width: 320px; margin-left: auto; margin-right: auto; }
+
+ /* 审核卡片 */
+ .review-item {
+ background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+ border-radius: var(--radius-md); padding: 12px 14px; display: flex; gap: 12px; align-items: center;
+ margin-bottom: 8px; transition: all .12s;
+ }
+ .review-item:hover { border-color: var(--border-default); background: var(--bg-hover); }
+ .review-thumb { width: 56px; height: 40px; border-radius: 6px; background: var(--bg-hover); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+ .review-info { flex: 1; min-width: 0; }
+ .review-title { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px; }
+ .review-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; }
+ .review-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+ /* 质检分数环 */
+ .score-ring { width: 80px; height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
+ .score-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+ .score-ring .score-value { font-size: 22px; font-weight: 700; z-index: 1; }
+
+ /* 发布时间线 */
+ .timeline { position: relative; padding-left: 24px; }
+ .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 1px; background: var(--border-subtle); }
+ .timeline-item { position: relative; padding-bottom: 20px; }
+ .timeline-item::before { content: ''; position: absolute; left: -20px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--bg-elevated); border: 2px solid var(--text-muted); }
+ .timeline-item.done::before { border-color: var(--accent); background: var(--accent); }
+ .timeline-item.active::before { border-color: var(--warning); background: var(--warning); }
+ .timeline-date { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+ .timeline-title { font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px; }
+ .timeline-desc { font-size: 11px; color: var(--text-secondary); }
+
+ /* 对话框 */
+ .dialog-overlay { display: flex; align-items: center; justify-content: center; min-height: 400px; background: rgba(0,0,0,0.4); border-radius: var(--radius-lg); padding: 24px; }
+ .dialog {
+ background: var(--bg-elevated); border: 1px solid var(--border-default);
+ border-radius: var(--radius-lg); width: 100%; max-width: 560px; overflow: hidden;
+ }
+ .dialog-header { padding: 20px 24px 0; }
+ .dialog-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+ .dialog-desc { font-size: 12px; color: var(--text-secondary); }
+ .dialog-body { padding: 20px 24px; }
+ .dialog-footer { padding: 12px 24px 20px; display: flex; justify-content: flex-end; gap: 8px; border-top: var(--border-subtle); }
+
+ /* 表单 */
+ .form-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+ .form-label { width: 80px; font-size: 12px; color: var(--text-secondary); padding-top: 6px; flex-shrink: 0; text-align: right; }
+ .form-label .req { color: var(--danger); }
+ .form-control { flex: 1; }
+ .form-input {
+ width: 100%; background: var(--bg-surface); border: 1px solid var(--border-subtle);
+ border-radius: var(--radius-md); padding: 7px 10px; font-size: 12px; color: var(--text-primary);
+ font-family: var(--font);
+ }
+ .form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+ .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+ .form-hint { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+ .form-checkbox-group { display: flex; gap: 8px; flex-wrap: wrap; }
+ .form-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); font-size: 11px; color: var(--text-secondary); cursor: pointer; }
+ .form-chip.checked { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+
+ /* ============ 说明区块 ============ */
+ .annotation {
+ background: rgba(16,185,129,0.04); border: 1px solid var(--accent-dim);
+ border-radius: var(--radius-md); padding: 14px 18px; margin: 16px 0;
+ font-size: 12px; color: var(--text-secondary); line-height: 1.7;
+ }
+ .annotation strong { color: var(--accent); }
+ .annotation ul { margin: 6px 0 0 16px; padding: 0; }
+ .annotation li { margin-bottom: 4px; }
+
+ .callout {
+ background: var(--bg-elevated); border-left: 3px solid var(--info);
+ border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 12px 16px; margin: 12px 0;
+ font-size: 12px; color: var(--text-secondary);
+ }
+
+ /* 网格 */
+ .design-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+
+ /* 文字小工具 */
+ .text-xs { font-size: 11px; }
+ .text-sm { font-size: 12px; }
+ .text-muted { color: var(--text-muted); }
+ .text-secondary { color: var(--text-secondary); }
+ .text-accent { color: var(--accent); }
+ .flex { display: flex; }
+ .items-center { align-items: center; }
+ .gap-2 { gap: 8px; }
+ .gap-3 { gap: 12px; }
+ .mt-2 { margin-top: 8px; }
+ .mt-4 { margin-top: 16px; }
+ .mb-2 { margin-bottom: 8px; }
+ .mb-4 { margin-bottom: 16px; }
+
+ /* 分页 */
+ .pagination {
+ display: flex; align-items: center; justify-content: space-between;
+ margin-top: 16px; font-size: 11px; color: var(--text-muted);
+ }
+ .pagination-info { display: flex; align-items: center; gap: 12px; }
+ .pagination-info .page-size-select {
+ background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+ border-radius: var(--radius-sm); padding: 3px 8px; font-size: 11px;
+ color: var(--text-secondary); cursor: pointer;
+ }
+ .pagination-controls { display: flex; align-items: center; gap: 4px; }
+ .pg-btn {
+ min-width: 28px; height: 28px; border-radius: var(--radius-sm);
+ border: 1px solid var(--border-subtle); background: var(--bg-elevated);
+ color: var(--text-secondary); font-size: 11px; cursor: pointer;
+ display: flex; align-items: center; justify-content: center; padding: 0 6px;
+ }
+ .pg-btn:hover { background: var(--bg-hover); border-color: var(--border-default); }
+ .pg-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+ .pg-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+ .pg-ellipsis { color: var(--text-muted); padding: 0 2px; }
+
+ /* 响应式 */
+ @media (max-width: 1100px) {
+ .card-grid { grid-template-columns: 1fr 1fr; }
+ .design-grid { grid-template-columns: 1fr; }
+ }
+</style>
+</head>
+<body>
+
+<!-- ============ 导航 ============ -->
+<nav class="doc-nav">
+ <span class="doc-nav-brand">Manju UI/UX</span>
+ <a href="#overview" class="active">总览</a>
+ <a href="#principles">设计原则</a>
+ <a href="#projects">项目中心</a>
+ <a href="#review">审核中心</a>
+ <a href="#quality">质检中心</a>
+ <a href="#publish">发布准备</a>
+ <a href="#components">组件规范</a>
+ <a href="#states">状态设计</a>
+</nav>
+
+<div class="doc-body">
+
+<!-- ============ 总览 ============ -->
+<section class="section" id="overview">
+ <div class="section-label">01 / Overview</div>
+ <h1>运营与管控 — UI/UX 设计稿</h1>
+ <p class="lead">本设计稿覆盖侧边栏「运营与管控」分组下的四个模块：项目中心、审核中心、质检中心、发布准备。每个模块基于其功能职责设计信息架构、页面布局、交互流程和状态展示，遵循项目 DESIGN.md 深色主题设计系统。</p>
+
+ <div class="callout">
+ <strong>设计目标：</strong>让项目负责人、审核人员、质量管理员和发布运营各司其职，在一个统一的管控视图中完成项目生命周期闭环——从立项、审核、质检到交付发布。
+ </div>
+
+ <h2>信息架构</h2>
+ <div class="frame">
+ <div class="frame-label">运营与管控模块关系图 <span class="tag">IA</span></div>
+ <div class="frame-body" style="padding: 32px; background: var(--bg-surface);">
+ <div style="display: flex; align-items: center; justify-content: center; gap: 0; flex-wrap: wrap; min-height: 200px;">
+
+ <!-- 项目中心 -->
+ <div style="text-align: center; padding: 20px;">
+ <div style="width: 140px; height: 80px; background: var(--accent-dim); border: 2px solid var(--accent); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 8px;">项目中心</div>
+ <div style="font-size: 10px; color: var(--text-muted); width: 140px;">立项 · 团队 · 进度 · 归档</div>
+ </div>
+
+ <!-- 箭头 -->
+ <div style="font-size: 24px; color: var(--text-muted); padding: 0 8px;">→</div>
+
+ <!-- 审核中心 -->
+ <div style="text-align: center; padding: 20px;">
+ <div style="width: 140px; height: 80px; background: var(--info-dim); border: 2px solid var(--info); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--info); margin-bottom: 8px;">审核中心</div>
+ <div style="font-size: 10px; color: var(--text-muted); width: 140px;">内容审核 · 通过/驳回</div>
+ </div>
+
+ <div style="font-size: 24px; color: var(--text-muted); padding: 0 8px;">→</div>
+
+ <!-- 质检中心 -->
+ <div style="text-align: center; padding: 20px;">
+ <div style="width: 140px; height: 80px; background: var(--warning-dim); border: 2px solid var(--warning); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--warning); margin-bottom: 8px;">质检中心</div>
+ <div style="font-size: 10px; color: var(--text-muted); width: 140px;">自动质检 · 评分 · 阻断</div>
+ </div>
+
+ <div style="font-size: 24px; color: var(--text-muted); padding: 0 8px;">→</div>
+
+ <!-- 发布准备 -->
+ <div style="text-align: center; padding: 20px;">
+ <div style="width: 140px; height: 80px; background: var(--purple-dim); border: 2px solid var(--purple); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--purple); margin-bottom: 8px;">发布准备</div>
+ <div style="font-size: 10px; color: var(--text-muted); width: 140px;">成片 · 计划 · 打包 · 交付</div>
+ </div>
+
+ </div>
+ <div style="text-align: center; margin-top: 16px; font-size: 11px; color: var(--text-muted);">
+ 项目生命周期闭环：立项 → 内容生产 → 质量把关 → 交付发布
+ </div>
+ </div>
+ </div>
+
+ <h2>角色与模块矩阵</h2>
+ <div class="table-wrap" style="margin-top: 16px;">
+ <table>
+ <thead>
+ <tr>
+ <th style="width: 120px;">角色</th>
+ <th>项目中心</th>
+ <th>审核中心</th>
+ <th>质检中心</th>
+ <th>发布准备</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr>
+ <td class="td-name">项目管理员</td>
+ <td><span class="badge badge-success">全权</span></td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-success">管理</span></td>
+ </tr>
+ <tr>
+ <td class="td-name">制片人</td>
+ <td><span class="badge badge-success">管理</span></td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-success">管理</span></td>
+ </tr>
+ <tr>
+ <td class="td-name">审核人员</td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-success">全权</span></td>
+ <td><span class="badge badge-warning">触发</span></td>
+ <td><span class="badge badge-muted">查看</span></td>
+ </tr>
+ <tr>
+ <td class="td-name">AI管理员</td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-success">配置</span></td>
+ <td><span class="badge badge-muted">查看</span></td>
+ </tr>
+ <tr>
+ <td class="td-name">发布运营</td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-muted">查看</span></td>
+ <td><span class="badge badge-success">全权</span></td>
+ </tr>
+ </tbody>
+ </table>
+ </div>
+</section>
+
+<!-- ============ 设计原则 ============ -->
+<section class="section" id="principles">
+ <div class="section-label">02 / Principles</div>
+ <h1>设计原则</h1>
+ <p class="lead">运营与管控模块面向管理角色，核心诉求是"快速掌握状态、精准做出决策、推动流程前进"。所有设计围绕以下五条原则展开。</p>
+
+ <div class="design-grid">
+ <div class="frame">
+ <div class="frame-label">原则一：状态优先</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">每个页面首屏必须回答"现在什么状态"——有多少待处理、多少通过、多少阻塞。用进度条+颜色编码+列表内联标记让状态一眼可见。</p>
+ <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+ <span class="badge badge-success">已通过 12</span>
+ <span class="badge badge-warning">待审核 5</span>
+ <span class="badge badge-danger">已驳回 2</span>
+ </div>
+ </div>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">原则二：操作即决策</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">审核通过/驳回、质检触发、发布排期都是管理决策。操作按钮必须紧跟上下文出现，并提供确认/备注/原因留痕，避免误操作。</p>
+ <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+ <button class="btn btn-primary btn-sm">通过</button>
+ <button class="btn btn-danger btn-sm">驳回</button>
+ <button class="btn btn-sm">备注</button>
+ <button class="btn btn-sm">详情</button>
+ </div>
+ <div style="margin-top: 12px; padding: 10px; background: var(--bg-surface); border-radius: var(--radius-md); font-size: 11px; color: var(--text-muted);">
+ 驳回原因：<span style="color: var(--text-secondary);">角色面部不一致，需重新生成三视图</span>
+ </div>
+ </div>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">原则三：可追溯</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">所有管控操作产生审计记录——谁在什么时候做了什么决策，关联哪个内容。质检报告、审核记录、发布计划都保留完整时间线。</p>
+ <div class="timeline">
+ <div class="timeline-item done">
+ <div class="timeline-date">2026-07-24 14:30</div>
+ <div class="timeline-title">张审核 通过了镜头 #042</div>
+ <div class="timeline-desc">评分：85 · 备注：画面构图合理</div>
+ </div>
+ <div class="timeline-item active">
+ <div class="timeline-date">2026-07-24 15:00</div>
+ <div class="timeline-title">质检自动触发</div>
+ <div class="timeline-desc">一致性检查中 · 阈值 70</div>
+ </div>
+ <div class="timeline-item">
+ <div class="timeline-date">待排期</div>
+ <div class="timeline-title">发布计划</div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">原则四：批量效率</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">管理角色常面对大量同类操作。支持批量审核、批量触发质检、批量排期，配 checkbox 全选+操作栏，减少重复点击。</p>
+ <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+ <input type="checkbox" checked style="accent-color: var(--accent);">
+ <span style="font-size: 11px; color: var(--text-secondary);">已选 3 项</span>
+ <div style="flex:1"></div>
+ <button class="btn btn-primary btn-sm">批量通过</button>
+ <button class="btn btn-danger btn-sm">批量驳回</button>
+ </div>
+ <div style="font-size: 10px; color: var(--text-muted);">支持多选后统一操作，操作完成后显示逐项成功/失败结果</div>
+ </div>
+ </div>
+ </div>
+
+ <div class="callout">
+ <strong>原则五：空状态可行动</strong> — 空状态不是终点，是入口。每个空状态都告诉用户"缺什么 + 下一步做什么"，并提供直达操作按钮。
+ </div>
+</section>
+
+
+<!-- ============ 项目中心 ============ -->
+<section class="section" id="projects">
+ <div class="section-label">03 / Projects Center</div>
+ <h1>项目中心</h1>
+ <p class="lead">项目中心是运营管控的起点，管理漫剧项目从立项到归档的全生命周期。核心功能：项目列表（卡片/表格双视图）、项目创建/编辑、进度跟踪、团队管理、快速跳转生产链路。</p>
+
+ <h2>3.1 项目列表 — 卡片视图（默认）</h2>
+ <div class="annotation">
+ <strong>设计要点：</strong>
+ <ul>
+ <li>工具栏：搜索 + 状态筛选 + 类型筛选 + 视图切换（卡片/表格）新建项目</li>
+ <li>卡片展示：项目名、类型徽章、状态徽章、进度条、团队头像组、截止日期</li>
+ <li>卡片 hover 显示快捷操作：编辑、删除、进入工作台</li>
+ <li>底部分页栏：总数 + 每页条数选择 + 页码导航，默认 10/页</li>
+ </ul>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">项目中心 — 卡片视图 <span class="tag">/projects</span></div>
+ <div class="frame-body">
+ <div class="mockup">
+ <div class="mockup-sidebar">
+ <div class="sb-logo">
+ <div class="logo-text">AI漫剧<br>生产平台</div>
+ </div>
+ <div class="sb-nav">
+ <div class="sb-item">驾驶舱</div>
+ <div class="sb-item">我的待办</div>
+ <div class="sb-item">智能助手</div>
+ <div class="sb-group">
+ <div class="sb-group-title">生产创作</div>
+ <div class="sb-item">AI任务队列</div>
+ <div class="sb-item">剧本中心</div>
+ <div class="sb-item">角色工厂</div>
+ </div>
+ <div class="sb-group">
+ <div class="sb-group-title">资产与数据</div>
+ <div class="sb-item">资产中心</div>
+ <div class="sb-item">数据中心</div>
+ </div>
+ <div class="sb-group">
+ <div class="sb-group-title">运营与管控</div>
+ <div class="sb-item active">项目中心</div>
+ <div class="sb-item">审核中心</div>
+ <div class="sb-item">质检中心</div>
+ <div class="sb-item">发布准备</div>
+ </div>
+ </div>
+ </div>
+
+ <div class="mockup-main">
+ <div class="mockup-topbar">
+ <div class="tb-left">
+ <div class="tb-breadcrumb">运营与管控 / <span>项目中心</span></div>
+ </div>
+ <div class="tb-right">
+ <button class="tb-btn">刷新</button>
+ <button class="tb-btn primary">新建项目</button>
+ </div>
+ </div>
+
+ <div class="mockup-content">
+ <!-- 工具栏 -->
+ <div class="toolbar">
+ <div class="tb-search">搜索项目名称...</div>
+ <div class="tb-filter active">全部</div>
+ <div class="tb-filter">进行中</div>
+ <div class="tb-filter">已完成</div>
+ <div class="tb-filter">已归档</div>
+ <div class="tb-filter">类型 ▾</div>
+ <div class="tb-spacer"></div>
+ <div class="tb-filter active">卡片</div>
+ <div class="tb-filter">表格</div>
+ </div>
+
+ <!-- 项目卡片 -->
+ <div class="card-grid">
+ <div class="project-card">
+ <div class="pc-header">
+ <div>
+ <div class="pc-title">灵契界 第一季</div>
+ <div class="pc-meta">古风武侠剧 · 20集</div>
+ </div>
+ <span class="badge badge-success">进行中</span>
+ </div>
+ <div class="pc-progress">
+ <div class="pc-progress-label"><span>生产进度</span><span>75%</span></div>
+ <div class="progress"><div class="progress-fill green" style="width:75%"></div></div>
+ </div>
+ <div style="font-size: 10px; color: var(--text-muted); display: flex; gap: 10px;">
+ <span>15/20集</span>
+ <span>6人</span>
+ <span>08-15</span>
+ </div>
+ <div class="pc-footer">
+ <div class="pc-team">
+ <div class="pc-avatar">张</div>
+ <div class="pc-avatar">王</div>
+ <div class="pc-avatar">李</div>
+ <div class="pc-avatar">+3</div>
+ </div>
+ <button class="btn btn-sm">进入</button>
+ </div>
+ </div>
+
+ <div class="project-card">
+ <div class="pc-header">
+ <div>
+ <div class="pc-title">星际拓荒者</div>
+ <div class="pc-meta">科幻冒险漫剧 · 12集</div>
+ </div>
+ <span class="badge badge-warning">待完善</span>
+ </div>
+ <div class="pc-progress">
+ <div class="pc-progress-label"><span>生产进度</span><span>40%</span></div>
+ <div class="progress"><div class="progress-fill amber" style="width:40%"></div></div>
+ </div>
+ <div style="font-size: 10px; color: var(--text-muted); display: flex; gap: 10px;">
+ <span>5/12集</span>
+ <span>4人</span>
+ <span>09-30</span>
+ </div>
+ <div class="pc-footer">
+ <div class="pc-team">
+ <div class="pc-avatar">赵</div>
+ <div class="pc-avatar">钱</div>
+ </div>
+ <button class="btn btn-sm">进入</button>
+ </div>
+ </div>
+
+ <div class="project-card">
+ <div class="pc-header">
+ <div>
+ <div class="pc-title">都市星途</div>
+ <div class="pc-meta">现代都市爱情剧 · 16集</div>
+ </div>
+ <span class="badge badge-danger">延期</span>
+ </div>
+ <div class="pc-progress">
+ <div class="pc-progress-label"><span>生产进度</span><span>60%</span></div>
+ <div class="progress"><div class="progress-fill red" style="width:60%"></div></div>
+ </div>
+ <div style="font-size: 10px; color: var(--text-muted); display: flex; gap: 10px;">
+ <span>10/16集</span>
+ <span>5人</span>
+ <span style="color: var(--danger);">已逾期</span>
+ </div>
+ <div class="pc-footer">
+ <div class="pc-team">
+ <div class="pc-avatar">孙</div>
+ <div class="pc-avatar">周</div>
+ <div class="pc-avatar">吴</div>
+ </div>
+ <button class="btn btn-sm">进入</button>
+ </div>
+ </div>
+
+ <div class="project-card">
+ <div class="pc-header">
+ <div>
+ <div class="pc-title">校园奇遇记</div>
+ <div class="pc-meta">青春校园剧 · 10集</div>
+ </div>
+ <span class="badge badge-purple">已完成</span>
+ </div>
+ <div class="pc-progress">
+ <div class="pc-progress-label"><span>生产进度</span><span>100%</span></div>
+ <div class="progress"><div class="progress-fill green" style="width:100%"></div></div>
+ </div>
+ <div style="font-size: 10px; color: var(--text-muted); display: flex; gap: 10px;">
+ <span>10/10集</span>
+ <span>3人</span>
+ <span>07-10</span>
+ </div>
+ <div class="pc-footer">
+ <div class="pc-team">
+ <div class="pc-avatar">郑</div>
+ <div class="pc-avatar">冯</div>
+ </div>
+ <button class="btn btn-sm">查看</button>
+ </div>
+ </div>
+
+ <div class="project-card">
+ <div class="pc-header">
+ <div>
+ <div class="pc-title">诡案追踪</div>
+ <div class="pc-meta">悬疑推理剧 · 8集</div>
+ </div>
+ <span class="badge badge-success">进行中</span>
+ </div>
+ <div class="pc-progress">
+ <div class="pc-progress-label"><span>生产进度</span><span>25%</span></div>
+ <div class="progress"><div class="progress-fill blue" style="width:25%"></div></div>
+ </div>
+ <div style="font-size: 10px; color: var(--text-muted); display: flex; gap: 10px;">
+ <span>2/8集</span>
+ <span>4人</span>
+ <span>10-20</span>
+ </div>
+ <div class="pc-footer">
+ <div class="pc-team">
+ <div class="pc-avatar">陈</div>
+ <div class="pc-avatar">褚</div>
+ <div class="pc-avatar">卫</div>
+ </div>
+ <button class="btn btn-sm">进入</button>
+ </div>
+ </div>
+
+ <div class="project-card" style="border-style: dashed; display: flex; align-items: center; justify-content: center; min-height: 160px;">
+                <div style="text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-secondary);">新建项目</div>
+ </div>
+ </div>
+ </div>
+
+ <!-- 分页 -->
+ <div class="pagination">
+ <div class="pagination-info">
+ <span>共 12 个项目</span>
+ <select class="page-size-select"><option>10 / 页</option><option>20 / 页</option><option>50 / 页</option></select>
+ </div>
+ <div class="pagination-controls">
+ <button class="pg-btn" disabled>‹</button>
+ <button class="pg-btn active">1</button>
+ <button class="pg-btn">2</button>
+ <button class="pg-btn">›</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <h2>3.2 项目列表 — 表格视图</h2>
+ <div class="annotation">
+ <strong>设计要点：</strong>表格视图用于快速扫描大量项目，列包括项目名、类型、状态、进度、集数、团队、截止日期、操作。支持列排序和行 hover 快捷操作。底部分页栏与卡片视图一致。
+ </div>
+ <div class="frame">
+ <div class="frame-label">项目中心 — 表格视图 <span class="tag">/projects?view=table</span></div>
+ <div class="frame-body">
+ <div class="mockup" style="min-height: 360px;">
+ <div class="mockup-main">
+ <div class="mockup-content">
+ <div class="toolbar">
+ <div class="tb-search">搜索...</div>
+ <div class="tb-filter active">全部</div>
+ <div class="tb-filter">进行中</div>
+ <div class="tb-spacer"></div>
+ <div class="tb-filter">表格</div>
+ <div class="tb-filter">卡片</div>
+ </div>
+ <div class="table-wrap">
+ <table>
+ <thead>
+ <tr>
+ <th>项目名称</th>
+ <th>类型</th>
+ <th>状态</th>
+ <th style="width: 140px;">进度</th>
+ <th>集数</th>
+ <th>团队</th>
+ <th>截止</th>
+ <th style="width: 120px;">操作</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr>
+ <td class="td-name">灵契界 第一季</td>
+ <td>古风武侠剧</td>
+ <td><span class="badge badge-success">进行中</span></td>
+ <td><div class="progress" style="width:100%"><div class="progress-fill green" style="width:75%"></div></div><span style="font-size:10px;color:var(--text-muted);">75%</span></td>
+ <td>15/20</td>
+ <td>6人</td>
+ <td>08-15</td>
+ <td><button class="btn btn-sm">编辑</button> <button class="btn btn-sm">工作台</button></td>
+ </tr>
+ <tr>
+ <td class="td-name">星际拓荒者</td>
+ <td>科幻冒险漫剧</td>
+ <td><span class="badge badge-warning">待完善</span></td>
+ <td><div class="progress" style="width:100%"><div class="progress-fill amber" style="width:40%"></div></div><span style="font-size:10px;color:var(--text-muted);">40%</span></td>
+ <td>5/12</td>
+ <td>4人</td>
+ <td>09-30</td>
+ <td><button class="btn btn-sm">编辑</button> <button class="btn btn-sm">工作台</button></td>
+ </tr>
+ <tr>
+ <td class="td-name">都市星途</td>
+ <td>现代都市爱情剧</td>
+ <td><span class="badge badge-danger">延期</span></td>
+ <td><div class="progress" style="width:100%"><div class="progress-fill red" style="width:60%"></div></div><span style="font-size:10px;color:var(--text-muted);">60%</span></td>
+ <td>10/16</td>
+ <td>5人</td>
+ <td style="color:var(--danger);">已逾期</td>
+ <td><button class="btn btn-sm">编辑</button> <button class="btn btn-sm">工作台</button></td>
+ </tr>
+ <tr>
+ <td class="td-name">校园奇遇记</td>
+ <td>青春校园剧</td>
+ <td><span class="badge badge-purple">已完成</span></td>
+ <td><div class="progress" style="width:100%"><div class="progress-fill green" style="width:100%"></div></div><span style="font-size:10px;color:var(--text-muted);">100%</span></td>
+ <td>10/10</td>
+ <td>3人</td>
+ <td>07-10</td>
+ <td><button class="btn btn-sm">查看</button></td>
+ </tr>
+ </tbody>
+ </table>
+ </div>
+ <div class="pagination">
+ <div class="pagination-info">
+ <span>共 12 个项目，显示 1-4</span>
+ <select class="page-size-select"><option>10 / 页</option><option>20 / 页</option><option>50 / 页</option></select>
+ </div>
+ <div class="pagination-controls">
+ <button class="pg-btn" disabled>‹</button>
+ <button class="pg-btn active">1</button>
+ <button class="pg-btn">2</button>
+ <button class="pg-btn">3</button>
+ <button class="pg-btn">›</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <h2>3.3 新建/编辑项目 — 对话框</h2>
+ <div class="annotation">
+ <strong>设计要点：</strong>采用左标签表单布局（符合 DESIGN.md 管理表单规范）。必填项红色星号标注，类型和状态用下拉选择，描述用 textarea。保存后自动刷新列表。
+ </div>
+ <div class="frame">
+ <div class="frame-label">新建项目对话框 <span class="tag">Modal</span></div>
+ <div class="frame-body">
+ <div class="dialog-overlay">
+ <div class="dialog">
+ <div class="dialog-header">
+ <div class="dialog-title">新建项目</div>
+ <div class="dialog-desc">创建一个新的漫剧生产项目，填写基础信息后可在工作台中继续完善。</div>
+ </div>
+ <div class="dialog-body">
+ <div class="form-row">
+ <div class="form-label">项目名称 <span class="req">*</span></div>
+ <div class="form-control">
+ <input class="form-input" placeholder="请输入项目名称" value="灵契界 第二季">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">项目类型 <span class="req">*</span></div>
+ <div class="form-control">
+ <select class="form-input form-select">
+ <option>古风武侠剧</option>
+ <option>科幻冒险漫剧</option>
+ </select>
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">项目状态</div>
+ <div class="form-control">
+ <select class="form-input form-select">
+ <option>进行中</option>
+ <option>已完成</option>
+ <option>已归档</option>
+ </select>
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">负责人 <span class="req">*</span></div>
+ <div class="form-control">
+ <input class="form-input" placeholder="请输入负责人姓名" value="张制片">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">目标集数</div>
+ <div class="form-control">
+ <input class="form-input" type="number" value="20" min="0">
+ <div class="form-hint">预计制作的总集数，后续可调整</div>
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">截止日期</div>
+ <div class="form-control">
+ <input class="form-input" type="date" value="2026-12-31">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">项目描述</div>
+ <div class="form-control">
+ <textarea class="form-input" rows="3" placeholder="请输入项目简介">承接第一季剧情，林逸踏上修真之路...</textarea>
+ </div>
+ </div>
+ </div>
+ <div class="dialog-footer">
+ <button class="btn">取消</button>
+ <button class="btn btn-primary">创建项目</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+</section>
+
+
+<!-- ============ 审核中心 ============ -->
+<section class="section" id="review">
+ <div class="section-label">04 / Review Center</div>
+ <h1>审核中心</h1>
+ <p class="lead">审核中心管理所有内容的审核流程：剧本、图片、视频、音频。核心功能：审核队列（按状态分 Tab）、单条审核（通过/驳回+备注）、批量审核、审核记录追溯。</p>
+
+ <h2>4.1 审核队列主页面</h2>
+ <div class="annotation">
+ <strong>设计要点：</strong>
+ <ul>
+ <li>Tab 分组：待审核（默认）、已通过、已驳回、全部记录</li>
+ <li>每个 Tab 显示对应数量徽章</li>
+ <li>审核项采用行卡片布局：缩略图 + 标题/来源/提交人 + 类型徽章 + 快捷操作</li>
+ <li>支持多选批量操作</li>
+ <li>底部分页栏：跟随 Tab 切换重新计数，默认 10/页</li>
+ </ul>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">审核中心 — 待审核队列 <span class="tag">/review</span></div>
+ <div class="frame-body">
+ <div class="mockup">
+ <div class="mockup-sidebar">
+ <div class="sb-logo">
+ <div class="logo-text">AI漫剧<br>生产平台</div>
+ </div>
+ <div class="sb-nav">
+ <div class="sb-item">驾驶舱</div>
+ <div class="sb-item">我的待办</div>
+ <div class="sb-group">
+ <div class="sb-group-title">运营与管控</div>
+ <div class="sb-item">项目中心</div>
+ <div class="sb-item active">审核中心</div>
+ <div class="sb-item">质检中心</div>
+ <div class="sb-item">发布准备</div>
+ </div>
+ </div>
+ </div>
+
+ <div class="mockup-main">
+ <div class="mockup-topbar">
+ <div class="tb-left">
+ <div class="tb-breadcrumb">运营与管控 / <span>审核中心</span></div>
+ </div>
+ <div class="tb-right">
+ <button class="tb-btn">刷新</button>
+ </div>
+ </div>
+
+ <div class="mockup-content">
+ <!-- Tab -->
+ <div class="tabs">
+ <div class="tab active">待审核 <span class="count">7</span></div>
+ <div class="tab">已通过 <span class="count">45</span></div>
+ <div class="tab">已驳回 <span class="count">8</span></div>
+ <div class="tab">全部记录</div>
+ </div>
+
+ <!-- 工具栏 -->
+ <div class="toolbar">
+ <input type="checkbox" style="accent-color: var(--accent);">
+ <span style="font-size: 11px; color: var(--text-secondary);">全选</span>
+ <div class="tb-filter active">全部类型</div>
+ <div class="tb-filter">图片</div>
+ <div class="tb-filter">视频</div>
+ <div class="tb-filter">剧本</div>
+ <div class="tb-filter">音频</div>
+ <div class="tb-spacer"></div>
+ <button class="btn btn-primary btn-sm">批量通过 (3)</button>
+ <button class="btn btn-danger btn-sm">批量驳回</button>
+ </div>
+
+ <!-- 审核列表 -->
+ <div>
+ <div class="review-item">
+ <input type="checkbox" checked style="accent-color: var(--accent); margin-right: 4px;">
+ <div class="review-thumb" style="background: linear-gradient(135deg, #1a2a3a, #2a3a4a);"></div>
+ <div class="review-info">
+ <div class="review-title">镜头 #042 — 林逸走出茶馆</div>
+ <div class="review-meta">
+ <span>来源：灵契界 第1集</span>
+ <span>提交人：王美术</span>
+ <span>2小时前</span>
+ </div>
+ </div>
+ <span class="badge badge-info">图片</span>
+ <div class="review-actions">
+ <button class="btn btn-sm">详情</button>
+ <button class="btn btn-primary btn-sm">通过</button>
+ <button class="btn btn-danger btn-sm">驳回</button>
+ </div>
+ </div>
+
+ <div class="review-item">
+ <input type="checkbox" checked style="accent-color: var(--accent); margin-right: 4px;">
+ <div class="review-thumb" style="background: linear-gradient(135deg, #2a1a1a, #3a2a2a);"></div>
+ <div class="review-info">
+ <div class="review-title">视频片段 — 萧晓转身离开</div>
+ <div class="review-meta">
+ <span>来源：灵契界 第1集 镜头#043</span>
+ <span>提交人：李导演</span>
+ <span>5秒 · 3小时前</span>
+ </div>
+ </div>
+ <span class="badge badge-purple">视频</span>
+ <div class="review-actions">
+ <button class="btn btn-sm">详情</button>
+ <button class="btn btn-primary btn-sm">通过</button>
+ <button class="btn btn-danger btn-sm">驳回</button>
+ </div>
+ </div>
+
+ <div class="review-item">
+ <input type="checkbox" style="accent-color: var(--accent); margin-right: 4px;">
+ <div class="review-thumb" style="background: linear-gradient(135deg, #1a2a1a, #2a3a2a);"></div>
+ <div class="review-info">
+ <div class="review-title">剧本 — 第3集 退婚风波</div>
+ <div class="review-meta">
+ <span>来源：灵契界</span>
+ <span>提交人：张编剧</span>
+ <span>4小时前</span>
+ </div>
+ </div>
+ <span class="badge badge-warning">剧本</span>
+ <div class="review-actions">
+ <button class="btn btn-sm">详情</button>
+ <button class="btn btn-primary btn-sm">通过</button>
+ <button class="btn btn-danger btn-sm">驳回</button>
+ </div>
+ </div>
+
+ <div class="review-item">
+ <input type="checkbox" checked style="accent-color: var(--accent); margin-right: 4px;">
+ <div class="review-thumb" style="background: linear-gradient(135deg, #2a2a1a, #3a3a2a);"></div>
+ <div class="review-info">
+ <div class="review-title">配音 — 林逸台词 "今日之后"</div>
+ <div class="review-meta">
+ <span>来源：灵契界 第1集</span>
+ <span>提交人：赵配音</span>
+ <span>6小时前</span>
+ </div>
+ </div>
+ <span class="badge badge-muted">音频</span>
+ <div class="review-actions">
+ <button class="btn btn-sm">详情</button>
+ <button class="btn btn-primary btn-sm">通过</button>
+ <button class="btn btn-danger btn-sm">驳回</button>
+ </div>
+ </div>
+
+ <!-- 分页 -->
+ <div class="pagination">
+ <div class="pagination-info">
+ <span>共 7 条待审核，显示 1-4</span>
+ <select class="page-size-select"><option>10 / 页</option><option>20 / 页</option><option>50 / 页</option></select>
+ </div>
+ <div class="pagination-controls">
+ <button class="pg-btn" disabled>‹</button>
+ <button class="pg-btn active">1</button>
+ <button class="pg-btn">2</button>
+ <button class="pg-btn">›</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <h2>4.2 驳回操作 — 备注弹窗</h2>
+ <div class="annotation">
+ <strong>设计要点：</strong>驳回必须填写原因（预设选项+自定义），原因关联到提交人的待办，形成返工闭环。预设原因覆盖常见问题，降低操作成本。
+ </div>
+ <div class="frame">
+ <div class="frame-label">驳回对话框 — 原因留痕 <span class="tag">Reject Modal</span></div>
+ <div class="frame-body">
+ <div class="dialog-overlay" style="min-height: 320px;">
+ <div class="dialog" style="max-width: 480px;">
+ <div class="dialog-header">
+ <div class="dialog-title" style="color: var(--danger);">驳回审核</div>
+ <div class="review-title" style="font-size: 13px; margin-top: 4px;">镜头 #042 — 林逸走出茶馆</div>
+ </div>
+ <div class="dialog-body">
+ <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">请选择驳回原因（可多选）：</div>
+ <div style="display: flex; flex-direction: column; gap: 8px;">
+ <label class="form-chip checked" style="justify-content: flex-start; padding: 8px 12px;"> 角色面部不一致</label>
+ <label class="form-chip" style="justify-content: flex-start; padding: 8px 12px;"> 场景风格不统一</label>
+ <label class="form-chip" style="justify-content: flex-start; padding: 8px 12px;"> 画面构图问题</label>
+ <label class="form-chip" style="justify-content: flex-start; padding: 8px 12px;"> Prompt 需优化</label>
+ <label class="form-chip" style="justify-content: flex-start; padding: 8px 12px;"> 其他</label>
+ </div>
+ <div style="margin-top: 12px;">
+ <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">补充说明：</div>
+ <textarea class="form-input" rows="2" placeholder="请输入具体修改建议...">林逸面部与角色设定图差异较大，需重新生成保持一致性。</textarea>
+ </div>
+ </div>
+ <div class="dialog-footer">
+ <button class="btn">取消</button>
+ <button class="btn btn-danger">确认驳回</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+</section>
+
+
+<!-- ============ 质检中心 ============ -->
+<section class="section" id="quality">
+ <div class="section-label">05 / Quality Center</div>
+ <h1>质检中心</h1>
+ <p class="lead">质检中心管理 AI 生成内容的自动质量检测：配置自动质检规则、查看质检报告、手动触发检测。核心功能：自动配置面板、质检汇总仪表盘、报告列表（可展开详情）、手动触发检测。</p>
+
+ <h2>5.1 质检中心主页面</h2>
+ <div class="annotation">
+ <strong>设计要点：</strong>
+ <ul>
+ <li>第一区块：自动质检配置（启用开关、目标类型多选、阈值、失败处理策略）</li>
+ <li>第二区块：质检汇总仪表盘（总报告、通过/失败/平均分 + 分数环可视化）</li>
+ <li>第三区块：手动触发检测（输入目标ID+类型，一键执行）</li>
+ <li>第四区块：报告列表（可展开查看每条规则得分）</li>
+ <li>底部分页栏：报告列表分页，默认 10/页</li>
+ </ul>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">质检中心 <span class="tag">/quality</span></div>
+ <div class="frame-body">
+ <div class="mockup">
+ <div class="mockup-sidebar">
+ <div class="sb-logo">
+ <div class="logo-text">AI漫剧<br>生产平台</div>
+ </div>
+ <div class="sb-nav">
+ <div class="sb-item">驾驶舱</div>
+ <div class="sb-group">
+ <div class="sb-group-title">运营与管控</div>
+ <div class="sb-item">项目中心</div>
+ <div class="sb-item">审核中心</div>
+ <div class="sb-item active">质检中心</div>
+ <div class="sb-item">发布准备</div>
+ </div>
+ </div>
+ </div>
+
+ <div class="mockup-main">
+ <div class="mockup-topbar">
+ <div class="tb-left">
+ <div class="tb-breadcrumb">运营与管控 / <span>质检中心</span></div>
+ </div>
+ <div class="tb-right">
+ <span style="font-size: 11px; color: var(--text-muted);">项目：灵契界 第一季</span>
+ <button class="tb-btn">刷新</button>
+ </div>
+ </div>
+
+ <div class="mockup-content">
+ <!-- 自动配置 -->
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 16px;">
+ <div style="padding: 12px 16px; border-bottom: var(--border-subtle); display: flex; align-items: center; justify-content: space-between;">
+ <div style="font-size: 13px; font-weight: 600;">自动质检配置</div>
+ <span style="font-size: 10px; color: var(--text-muted);">更新于 2026-07-24 14:20</span>
+ </div>
+ <div style="padding: 16px;">
+ <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;">
+ <label style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+ <input type="checkbox" checked style="accent-color: var(--accent);"> 启用自动质检
+ </label>
+ <div style="display: flex; align-items: center; gap: 8px;">
+ <span style="font-size: 11px; color: var(--text-muted);">目标类型：</span>
+ <span class="form-chip checked"> 图片</span>
+ <span class="form-chip checked"> 视频</span>
+ <span class="form-chip"> 音频</span>
+ <span class="form-chip"> 合成</span>
+ </div>
+ </div>
+ <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+ <div style="display: flex; align-items: center; gap: 6px;">
+ <span style="font-size: 11px; color: var(--text-muted);">阈值：</span>
+ <input class="form-input" type="number" value="70" min="0" max="100" style="width: 60px; text-align: center;">
+ </div>
+ <div style="display: flex; align-items: center; gap: 6px;">
+ <span style="font-size: 11px; color: var(--text-muted);">失败处理：</span>
+ <select class="form-input form-select" style="width: auto; padding: 4px 28px 4px 10px;">
+ <option>log (记录)</option>
+ <option selected>review (转审核)</option>
+ <option>block (阻断)</option>
+ </select>
+ </div>
+ <div style="flex:1"></div>
+ <button class="btn btn-primary btn-sm"> 保存配置</button>
+ <button class="btn btn-danger btn-sm"> 删除</button>
+ </div>
+ </div>
+ </div>
+
+ <!-- 质检汇总 -->
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 16px;">
+ <div style="padding: 12px 16px; border-bottom: var(--border-subtle);">
+ <div style="font-size: 13px; font-weight: 600;">质检汇总</div>
+ </div>
+ <div style="padding: 16px; display: flex; gap: 24px; align-items: center; flex-wrap: wrap;">
+ <!-- 分数环 -->
+ <div style="display: flex; align-items: center; gap: 12px;">
+ <div class="score-ring">
+ <svg width="80" height="80">
+ <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+ <circle cx="40" cy="40" r="34" fill="none" stroke="var(--accent)" stroke-width="6" stroke-dasharray="213.6" stroke-dashoffset="42.7" stroke-linecap="round"/>
+ </svg>
+ <div class="score-value" style="color: var(--accent);">80</div>
+ </div>
+ <div>
+ <div style="font-size: 11px; color: var(--text-muted);">平均分</div>
+ <div style="font-size: 10px; color: var(--text-secondary);">满分100</div>
+ </div>
+ </div>
+ <!-- 按类型 -->
+ <div style="border-left: var(--border-subtle); padding-left: 20px;">
+ <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">按目标类型</div>
+ <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+ <span class="badge badge-info">图片 15</span>
+ <span class="badge badge-purple">视频 7</span>
+ <span class="badge badge-muted">音频 2</span>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- 手动触发 -->
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 16px;">
+ <div style="padding: 12px 16px; border-bottom: var(--border-subtle);">
+ <div style="font-size: 13px; font-weight: 600;">手动触发检测</div>
+ </div>
+ <div style="padding: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+ <input class="form-input" style="width: 200px;" placeholder="targetId (img-xxx / vid-xxx)" value="img-042">
+ <select class="form-input form-select" style="width: auto; padding: 7px 28px 7px 10px;">
+ <option>image</option>
+ <option>video</option>
+ </select>
+ <button class="btn btn-primary btn-sm">执行检测</button>
+ </div>
+ </div>
+
+ <!-- 报告列表 -->
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden;">
+ <div style="padding: 12px 16px; border-bottom: var(--border-subtle); display: flex; align-items: center; justify-content: space-between;">
+ <div style="font-size: 13px; font-weight: 600;">报告列表</div>
+ <span style="font-size: 11px; color: var(--text-muted);">共 24 条</span>
+ </div>
+ <table>
+ <thead>
+ <tr>
+ <th>报告ID</th>
+ <th>目标</th>
+ <th>类型</th>
+ <th>分数</th>
+ <th>状态</th>
+ <th>时间</th>
+ <th style="text-align:right;">操作</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr>
+ <td class="td-mono">qr-001</td>
+ <td class="td-mono">img-042</td>
+ <td><span class="badge badge-info">image</span></td>
+ <td><span class="badge badge-success">85</span></td>
+ <td><span class="badge badge-success">passed</span></td>
+ <td class="td-mono">07-24 14:30</td>
+ <td style="text-align:right;"><button class="btn btn-sm">详情</button></td>
+ </tr>
+ <tr style="background: rgba(255,255,255,0.02);">
+ <td colspan="7" style="padding: 12px 16px; background: rgba(0,0,0,0.15);">
+ <div style="display: flex; gap: 20px; margin-bottom: 8px; font-size: 11px;">
+ <span>技术分: <strong style="color:var(--accent);">88</strong></span>
+ <span>美学分: <strong style="var(--text-primary);">82</strong></span>
+ <span>一致性: <strong style="var(--text-primary);">85</strong></span>
+ </div>
+ <table>
+ <thead>
+ <tr><th>规则</th><th>状态</th><th>分数</th><th>说明</th></tr>
+ </thead>
+ <tbody>
+ <tr><td>分辨率检查</td><td><span class="badge badge-success">passed</span></td><td>95</td><td>分辨率符合要求</td></tr>
+ <tr><td>面部一致性</td><td><span class="badge badge-success">passed</span></td><td>80</td><td>角色面部与设定图一致性达标</td></tr>
+ <tr><td>色彩风格</td><td><span class="badge badge-warning">warning</span></td><td>75</td><td>色调偏暖，建议调整</td></tr>
+ </tbody>
+ </table>
+ </td>
+ </tr>
+ <tr>
+ <td class="td-mono">qr-002</td>
+ <td class="td-mono">vid-008</td>
+ <td><span class="badge badge-purple">video</span></td>
+ <td><span class="badge badge-danger">55</span></td>
+ <td><span class="badge badge-danger">failed</span></td>
+ <td class="td-mono">07-24 13:10</td>
+ <td style="text-align:right;"><button class="btn btn-sm">详情</button></td>
+ </tr>
+ <tr>
+ <td class="td-mono">qr-003</td>
+ <td class="td-mono">img-039</td>
+ <td><span class="badge badge-info">image</span></td>
+ <td><span class="badge badge-warning">68</span></td>
+ <td><span class="badge badge-warning">warning</span></td>
+ <td class="td-mono">07-24 12:00</td>
+ <td style="text-align:right;"><button class="btn btn-sm">收起</button></td>
+ </tr>
+ </tbody>
+ </table>
+ </div>
+
+ <!-- 分页 -->
+ <div class="pagination">
+ <div class="pagination-info">
+ <span>共 24 条报告，显示 1-3</span>
+ <select class="page-size-select"><option>10 / 页</option><option>20 / 页</option><option>50 / 页</option></select>
+ </div>
+ <div class="pagination-controls">
+ <button class="pg-btn" disabled>‹</button>
+ <button class="pg-btn active">1</button>
+ <button class="pg-btn">2</button>
+ <button class="pg-btn">3</button>
+ <span class="pg-ellipsis">···</span>
+ <button class="pg-btn">8</button>
+ <button class="pg-btn">›</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+</section>
+
+
+<!-- ============ 发布准备 ============ -->
+<section class="section" id="publish">
+ <div class="section-label">06 / Publish Center</div>
+ <h1>发布准备</h1>
+ <p class="lead">发布准备中心管理成片交付到发布的最后环节：成片管理、发布计划、平台物料、一键打包。核心功能：成片列表与预览、发布计划 CRUD、发布时间线、打包 manifest 生成。</p>
+
+ <h2>6.1 发布准备主页面</h2>
+ <div class="annotation">
+ <strong>设计要点：</strong>
+ <ul>
+ <li>左右分栏：左侧成片列表（卡片，含预览缩略图+状态+快捷操作），右侧发布计划时间线</li>
+ <li>成片卡片：缩略图、名称、时长、发布状态徽章、操作（预览/下载/打包/加入计划）</li>
+ <li>发布计划：时间线视图，按日期排列，显示计划名、视频数、平台、状态</li>
+ <li>底部分页栏：成片列表分页，默认 10/页</li>
+ </ul>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">发布准备中心 <span class="tag">/publish</span></div>
+ <div class="frame-body">
+ <div class="mockup">
+ <div class="mockup-sidebar">
+ <div class="sb-logo">
+ <div class="logo-text">AI漫剧<br>生产平台</div>
+ </div>
+ <div class="sb-nav">
+ <div class="sb-item">驾驶舱</div>
+ <div class="sb-group">
+ <div class="sb-group-title">运营与管控</div>
+ <div class="sb-item">项目中心</div>
+ <div class="sb-item">审核中心</div>
+ <div class="sb-item">质检中心</div>
+ <div class="sb-item active">发布准备</div>
+ </div>
+ </div>
+ </div>
+
+ <div class="mockup-main">
+ <div class="mockup-topbar">
+ <div class="tb-left">
+ <div class="tb-breadcrumb">运营与管控 / <span>发布准备</span></div>
+ </div>
+ <div class="tb-right">
+ <button class="tb-btn">刷新</button>
+ <button class="tb-btn primary">+ 新建发布计划</button>
+ </div>
+ </div>
+
+ <div class="mockup-content">
+ <!-- 双栏布局 -->
+ <div style="display: grid; grid-template-columns: 1fr 340px; gap: 16px;">
+ <!-- 左侧：成片列表 -->
+ <div>
+ <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+ <div style="font-size: 14px; font-weight: 600;">成片列表</div>
+ <div style="display: flex; gap: 6px;">
+ <div class="tb-filter active">全部</div>
+ <div class="tb-filter">待发布</div>
+ <div class="tb-filter">已发布</div>
+ </div>
+ </div>
+
+ <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+ <!-- 成片卡 1 -->
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden;">
+ <div style="height: 80px; background: linear-gradient(135deg, #1a2a3a, #2a3a5a); display: flex; align-items: center; justify-content: center; position: relative;">
+ <span style="font-size: 28px;"></span>
+ <span style="position: absolute; bottom: 6px; right: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 10px;">5:30</span>
+ <span style="position: absolute; top: 6px; left: 8px;" class="badge badge-success">已发布</span>
+ </div>
+ <div style="padding: 10px 12px;">
+ <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">灵契界 第1集 退婚</div>
+ <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px;">抖音 · 07-20发布</div>
+ <div style="display: flex; gap: 4px;">
+ <button class="btn btn-sm">预览</button>
+ <button class="btn btn-sm">下载</button>
+ <button class="btn btn-sm">打包</button>
+ </div>
+ </div>
+ </div>
+
+ <!-- 成片卡 2 -->
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden;">
+ <div style="height: 80px; background: linear-gradient(135deg, #2a1a1a, #3a2a3a); display: flex; align-items: center; justify-content: center; position: relative;">
+ <span style="font-size: 28px;"></span>
+ <span style="position: absolute; bottom: 6px; right: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 10px;">4:15</span>
+ <span style="position: absolute; top: 6px; left: 8px;" class="badge badge-warning">待发布</span>
+ </div>
+ <div style="padding: 10px 12px;">
+ <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">灵契界 第2集 初遇</div>
+ <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px;">排期 07-28 · B站</div>
+ <div style="display: flex; gap: 4px;">
+ <button class="btn btn-sm">预览</button>
+ <button class="btn btn-sm">下载</button>
+ <button class="btn btn-sm">打包</button>
+ </div>
+ </div>
+ </div>
+
+ <!-- 成片卡 3 -->
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden;">
+ <div style="height: 80px; background: linear-gradient(135deg, #1a2a1a, #2a3a2a); display: flex; align-items: center; justify-content: center; position: relative;">
+ <span style="font-size: 28px;"></span>
+ <span style="position: absolute; bottom: 6px; right: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 10px;">6:00</span>
+ <span style="position: absolute; top: 6px; left: 8px;" class="badge badge-warning">待发布</span>
+ </div>
+ <div style="padding: 10px 12px;">
+ <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">灵契界 第3集 风波</div>
+ <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px;">排期 08-01 · 小红书</div>
+ <div style="display: flex; gap: 4px;">
+ <button class="btn btn-sm">预览</button>
+ <button class="btn btn-sm">下载</button>
+ <button class="btn btn-sm">打包</button>
+ </div>
+ </div>
+ </div>
+
+ <!-- 成片卡 4 -->
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden;">
+ <div style="height: 80px; background: linear-gradient(135deg, #2a2a1a, #3a3a1a); display: flex; align-items: center; justify-content: center; position: relative;">
+ <span style="font-size: 28px;"></span>
+ <span style="position: absolute; bottom: 6px; right: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 10px;">5:45</span>
+ <span style="position: absolute; top: 6px; left: 8px;" class="badge badge-muted">未排期</span>
+ </div>
+ <div style="padding: 10px 12px;">
+ <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">灵契界 第4集 修炼</div>
+ <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px;">等待排期</div>
+ <div style="display: flex; gap: 4px;">
+ <button class="btn btn-sm">预览</button>
+ <button class="btn btn-sm">下载</button>
+ <button class="btn btn-sm">打包</button>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- 分页 -->
+ <div class="pagination">
+ <div class="pagination-info">
+ <span>共 18 个成片，显示 1-4</span>
+ <select class="page-size-select"><option>10 / 页</option><option>20 / 页</option><option>50 / 页</option></select>
+ </div>
+ <div class="pagination-controls">
+ <button class="pg-btn" disabled>‹</button>
+ <button class="pg-btn active">1</button>
+ <button class="pg-btn">2</button>
+ <button class="pg-btn">3</button>
+ <span class="pg-ellipsis">···</span>
+ <button class="pg-btn">5</button>
+ <button class="pg-btn">›</button>
+ </div>
+ </div>
+ </div>
+
+ <!-- 右侧：发布计划时间线 -->
+ <div>
+ <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+ <div style="font-size: 14px; font-weight: 600;">发布计划</div>
+ <button class="btn btn-sm btn-primary">+ 新计划</button>
+ </div>
+
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
+ <div class="timeline">
+ <div class="timeline-item done">
+ <div class="timeline-date">07-20 周一</div>
+ <div class="timeline-title">第1集发布计划</div>
+ <div class="timeline-desc">2个视频 · 抖音 · 已完成</div>
+ </div>
+ <div class="timeline-item active">
+ <div class="timeline-date">07-28 周一</div>
+ <div class="timeline-title">第2集发布计划</div>
+ <div class="timeline-desc">1个视频 · B站 · 执行中</div>
+ </div>
+ <div class="timeline-item">
+ <div class="timeline-date">08-01 周四</div>
+ <div class="timeline-title">暑期合集计划</div>
+ <div class="timeline-desc">3个视频 · 小红书+抖音 · 待执行</div>
+ </div>
+ <div class="timeline-item">
+ <div class="timeline-date">08-15 周四</div>
+ <div class="timeline-title">第3集发布计划</div>
+ <div class="timeline-desc">1个视频 · 多平台 · 待执行</div>
+ </div>
+ </div>
+ </div>
+
+ <!-- 打包说明 -->
+ <div style="margin-top: 16px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px;">
+ <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">一键打包</div>
+ <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+ 生成发布包 manifest（JSON），包含成片元数据、推荐平台和标签，可直接用于创建发布计划。
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <h2>6.2 发布计划管理</h2>
+ <div class="annotation">
+ <strong>设计要点：</strong>发布计划管理区采用表单+列表结构。表单填写计划名称、选择视频、选择平台、指定负责人、排期日期。已有计划列表支持编辑/删除。
+ </div>
+ <div class="frame">
+ <div class="frame-label">发布计划管理 <span class="tag">Plan Manager</span></div>
+ <div class="frame-body">
+ <div class="mockup" style="min-height: 360px;">
+ <div class="mockup-main">
+ <div class="mockup-content">
+ <div style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 20px;">
+ <div style="font-size: 14px; font-weight: 600; margin-bottom: 16px;">发布计划管理</div>
+
+ <!-- 表单 -->
+ <div class="form-row">
+ <div class="form-label">计划名称 <span class="req">*</span></div>
+ <div class="form-control">
+ <input class="form-input" placeholder="请输入计划名称" value="灵契界 第5集发布计划">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">选择视频 <span class="req">*</span></div>
+ <div class="form-control">
+ <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+ <span class="form-chip checked"> 灵契界 第4集 修炼 (5:45)</span>
+ <span class="form-chip"> 灵契界 第5集 突破 (6:20)</span>
+ </div>
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">发布平台 <span class="req">*</span></div>
+ <div class="form-control">
+ <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+ <span class="form-chip checked"> 抖音</span>
+ <span class="form-chip checked"> B站</span>
+ <span class="form-chip"> 小红书</span>
+ <span class="form-chip"> 快手</span>
+ <span class="form-chip"> 自定义</span>
+ </div>
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">负责人</div>
+ <div class="form-control">
+ <input class="form-input" value="陈运营" placeholder="请输入负责人">
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">排期日期 <span class="req">*</span></div>
+ <div class="form-control">
+ <input class="form-input" type="date" value="2026-08-10">
+ </div>
+ </div>
+ <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+ <button class="btn">取消</button>
+ <button class="btn btn-primary">创建计划</button>
+ </div>
+
+ <div style="border-top: var(--border-subtle); margin: 20px 0;"></div>
+
+ <!-- 已有计划列表 -->
+ <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">已有计划 (4)</div>
+ <div class="table-wrap">
+ <table>
+ <thead>
+ <tr>
+ <th>计划名称</th>
+ <th>视频</th>
+ <th>平台</th>
+ <th>负责人</th>
+ <th>排期</th>
+ <th>状态</th>
+ <th style="text-align:right;">操作</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr>
+ <td class="td-name">第1集发布计划</td>
+ <td>2个</td>
+ <td><span class="badge badge-info">抖音</span></td>
+ <td>陈运营</td>
+ <td>07-20</td>
+ <td><span class="badge badge-success">已完成</span></td>
+ <td style="text-align:right;"><button class="btn btn-sm">编辑</button> <button class="btn btn-sm btn-danger">删除</button></td>
+ </tr>
+ <tr>
+ <td class="td-name">第2集发布计划</td>
+ <td>1个</td>
+ <td><span class="badge badge-purple">B站</span></td>
+ <td>陈运营</td>
+ <td>07-28</td>
+ <td><span class="badge badge-warning">执行中</span></td>
+ <td style="text-align:right;"><button class="btn btn-sm">编辑</button> <button class="btn btn-sm btn-danger">删除</button></td>
+ </tr>
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+</section>
+
+
+<!-- ============ 组件规范 ============ -->
+<section class="section" id="components">
+ <div class="section-label">07 / Components</div>
+ <h1>组件规范</h1>
+ <p class="lead">运营与管控模块复用项目设计系统的通用组件，以下列出在本模块中的使用规范和变体。</p>
+
+ <div class="design-grid">
+ <div class="frame">
+ <div class="frame-label">状态徽章 Badge</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">统一状态标签系统，每个状态有文字+颜色，可附下一步操作。</p>
+ <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+ <span class="badge badge-success">已就绪</span>
+ <span class="badge badge-warning">待完善</span>
+ <span class="badge badge-info">处理中</span>
+ <span class="badge badge-purple">审核中</span>
+ <span class="badge badge-success">完成</span>
+ <span class="badge badge-danger">失败</span>
+ <span class="badge badge-muted">归档</span>
+ </div>
+ <div style="font-size: 11px; color: var(--text-muted);">语义固定：绿色=成功/进行 · 琥珀=待处理/警告 · 红色=失败/危险 · 蓝色=信息 · 紫色=审核</div>
+ </div>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">进度条 Progress</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">4色进度条，颜色映射状态而非百分比。</p>
+ <div style="margin-bottom: 8px;">
+ <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">正常进行 75%</div>
+ <div class="progress"><div class="progress-fill green" style="width:75%"></div></div>
+ </div>
+ <div style="margin-bottom: 8px;">
+ <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">待完善 40%</div>
+ <div class="progress"><div class="progress-fill amber" style="width:40%"></div></div>
+ </div>
+ <div style="margin-bottom: 8px;">
+ <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">延期 60%</div>
+ <div class="progress"><div class="progress-fill red" style="width:60%"></div></div>
+ </div>
+ <div>
+ <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">已完成 100%</div>
+ <div class="progress"><div class="progress-fill green" style="width:100%"></div></div>
+ </div>
+ </div>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">按钮 Button</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">主操作=绿色实底 · 辅助=暗色描边 · 危险=红色描边 · 图标按钮=方形</p>
+ <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+ <button class="btn btn-primary">主要操作</button>
+ <button class="btn">辅助操作</button>
+ <button class="btn btn-danger">危险操作</button>
+ </div>
+ <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+ <button class="btn btn-sm btn-primary">通过</button>
+ <button class="btn btn-sm btn-danger">驳回</button>
+ <button class="btn btn-sm">详情</button>
+ <button class="btn btn-sm">更多</button>
+ </div>
+ </div>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">分页 Pagination</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">所有列表统一使用底部分页栏：左侧显示总数+每页条数选择器，右侧页码导航。当前页绿色高亮，首尾页禁用箭头，超过 5 页显示省略号。</p>
+ <div class="pagination" style="margin-top: 0;">
+ <div class="pagination-info">
+ <span>共 128 条，显示 1-10</span>
+ <select class="page-size-select"><option>10 / 页</option><option>20 / 页</option><option>50 / 页</option></select>
+ </div>
+ <div class="pagination-controls">
+ <button class="pg-btn" disabled>‹</button>
+ <button class="pg-btn active">1</button>
+ <button class="pg-btn">2</button>
+ <button class="pg-btn">3</button>
+ <button class="pg-btn">4</button>
+ <button class="pg-btn">5</button>
+ <span class="pg-ellipsis">···</span>
+ <button class="pg-btn">13</button>
+ <button class="pg-btn">›</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">工具栏 ModuleToolbar</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">统一工具栏组件：搜索框 + 筛选标签 + 视图切换 + 主操作按钮。筛选标签 active 态用绿色高亮。</p>
+ <div class="toolbar">
+ <div class="tb-search">搜索...</div>
+ <div class="tb-filter active">全部</div>
+ <div class="tb-filter">进行中</div>
+ <div class="tb-filter">已完成</div>
+ <div class="tb-filter">类型 ▾</div>
+ <div class="tb-spacer"></div>
+ <div class="tb-filter active">卡片</div>
+ <div class="tb-filter">表格</div>
+ <button class="btn btn-primary btn-sm">+ 新建</button>
+ </div>
+ </div>
+ </div>
+
+ <div class="frame">
+ <div class="frame-label">左标签表单 FormDialog</div>
+ <div class="frame-body" style="padding: 20px;">
+ <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">管理类表单统一使用左标签布局（label左80px，控件右填充），符合 DESIGN.md 扫描速度优先原则。必填项标红星。</p>
+ <div class="form-row">
+ <div class="form-label">名称 <span class="req">*</span></div>
+ <div class="form-control"><input class="form-input" placeholder="请输入"></div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">类型</div>
+ <div class="form-control"><select class="form-input form-select"><option>选项A</option></select></div>
+ </div>
+ <div class="form-row">
+ <div class="form-label">描述</div>
+ <div class="form-control"><textarea class="form-input" rows="2" placeholder="请输入描述"></textarea></div>
+ </div>
+ </div>
+ </div>
+</section>
+
+
+<!-- ============ 状态设计 ============ -->
+<section class="section" id="states">
+ <div class="section-label">08 / States</div>
+ <h1>状态设计</h1>
+ <p class="lead">每个页面必须覆盖 4 种状态：空状态、加载状态、错误状态、成功反馈。空状态提供下一步操作，加载状态显示骨架屏或 spinner，错误状态显示原因+重试，成功反馈用 toast 提示。</p>
+
+ <div class="design-grid">
+ <!-- 空状态 -->
+ <div class="frame">
+ <div class="frame-label">空状态 — 项目中心</div>
+ <div class="frame-body">
+ <div class="mockup" style="min-height: 280px;">
+ <div class="mockup-main">
+ <div class="mockup-content">
+ <div class="empty-state">
+ <div class="empty-title">暂无项目</div>
+ <div class="empty-desc">创建你的第一个漫剧项目，从剧本到成片全程管理。</div>
+ <button class="btn btn-primary">新建项目</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- 空状态 - 审核 -->
+ <div class="frame">
+ <div class="frame-label">空状态 — 审核中心</div>
+ <div class="frame-body">
+ <div class="mockup" style="min-height: 280px;">
+ <div class="mockup-main">
+ <div class="mockup-content">
+ <div class="empty-state">
+ <div class="empty-title">暂无待审核内容</div>
+ <div class="empty-desc">所有内容已审核完毕。新提交的图片、视频、剧本将出现在这里。</div>
+ <button class="btn">查看审核记录</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- 加载状态 -->
+ <div class="frame">
+ <div class="frame-label">加载状态 — 骨架屏</div>
+ <div class="frame-body">
+ <div class="mockup" style="min-height: 280px;">
+ <div class="mockup-main">
+ <div class="mockup-content">
+ <div style="background: var(--bg-elevated); border-radius: var(--radius-md); height: 40px; margin-bottom: 16px; animation: pulse 1.5s infinite;"></div>
+ <div style="background: var(--bg-elevated); border-radius: var(--radius-md); height: 120px; margin-bottom: 12px; animation: pulse 1.5s infinite;"></div>
+ <div style="background: var(--bg-elevated); border-radius: var(--radius-md); height: 120px; animation: pulse 1.5s infinite;"></div>
+ <style>@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }</style>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- 错误状态 -->
+ <div class="frame">
+ <div class="frame-label">错误状态 — 重试</div>
+ <div class="frame-body">
+ <div class="mockup" style="min-height: 280px;">
+ <div class="mockup-main">
+ <div class="mockup-content">
+ <div class="empty-state">
+ <div class="empty-title">加载失败</div>
+ <div class="empty-desc">无法连接到服务器 (503)。请检查网络连接后重试。</div>
+ <div style="display: flex; gap: 8px; justify-content: center;">
+ <button class="btn">重试</button>
+ <button class="btn">联系管理员</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <h2>Toast 反馈</h2>
+ <div class="annotation">
+ <strong>操作反馈规范：</strong>
+ <ul>
+ <li><strong>成功</strong>：绿色 toast，3秒自动消失，如"审核已通过"、"配置已保存"</li>
+ <li><strong>警告</strong>：琥珀色 toast，如"该成片无可用下载地址"</li>
+ <li><strong>错误</strong>：红色 toast，需手动关闭，附带具体错误原因</li>
+ <li><strong>信息</strong>：蓝色 toast，如"请在发布计划管理区填写计划"</li>
+ </ul>
+ </div>
+
+ <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px;">
+ <div style="background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--radius-md); padding: 10px 16px; font-size: 12px; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+ <span>审核已通过</span>
+ </div>
+ <div style="background: var(--warning-dim); border: 1px solid var(--warning); border-radius: var(--radius-md); padding: 10px 16px; font-size: 12px; color: var(--warning); display: flex; align-items: center; gap: 8px;">
+ <span>该成片无可用下载地址</span>
+ </div>
+ <div style="background: var(--danger-dim); border: 1px solid var(--danger); border-radius: var(--radius-md); padding: 10px 16px; font-size: 12px; color: var(--danger); display: flex; align-items: center; gap: 8px;">
+ <span>保存失败：网络连接超时</span>
+ </div>
+ <div style="background: var(--info-dim); border: 1px solid var(--info); border-radius: var(--radius-md); padding: 10px 16px; font-size: 12px; color: var(--info); display: flex; align-items: center; gap: 8px;">
+ ℹ <span>请在发布计划管理区填写计划</span>
+ </div>
+ </div>
+
+ <div style="height: 48px;"></div>
+</section>
+
+</div>
+
+<script>
+ // 导航高亮
+ const navLinks = document.querySelectorAll('.doc-nav a');
+ const sections = document.querySelectorAll('.section');
+
+ window.addEventListener('scroll', () => {
+ let current = '';
+ sections.forEach(sec => {
+ const top = sec.offsetTop - 80;
+ if (window.scrollY >= top) current = sec.id;
+ });
+ navLinks.forEach(link => {
+ link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+ });
+ });
+</script>
+
+</body>
+</html>

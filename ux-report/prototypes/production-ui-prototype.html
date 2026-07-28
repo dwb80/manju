@@ -1,0 +1,2189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manju AI漫剧生产平台 — 生产创作 UI/UX 设计原型</title>
+<style>
+:root {
+  --bg-app: #0d0d0d;
+  --bg-sidebar: #141414;
+  --bg-topbar: #1a1a1a;
+  --bg-card: #202020;
+  --bg-card-hover: #252525;
+  --bg-elevated: #2a2a2a;
+  --bg-input: #1e1e1e;
+  --border: rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.15);
+  --border-active: rgba(16,185,129,0.5);
+  --text-primary: #f5f5f5;
+  --text-secondary: #a3a3a3;
+  --text-muted: #6b7280;
+  --text-dim: #4b5563;
+  --accent: #10b981;
+  --accent-dim: rgba(16,185,129,0.1);
+  --accent-hover: #059669;
+  --warning: #f59e0b;
+  --warning-dim: rgba(245,158,11,0.1);
+  --error: #ef4444;
+  --error-dim: rgba(239,68,68,0.1);
+  --info: #3b82f6;
+  --info-dim: rgba(59,130,246,0.1);
+  --purple: #8b5cf6;
+  --purple-dim: rgba(139,92,246,0.1);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --sidebar-w: 224px;
+  --topbar-h: 52px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+  height: 100vh;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.topbar {
+  height: var(--topbar-h);
+  background: var(--bg-topbar);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* Sidebar */
+.sidebar-brand {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-brand h1 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.sidebar-brand p {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.sidebar-group { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.sidebar-group-title {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 8px 16px;
+  font-weight: 500;
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+.sidebar-item:hover { background: rgba(255,255,255,0.03); color: var(--text-primary); }
+.sidebar-item.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+.sidebar-item .badge {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 4px var(--accent);
+  flex-shrink: 0;
+}
+
+/* Topbar */
+.topbar-project {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+}
+.topbar-project:hover { border-color: var(--border-hover); }
+.topbar-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.topbar-breadcrumb .sep { color: var(--text-dim); }
+.topbar-breadcrumb .current { color: var(--text-primary); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.topbar-btn {
+  padding: 5px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+}
+.topbar-btn:hover { background: var(--bg-card); color: var(--text-primary); border-color: var(--border); }
+.user-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Page sections */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.page-title { font-size: 18px; font-weight: 600; }
+.page-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+/* Stat cards */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.stat-card .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .value { font-size: 24px; font-weight: 600; margin-top: 4px; }
+.stat-card .trend { font-size: 11px; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.stat-card .trend.up { color: var(--accent); }
+.stat-card .trend.down { color: var(--error); }
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.search-input {
+  width: 240px;
+  padding: 7px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text-muted); }
+.filter-select {
+  padding: 7px 28px 7px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.toolbar-right { margin-left: auto; display: flex; gap: 8px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-card-hover); border-color: var(--border-hover); }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--bg-card); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-danger { color: var(--error); }
+.btn-danger:hover { background: var(--error-dim); border-color: var(--error); }
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.card-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-title { font-size: 13px; font-weight: 500; }
+.card-body { padding: 16px; }
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.badge-success { background: var(--accent-dim); color: var(--accent); }
+.badge-warning { background: var(--warning-dim); color: var(--warning); }
+.badge-error { background: var(--error-dim); color: var(--error); }
+.badge-info { background: var(--info-dim); color: var(--info); }
+.badge-muted { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+.badge-purple { background: var(--purple-dim); color: var(--purple); }
+
+/* Table */
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+.table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.table tr:hover td { background: rgba(255,255,255,0.02); }
+.table tr:last-child td { border-bottom: none; }
+
+/* Grid */
+.grid { display: grid; gap: 16px; }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+
+/* Asset card */
+.asset-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.asset-card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+.asset-card.selected { border-color: var(--accent); }
+.asset-thumb {
+  width: 100%;
+  aspect-ratio: 3/4;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.asset-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.asset-thumb .placeholder { font-size: 32px; opacity: 0.3; }
+.asset-info { padding: 12px; }
+.asset-name { font-size: 13px; font-weight: 500; }
+.asset-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.asset-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+
+/* Storyboard row */
+.sb-row {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.sb-row-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.sb-row-header:hover { background: var(--bg-card-hover); }
+.sb-number {
+  width: 40px; height: 40px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.sb-content { flex: 1; min-width: 0; }
+.sb-title { font-size: 13px; font-weight: 500; }
+.sb-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+.sb-row-header:hover .sb-actions { opacity: 1; }
+.sb-chevron {
+  color: var(--text-muted);
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.sb-chevron.open { transform: rotate(180deg); }
+.sb-shots { padding: 0 14px 10px 54px; }
+.shot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.02);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.shot-thumb {
+  width: 48px; height: 28px;
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.shot-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-muted);
+}
+.empty-state .title { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+.empty-state .desc { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+
+/* Progress bar */
+.progress { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+
+/* Pipeline flow */
+.pipeline-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  overflow-x: auto;
+}
+.pipeline-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 80px;
+  position: relative;
+}
+.pipeline-stage .dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pipeline-stage.done .dot { background: var(--accent); color: #fff; }
+.pipeline-stage.running .dot { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+.pipeline-stage.pending .dot { background: var(--bg-elevated); color: var(--text-muted); border: 1px solid var(--border); }
+.pipeline-stage .name { font-size: 11px; color: var(--text-secondary); }
+.pipeline-stage.done .name { color: var(--accent); }
+.pipeline-stage.running .name { color: var(--accent); }
+.pipeline-arrow {
+  color: var(--text-dim);
+  margin: 0 2px;
+  align-self: center;
+  margin-top: -14px;
+  font-size: 14px;
+}
+
+/* Tabs */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tab {
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text-primary); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Checkbox */
+.checkbox {
+  width: 16px; height: 16px;
+  border: 1px solid var(--border-hover);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.checkbox.checked { background: var(--accent); border-color: var(--accent); }
+.checkbox.checked::after { content: ""; width: 8px; height: 5px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translate(1px,-1px); }
+
+/* Chat / Studio */
+.chat-area { max-width: 768px; margin: 0 auto; padding: 20px 0; }
+.chat-msg { margin-bottom: 16px; }
+.chat-msg-user .chat-bubble {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: inline-block;
+  max-width: 80%;
+}
+.chat-msg-ai .chat-bubble {
+  background: transparent;
+  padding: 4px 0;
+}
+.chat-role { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.chat-attachments { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.chat-attachment {
+  width: 80px; height: 80px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+.chat-attachment img { width: 100%; height: 100%; object-fit: cover; }
+.composer {
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 12px 0;
+}
+.composer-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 12px 16px;
+}
+.composer-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  resize: none;
+  min-height: 24px;
+}
+.composer-input::placeholder { color: var(--text-muted); }
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.composer-mode {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+.composer-mode-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.composer-mode-btn.active { background: var(--bg-elevated); color: var(--text-primary); }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 12px;
+}
+.pagination-info {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.page-btn {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  user-select: none;
+}
+.page-btn:hover { background: var(--bg-card); border-color: var(--border); }
+.page-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--border-active); }
+.page-btn.disabled { color: var(--text-dim); cursor: not-allowed; }
+.page-btn.disabled:hover { background: transparent; border-color: transparent; }
+.page-size-select {
+  padding: 4px 24px 4px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+.page-ellipsis { color: var(--text-dim); font-size: 12px; padding: 0 4px; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-close {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 18px;
+  border: none;
+  background: transparent;
+}
+.modal-close:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Form */
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-input::placeholder { color: var(--text-muted); }
+.form-textarea { min-height: 80px; resize: vertical; }
+.form-select {
+  width: 100%;
+  padding: 8px 28px 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.form-row { display: flex; gap: 12px; }
+.form-row > * { flex: 1; }
+
+/* AI generation panel */
+.ai-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.ai-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ai-model-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.model-card {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.model-card:hover { border-color: var(--border-hover); }
+.model-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.model-card .name { font-size: 13px; font-weight: 500; }
+.model-card .desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.model-card .stars { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* Image grid */
+.image-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.image-cell {
+  aspect-ratio: 9/16;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+.image-cell img { width: 100%; height: 100%; object-fit: cover; }
+.image-cell .overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%);
+  display: flex;
+  align-items: flex-end;
+  padding: 8px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.image-cell:hover .overlay { opacity: 1; }
+
+/* Timeline */
+.timeline-ruler {
+  display: flex;
+  height: 24px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  overflow: hidden;
+}
+.timeline-ruler .tick {
+  flex: 1;
+  border-right: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.timeline-track {
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  min-height: 48px;
+}
+.timeline-clip {
+  height: 36px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.timeline-clip.video { background: var(--bg-elevated); border-left: 3px solid var(--accent); color: var(--text-secondary); }
+.timeline-clip.audio { background: var(--bg-elevated); border-left: 3px solid var(--text-muted); color: var(--text-secondary); }
+.timeline-clip.subtitle { background: var(--bg-elevated); border-left: 3px solid var(--text-dim); color: var(--text-secondary); }
+
+/* Page switching */
+.page { display: none; }
+.page.active { display: block; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 200;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-left: 3px solid var(--accent); }
+.toast.error { border-left: 3px solid var(--error); }
+
+/* Misc */
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+.flex { display: flex; }
+.flex-1 { flex: 1; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.justify-between { justify-content: space-between; }
+.text-muted { color: var(--text-muted); }
+.text-sm { font-size: 12px; }
+.text-xs { font-size: 11px; }
+.mt-2 { margin-top: 8px; }
+.mt-4 { margin-top: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-4 { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <h1>AI漫剧工业化</h1>
+      <p>生产平台 Manju</p>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-item" onclick="switchPage('dashboard')" data-page="dashboard">
+        驾驶舱
+      </div>
+      <div class="sidebar-item" onclick="switchPage('todos')" data-page="todos">
+        我的待办
+        <span class="badge">5</span>
+      </div>
+      <div class="sidebar-item" onclick="switchPage('studio')" data-page="studio">
+        创作工作台
+      </div>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">创作入口</div>
+      <div class="sidebar-item active" onclick="switchPage('scripts')" data-page="scripts">
+        剧本中心
+      </div>
+      <div class="sidebar-item" onclick="switchPage('storyboards')" data-page="storyboards">
+        分镜导演台
+      </div>
+      <div class="sidebar-item" onclick="switchPage('ai-tasks')" data-page="ai-tasks">
+        AI任务队列
+      </div>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">资产工厂</div>
+      <div class="sidebar-item" onclick="switchPage('characters')" data-page="characters">
+        角色工厂
+      </div>
+      <div class="sidebar-item" onclick="switchPage('scenes')" data-page="scenes">
+        场景工厂
+      </div>
+      <div class="sidebar-item" onclick="switchPage('props')" data-page="props">
+        道具工厂
+      </div>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">AI生产与后期</div>
+      <div class="sidebar-item" onclick="switchPage('video-prod')" data-page="video-prod">
+        视频生产线
+      </div>
+      <div class="sidebar-item" onclick="switchPage('audio')" data-page="audio">
+        音频中心
+      </div>
+      <div class="sidebar-item" onclick="switchPage('clips')" data-page="clips">
+        剪辑中心
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="status-dot"></div>
+      <span class="text-xs text-muted">系统正常</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-project">
+        <span>灵契界 · 第一季</span>
+        <span style="color:var(--text-muted);font-size:10px">▾</span>
+      </div>
+      <div class="topbar-breadcrumb">
+        <span>生产创作</span>
+        <span class="sep">/</span>
+        <span class="current" id="bc-current">剧本中心</span>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-btn" onclick="showToast('全局搜索（⌘K）', 'success')">搜索</div>
+        <div class="user-avatar" title="张三 · 项目管理员">张</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ===== PAGE: Scripts ===== -->
+      <div class="page active" id="page-scripts">
+        <div class="page-header">
+          <div>
+            <div class="page-title">剧本中心</div>
+            <div class="page-desc">管理剧本版本、AI分析、场景拆解与审核流转</div>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="label">剧本总数</div>
+            <div class="value">12</div>
+            <div class="trend up">+2 本周</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">审核中</div>
+            <div class="value">3</div>
+            <div class="trend up" style="color: var(--warning)">待处理</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">已通过</div>
+            <div class="value">8</div>
+            <div class="trend up">+1 今日</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">AI分析覆盖</div>
+            <div class="value">75%</div>
+            <div class="trend up">+15%</div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input class="search-input" placeholder="搜索剧本标题、内容...">
+          <select class="filter-select">
+            <option>全部状态</option>
+            <option>草稿</option>
+            <option>审核中</option>
+            <option>已通过</option>
+            <option>已驳回</option>
+          </select>
+          <select class="filter-select">
+            <option>全部剧集</option>
+            <option>第1集</option>
+            <option>第2集</option>
+            <option>第3集</option>
+          </select>
+          <div class="toolbar-right">
+            <button class="btn" onclick="showToast('AI分析功能：批量分析剧本角色/场景/道具', 'success')">AI 分析</button>
+            <button class="btn" onclick="showModal('modal-import')">导入剧本</button>
+            <button class="btn btn-primary" onclick="showModal('modal-new-script')">新建剧本</button>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active">剧本列表</div>
+          <div class="tab">模板库</div>
+          <div class="tab">回收站</div>
+        </div>
+
+        <div class="card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:32px"><div class="checkbox" onclick="this.classList.toggle('checked')"></div></th>
+                <th>标题</th>
+                <th>集数</th>
+                <th>状态</th>
+                <th>场景数</th>
+                <th>角色</th>
+                <th>更新时间</th>
+                <th style="width:120px">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="checkbox" onclick="this.classList.toggle('checked')"></div></td>
+                <td><span style="font-weight:500">灵契界 · 第一集：觉醒</span><div class="text-xs text-muted mt-2">原创剧本 · 8200字</div></td>
+                <td>EP01</td>
+                <td><span class="badge badge-success">已通过</span></td>
+                <td>12</td>
+                <td><span class="badge badge-info">林逸</span> <span class="badge badge-info">苏瑶</span></td>
+                <td class="text-muted">2小时前</td>
+                <td>
+                  <button class="btn btn-sm btn-ghost" onclick="showToast('打开剧本编辑器', 'success')">编辑</button>
+                  <button class="btn btn-sm btn-ghost">分析</button>
+                </td>
+              </tr>
+              <tr>
+                <td><div class="checkbox" onclick="this.classList.toggle('checked')"></div></td>
+                <td><span style="font-weight:500">灵契界 · 第二集：暗流</span><div class="text-xs text-muted mt-2">原创剧本 · 7600字</div></td>
+                <td>EP02</td>
+                <td><span class="badge badge-warning">审核中</span></td>
+                <td>10</td>
+                <td><span class="badge badge-info">林逸</span> <span class="badge badge-info">苏瑶</span> <span class="badge badge-info">陈默</span></td>
+                <td class="text-muted">5小时前</td>
+                <td>
+                  <button class="btn btn-sm btn-ghost">编辑</button>
+                  <button class="btn btn-sm btn-ghost">分析</button>
+                </td>
+              </tr>
+              <tr>
+                <td><div class="checkbox" onclick="this.classList.toggle('checked')"></div></td>
+                <td><span style="font-weight:500">灵契界 · 第三集：裂痕</span><div class="text-xs text-muted mt-2">AI辅助 · 9100字</div></td>
+                <td>EP03</td>
+                <td><span class="badge badge-muted">草稿</span></td>
+                <td>15</td>
+                <td><span class="badge badge-info">林逸</span> <span class="badge badge-info">苏瑶</span></td>
+                <td class="text-muted">昨天</td>
+                <td>
+                  <button class="btn btn-sm btn-ghost">编辑</button>
+                  <button class="btn btn-sm btn-ghost">分析</button>
+                </td>
+              </tr>
+              <tr>
+                <td><div class="checkbox" onclick="this.classList.toggle('checked')"></div></td>
+                <td><span style="font-weight:500">灵契界 · 第四集：对决</span><div class="text-xs text-muted mt-2">AI辅助 · 6800字</div></td>
+                <td>EP04</td>
+                <td><span class="badge badge-error">已驳回</span></td>
+                <td>8</td>
+                <td><span class="badge badge-info">林逸</span></td>
+                <td class="text-muted">3天前</td>
+                <td>
+                  <button class="btn btn-sm btn-ghost">编辑</button>
+                  <button class="btn btn-sm btn-ghost">分析</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <div class="pagination-info">共 12 条 · 每页 <select class="page-size-select"><option>10</option><option>20</option><option>50</option></select> 条</div>
+          <div class="pagination-controls">
+            <div class="page-btn disabled">上一页</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">下一页</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Storyboards ===== -->
+      <div class="page" id="page-storyboards">
+        <div class="page-header">
+          <div>
+            <div class="page-title">分镜导演台</div>
+            <div class="page-desc">分镜 → 镜头 父子结构，AI拆解、图生视频、批量操作</div>
+          </div>
+        </div>
+
+        <div class="pipeline-flow">
+          <div class="pipeline-stage done"><div class="dot">1</div><div class="name">剧本</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage running"><div class="dot">2</div><div class="name">分镜</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage pending"><div class="dot">3</div><div class="name">角色</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage pending"><div class="dot">4</div><div class="name">图片</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage pending"><div class="dot">5</div><div class="name">视频</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage pending"><div class="dot">6</div><div class="name">审核</div></div>
+        </div>
+
+        <div class="toolbar">
+          <input class="search-input" placeholder="搜索分镜标题、对白、描述...">
+          <select class="filter-select">
+            <option>全部状态</option>
+            <option>草稿</option>
+            <option>审核中</option>
+            <option>已通过</option>
+          </select>
+          <select class="filter-select">
+            <option>全部集数</option>
+            <option>第1集</option>
+            <option>第2集</option>
+          </select>
+          <div class="toolbar-right">
+            <button class="btn" onclick="showToast('AI拆解镜头：分析剧本自动生成镜头', 'success')">AI 拆分镜头</button>
+            <button class="btn btn-primary">新增分镜</button>
+          </div>
+        </div>
+
+        <!-- Storyboard rows -->
+        <div class="sb-row">
+          <div class="sb-row-header" onclick="toggleShots(this)">
+            <div class="checkbox" onclick="event.stopPropagation(); this.classList.toggle('checked')"></div>
+            <div class="sb-number">01</div>
+            <div class="sb-content">
+              <div class="flex items-center gap-2">
+                <span class="sb-title">城市天际线 · 黄昏 establishing</span>
+                <span class="badge badge-success">已通过</span>
+                <span class="badge badge-muted">EP01</span>
+                <span class="badge badge-info">城市场景</span>
+              </div>
+              <div class="sb-desc">远景俯瞰城市，夕阳西下，建立空间感和时间基调。镜头从云层缓慢下降至城市轮廓。</div>
+              <div class="flex gap-2 mt-2">
+                <span class="badge badge-info">林逸</span>
+                <span class="badge badge-purple">无道具</span>
+              </div>
+            </div>
+            <div class="sb-actions">
+              <button class="btn btn-sm btn-ghost">编辑</button>
+              <button class="btn btn-sm btn-primary">图生视频</button>
+            </div>
+            <span class="sb-chevron">▾</span>
+          </div>
+          <div class="sb-shots" style="display:none">
+            <div class="shot-row">
+              <div class="shot-thumb" style="background:var(--bg-elevated)"></div>
+              <span style="font-weight:500;width:40px">S01-1</span>
+              <span class="badge badge-success" style="font-size:10px">完成</span>
+              <span class="text-muted text-xs" style="flex:1">远景 · 俯拍 · 缓慢下降 · 5s</span>
+              <button class="btn btn-sm btn-ghost">预览</button>
+              <button class="btn btn-sm btn-ghost">编辑</button>
+            </div>
+            <div class="shot-row">
+              <div class="shot-thumb" style="background:var(--bg-elevated)"></div>
+              <span style="font-weight:500;width:40px">S01-2</span>
+              <span class="badge badge-warning" style="font-size:10px">处理中</span>
+              <span class="text-muted text-xs" style="flex:1">中景 · 平视 · 固定 · 3s</span>
+              <button class="btn btn-sm btn-ghost">预览</button>
+              <button class="btn btn-sm btn-ghost">编辑</button>
+            </div>
+            <div class="flex gap-2 mt-2">
+              <button class="btn btn-sm">+ 添加镜头</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-row">
+          <div class="sb-row-header" onclick="toggleShots(this)">
+            <div class="checkbox" onclick="event.stopPropagation(); this.classList.toggle('checked')"></div>
+            <div class="sb-number">02</div>
+            <div class="sb-content">
+              <div class="flex items-center gap-2">
+                <span class="sb-title">林逸房间 · 内景</span>
+                <span class="badge badge-warning">审核中</span>
+                <span class="badge badge-muted">EP01</span>
+                <span class="badge badge-info">室内场景</span>
+              </div>
+              <div class="sb-desc">林逸在房间内研究古卷，桌上散落灵契碎片。特写手部动作和表情变化。</div>
+              <div class="flex gap-2 mt-2">
+                <span class="badge badge-info">林逸</span>
+                <span class="badge badge-purple">古卷</span>
+                <span class="badge badge-purple">灵契碎片</span>
+              </div>
+            </div>
+            <div class="sb-actions">
+              <button class="btn btn-sm btn-ghost">编辑</button>
+              <button class="btn btn-sm btn-primary">图生视频</button>
+            </div>
+            <span class="sb-chevron">▾</span>
+          </div>
+        </div>
+
+        <div class="sb-row">
+          <div class="sb-row-header" onclick="toggleShots(this)">
+            <div class="checkbox" onclick="event.stopPropagation(); this.classList.toggle('checked')"></div>
+            <div class="sb-number">03</div>
+            <div class="sb-content">
+              <div class="flex items-center gap-2">
+                <span class="sb-title">苏瑶登场 · 街道</span>
+                <span class="badge badge-muted">草稿</span>
+                <span class="badge badge-muted">EP01</span>
+                <span class="badge badge-info">街道场景</span>
+              </div>
+              <div class="sb-desc">苏瑶从街角走出，风吹起长发。慢镜头，强调角色魅力和神秘感。</div>
+              <div class="flex gap-2 mt-2">
+                <span class="badge badge-info">苏瑶</span>
+              </div>
+            </div>
+            <div class="sb-actions">
+              <button class="btn btn-sm btn-ghost">编辑</button>
+              <button class="btn btn-sm btn-primary">图生视频</button>
+            </div>
+            <span class="sb-chevron">▾</span>
+          </div>
+        </div>
+
+        <div class="pagination">
+          <div class="pagination-info">共 28 条 · 每页 <select class="page-size-select"><option>10</option><option>20</option><option>50</option></select> 条</div>
+          <div class="pagination-controls">
+            <div class="page-btn disabled">上一页</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">3</div>
+            <div class="page-btn">下一页</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Characters ===== -->
+      <div class="page" id="page-characters">
+        <div class="page-header">
+          <div>
+            <div class="page-title">角色工厂</div>
+            <div class="page-desc">角色资产库：三视图、一致性包、LoRA、表情/动作库</div>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="label">角色总数</div>
+            <div class="value">24</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">已完成三视图</div>
+            <div class="value">18</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">一致性包</div>
+            <div class="value">12</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">引用次数</div>
+            <div class="value">186</div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input class="search-input" placeholder="搜索角色名称、标签...">
+          <select class="filter-select">
+            <option>全部类型</option>
+            <option>主角</option>
+            <option>配角</option>
+            <option>群演</option>
+          </select>
+          <select class="filter-select">
+            <option>全部状态</option>
+            <option>已就绪</option>
+            <option>待完善</option>
+            <option>处理中</option>
+          </select>
+          <div class="toolbar-right">
+            <button class="btn">模板库</button>
+            <button class="btn">AI 生成</button>
+            <button class="btn btn-primary">新建角色</button>
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated)">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;opacity:0.3">林</div>
+              <div style="position:absolute;top:8px;right:8px"><span class="badge badge-success">已就绪</span></div>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">林逸</div>
+              <div class="asset-meta">主角 · 男 · 20岁 · 引用 42次</div>
+              <div class="asset-tags">
+                <span class="badge badge-info">三视图</span>
+                <span class="badge badge-info">一致性包</span>
+                <span class="badge badge-purple">LoRA</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated)">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;opacity:0.3">苏</div>
+              <div style="position:absolute;top:8px;right:8px"><span class="badge badge-success">已就绪</span></div>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">苏瑶</div>
+              <div class="asset-meta">主角 · 女 · 19岁 · 引用 38次</div>
+              <div class="asset-tags">
+                <span class="badge badge-info">三视图</span>
+                <span class="badge badge-info">一致性包</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated)">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;opacity:0.3">陈</div>
+              <div style="position:absolute;top:8px;right:8px"><span class="badge badge-warning">待完善</span></div>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">陈默</div>
+              <div class="asset-meta">配角 · 男 · 25岁 · 引用 15次</div>
+              <div class="asset-tags">
+                <span class="badge badge-info">三视图</span>
+                <span class="badge badge-muted">待生成</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated)">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;opacity:0.3">叶</div>
+              <div style="position:absolute;top:8px;right:8px"><span class="badge badge-warning">待完善</span></div>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">叶灵</div>
+              <div class="asset-meta">配角 · 女 · 22岁 · 引用 8次</div>
+              <div class="asset-tags">
+                <span class="badge badge-muted">待生成</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated)">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;opacity:0.3">周</div>
+              <div style="position:absolute;top:8px;right:8px"><span class="badge badge-success">已就绪</span></div>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">周伯</div>
+              <div class="asset-meta">配角 · 男 · 60岁 · 引用 6次</div>
+              <div class="asset-tags">
+                <span class="badge badge-info">三视图</span>
+                <span class="badge badge-purple">LoRA</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="asset-card" style="border-style:dashed;opacity:0.5">
+            <div class="asset-thumb" style="background:transparent;border:1px dashed var(--border)">
+              <div style="text-align:center;font-size:32px;opacity:0.3">+</div>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name text-muted">新建角色</div>
+              <div class="asset-meta">手动创建或AI生成</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pagination">
+          <div class="pagination-info">共 24 条 · 每页 <select class="page-size-select"><option>12</option><option>24</option><option>48</option></select> 条</div>
+          <div class="pagination-controls">
+            <div class="page-btn disabled">上一页</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">下一页</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Scenes ===== -->
+      <div class="page" id="page-scenes">
+        <div class="page-header">
+          <div>
+            <div class="page-title">场景工厂</div>
+            <div class="page-desc">场景资产库：环境、光照、时间设定、镜头适配</div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input class="search-input" placeholder="搜索场景名称...">
+          <select class="filter-select">
+            <option>全部类型</option>
+            <option>室内</option>
+            <option>室外</option>
+            <option>特效</option>
+          </select>
+          <div class="toolbar-right">
+            <button class="btn">AI 生成</button>
+            <button class="btn btn-primary">新建场景</button>
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated);aspect-ratio:16/9">
+              <div style="position:absolute;bottom:0;left:0;right:0;padding:8px;background:var(--bg-elevated))">
+                <span class="text-xs text-muted">城市天际线 · 黄昏</span>
+              </div>
+              <span class="badge badge-success" style="position:absolute;top:8px;right:8px">已就绪</span>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">城市天际线</div>
+              <div class="asset-meta">室外 · 黄昏 · 引用 6次</div>
+            </div>
+          </div>
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated);aspect-ratio:16/9">
+              <span class="badge badge-success" style="position:absolute;top:8px;right:8px">已就绪</span>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">林逸房间</div>
+              <div class="asset-meta">室内 · 夜晚 · 引用 4次</div>
+            </div>
+          </div>
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated);aspect-ratio:16/9">
+              <span class="badge badge-warning" style="position:absolute;top:8px;right:8px">待完善</span>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">古街</div>
+              <div class="asset-meta">室外 · 白天 · 引用 3次</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pagination">
+          <div class="pagination-info">共 18 条 · 每页 <select class="page-size-select"><option>12</option><option>24</option><option>48</option></select> 条</div>
+          <div class="pagination-controls">
+            <div class="page-btn disabled">上一页</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">下一页</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Props ===== -->
+      <div class="page" id="page-props">
+        <div class="page-header">
+          <div>
+            <div class="page-title">道具工厂</div>
+            <div class="page-desc">道具资产库：引用查询、跨项目复制、版本管理</div>
+          </div>
+        </div>
+        <div class="toolbar">
+          <input class="search-input" placeholder="搜索道具名称...">
+          <div class="toolbar-right">
+            <button class="btn">AI 生成</button>
+            <button class="btn btn-primary">新建道具</button>
+          </div>
+        </div>
+        <div class="grid grid-3">
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated);aspect-ratio:1">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4">古</div>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">古卷</div>
+              <div class="asset-meta">引用 8次 · 2个项目</div>
+            </div>
+          </div>
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated);aspect-ratio:1">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4">灵</div>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">灵契碎片</div>
+              <div class="asset-meta">引用 5次 · 1个项目</div>
+            </div>
+          </div>
+          <div class="asset-card">
+            <div class="asset-thumb" style="background:var(--bg-elevated);aspect-ratio:1">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4">剑</div>
+            </div>
+            <div class="asset-info">
+              <div class="asset-name">灵纹剑</div>
+              <div class="asset-meta">引用 3次 · 1个项目</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pagination">
+          <div class="pagination-info">共 15 条 · 每页 <select class="page-size-select"><option>12</option><option>24</option><option>48</option></select> 条</div>
+          <div class="pagination-controls">
+            <div class="page-btn disabled">上一页</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">下一页</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Video Production ===== -->
+      <div class="page" id="page-video-prod">
+        <div class="page-header">
+          <div>
+            <div class="page-title">视频生产线</div>
+            <div class="page-desc">图生视频、批量生成、任务重试、质量把控</div>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="label">总任务</div>
+            <div class="value">48</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">处理中</div>
+            <div class="value">3</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">已完成</div>
+            <div class="value">38</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">失败</div>
+            <div class="value">2</div>
+          </div>
+        </div>
+
+        <!-- AI Generation Panel -->
+        <div class="ai-panel">
+          <div class="ai-panel-header">
+            <span style="font-weight:500">AI 视频生成</span>
+            <span class="badge badge-muted">默认模型</span>
+          </div>
+          <div class="ai-model-selector">
+            <div class="model-card selected">
+              <div class="name">可灵 2.0</div>
+              <div class="desc">推荐 · 高质量图生视频</div>
+              <div class="stars">★★★★★</div>
+            </div>
+            <div class="model-card">
+              <div class="name">Runway Gen-3</div>
+              <div class="desc">快速 · 镜头运动</div>
+              <div class="stars">★★★★</div>
+            </div>
+            <div class="model-card">
+              <div class="name">Veo 2.0</div>
+              <div class="desc">高质量 · 人物一致</div>
+              <div class="stars">★★★★★</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex:1">
+              <label class="form-label">时长</label>
+              <select class="form-select"><option>5秒</option><option>10秒</option></select>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label">分辨率</label>
+              <select class="form-select"><option>1080p</option><option>720p</option></select>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label">运动强度</label>
+              <select class="form-select"><option>中等</option><option>低</option><option>高</option></select>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label">一致性等级</label>
+              <select class="form-select"><option>高</option><option>中</option><option>低</option></select>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%">开始生成（选中 3 个分镜）</button>
+        </div>
+
+        <!-- Task Queue -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">任务队列</span>
+            <div class="flex gap-2">
+              <select class="filter-select" style="font-size:12px">
+                <option>全部任务</option>
+                <option>排队中</option>
+                <option>处理中</option>
+                <option>已完成</option>
+                <option>失败</option>
+              </select>
+            </div>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>任务ID</th>
+                <th>分镜</th>
+                <th>模型</th>
+                <th>状态</th>
+                <th>进度</th>
+                <th>耗时</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-muted text-sm">vid-3a8f</td>
+                <td>SB01-S01-1</td>
+                <td><span class="badge badge-info">可灵 2.0</span></td>
+                <td><span class="badge badge-info">处理中</span></td>
+                <td><div style="width:100px"><div class="progress"><div class="progress-fill" style="width:65%"></div></div></div></td>
+                <td class="text-muted text-sm">32s</td>
+                <td><button class="btn btn-sm btn-danger">取消</button></td>
+              </tr>
+              <tr>
+                <td class="text-muted text-sm">vid-2b7e</td>
+                <td>SB01-S01-2</td>
+                <td><span class="badge badge-info">可灵 2.0</span></td>
+                <td><span class="badge badge-info">处理中</span></td>
+                <td><div style="width:100px"><div class="progress"><div class="progress-fill" style="width:28%"></div></div></div></td>
+                <td class="text-muted text-sm">14s</td>
+                <td><button class="btn btn-sm btn-danger">取消</button></td>
+              </tr>
+              <tr>
+                <td class="text-muted text-sm">vid-1c6d</td>
+                <td>SB02-S01-1</td>
+                <td><span class="badge badge-info">可灵 2.0</span></td>
+                <td><span class="badge badge-success">完成</span></td>
+                <td><div style="width:100px"><div class="progress"><div class="progress-fill" style="width:100%"></div></div></div></td>
+                <td class="text-muted text-sm">48s</td>
+                <td><button class="btn btn-sm btn-ghost">预览</button></td>
+              </tr>
+              <tr>
+                <td class="text-muted text-sm">vid-0d5c</td>
+                <td>SB03-S02-1</td>
+                <td><span class="badge badge-info">Runway</span></td>
+                <td><span class="badge badge-error">失败</span></td>
+                <td class="text-muted text-sm">超时</td>
+                <td class="text-muted text-sm">120s</td>
+                <td><button class="btn btn-sm btn-primary">重试</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <div class="pagination-info">共 48 条 · 每页 <select class="page-size-select"><option>20</option><option>50</option><option>100</option></select> 条</div>
+          <div class="pagination-controls">
+            <div class="page-btn disabled">上一页</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">3</div>
+            <div class="page-btn">下一页</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Audio ===== -->
+      <div class="page" id="page-audio">
+        <div class="page-header">
+          <div>
+            <div class="page-title">音频中心</div>
+            <div class="page-desc">TTS配音、BGM生成、音效库</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab active">TTS 配音</div>
+          <div class="tab">BGM 音乐</div>
+          <div class="tab">音效库</div>
+          <div class="tab">音频资产</div>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-header"><span class="card-title">配音任务</span><button class="btn btn-sm btn-primary">新建配音</button></div>
+            <div class="card-body">
+              <table class="table">
+                <thead><tr><th>角色</th><th>文本</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="badge badge-info">林逸</span></td><td class="text-sm">"这股力量...到底是什么？"</td><td><span class="badge badge-success">完成</span></td><td><button class="btn btn-sm btn-ghost">播放</button></td></tr>
+                  <tr><td><span class="badge badge-info">苏瑶</span></td><td class="text-sm">"你终于来了。"</td><td><span class="badge badge-info">处理中</span></td><td><button class="btn btn-sm btn-ghost">等待</button></td></tr>
+                  <tr><td><span class="badge badge-info">陈默</span></td><td class="text-sm">"计划有变。"</td><td><span class="badge badge-muted">排队中</span></td><td><button class="btn btn-sm btn-ghost">等待</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination" style="margin:0;padding:10px 16px;border-top:1px solid var(--border)">
+              <div class="pagination-info">共 22 条</div>
+              <div class="pagination-controls">
+                <div class="page-btn disabled">上一页</div>
+                <div class="page-btn active">1</div>
+                <div class="page-btn">2</div>
+                <div class="page-btn">3</div>
+                <div class="page-btn">下一页</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">音色库</span><button class="btn btn-sm">管理</button></div>
+            <div class="card-body">
+              <div class="grid grid-2">
+                <div class="asset-card" style="cursor:pointer">
+                  <div class="asset-info">
+                    <div class="asset-name">林逸 · 青年男声</div>
+                    <div class="asset-meta">清澈 · 沉稳</div>
+                  </div>
+                </div>
+                <div class="asset-card" style="cursor:pointer">
+                  <div class="asset-info">
+                    <div class="asset-name">苏瑶 · 少女声</div>
+                    <div class="asset-meta">灵动 · 清脆</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="pagination" style="margin:0;padding:10px 16px;border-top:1px solid var(--border)">
+              <div class="pagination-info">共 8 条</div>
+              <div class="pagination-controls">
+                <div class="page-btn disabled">上一页</div>
+                <div class="page-btn active">1</div>
+                <div class="page-btn">下一页</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Clips ===== -->
+      <div class="page" id="page-clips">
+        <div class="page-header">
+          <div>
+            <div class="page-title">剪辑中心</div>
+            <div class="page-desc">片段编排、时间线编辑、成片导出</div>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn">导入片段</button>
+            <button class="btn btn-primary">导出成片</button>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:1fr 280px;gap:16px">
+          <div>
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">时间线 — EP01</span>
+                <span class="text-muted text-sm">总时长: 02:35</span>
+              </div>
+              <div class="card-body">
+                <div class="timeline-ruler">
+                  <div class="tick">0s</div><div class="tick">5s</div><div class="tick">10s</div><div class="tick">15s</div><div class="tick">20s</div><div class="tick">25s</div><div class="tick">30s</div><div class="tick">35s</div><div class="tick">40s</div>
+                </div>
+                <div style="margin-bottom:8px">
+                  <div class="text-xs text-muted mb-2">视频轨</div>
+                  <div class="timeline-track">
+                    <div class="timeline-clip video" style="width:60px">S01-1</div>
+                    <div class="timeline-clip video" style="width:80px">S01-2</div>
+                    <div class="timeline-clip video" style="width:45px">S02-1</div>
+                    <div class="timeline-clip video" style="width:70px">S02-2</div>
+                    <div class="timeline-clip video" style="width:55px">S03-1</div>
+                  </div>
+                </div>
+                <div style="margin-bottom:8px">
+                  <div class="text-xs text-muted mb-2">音频轨</div>
+                  <div class="timeline-track">
+                    <div class="timeline-clip audio" style="width:120px">BGM-01</div>
+                    <div class="timeline-clip audio" style="width:90px">BGM-02</div>
+                    <div class="timeline-clip audio" style="width:100px">BGM-03</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-xs text-muted mb-2">字幕轨</div>
+                  <div class="timeline-track">
+                    <div class="timeline-clip subtitle" style="width:50px">"这股力量..."</div>
+                    <div class="timeline-clip subtitle" style="width:40px">"你终于来了"</div>
+                    <div class="timeline-clip subtitle" style="width:60px">"计划有变"</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card mt-4">
+              <div class="card-header"><span class="card-title">片段列表</span></div>
+              <table class="table">
+                <thead><tr><th>编号</th><th>分镜</th><th>时长</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>CL01</td><td>SB01-S01-1</td><td>5.0s</td><td><span class="badge badge-success">已就绪</span></td><td><button class="btn btn-sm btn-ghost">编辑</button></td></tr>
+                  <tr><td>CL02</td><td>SB01-S01-2</td><td>3.2s</td><td><span class="badge badge-success">已就绪</span></td><td><button class="btn btn-sm btn-ghost">编辑</button></td></tr>
+                  <tr><td>CL03</td><td>SB02-S01-1</td><td>4.5s</td><td><span class="badge badge-warning">待审核</span></td><td><button class="btn btn-sm btn-ghost">编辑</button></td></tr>
+                </tbody>
+              </table>
+              <div class="pagination" style="margin:0;padding:10px 16px;border-top:1px solid var(--border)">
+                <div class="pagination-info">共 35 条</div>
+                <div class="pagination-controls">
+                  <div class="page-btn disabled">上一页</div>
+                  <div class="page-btn active">1</div>
+                  <div class="page-btn">2</div>
+                  <div class="page-btn">3</div>
+                  <div class="page-btn">4</div>
+                  <div class="page-btn">下一页</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">成片信息</span></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">成片标题</label>
+                <input class="form-input" value="灵契界 EP01">
+              </div>
+              <div class="form-group">
+                <label class="form-label">分辨率</label>
+                <select class="form-select"><option>1920x1080</option><option>1280x720</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">帧率</label>
+                <select class="form-select"><option>30fps</option><option>24fps</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">格式</label>
+                <select class="form-select"><option>MP4 (H.264)</option><option>MOV (ProRes)</option></select>
+              </div>
+              <div class="divider"></div>
+              <div class="text-xs text-muted mb-2">质检状态</div>
+              <div class="flex gap-2 mb-4">
+                <span class="badge badge-success">画面审核: 通过</span>
+              </div>
+              <div class="flex gap-2 mb-2">
+                <span class="badge badge-warning">音频审核: 待审</span>
+              </div>
+              <button class="btn btn-primary" style="width:100%">提交审核</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Studio ===== -->
+      <div class="page" id="page-studio">
+        <div class="page-header">
+          <div>
+            <div class="page-title">创作工作台</div>
+            <div class="page-desc">AI对话创作 · 文/图/视频生成 · 灵感速记</div>
+          </div>
+        </div>
+
+        <div class="chat-area">
+          <div class="chat-msg chat-msg-ai">
+            <div class="chat-role">AI 助手</div>
+            <div class="chat-bubble">你好！我可以帮你创作漫剧内容。你可以让我生成角色设定、分镜脚本、图片或视频。试试说"帮我设计一个古风女角色"。</div>
+          </div>
+          <div class="chat-msg chat-msg-user">
+            <div class="chat-role">你</div>
+            <div class="chat-bubble">帮我设计一个古风女角色，名字叫苏瑶，19岁，性格灵动神秘</div>
+          </div>
+          <div class="chat-msg chat-msg-ai">
+            <div class="chat-role">AI 助手</div>
+            <div class="chat-bubble">
+              好的，我为你设计了苏瑶的角色概念：<br><br>
+              <strong>外观</strong>：黑色长发及腰，额间有灵纹印记，身着淡紫色古装长裙，腰间佩有灵玉。<br>
+              <strong>性格</strong>：外表冷淡但内心温柔，观察力极强，说话简洁有力。<br>
+              <strong>能力</strong>：天生灵视，能看到常人看不到的灵体。<br><br>
+              已生成三张概念图，请查看：
+            </div>
+            <div class="chat-attachments">
+              <div class="chat-attachment" style="background:var(--bg-elevated)"></div>
+              <div class="chat-attachment" style="background:var(--bg-elevated)"></div>
+              <div class="chat-attachment" style="background:var(--bg-elevated)"></div>
+            </div>
+            <div class="flex gap-2 mt-2">
+              <button class="btn btn-sm btn-primary">入库角色资产</button>
+              <button class="btn btn-sm">重新生成</button>
+              <button class="btn btn-sm">优化描述</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer">
+          <div class="composer-box">
+            <textarea class="composer-input" placeholder="输入你的创作需求...  (Shift+Enter 换行)"></textarea>
+            <div class="composer-actions">
+              <button class="btn btn-sm btn-ghost">附件</button>
+              <div class="composer-mode">
+                <div class="composer-mode-btn active">聊天</div>
+                <div class="composer-mode-btn">图片</div>
+                <div class="composer-mode-btn">视频</div>
+              </div>
+              <button class="btn btn-sm btn-primary" style="margin-left:auto">发送</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: AI Tasks ===== -->
+      <div class="page" id="page-ai-tasks">
+        <div class="page-header">
+          <div>
+            <div class="page-title">AI 任务队列</div>
+            <div class="page-desc">全局AI任务监控：图片、视频、文本、音频</div>
+          </div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="label">总任务</div><div class="value">128</div></div>
+          <div class="stat-card"><div class="label">处理中</div><div class="value">5</div></div>
+          <div class="stat-card"><div class="label">成功率</div><div class="value">94%</div></div>
+          <div class="stat-card"><div class="label">今日成本</div><div class="value">¥2.40</div></div>
+        </div>
+        <div class="toolbar">
+          <select class="filter-select"><option>全部类型</option><option>图片生成</option><option>视频生成</option><option>文本生成</option><option>音频生成</option></select>
+          <select class="filter-select"><option>全部状态</option><option>排队中</option><option>处理中</option><option>已完成</option><option>失败</option></select>
+          <select class="filter-select"><option>全部模型</option><option>Flux Pro</option><option>可灵 2.0</option><option>Claude</option></select>
+          <div class="toolbar-right">
+            <button class="btn">导出报告</button>
+            <button class="btn btn-danger">清空已完成</button>
+          </div>
+        </div>
+        <div class="card">
+          <table class="table">
+            <thead><tr><th>任务ID</th><th>类型</th><th>关联</th><th>模型</th><th>状态</th><th>耗时</th><th>成本</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td class="text-sm text-muted">task-9f2a</td><td><span class="badge badge-purple">图片</span></td><td>SB01-S01-1</td><td>Flux Pro</td><td><span class="badge badge-info">处理中</span></td><td class="text-sm text-muted">12s</td><td class="text-sm">¥0.02</td><td><button class="btn btn-sm btn-danger">取消</button></td></tr>
+              <tr><td class="text-sm text-muted">task-8e1b</td><td><span class="badge badge-info">视频</span></td><td>SB01-S01-2</td><td>可灵 2.0</td><td><span class="badge badge-success">完成</span></td><td class="text-sm text-muted">48s</td><td class="text-sm">¥0.15</td><td><button class="btn btn-sm btn-ghost">查看</button></td></tr>
+              <tr><td class="text-sm text-muted">task-7d0c</td><td><span class="badge badge-purple">图片</span></td><td>角色: 林逸</td><td>Flux Pro</td><td><span class="badge badge-success">完成</span></td><td class="text-sm text-muted">28s</td><td class="text-sm">¥0.02</td><td><button class="btn btn-sm btn-ghost">查看</button></td></tr>
+              <tr><td class="text-sm text-muted">task-6c9d</td><td><span class="badge badge-success">文本</span></td><td>EP02 剧本</td><td>Claude</td><td><span class="badge badge-success">完成</span></td><td class="text-sm text-muted">15s</td><td class="text-sm">¥0.01</td><td><button class="btn btn-sm btn-ghost">查看</button></td></tr>
+              <tr><td class="text-sm text-muted">task-5b8e</td><td><span class="badge badge-warning">音频</span></td><td>林逸配音</td><td>TTS</td><td><span class="badge badge-error">失败</span></td><td class="text-sm text-muted">--</td><td class="text-sm">¥0.00</td><td><button class="btn btn-sm btn-primary">重试</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <div class="pagination-info">共 128 条 · 每页 <select class="page-size-select"><option>20</option><option>50</option><option>100</option></select> 条</div>
+          <div class="pagination-controls">
+            <div class="page-btn disabled">上一页</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">3</div>
+            <span class="page-ellipsis">...</span>
+            <div class="page-btn">7</div>
+            <div class="page-btn">下一页</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Dashboard ===== -->
+      <div class="page" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <div class="page-title">生产驾驶舱</div>
+            <div class="page-desc">灵契界 · 第一季 · 项目状态全景</div>
+          </div>
+        </div>
+        <div class="pipeline-flow">
+          <div class="pipeline-stage done"><div class="dot">1</div><div class="name">剧本</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage running"><div class="dot">2</div><div class="name">分镜</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage running"><div class="dot">3</div><div class="name">资产</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage pending"><div class="dot">4</div><div class="name">图片</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage pending"><div class="dot">5</div><div class="name">视频</div></div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage pending"><div class="dot">6</div><div class="name">审核</div></div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="label">整体进度</div><div class="value">35%</div><div class="progress mt-2"><div class="progress-fill" style="width:35%"></div></div></div>
+          <div class="stat-card"><div class="label">剧集数</div><div class="value">5</div><div class="trend up">+1 本周</div></div>
+          <div class="stat-card"><div class="label">待审核</div><div class="value">3</div></div>
+          <div class="stat-card"><div class="label">风险项</div><div class="value">1</div></div>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-header"><span class="card-title">待办事项</span><span class="badge badge-warning">5</span></div>
+            <div class="card-body">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+                <div class="checkbox" onclick="this.classList.toggle('checked')"></div>
+                <span style="flex:1">EP02 剧本审核</span>
+                <span class="badge badge-error" style="font-size:10px">紧急</span>
+                <span class="text-muted text-xs">2h前</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+                <div class="checkbox" onclick="this.classList.toggle('checked')"></div>
+                <span style="flex:1">SB03 分镜图缺失</span>
+                <span class="badge badge-warning" style="font-size:10px">重要</span>
+                <span class="text-muted text-xs">5h前</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 0">
+                <div class="checkbox" onclick="this.classList.toggle('checked')"></div>
+                <span style="flex:1">陈默角色三视图待生成</span>
+                <span class="badge badge-muted" style="font-size:10px">普通</span>
+                <span class="text-muted text-xs">昨天</span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">风险预警</span></div>
+            <div class="card-body">
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span class="badge badge-error" style="flex-shrink:0;margin-top:2px">错误</span>
+                <div style="flex:1">
+                  <div class="text-sm" style="font-weight:500">EP04 剧本被驳回</div>
+                  <div class="text-xs text-muted mt-2">原因：场景转换突兀，需修改第3场。审核人：李四</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0">
+                <span class="badge badge-warning" style="flex-shrink:0;margin-top:2px">警告</span>
+                <div style="flex:1">
+                  <div class="text-sm" style="font-weight:500">视频生成失败率偏高</div>
+                  <div class="text-xs text-muted mt-2">近24h失败率 12%，建议检查模型配置或参考图质量</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: Todos ===== -->
+      <div class="page" id="page-todos">
+        <div class="page-header">
+          <div>
+            <div class="page-title">我的待办</div>
+            <div class="page-desc">按优先级和截止日期排序</div>
+          </div>
+          <button class="btn btn-primary">新建待办</button>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="label">待处理</div><div class="value">5</div></div>
+          <div class="stat-card"><div class="label">进行中</div><div class="value">2</div></div>
+          <div class="stat-card"><div class="label">今日截止</div><div class="value">1</div></div>
+          <div class="stat-card"><div class="label">已完成</div><div class="value">18</div></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border)">
+            <div class="checkbox" onclick="this.classList.toggle('checked')"></div>
+            <span class="badge badge-error">紧急</span>
+            <span style="flex:1">EP02 剧本审核 — 场景/角色/道具分析</span>
+            <span class="text-muted text-xs">截止: 今天 18:00</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border)">
+            <div class="checkbox" onclick="this.classList.toggle('checked')"></div>
+            <span class="badge badge-warning">重要</span>
+            <span style="flex:1">SB03 分镜图缺失 — 需AI生成</span>
+            <span class="text-muted text-xs">截止: 明天</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 16px">
+            <div class="checkbox" onclick="this.classList.toggle('checked')"></div>
+            <span class="badge badge-muted">普通</span>
+            <span style="flex:1">陈默角色三视图待生成</span>
+            <span class="text-muted text-xs">截止: 本周</span>
+          </div>
+        </div>
+
+        <div class="pagination">
+          <div class="pagination-info">共 25 条 · 每页 <select class="page-size-select"><option>10</option><option>20</option><option>50</option></select> 条</div>
+          <div class="pagination-controls">
+            <div class="page-btn disabled">上一页</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">3</div>
+            <div class="page-btn">下一页</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal: New Script -->
+<div class="modal-overlay" id="modal-new-script">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-weight:500">新建剧本</span>
+      <button class="modal-close" onclick="hideModal('modal-new-script')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">剧本标题</label>
+        <input class="form-input" placeholder="输入剧本标题">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">集数</label>
+          <input class="form-input" type="number" value="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">类型</label>
+          <select class="form-select"><option>原创</option><option>改编</option><option>AI辅助</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">简介</label>
+        <textarea class="form-input form-textarea" placeholder="一句话描述剧本内容..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="hideModal('modal-new-script')">取消</button>
+      <button class="btn btn-primary" onclick="hideModal('modal-new-script'); showToast('剧本已创建', 'success')">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Import -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-weight:500">导入剧本</span>
+      <button class="modal-close" onclick="hideModal('modal-import')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="border:2px dashed var(--border);border-radius:var(--radius-md);padding:32px;text-align:center;cursor:pointer" onclick="showToast('选择文件...', 'success')">
+        <div class="text-muted" style="font-size:13px">点击或拖拽文件到此处</div>
+        <div class="text-xs text-muted mt-2">支持 .txt .docx .fountain .fdx</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="hideModal('modal-import')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toast-text"></span>
+</div>
+
+<script>
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  const item = document.querySelector('[data-page="' + page + '"]');
+  if (item) item.classList.add('active');
+  const titles = {
+    'dashboard':'驾驶舱','todos':'我的待办','studio':'创作工作台',
+    'scripts':'剧本中心','storyboards':'分镜导演台','ai-tasks':'AI任务队列',
+    'characters':'角色工厂','scenes':'场景工厂','props':'道具工厂',
+    'video-prod':'视频生产线','audio':'音频中心','clips':'剪辑中心'
+  };
+  document.getElementById('bc-current').textContent = titles[page] || page;
+  document.querySelector('.content').scrollTop = 0;
+}
+
+function toggleShots(header) {
+  const shots = header.nextElementSibling;
+  if (shots && shots.classList.contains('sb-shots')) {
+    shots.style.display = shots.style.display === 'none' ? 'block' : 'none';
+    const chevron = header.querySelector('.sb-chevron');
+    if (chevron) chevron.classList.toggle('open');
+  }
+}
+
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+let toastTimer;
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  const text = document.getElementById('toast-text');
+  text.textContent = msg;
+  toast.className = 'toast show ' + (type || '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+document.querySelectorAll('.composer-mode-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    this.parentElement.querySelectorAll('.composer-mode-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+document.querySelectorAll('.model-card').forEach(card => {
+  card.addEventListener('click', function() {
+    this.parentElement.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+    this.classList.add('selected');
+  });
+});
+
+document.querySelectorAll('.pagination-controls').forEach(ctrl => {
+  ctrl.addEventListener('click', function(e) {
+    if (e.target.classList.contains('page-btn') && !e.target.classList.contains('disabled')) {
+      this.querySelectorAll('.page-btn').forEach(b => b.classList.remove('active'));
+      if (!e.target.textContent.includes('上一页') && !e.target.textContent.includes('下一页')) {
+        e.target.classList.add('active');
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>
