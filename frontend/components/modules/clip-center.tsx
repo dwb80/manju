@@ -94,15 +94,15 @@ const config: FactoryCRUDPageProps<ProjectClip> = {
 
   renderCard: (c, actions) => {
     const status = (c.status ?? "todo") as ProjectClipStatus;
-    const color = PROJECT_CLIP_STATUS_COLORS[status] ?? "bg-gray-500/20 text-gray-400";
+    const color = PROJECT_CLIP_STATUS_COLORS[status] ?? "bg-muted/20 text-muted-foreground";
     const label = PROJECT_CLIP_STATUS_LABELS[status] ?? c.status;
     const display = getEntityLabel(c, "未命名剪辑");
     return (
       <div
-        className={`group flex items-center gap-3 rounded-lg border bg-[#202020] p-3 transition-colors ${
+        className={`group flex items-center gap-3 rounded-lg border bg-muted p-3 transition-colors ${
           actions.selected
-            ? "border-emerald-500 ring-1 ring-emerald-500/40"
-            : "border-white/10 hover:border-emerald-500/50"
+            ? "border-primary ring-1 ring-primary/40"
+            : "border-border hover:border-primary/50"
         }`}
       >
         <button
@@ -113,8 +113,8 @@ const config: FactoryCRUDPageProps<ProjectClip> = {
           }}
           className={`grid h-5 w-5 shrink-0 place-items-center rounded border transition-opacity ${
             actions.selected
-              ? "border-emerald-500 bg-emerald-500 opacity-100"
-              : "border-white/40 bg-black/30 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
+              ? "border-primary bg-primary opacity-100"
+              : "border-border bg-black/30 opacity-0 group-hover:opacity-100 hover:border-primary"
           }`}
           aria-label={actions.selected ? "取消选择" : "选择"}
         >
@@ -129,20 +129,20 @@ const config: FactoryCRUDPageProps<ProjectClip> = {
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-white"
+              className="text-foreground"
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
           )}
         </button>
-        <Scissors className="h-4 w-4 shrink-0 text-emerald-400" />
+        <Scissors className="h-4 w-4 shrink-0 text-primary" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="truncate text-sm font-medium text-white">{display}</h3>
+            <h3 className="truncate text-sm font-medium text-foreground">{display}</h3>
             <span className={`rounded px-2 py-0.5 text-xs ${color}`}>{label}</span>
-            {c.episode > 0 && <span className="text-xs text-[#888]">第 {c.episode} 集</span>}
+            {c.episode > 0 && <span className="text-xs text-muted-foreground">第 {c.episode} 集</span>}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[#888]">
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             {c.scene && <span>场景: {c.scene}</span>}
             {c.shot && <span>镜头: {c.shot}</span>}
             {c.duration > 0 && <span>时长: {c.duration}s</span>}
@@ -236,14 +236,14 @@ export function ClipCenterPage() {
 
   const toolbarExtra = (
     <div className="flex items-center gap-2">
-      <div className="flex rounded-md border border-white/10 bg-[#1a1a1a] p-0.5">
+      <div className="flex rounded-md border border-border bg-card p-0.5">
         <button
           type="button"
           onClick={() => setView("list")}
           className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${
             view === "list"
-              ? "bg-emerald-500/20 text-emerald-300"
-              : "text-[#888] hover:text-white"
+              ? "bg-primary/20 text-primary"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <List className="h-3 w-3" />
@@ -254,8 +254,8 @@ export function ClipCenterPage() {
           onClick={() => setView("timeline")}
           className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${
             view === "timeline"
-              ? "bg-emerald-500/20 text-emerald-300"
-              : "text-[#888] hover:text-white"
+              ? "bg-primary/20 text-primary"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Clock className="h-3 w-3" />
@@ -283,7 +283,7 @@ export function ClipCenterPage() {
         renderCard={() => null}
         extraToolbarContent={
           isTimelineLoading ? (
-            <div className="p-8 text-center text-sm text-[#666]">加载中...</div>
+            <div className="p-8 text-center text-sm text-muted-foreground">加载中...</div>
           ) : (
             <ClipTimeline clips={timelineClips} />
           )

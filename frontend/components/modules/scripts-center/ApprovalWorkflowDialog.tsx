@@ -86,29 +86,29 @@ function SimpleApprovalWorkflow({
   };
 
   const statusColors: Record<string, string> = {
-    draft: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-    active: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    review: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    completed: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-    archived: "bg-[#252525] text-[#888] border-white/10",
+    draft: "bg-muted/20 text-muted-foreground border-border/30",
+    active: "bg-info/20 text-info border-info/30",
+    review: "bg-chart-5/20 text-chart-5 border-chart-5/30",
+    completed: "bg-primary/20 text-primary border-primary/30",
+    archived: "bg-secondary text-muted-foreground border-border",
   };
 
   return (
     <div className="space-y-4">
       {/* 审批通过提示 */}
       {currentStatus === "completed" && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-          <CheckCircle className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-emerald-200">
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+          <CheckCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-primary">
             <p className="font-medium">剧本已审批通过</p>
-            <p className="text-xs text-emerald-300/80 mt-1">该剧本已自动流转到审核中心，可在审核中心查看和管理</p>
+            <p className="text-xs text-primary/80 mt-1">该剧本已自动流转到审核中心，可在审核中心查看和管理</p>
           </div>
         </div>
       )}
 
       {/* 当前状态 */}
       <div>
-        <div className="text-sm font-medium text-white mb-3">当前状态</div>
+        <div className="text-sm font-medium text-foreground mb-3">当前状态</div>
         <div className={`rounded-lg p-3 border ${statusColors[currentStatus]}`}>
           <div className="flex items-center justify-between">
             <div>
@@ -124,7 +124,7 @@ function SimpleApprovalWorkflow({
 
       {/* 审批流程步骤 */}
       <div>
-        <div className="text-sm font-medium text-white mb-3">审批流程</div>
+        <div className="text-sm font-medium text-foreground mb-3">审批流程</div>
         <div className="space-y-2">
           {workflowSteps.map((step, index) => {
             const isCompleted = index < currentIndex;
@@ -135,33 +135,33 @@ function SimpleApprovalWorkflow({
                 key={step.status}
                 className={`border rounded-lg p-3 transition-colors ${
                   isCurrent
-                    ? "bg-blue-500/10 border-blue-500/30 ring-2 ring-blue-500/20"
+                    ? "bg-info/10 border-info/30 ring-2 ring-info/20"
                     : isCompleted
-                    ? "bg-emerald-500/5 border-emerald-500/20"
-                    : "bg-white/5 border-white/10"
+                    ? "bg-primary/5 border-primary/20"
+                    : "bg-muted/50 border-border"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
                       isCompleted
-                        ? "bg-emerald-500/20 text-emerald-400"
+                        ? "bg-primary/20 text-primary"
                         : isCurrent
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "bg-white/5 text-[#666]"
+                        ? "bg-info/20 text-info"
+                        : "bg-muted/50 text-muted-foreground"
                     }`}
                   >
                     {isCompleted ? <CheckCircle className="h-4 w-4" /> : index + 1}
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-white">{step.label}</div>
-                    <div className="text-xs text-[#888]">{step.desc}</div>
+                    <div className="text-sm font-medium text-foreground">{step.label}</div>
+                    <div className="text-xs text-muted-foreground">{step.desc}</div>
                   </div>
                   {isCurrent && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">当前</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-info/20 text-info">当前</span>
                   )}
                   {isCompleted && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">已完成</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary">已完成</span>
                   )}
                 </div>
               </div>
@@ -173,13 +173,13 @@ function SimpleApprovalWorkflow({
       {/* 操作区域 */}
       {currentIndex < workflowSteps.length - 1 && (
         <div>
-          <div className="text-sm font-medium text-white mb-3">审批操作</div>
+          <div className="text-sm font-medium text-foreground mb-3">审批操作</div>
           <div className="space-y-3">
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="输入审批意见（可选）..."
-              className="w-full h-20 p-3 rounded-lg bg-[#252525] border border-white/10 text-sm text-white resize-none focus:outline-none focus:border-emerald-500/50"
+              className="w-full h-20 p-3 rounded-lg bg-secondary border border-border text-sm text-foreground resize-none focus:outline-none focus:border-primary/50"
             />
             <div className="flex gap-2">
               <Button
@@ -212,18 +212,18 @@ function SimpleApprovalWorkflow({
       {/* 审批历史 */}
       {history.length > 0 && (
         <div>
-          <div className="text-sm font-medium text-white mb-3">审批历史</div>
+          <div className="text-sm font-medium text-foreground mb-3">审批历史</div>
           <div className="space-y-2">
             {history.map((record, idx) => (
-              <div key={idx} className="bg-white/5 rounded p-2 text-xs">
+              <div key={idx} className="bg-muted/50 rounded p-2 text-xs">
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`px-2 py-0.5 rounded ${statusColors[record.status]}`}>
                     {workflowSteps.find((s) => s.status === record.status)?.label || record.status}
                   </span>
-                  <span className="text-[#666]">{record.time}</span>
+                  <span className="text-muted-foreground">{record.time}</span>
                 </div>
                 {record.comment && (
-                  <div className="text-[#888]">{record.comment}</div>
+                  <div className="text-muted-foreground">{record.comment}</div>
                 )}
               </div>
             ))}

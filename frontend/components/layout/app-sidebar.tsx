@@ -185,15 +185,15 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
   };
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
+    <aside className="flex h-screen w-64 flex-col border-r border-border bg-sidebar">
       {/* Logo区域 */}
-      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
-          <Film className="h-6 w-6 text-white" />
+      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary">
+          <Film className="h-6 w-6 text-foreground" />
         </div>
         <div>
-          <div className="text-base font-bold text-white leading-tight">AI漫剧工业化</div>
-          <div className="text-base font-bold text-white leading-tight">生产平台</div>
+          <div className="text-base font-bold text-foreground leading-tight">AI漫剧工业化</div>
+          <div className="text-base font-bold text-foreground leading-tight">生产平台</div>
         </div>
       </div>
 
@@ -204,12 +204,12 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           <button
             onClick={() => router.push("/")}
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${activePath === "/"
-                ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500"
-                : "text-[#ccc] hover:bg-white/5 hover:text-white"
+                ? "bg-primary/10 text-primary border-l-2 border-primary"
+                : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
               }`}
             aria-current={activePath === "/" ? "page" : "false"}
           >
-            <Home className={`h-4 w-4 ${activePath === "/" ? "text-emerald-400" : "text-[#888]"}`} />
+            <Home className={`h-4 w-4 ${activePath === "/" ? "text-primary" : "text-muted-foreground"}`} />
             <span className="flex-1 text-left">驾驶舱</span>
           </button>
 
@@ -217,12 +217,12 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           <button
             onClick={() => router.push("/todos")}
             className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${activePath.startsWith("/todos")
-                ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500"
-                : "text-[#ccc] hover:bg-white/5 hover:text-white"
+                ? "bg-primary/10 text-primary border-l-2 border-primary"
+                : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
               }`}
             aria-current={activePath.startsWith("/todos") ? "page" : "false"}
           >
-            <CheckSquare className={`h-4 w-4 ${activePath.startsWith("/todos") ? "text-emerald-400" : "text-[#888]"}`} />
+            <CheckSquare className={`h-4 w-4 ${activePath.startsWith("/todos") ? "text-primary" : "text-muted-foreground"}`} />
             <span className="flex-1 text-left">我的待办</span>
           </button>
         </div>
@@ -238,7 +238,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
               {group.name && (
                 <button
                   onClick={() => handleToggleGroup(group.id)}
-                  className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-[#888] hover:text-white transition-colors"
+                  className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                   aria-expanded={isExpanded}
                   aria-label={group.name}
                 >
@@ -266,15 +266,15 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
                         key={item.id}
                         onClick={() => handleItemClick(item)}
                         className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${isActive
-                          ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500"
-                          : "text-[#ccc] hover:bg-white/5 hover:text-white"
+                          ? "bg-primary/10 text-primary border-l-2 border-primary"
+                          : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
                           }`}
                         aria-current={isActive ? "page" : undefined}
                       >
-                        <ItemIcon className={`h-4 w-4 ${isActive ? "text-emerald-400" : "text-[#888]"}`} />
+                        <ItemIcon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                         <span className="flex-1 text-left">{item.name}</span>
                         {item.badge && (
-                          <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-xs text-emerald-400">
+                          <span className="rounded bg-primary/20 px-1.5 py-0.5 text-xs text-primary">
                             {item.badge}
                           </span>
                         )}
@@ -289,10 +289,10 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
       </nav>
 
       {/* 底部状态栏 */}
-      <div className="border-t border-white/10 px-4 py-3">
-        <div className="flex items-center justify-between text-xs text-[#888]">
+      <div className="border-t border-border px-4 py-3">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+            <div className="h-2 w-2 rounded-full bg-primary" />
             <span>系统正常</span>
           </div>
           {isAdmin && <>
@@ -300,8 +300,8 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
               onClick={() => router.push("/settings")}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors ${
                 activePath.startsWith("/settings")
-                  ? "bg-emerald-500/10 text-emerald-400"
-                  : "hover:bg-white/10"
+                  ? "bg-primary/10 text-primary"
+                  : "hover:bg-muted"
               }`}
               aria-label="系统管理"
             >
@@ -312,8 +312,8 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
               onClick={() => router.push("/logs")}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors ${
                 activePath.startsWith("/logs")
-                  ? "bg-emerald-500/10 text-emerald-400"
-                  : "hover:bg-white/10"
+                  ? "bg-primary/10 text-primary"
+                  : "hover:bg-muted"
               }`}
               aria-label="审计日志"
             >

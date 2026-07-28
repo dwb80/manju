@@ -58,7 +58,7 @@ function BatchChangeTypeMenu({
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-30 mt-1 min-w-[140px] max-h-72 overflow-y-auto rounded-md border border-white/10 bg-[#202020] py-1 shadow-lg">
+          <div className="absolute right-0 top-full z-30 mt-1 min-w-[140px] max-h-72 overflow-y-auto rounded-md border border-border bg-muted py-1 shadow-lg">
             {options.map((opt) => (
               <button
                 key={opt.value}
@@ -67,7 +67,7 @@ function BatchChangeTypeMenu({
                   setOpen(false);
                   onSelect(opt.value);
                 }}
-                className="w-full px-3 py-1.5 text-left text-xs text-white hover:bg-white/10"
+                className="w-full px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted"
               >
                 {opt.label}
               </button>
@@ -102,9 +102,9 @@ function FactoryBatchActionsBar({
   onChangeType?: (value: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5">
-      <span className="text-xs font-medium text-emerald-300">已选 {count} 项</span>
-      <span className="h-4 w-px bg-white/10" />
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5">
+      <span className="text-xs font-medium text-primary">已选 {count} 项</span>
+      <span className="h-4 w-px bg-muted" />
       <Button variant="ghost" size="sm" onClick={onSelectAll} className="text-xs">
         <CheckSquare className="mr-1 h-3 w-3" />
         {selectAllLabel}
@@ -115,7 +115,7 @@ function FactoryBatchActionsBar({
       </Button>
       {batchTypeConfig && onChangeType && (
         <>
-          <span className="h-4 w-px bg-white/10" />
+          <span className="h-4 w-px bg-muted" />
           <BatchChangeTypeMenu
             options={batchTypeConfig.options}
             onSelect={onChangeType}
@@ -153,18 +153,18 @@ function SelectAllRow({
   partialLabel?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 pb-3 mb-3 border-b border-white/10">
+    <div className="flex flex-wrap items-center gap-3 pb-3 mb-3 border-b border-border">
       {showSelectAll && (
         <button
           type="button"
           onClick={onToggle}
-          className="flex items-center gap-2 text-xs text-[#888] hover:text-white transition-colors"
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           aria-label={isAllSelected ? "取消全选" : selectAllLabel}
         >
           {isAllSelected ? (
-            <CheckSquare className="h-4 w-4 text-emerald-400" />
+            <CheckSquare className="h-4 w-4 text-primary" />
           ) : isPartial ? (
-            <Square className="h-4 w-4 text-emerald-400 opacity-50" />
+            <Square className="h-4 w-4 text-primary opacity-50" />
           ) : (
             <Square className="h-4 w-4" />
           )}
@@ -198,34 +198,34 @@ function RecycleBinRow<TEntity extends FactoryEntity>({
   const deletedAt = item.deleted_at;
   return (
     <div
-      className={`group flex items-center gap-3 rounded-lg border bg-[#1f1f1f] px-4 py-3 transition-colors ${selected
-        ? "border-emerald-500 ring-1 ring-emerald-500/40"
-        : "border-white/10 hover:border-white/20"
+      className={`group flex items-center gap-3 rounded-lg border bg-muted px-4 py-3 transition-colors ${selected
+        ? "border-primary ring-1 ring-primary/40"
+        : "border-border hover:border-border"
         }`}
     >
       <button
         type="button"
         onClick={onToggleSelect}
         className={`grid h-5 w-5 shrink-0 place-items-center rounded border transition-opacity ${selected
-          ? "border-emerald-500 bg-emerald-500"
-          : "border-white/40 bg-black/30 hover:border-emerald-400"
+          ? "border-primary bg-primary"
+          : "border-border bg-black/30 hover:border-primary"
           }`}
         aria-label={selected ? "取消选择" : "选择"}
       >
-        {selected && <CheckSquare className="h-3 w-3 text-white" />}
+        {selected && <CheckSquare className="h-3 w-3 text-foreground" />}
       </button>
       <SafeImage
         src={image}
         alt={item.name || entityLabel}
-        className="h-10 w-10 rounded-md bg-[#2a2a2a]"
+        className="h-10 w-10 rounded-md bg-secondary"
         fallbackIcon={false}
         fallbackLabel={item.name?.slice(0, 2) || entityLabel.slice(0, 2)}
       />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 text-sm text-white truncate">
+        <div className="flex items-center gap-2 text-sm text-foreground truncate">
           {item.name}
         </div>
-        <div className="text-xs text-[#666] truncate">
+        <div className="text-xs text-muted-foreground truncate">
           {metaLabel}: {deletedAt ? new Date(deletedAt).toLocaleString() : "—"}
         </div>
       </div>
@@ -287,6 +287,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
     pageSize: defaultPageSize = 12,
     selectAllLabel = "全选",
     loadingView,
+    headerContent,
     extraToolbarContent,
     toolbarExtra,
     showStats,
@@ -717,38 +718,39 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
 
   return (
     <PageContainer title={title} description={description}>
+      {headerContent && <div className="mb-4">{headerContent}</div>}
       {/* 客户端 mount 前：渲染与 SSR 一致的占位，避免 selectedProjectId 引起 hydration mismatch */}
       {!hasMounted && (
-        <div className="flex items-center justify-center py-16 text-sm text-[#888]">加载中…</div>
+        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">加载中…</div>
       )}
       {hasMounted && (
         <>
           {/* 顶部 Tab：正常资产 / 回收站（仅当配置了 fetchDeleted + permanentDelete + restoreItem 时启用） */}
           {recycleBinEnabled && (
-            <div className="mb-4 inline-flex h-9 items-center rounded-md border border-white/10 bg-[#1a1a1a] p-0.5 text-xs">
+            <div className="mb-4 inline-flex h-9 items-center rounded-md border border-border bg-card p-0.5 text-xs">
               <button
                 type="button"
                 onClick={switchToNormal}
                 className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1 transition-colors ${activeView === "normal"
-                  ? "bg-emerald-500/15 text-emerald-300"
-                  : "text-[#888] hover:text-white"
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-foreground"
                   }`}
               >
                 <Archive className="h-3.5 w-3.5" />
                 正常{entityLabel}
-                <span className="text-[10px] text-[#666]">（{items.length}）</span>
+                <span className="text-[10px] text-muted-foreground">（{items.length}）</span>
               </button>
               <button
                 type="button"
                 onClick={switchToRecycleBin}
                 className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1 transition-colors ${activeView === "recycleBin"
-                  ? "bg-emerald-500/15 text-emerald-300"
-                  : "text-[#888] hover:text-white"
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-foreground"
                   }`}
               >
                 <Inbox className="h-3.5 w-3.5" />
                 回收站
-                <span className="text-[10px] text-[#666]">（{deletedItems.length}）</span>
+                <span className="text-[10px] text-muted-foreground">（{deletedItems.length}）</span>
               </button>
             </div>
           )}
@@ -758,7 +760,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
             <>
               {/* 统计卡片 */}
               {statConfigs.length > 0 && (
-                <PageCard className="mb-6">
+                <PageCard className="mb-4">
                   <StatCardGrid columns={4 as 2 | 3 | 4}>
                     {statConfigs.map((cfg, idx) => (
                       <StatCard key={`${cfg.label}-${idx}`} label={cfg.label} value={cfg.value} icon={cfg.icon} color={cfg.color} />
@@ -872,7 +874,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                       onToggle={toggleSelectVisible}
                       totalSelectedLabel={
                         selectedIds.size > 0 ? (
-                          <span className="text-xs text-emerald-400">已选 {selectedIds.size} 项</span>
+                          <span className="text-xs text-primary">已选 {selectedIds.size} 项</span>
                         ) : undefined
                       }
                       selectedLabel={usePagination ? "已选当前页" : "已全选当前筛选结果"}
@@ -884,7 +886,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                         <button
                           type="button"
                           onClick={selectAllFiltered}
-                          className="text-xs text-[#888] hover:text-emerald-300 transition-colors"
+                          className="text-xs text-muted-foreground hover:text-primary transition-colors"
                           title={`将当前过滤结果的全部 ${filteredItems.length} 项加入选择`}
                         >
                           {selectAllLabel}（{filteredItems.length}）
@@ -935,11 +937,11 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
           {activeView === "recycleBin" && recycleBinEnabled && (
             <>
               {/* 提示横幅 */}
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
                 <Inbox className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <div>
                   回收站中的{entityLabel}可被恢复或永久删除。
-                  <span className="ml-1 text-amber-300/80">永久删除后将无法恢复，请谨慎操作。</span>
+                  <span className="ml-1 text-warning/80">永久删除后将无法恢复，请谨慎操作。</span>
                 </div>
               </div>
 
@@ -954,9 +956,9 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                 }
                 right={
                   selectedIds.size > 0 ? (
-                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5">
-                      <span className="text-xs font-medium text-emerald-300">已选 {selectedIds.size} 项</span>
-                      <span className="h-4 w-px bg-white/10" />
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5">
+                      <span className="text-xs font-medium text-primary">已选 {selectedIds.size} 项</span>
+                      <span className="h-4 w-px bg-muted" />
                       <Button
                         variant="ghost"
                         size="sm"
@@ -992,7 +994,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
               {/* 回收站列表 */}
               <PageCard title={`回收站（${entityLabel}）`}>
                 {isRecycleBinLoading ? (
-                  loadingView ?? <div className="flex items-center justify-center py-12 text-[#888]">加载中...</div>
+                  loadingView ?? <div className="flex items-center justify-center py-12 text-muted-foreground">加载中...</div>
                 ) : deletedItems.length > 0 ? (
                   (() => {
                     // 简单搜索过滤
@@ -1012,7 +1014,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                       visibleIdsInBin.some((id) => selectedIds.has(id)) && !allInBinSelected;
                     return (
                       <>
-                        <div className="flex flex-wrap items-center gap-3 pb-3 mb-3 border-b border-white/10">
+                        <div className="flex flex-wrap items-center gap-3 pb-3 mb-3 border-b border-border">
                           <button
                             type="button"
                             onClick={() => {
@@ -1026,18 +1028,18 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                                 return next;
                               });
                             }}
-                            className="flex items-center gap-2 text-xs text-[#888] hover:text-white transition-colors"
+                            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                           >
                             {allInBinSelected ? (
-                              <CheckSquare className="h-4 w-4 text-emerald-400" />
+                              <CheckSquare className="h-4 w-4 text-primary" />
                             ) : partialInBin ? (
-                              <Square className="h-4 w-4 text-emerald-400 opacity-50" />
+                              <Square className="h-4 w-4 text-primary opacity-50" />
                             ) : (
                               <Square className="h-4 w-4" />
                             )}
                             {allInBinSelected ? "已全选" : "全选"}
                           </button>
-                          <span className="text-xs text-[#666]">
+                          <span className="text-xs text-muted-foreground">
                             共 {deletedItems.length} 个已删除{entityLabel}
                           </span>
                         </div>

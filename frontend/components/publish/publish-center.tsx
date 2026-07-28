@@ -177,15 +177,15 @@ export function PublishCenter({
   return (
     <div className="space-y-6">
       {/* 顶部标题区域 */}
-      <div className="rounded-xl border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#202020] p-6">
+      <div className="rounded-xl border border-border bg-gradient-to-br from-background to-muted p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20">
-              <Upload className="h-6 w-6 text-blue-400" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-info/20 to-chart-1/20">
+              <Upload className="h-6 w-6 text-info" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">成片与发布计划管理</h2>
-              <p className="text-sm text-[#888]">
+              <h2 className="text-xl font-bold text-foreground">成片与发布计划管理</h2>
+              <p className="text-sm text-muted-foreground">
                 管理成片与发布计划，追踪发布进度
               </p>
             </div>
@@ -195,14 +195,14 @@ export function PublishCenter({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={onViewAllVideos}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#202020] px-4 py-2 text-sm font-medium text-white transition-colors hover:border-white/20 hover:bg-[#252525]"
+              className="flex items-center gap-2 rounded-lg border border-border bg-muted px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-border hover:bg-secondary"
             >
               <Video className="h-4 w-4" />
               <span>查看所有成片</span>
             </button>
             <button
               onClick={onCreatePlan}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-info to-chart-1 px-4 py-2 text-sm font-medium text-foreground transition-opacity hover:opacity-90"
             >
               <Calendar className="h-4 w-4" />
               <span>创建发布计划</span>
@@ -212,12 +212,12 @@ export function PublishCenter({
       </div>
 
       {/* Tab 切换 */}
-      <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-[#1a1a1a] p-1">
+      <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
         <button
           onClick={() => setActiveTab("overview")}
           className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === "overview"
-            ? "bg-white/10 text-white"
-            : "text-[#888] hover:text-white"
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:text-foreground"
             }`}
         >
           概览
@@ -225,8 +225,8 @@ export function PublishCenter({
         <button
           onClick={() => setActiveTab("videos")}
           className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === "videos"
-            ? "bg-white/10 text-white"
-            : "text-[#888] hover:text-white"
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:text-foreground"
             }`}
         >
           最新成片
@@ -234,8 +234,8 @@ export function PublishCenter({
         <button
           onClick={() => setActiveTab("plans")}
           className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === "plans"
-            ? "bg-white/10 text-white"
-            : "text-[#888] hover:text-white"
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:text-foreground"
             }`}
         >
           发布计划
@@ -243,17 +243,17 @@ export function PublishCenter({
       </div>
 
       {/* 内容区域 */}
-      <div className="rounded-xl border border-white/10 bg-[#181818] p-6">
+      <div className="rounded-xl border border-border bg-card p-6">
         {/* 概览 Tab */}
         {activeTab === "overview" && (
           <div className="space-y-6">
             {/* 最新成片预览 */}
             <div>
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">最新成片</h3>
+                <h3 className="text-lg font-semibold text-foreground">最新成片</h3>
                 <button
                   onClick={() => setActiveTab("videos")}
-                  className="flex items-center gap-1 text-sm text-blue-400 transition-colors hover:text-blue-300"
+                  className="flex items-center gap-1 text-sm text-info transition-colors hover:text-info"
                 >
                   查看全部
                   <ChevronRight className="h-4 w-4" />
@@ -263,15 +263,15 @@ export function PublishCenter({
                 {recentVideos.slice(0, 3).map((video) => (
                   <div
                     key={video.id}
-                    className="flex items-center justify-between rounded-lg border border-white/5 bg-[#202020] p-4 transition-colors hover:border-white/10"
+                    className="flex items-center justify-between rounded-lg border border-border/50 bg-muted p-4 transition-colors hover:border-border"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                        <PlayCircle className="h-5 w-5 text-blue-400" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-info/10">
+                        <PlayCircle className="h-5 w-5 text-info" />
                       </div>
                       <div>
-                        <p className="font-medium text-white">{video.name}</p>
-                        <p className="text-xs text-[#888]">
+                        <p className="font-medium text-foreground">{video.name}</p>
+                        <p className="text-xs text-muted-foreground">
                           {video.projectName} · {formatDuration(video.duration)}
                         </p>
                       </div>
@@ -279,8 +279,8 @@ export function PublishCenter({
                     <div className="flex items-center gap-3">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-medium ${video.publishStatus === "published"
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-orange-500/10 text-orange-400"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-chart-3/10 text-chart-3"
                           }`}
                       >
                         {video.publishStatus === "published" ? "已发布" : "待发布"}
@@ -289,7 +289,7 @@ export function PublishCenter({
                   </div>
                 ))}
                 {recentVideos.length === 0 && (
-                  <div className="py-8 text-center text-[#666]">暂无成片</div>
+                  <div className="py-8 text-center text-muted-foreground">暂无成片</div>
                 )}
               </div>
             </div>
@@ -297,10 +297,10 @@ export function PublishCenter({
             {/* 发布计划预览 */}
             <div>
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">发布计划</h3>
+                <h3 className="text-lg font-semibold text-foreground">发布计划</h3>
                 <button
                   onClick={() => setActiveTab("plans")}
-                  className="flex items-center gap-1 text-sm text-blue-400 transition-colors hover:text-blue-300"
+                  className="flex items-center gap-1 text-sm text-info transition-colors hover:text-info"
                 >
                   查看全部
                   <ChevronRight className="h-4 w-4" />
@@ -310,23 +310,23 @@ export function PublishCenter({
                 {plans.slice(0, 2).map((plan) => (
                   <div
                     key={plan.id}
-                    className="rounded-lg border border-white/5 bg-[#202020] p-4 transition-colors hover:border-white/10"
+                    className="rounded-lg border border-border/50 bg-muted p-4 transition-colors hover:border-border"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <p className="font-medium text-white">{plan.name}</p>
-                        <p className="mt-1 text-xs text-[#888]">
+                        <p className="font-medium text-foreground">{plan.name}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {plan.date} · {plan.videos.length} 个成片
                         </p>
                       </div>
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-medium ${plan.status === "completed"
-                          ? "bg-emerald-500/10 text-emerald-400"
+                          ? "bg-primary/10 text-primary"
                           : plan.status === "executing"
-                            ? "bg-blue-500/10 text-blue-400"
+                            ? "bg-info/10 text-info"
                             : plan.status === "cancelled"
-                              ? "bg-red-500/10 text-red-400"
-                              : "bg-orange-500/10 text-orange-400"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-chart-3/10 text-chart-3"
                           }`}
                       >
                         {plan.status === "completed"
@@ -342,7 +342,7 @@ export function PublishCenter({
                       {plan.platforms.map((platform) => (
                         <span
                           key={platform}
-                          className="rounded-md bg-white/5 px-2 py-1 text-xs text-[#888]"
+                          className="rounded-md bg-muted/50 px-2 py-1 text-xs text-muted-foreground"
                         >
                           {getPlatformIcon(platform)}
                         </span>
@@ -351,20 +351,20 @@ export function PublishCenter({
                   </div>
                 ))}
                 {plans.length === 0 && (
-                  <div className="py-8 text-center text-[#666]">暂无发布计划</div>
+                  <div className="py-8 text-center text-muted-foreground">暂无发布计划</div>
                 )}
               </div>
             </div>
 
             {/* 快捷统计 */}
-            <div className="rounded-lg border border-white/5 bg-[#202020] p-4">
+            <div className="rounded-lg border border-border/50 bg-muted p-4">
               <div className="mb-3 flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-[#888]" />
-                <span className="text-sm font-medium text-white">发布统计</span>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">发布统计</span>
               </div>
               <button
                 onClick={onViewStatistics}
-                className="w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-4 py-3 text-sm text-[#888] transition-colors hover:border-white/20 hover:text-white"
+                className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-border hover:text-foreground"
               >
                 查看详细发布统计和数据分析
               </button>
@@ -394,8 +394,8 @@ export function PublishCenter({
                       <TableRow key={video.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-500/10">
-                              <PlayCircle className="h-4 w-4 text-blue-400" />
+                            <div className="flex h-8 w-8 items-center justify-center rounded bg-info/10">
+                              <PlayCircle className="h-4 w-4 text-info" />
                             </div>
                             <span className="font-medium text-foreground">{video.name}</span>
                           </div>
@@ -424,7 +424,7 @@ export function PublishCenter({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => onPackageVideo(video)}
-                                className="text-amber-400 hover:text-amber-300"
+                                className="text-warning hover:text-warning"
                                 title="一键打包（生成发布 manifest）"
                               >
                                 <Package className="h-3 w-3" />
@@ -440,9 +440,9 @@ export function PublishCenter({
               </div>
             ) : (
               <div className="py-12 text-center">
-                <Video className="mx-auto h-12 w-12 text-[#666]" />
-                <p className="mt-4 text-[#888]">暂无成片</p>
-                <p className="mt-1 text-sm text-[#666]">完成的视频将在这里显示</p>
+                <Video className="mx-auto h-12 w-12 text-muted-foreground" />
+                <p className="mt-4 text-muted-foreground">暂无成片</p>
+                <p className="mt-1 text-sm text-muted-foreground">完成的视频将在这里显示</p>
               </div>
             )}
 
@@ -495,8 +495,8 @@ export function PublishCenter({
                         <TableRow key={plan.id}>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 items-center justify-center rounded bg-purple-500/10">
-                                <Calendar className="h-4 w-4 text-purple-400" />
+                              <div className="flex h-8 w-8 items-center justify-center rounded bg-chart-1/10">
+                                <Calendar className="h-4 w-4 text-chart-1" />
                               </div>
                               <span className="font-medium text-foreground">{plan.name}</span>
                             </div>
@@ -530,11 +530,11 @@ export function PublishCenter({
               </div>
             ) : (
               <div className="py-12 text-center">
-                <Calendar className="mx-auto h-12 w-12 text-[#666]" />
-                <p className="mt-4 text-[#888]">暂无发布计划</p>
+                <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
+                <p className="mt-4 text-muted-foreground">暂无发布计划</p>
                 <button
                   onClick={onCreatePlan}
-                  className="mt-4 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                  className="mt-4 rounded-lg bg-gradient-to-r from-info to-chart-1 px-4 py-2 text-sm font-medium text-foreground transition-opacity hover:opacity-90"
                 >
                   创建发布计划
                 </button>

@@ -77,7 +77,7 @@ export function TagInput({
               <button
                 type="button"
                 onClick={() => removeTag(idx)}
-                className="hover:text-red-400"
+                className="hover:text-destructive"
                 aria-label={`删除标签 ${tag}`}
               >
                 <X className="h-3 w-3" />
@@ -93,19 +93,19 @@ export function TagInput({
           onBlur={() => draft && addTag(draft)}
           placeholder={value.length === 0 ? placeholder : ""}
           disabled={disabled || value.length >= maxTags}
-          className="flex-1 min-w-[100px] bg-transparent text-sm outline-none placeholder:text-[#666]"
+          className="flex-1 min-w-[100px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
       </div>
       {remainingSuggestions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-[#666]">推荐：</span>
+          <span className="text-xs text-muted-foreground">推荐：</span>
           {remainingSuggestions.slice(0, 8).map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => addTag(s)}
               disabled={disabled}
-              className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-[#aaa] hover:bg-white/10 hover:text-white disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
             >
               <Plus className="h-2.5 w-2.5" />
               {s}

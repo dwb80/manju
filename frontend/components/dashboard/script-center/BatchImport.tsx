@@ -250,21 +250,21 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
   const processingCount = files.filter((f) => f.status === 'processing').length
 
   return (
-    <div className="batch-import bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden">
+    <div className="batch-import bg-card rounded-lg border border-border overflow-hidden">
       {/* 标题 */}
-      <div className="p-3 border-b border-white/10">
-        <h3 className="text-sm font-medium text-white">批量导入与格式转换</h3>
+      <div className="p-3 border-b border-border">
+        <h3 className="text-sm font-medium text-foreground">批量导入与格式转换</h3>
       </div>
 
       {/* 模式切换 */}
-      <div className="p-3 border-b border-white/10">
+      <div className="p-3 border-b border-border">
         <div className="flex gap-2 mb-3">
           <button
             onClick={() => setImportMode('import')}
             className={`flex-1 px-3 py-2 rounded text-sm transition-colors ${
               importMode === 'import'
-                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
-                : 'bg-white/5 text-[#888] border border-white/10 hover:bg-white/10'
+                ? 'bg-info/20 text-info border border-info/50'
+                : 'bg-muted/50 text-muted-foreground border border-border hover:bg-muted'
             }`}
           >
             <Upload className="h-4 w-4 inline mr-1" />
@@ -274,8 +274,8 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
             onClick={() => setImportMode('convert')}
             className={`flex-1 px-3 py-2 rounded text-sm transition-colors ${
               importMode === 'convert'
-                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
-                : 'bg-white/5 text-[#888] border border-white/10 hover:bg-white/10'
+                ? 'bg-chart-1/20 text-chart-1 border border-chart-1/50'
+                : 'bg-muted/50 text-muted-foreground border border-border hover:bg-muted'
             }`}
           >
             <ArrowRight className="h-4 w-4 inline mr-1" />
@@ -286,40 +286,40 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
         {/* 格式转换的目标格式选择 */}
         {importMode === 'convert' && (
           <div className="mb-3">
-            <div className="text-xs text-[#888] mb-2">目标格式：</div>
+            <div className="text-xs text-muted-foreground mb-2">目标格式：</div>
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => setTargetFormat('json')}
                 className={`flex items-center gap-2 p-2 rounded border transition-colors ${
                   targetFormat === 'json'
-                    ? 'border-emerald-500 bg-emerald-500/10'
-                    : 'border-white/10 hover:bg-white/5'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:bg-muted/50'
                 }`}
               >
-                <FileJson className="h-3 w-3 text-[#888]" />
-                <span className="text-xs text-white">JSON</span>
+                <FileJson className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-foreground">JSON</span>
               </button>
               <button
                 onClick={() => setTargetFormat('markdown')}
                 className={`flex items-center gap-2 p-2 rounded border transition-colors ${
                   targetFormat === 'markdown'
-                    ? 'border-emerald-500 bg-emerald-500/10'
-                    : 'border-white/10 hover:bg-white/5'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:bg-muted/50'
                 }`}
               >
-                <FileText className="h-3 w-3 text-[#888]" />
-                <span className="text-xs text-white">Markdown</span>
+                <FileText className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-foreground">Markdown</span>
               </button>
               <button
                 onClick={() => setTargetFormat('fdx')}
                 className={`flex items-center gap-2 p-2 rounded border transition-colors ${
                   targetFormat === 'fdx'
-                    ? 'border-emerald-500 bg-emerald-500/10'
-                    : 'border-white/10 hover:bg-white/5'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:bg-muted/50'
                 }`}
               >
-                <Film className="h-3 w-3 text-[#888]" />
-                <span className="text-xs text-white">FDX</span>
+                <Film className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-foreground">FDX</span>
               </button>
             </div>
           </div>
@@ -327,14 +327,14 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
       </div>
 
       {/* 文件上传区域 */}
-      <div className="p-3 border-b border-white/10">
+      <div className="p-3 border-b border-border">
         <div
-          className="border border-white/10 rounded p-6 text-center cursor-pointer hover:border-white/20 transition-colors"
+          className="border border-border rounded p-6 text-center cursor-pointer hover:border-border transition-colors"
           onClick={() => fileInputRef.current?.click()}
         >
-          <Upload className="h-8 w-8 text-[#888] mx-auto mb-2" />
-          <div className="text-sm text-[#888] mb-1">点击选择文件或拖拽文件到此处</div>
-          <div className="text-xs text-[#666]">
+          <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+          <div className="text-sm text-muted-foreground mb-1">点击选择文件或拖拽文件到此处</div>
+          <div className="text-xs text-muted-foreground">
             支持 JSON、Markdown、FDX 格式
           </div>
           <input
@@ -351,23 +351,23 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
       {/* 文件列表 */}
       <div className="p-3">
         {files.length === 0 ? (
-          <div className="text-center py-8 text-[#666] text-sm">尚未添加文件</div>
+          <div className="text-center py-8 text-muted-foreground text-sm">尚未添加文件</div>
         ) : (
           <div className="space-y-2">
             {/* 统计信息 */}
-            <div className="flex items-center justify-between mb-3 p-2 bg-white/5 rounded">
-              <div className="text-xs text-[#888]">
+            <div className="flex items-center justify-between mb-3 p-2 bg-muted/50 rounded">
+              <div className="text-xs text-muted-foreground">
                 共 {files.length} 个文件
                 {successCount > 0 && (
-                  <span className="text-emerald-400 ml-2">
+                  <span className="text-primary ml-2">
                     {successCount} 成功
                   </span>
                 )}
                 {errorCount > 0 && (
-                  <span className="text-red-400 ml-2">{errorCount} 失败</span>
+                  <span className="text-destructive ml-2">{errorCount} 失败</span>
                 )}
                 {processingCount > 0 && (
-                  <span className="text-yellow-400 ml-2">
+                  <span className="text-chart-5 ml-2">
                     {processingCount} 处理中
                   </span>
                 )}
@@ -389,26 +389,26 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
             {files.map((file) => (
               <div
                 key={file.id}
-                className={`p-3 bg-white/5 rounded border ${
+                className={`p-3 bg-muted/50 rounded border ${
                   file.status === 'success'
-                    ? 'border-emerald-500/50'
+                    ? 'border-primary/50'
                     : file.status === 'error'
-                    ? 'border-red-500/50'
-                    : 'border-white/10'
+                    ? 'border-destructive/50'
+                    : 'border-border'
                 }`}
               >
                 <div className="flex items-start gap-3">
                   {/* 文件图标 */}
                   <div className="flex-shrink-0">
-                    {file.format === 'json' && <FileJson className="h-5 w-5 text-blue-400" />}
-                    {file.format === 'markdown' && <FileText className="h-5 w-5 text-purple-400" />}
-                    {file.format === 'fdx' && <Film className="h-5 w-5 text-emerald-400" />}
+                    {file.format === 'json' && <FileJson className="h-5 w-5 text-info" />}
+                    {file.format === 'markdown' && <FileText className="h-5 w-5 text-chart-1" />}
+                    {file.format === 'fdx' && <Film className="h-5 w-5 text-primary" />}
                   </div>
 
                   {/* 文件信息 */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-white truncate mb-1">{file.name}</div>
-                    <div className="flex items-center gap-2 text-xs text-[#888]">
+                    <div className="text-sm text-foreground truncate mb-1">{file.name}</div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{formatFileSize(file.size)}</span>
                       <span>•</span>
                       <span>
@@ -419,13 +419,13 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
                     {/* 进度条 */}
                     {file.status === 'processing' && (
                       <div className="mt-2">
-                        <div className="h-1 bg-white/5 rounded overflow-hidden">
+                        <div className="h-1 bg-muted/50 rounded overflow-hidden">
                           <div
-                            className="h-full bg-blue-500 transition-all"
+                            className="h-full bg-info transition-all"
                             style={{ width: `${file.progress}%` }}
                           />
                         </div>
-                        <div className="text-xs text-[#888] mt-1">
+                        <div className="text-xs text-muted-foreground mt-1">
                           处理中... {file.progress}%
                         </div>
                       </div>
@@ -433,7 +433,7 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
 
                     {/* 结果信息 */}
                     {file.status === 'success' && file.result && (
-                      <div className="mt-2 text-xs text-emerald-400">
+                      <div className="mt-2 text-xs text-primary">
                         <CheckCircle className="h-3 w-3 inline mr-1" />
                         {file.result.title || '处理完成'}
                       </div>
@@ -441,7 +441,7 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
 
                     {/* 错误信息 */}
                     {file.status === 'error' && file.error && (
-                      <div className="mt-2 text-xs text-red-400">
+                      <div className="mt-2 text-xs text-destructive">
                         <AlertCircle className="h-3 w-3 inline mr-1" />
                         {file.error}
                       </div>
@@ -466,7 +466,7 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFile(file.id)}
-                        className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                         title="删除"
                       >
                         <X className="h-3 w-3" />
@@ -481,9 +481,9 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
       </div>
 
       {/* 操作按钮 */}
-      <div className="p-3 border-t border-white/10">
+      <div className="p-3 border-t border-border">
         <div className="flex items-center justify-between">
-          <div className="text-xs text-[#888]">
+          <div className="text-xs text-muted-foreground">
             {importMode === 'import' ? '将导入文件到项目' : '将转换文件格式'}
           </div>
           <div className="flex items-center gap-2">
@@ -530,12 +530,12 @@ export function BatchImport({ projectId, onImportComplete }: BatchImportProps) {
 
       {/* 导入结果报告 */}
       {successCount > 0 && !converting && (
-        <div className="p-3 border-t border-white/10 bg-emerald-500/10">
-          <div className="text-sm text-emerald-400 mb-2">
+        <div className="p-3 border-t border-border bg-primary/10">
+          <div className="text-sm text-primary mb-2">
             <CheckCircle className="h-4 w-4 inline mr-1" />
             {importMode === 'import' ? '导入完成' : '转换完成'}
           </div>
-          <div className="text-xs text-white">
+          <div className="text-xs text-foreground">
             成功处理 {successCount} 个文件
             {errorCount > 0 && `, ${errorCount} 个文件失败`}
           </div>

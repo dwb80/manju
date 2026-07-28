@@ -87,8 +87,8 @@ function buildBlocks(clips: ProjectClip[]): { blocks: BlockMeta[]; maxTime: numb
 export function ClipTimeline({ clips }: { clips: ProjectClip[] }) {
   if (!clips || clips.length === 0) {
     return (
-      <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-8 text-center text-sm text-[#666]">
-        <Clock className="mx-auto mb-2 h-8 w-8 text-emerald-500/40" />
+      <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+        <Clock className="mx-auto mb-2 h-8 w-8 text-primary/40" />
         暂无剪辑数据，先从分镜同步或新建剪辑。
       </div>
     );
@@ -104,10 +104,10 @@ export function ClipTimeline({ clips }: { clips: ProjectClip[] }) {
       {episodes.map((ep) => {
         const epBlocks = blocks.filter((b) => b.episode === ep);
         return (
-          <div key={ep} className="rounded-lg border border-white/10 bg-[#1a1a1a] p-3">
-            <div className="mb-2 flex items-center gap-2 text-xs text-emerald-300/90">
-              <span className="rounded bg-emerald-500/10 px-1.5 py-0.5">第 {ep} 集</span>
-              <span className="text-[#666]">{epBlocks.length} 条剪辑</span>
+          <div key={ep} className="rounded-lg border border-border bg-card p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs text-primary/90">
+              <span className="rounded bg-primary/10 px-1.5 py-0.5">第 {ep} 集</span>
+              <span className="text-muted-foreground">{epBlocks.length} 条剪辑</span>
             </div>
             {/* 时间刻度尺 */}
             <div className="relative ml-12 mb-1 h-4">
@@ -116,7 +116,7 @@ export function ClipTimeline({ clips }: { clips: ProjectClip[] }) {
                 return (
                   <span
                     key={i}
-                    className="absolute -translate-x-1/2 text-[10px] text-[#666]"
+                    className="absolute -translate-x-1/2 text-[10px] text-muted-foreground"
                     style={{ left: `${(t / total) * 100}%` }}
                   >
                     {formatTC(t)}
@@ -125,14 +125,14 @@ export function ClipTimeline({ clips }: { clips: ProjectClip[] }) {
               })}
             </div>
             {/* 轨道 */}
-            <div className="relative ml-12 h-12 rounded bg-[#0f0f0f]">
+            <div className="relative ml-12 h-12 rounded bg-background">
               {epBlocks.map((b) => {
                 if (b.start < 0) return null;
                 const left = (b.start / total) * 100;
                 const width = Math.max(((b.end - b.start) / total) * 100, 2);
                 const color =
                   PROJECT_CLIP_STATUS_COLORS[b.status as keyof typeof PROJECT_CLIP_STATUS_COLORS] ??
-                  "bg-gray-500/20 text-gray-300";
+                  "bg-muted/20 text-muted-foreground";
                 return (
                   <Tip
                     key={b.id}
@@ -149,7 +149,7 @@ export function ClipTimeline({ clips }: { clips: ProjectClip[] }) {
                     className="max-w-xs"
                   >
                     <div
-                      className={`absolute top-1 bottom-1 flex items-center overflow-hidden rounded border border-white/10 ${color} hover:z-10 hover:ring-1 hover:ring-emerald-400`}
+                      className={`absolute top-1 bottom-1 flex items-center overflow-hidden rounded border border-border ${color} hover:z-10 hover:ring-1 hover:ring-primary`}
                       style={{ left: `${left}%`, width: `${width}%` }}
                     >
                       <Scissors className="ml-1 h-3 w-3 shrink-0 opacity-70" />
@@ -171,15 +171,15 @@ export function ClipTimeline({ clips }: { clips: ProjectClip[] }) {
         const unscheduled = blocks.filter((b) => b.start < 0);
         if (unscheduled.length === 0) return null;
         return (
-          <div className="rounded-lg border border-dashed border-white/10 bg-[#1a1a1a] p-3">
-            <div className="mb-2 flex items-center gap-2 text-xs text-[#888]">
-              <span className="rounded bg-white/5 px-1.5 py-0.5">未排期</span>
-              <span className="text-[#666]">{unscheduled.length} 条剪辑未填写时间点</span>
+          <div className="rounded-lg border border-dashed border-border bg-card p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="rounded bg-muted/50 px-1.5 py-0.5">未排期</span>
+              <span className="text-muted-foreground">{unscheduled.length} 条剪辑未填写时间点</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {unscheduled.map((b) => (
                 <Tip key={b.id} label={b.notes} side="top">
-                  <div className="rounded border border-white/10 bg-[#252525] px-2 py-1 text-xs text-white/70">
+                  <div className="rounded border border-border bg-secondary px-2 py-1 text-xs text-foreground/70">
                     {b.shot ? `${b.shot} · ` : ""}
                     {b.title}
                   </div>
@@ -190,7 +190,7 @@ export function ClipTimeline({ clips }: { clips: ProjectClip[] }) {
         );
       })()}
 
-      <div className="text-[10px] text-[#666]">
+      <div className="text-[10px] text-muted-foreground">
         共 {clips.length} 条剪辑 / 总时长 {formatTC(maxTime)}
       </div>
     </div>

@@ -63,7 +63,7 @@ const ImportExportDialog = lazy(() =>
 
 // 加载占位符
 function LoadingFallback() {
-  return <div className="p-4 text-center text-gray-400">加载中...</div>
+  return <div className="p-4 text-center text-muted-foreground">加载中...</div>
 }
 
 // === 大纲视图数据类型（与 OutlineView 组件接口一致） ===
@@ -113,10 +113,10 @@ function convertNavTreeToOutline(nodes: NavTreeNode[]): OutlineNode[] {
 // 仅用作占位色块，不是真实视觉。
 
 const IMPORTANCE_COLOR: Record<string, string> = {
-  protagonist: '#ef4444', // red
-  antagonist: '#a855f7',  // purple
-  supporting: '#3b82f6',  // blue
-  minor: '#9ca3af',       // gray
+  protagonist: 'hsl(var(--destructive))',
+  antagonist: 'hsl(var(--chart-1))',
+  supporting: 'hsl(var(--info))',
+  minor: 'hsl(var(--muted-foreground))',
 }
 
 const CHARACTER_NAME_BLOCKLIST: ReadonlySet<string> = new Set([
@@ -1072,11 +1072,11 @@ export default function ScriptEditPage() {
   // ---- 加载 / 空态 ----
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-0 bg-[#0a0a0a] gap-3">
-        <div className="text-emerald-400 animate-pulse text-base">
+      <div className="flex flex-col items-center justify-center h-full min-h-0 bg-background gap-3">
+        <div className="text-primary animate-pulse text-base">
           正在加载中，请耐心等待…
         </div>
-        <div className="text-xs text-[#666]">
+        <div className="text-xs text-muted-foreground">
           {(typeof window !== 'undefined' && (window as any).__scriptLoadProgress) || '正在请求后端数据'}
         </div>
       </div>
@@ -1084,10 +1084,10 @@ export default function ScriptEditPage() {
   }
   if (!currentDocument) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-0 bg-[#0a0a0a] gap-4 p-6 text-center max-w-2xl mx-auto">
-        <div className="text-[#888] text-base">剧本加载失败</div>
-        <div className="text-xs text-[#888] max-w-md leading-relaxed">
-          剧本 ID：<code className="text-emerald-400/80">{scriptId}</code>
+      <div className="flex flex-col items-center justify-center h-full min-h-0 bg-background gap-4 p-6 text-center max-w-2xl mx-auto">
+        <div className="text-muted-foreground text-base">剧本加载失败</div>
+        <div className="text-xs text-muted-foreground max-w-md leading-relaxed">
+          剧本 ID：<code className="text-primary/80">{scriptId}</code>
           <br />
           {error || '可能原因：剧本已删除、后端服务未启动、或该 ID 在数据中找不到对应记录。'}
         </div>
@@ -1136,7 +1136,7 @@ export default function ScriptEditPage() {
             关闭标签页
           </Button>
         </div>
-        <div className="text-[10px] text-[#555] mt-4 leading-relaxed">
+        <div className="text-[10px] text-muted-foreground mt-4 leading-relaxed">
           提示：打开浏览器 DevTools → Network 标签，可以查看 <code>/api/scripts</code> 和 <code>/api/script-documents</code> 的请求状态。
           <br />
           常见问题：① SQLite 数据库 <code>backend/data/sqlite.db</code> 的 <code>scripts</code> 表中是否存在此 ID；② <code>script_documents</code> 表是否需要为该剧本补充一条文档记录。
@@ -1149,9 +1149,9 @@ export default function ScriptEditPage() {
   // 渲染
   // ============================================================
   return (
-    <div className="script-edit-page h-full min-h-0 bg-[#0a0a0a] flex flex-col overflow-hidden">
+    <div className="script-edit-page h-full min-h-0 bg-background flex flex-col overflow-hidden">
       {/* === 顶部工具栏 === */}
-      <div className="border-b border-white/10 bg-[#1a1a1a] px-4 py-2 flex items-center gap-2">
+      <div className="border-b border-border bg-card px-4 py-2 flex items-center gap-2">
         <div className="flex-1 min-w-0">
           <input
             type="text"
@@ -1169,10 +1169,10 @@ export default function ScriptEditPage() {
               if (isDirty) handleSave();
             }}
             placeholder="未命名剧本"
-            className="text-lg font-medium text-white bg-transparent border-b border-transparent hover:border-white/20 focus:border-emerald-500/50 focus:outline-none w-full px-0 py-0"
+            className="text-lg font-medium text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary/50 focus:outline-none w-full px-0 py-0"
             aria-label="剧本标题"
           />
-          <div className="text-xs text-[#888] mt-0.5">{isSaving ? '保存中...' : isDirty ? '有未保存修改' : '已保存'}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">{isSaving ? '保存中...' : isDirty ? '有未保存修改' : '已保存'}</div>
         </div>
         {/* 方案 A：作者 / 状态 inline-edit 下拉，写入时与 saveDocument 一并保存 */}
         <div className="flex items-center gap-2">
@@ -1187,7 +1187,7 @@ export default function ScriptEditPage() {
             }}
             onBlur={() => isDirty && handleSave()}
             placeholder="作者"
-            className="text-xs text-white bg-transparent border border-white/10 rounded px-2 py-1 w-28 focus:border-emerald-500/50 focus:outline-none"
+            className="text-xs text-foreground bg-transparent border border-border rounded px-2 py-1 w-28 focus:border-primary/50 focus:outline-none"
             aria-label="作者"
           />
           <select
@@ -1199,7 +1199,7 @@ export default function ScriptEditPage() {
               setIsDirty(true);
               handleSave();
             }}
-            className="text-xs text-white bg-[#1a1a1a] border border-white/10 rounded px-2 py-1 focus:border-emerald-500/50 focus:outline-none"
+            className="text-xs text-foreground bg-card border border-border rounded px-2 py-1 focus:border-primary/50 focus:outline-none"
             aria-label="状态"
           >
             <option value="draft">草稿</option>

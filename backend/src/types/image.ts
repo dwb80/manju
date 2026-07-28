@@ -13,27 +13,33 @@
 import type { TaskStatus } from "./common.js";
 
 /**
- * 图片模型 ID 字面量联合（按 S1 决策解绑）。
- * - 现阶段：仅 `agnes-image-2.1-flash`
- * - V1.x+：每接入一个 Provider 就追加；TS 联合会被自动收紧（不会因 string 太宽而漏校验）
+ * 图片模型 ID（名义类型，按 S1 决策解绑）。
  *
- * 如需运行时获取当前所有可用 image model，请用：
+ * 采用 `string & {}` 模式构造名义类型（nominal typing）：
+ * - 结构上仍接受任意 string——V1.x+ 接入 `jimeng-*` / `flux-*` / `sdxl-*` / `dall-e-*` / `midjourney-*`
+ *   等新 Provider 时无需修改本类型即可放行；
+ * - 同时与普通 `string`、以及其它 `string & {}` 品牌类型（如视频模型 ID）互相不可直接赋值，
+ *   避免不同字符串类型之间意外赋值；
+ * - IDE 仍可在字面量上下文给出 `agnes-image-2.1-flash` 等已知值的提示。
+ *
+ * 运行时校验以 `image-provider.ts` 中 `ImageProviderRouter` 的注册表为准；此处只提供类型提示，
+ * 实际可用性由 `getAllModels({ capability: "image" })` 给出：
  * ```ts
  * import { getAllModels } from "@/types/model-capabilities.js";
  * const models = getAllModels({ capability: "image", visibleOnly: true });
  * ```
  */
-export type ImageModel = "agnes-image-2.1-flash";
+export type ImageModel = string & {};
 
 /** 图片生成入参，images 支持多张参考图；model 允许调用方显式指定模型（默认 agnes-image-2.1-flash）。 */
 export interface ImageParams {
   /**
    * 模型名称。
-   * - 类型字面量：见 `ImageModel`（S1 阶段仅 `agnes-image-2.1-flash`）
-   * - 运行时：建议传 `string` 让新 model 也能通过；路由层会校验是否已注册
-   * - 默认：`agnes-image-2.1-flash`
+   * - 类型：`ImageModel`（`string & {}` 名义类型，既保留已知值提示又接受任意 string，新 model 可直接放行）
+   * - 运行时：路由层会校验是否已注册
+   * - 默认：`agnes-image-2.1-flash`（见 `image-config.ts:DEFAULT_IMAGE_MODEL`）
    */
-  model?: ImageModel | (string & {});
+  model?: ImageModel;
   prompt: string;
   negative_prompt?: string;
   image?: string;

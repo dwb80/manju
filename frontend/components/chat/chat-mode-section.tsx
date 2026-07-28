@@ -100,16 +100,16 @@ export function ChatModeSection(props: ChatModeSectionProps) {
 
     return (
         <section className={`agnes-work-surface relative grid h-screen min-w-0 ${mode === "favorites" || mode === "project" ? "grid-rows-[56px_1fr]" : "grid-rows-[56px_1fr_auto]"} overflow-hidden`}>
-            <header className="flex items-center justify-between border-b border-white/10 bg-[#181818]/80 px-5 backdrop-blur">
+            <header className="flex items-center justify-between border-b border-border bg-card/80 px-5 backdrop-blur">
                 <div className="text-sm font-semibold">
                     {mode === "chat" && "Agnes 2.0 Flash"}
                     {mode === "favorites" && "收藏"}
                     {mode === "project" && "项目工作台"}
                 </div>
-                <div className="text-xs font-medium text-[#d6d6d6]">{notice}</div>
+                <div className="text-xs font-medium text-foreground/80">{notice}</div>
             </header>
             {notice && (
-                <div className="pointer-events-none fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-[#303030] px-5 py-2.5 text-sm text-white shadow-lg transition-all duration-200">
+                <div className="pointer-events-none fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-full border border-border bg-secondary px-5 py-2.5 text-sm text-foreground shadow-lg transition-all duration-200">
                     {notice}
                 </div>
             )}

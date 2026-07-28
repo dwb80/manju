@@ -59,7 +59,7 @@ interface HelpCenterProps {
 /**
  * HelpCenter - 帮助中心面板
  *
- * 拆分为受控组件后，host 负责 open 状态、首次进入自动弹窗。
+ * 拆分为受控组件后，host 负责 open 状态；面板只由用户主动打开。
  */
 export function HelpCenter({ open, onOpenChange }: HelpCenterProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -81,30 +81,30 @@ export function HelpCenter({ open, onOpenChange }: HelpCenterProps) {
       aria-modal="true"
       aria-label="帮助中心"
     >
-      <div className="w-full max-w-4xl max-h-[80vh] rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl overflow-hidden">
+      <div className="w-full max-w-4xl max-h-[80vh] rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
         {/* 头部 */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <HelpCircle className="h-6 w-6 text-emerald-400" />
-            <h2 className="text-lg font-semibold text-white">帮助中心</h2>
+            <HelpCircle className="h-6 w-6 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">帮助中心</h2>
           </div>
           <button
             onClick={() => onOpenChange(false)}
-            className="p-2 rounded-lg hover:bg-white/10"
+            className="p-2 rounded-lg hover:bg-muted"
             aria-label="关闭帮助中心"
           >
-            <X className="h-5 w-5 text-[#888]" />
+            <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
         {/* 搜索框 */}
-        <div className="p-4 border-b border-white/10">
+        <div className="p-4 border-b border-border">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#888]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="搜索问题..."
-              className="w-full rounded-lg border border-white/10 bg-[#252525] py-2 pl-10 pr-4 text-sm text-white placeholder-[#888] focus:border-emerald-500/50 focus:outline-none"
+              className="w-full rounded-lg border border-border bg-secondary py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="搜索问题"
@@ -115,7 +115,7 @@ export function HelpCenter({ open, onOpenChange }: HelpCenterProps) {
         {/* 内容区 */}
         <div className="flex h-[400px]">
           {/* 分类列表 */}
-          <div className="w-1/3 border-r border-white/10 overflow-y-auto" role="tablist">
+          <div className="w-1/3 border-r border-border overflow-y-auto" role="tablist">
             {helpCategories.map((category) => {
               const Icon = category.icon;
               return (
@@ -124,16 +124,16 @@ export function HelpCenter({ open, onOpenChange }: HelpCenterProps) {
                   role="tab"
                   aria-selected={selectedCategory === category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`w-full flex items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors ${
-                    selectedCategory === category.id ? "bg-white/10 border-l-2 border-emerald-500" : ""
+                  className={`w-full flex items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors ${
+                    selectedCategory === category.id ? "bg-muted border-l-2 border-primary" : ""
                   }`}
                 >
-                  <Icon className="h-5 w-5 text-[#888]" />
+                  <Icon className="h-5 w-5 text-muted-foreground" />
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-white">{category.name}</div>
-                    <div className="text-xs text-[#888]">{category.items.length} 个问题</div>
+                    <div className="text-sm font-medium text-foreground">{category.name}</div>
+                    <div className="text-xs text-muted-foreground">{category.items.length} 个问题</div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-[#666]" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </button>
               );
             })}
@@ -154,35 +154,35 @@ export function HelpCenter({ open, onOpenChange }: HelpCenterProps) {
                   .map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-lg border border-white/10 bg-[#252525] p-4"
+                      className="rounded-lg border border-border bg-secondary p-4"
                     >
-                      <div className="text-sm font-medium text-white mb-2">{item.question}</div>
-                      <div className="text-xs text-[#888]">{item.answer}</div>
+                      <div className="text-sm font-medium text-foreground mb-2">{item.question}</div>
+                      <div className="text-xs text-muted-foreground">{item.answer}</div>
                     </div>
                   ))}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center">
-                <Book className="h-12 w-12 text-[#666] mb-3" />
-                <p className="text-sm text-[#888]">选择左侧分类查看相关问题</p>
+                <Book className="h-12 w-12 text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">选择左侧分类查看相关问题</p>
               </div>
             )}
           </div>
         </div>
 
         {/* 底部操作 */}
-        <div className="flex items-center justify-between p-4 border-t border-white/10">
+        <div className="flex items-center justify-between p-4 border-t border-border">
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#252525] px-3 py-2 text-xs text-[#888] hover:bg-white/5">
+            <button className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground hover:bg-muted/50">
               <Video className="h-4 w-4" />
               视频教程
             </button>
-            <button className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#252525] px-3 py-2 text-xs text-[#888] hover:bg-white/5">
+            <button className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground hover:bg-muted/50">
               <MessageCircle className="h-4 w-4" />
               在线客服
             </button>
           </div>
-          <button className="flex items-center gap-1 text-xs text-[#888] hover:text-white">
+          <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
             <ExternalLink className="h-3 w-3" />
             完整文档
           </button>
@@ -192,63 +192,30 @@ export function HelpCenter({ open, onOpenChange }: HelpCenterProps) {
   );
 }
 
-const HELP_SEEN_KEY = "manju:help-seen";
-
 /**
  * HelpCenterHost - 帮助中心全局挂载点
  *
  * - 渲染右下角浮动按钮（始终可见）
- * - 首次进入应用且未关闭过帮助时，自动弹出一次
+ * - 仅在用户点击入口时打开，避免打断首屏任务和拦截页面操作
  * - 在 root layout 渲染一次即可
  */
 export function HelpCenterHost() {
   const open = useHelpStore((s) => s.open);
   const setOpen = useHelpStore((s) => s.setOpen);
-  const [autoTriggered, setAutoTriggered] = useState(false);
-
-  useEffect(() => {
-    if (autoTriggered) return;
-    if (typeof window === "undefined") return;
-    let seen = false;
-    try {
-      seen = window.localStorage.getItem(HELP_SEEN_KEY) === "1";
-    } catch {
-      // ignore
-    }
-    if (!seen) {
-      // 延迟弹出，避免与首屏渲染冲突
-      const t = window.setTimeout(() => {
-        setOpen(true);
-      }, 1500);
-      return () => window.clearTimeout(t);
-    }
-    setAutoTriggered(true);
-    return undefined;
-  }, [autoTriggered, setOpen]);
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg transition-colors hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-[#181818]"
+        className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
         aria-label="打开帮助中心"
       >
         <HelpCircle className="h-6 w-6" />
       </button>
       <HelpCenter
         open={open}
-        onOpenChange={(next) => {
-          setOpen(next);
-          if (!next && !autoTriggered) {
-            setAutoTriggered(true);
-            try {
-              window.localStorage.setItem(HELP_SEEN_KEY, "1");
-            } catch {
-              // ignore
-            }
-          }
-        }}
+        onOpenChange={setOpen}
       />
     </>
   );

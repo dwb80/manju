@@ -104,29 +104,29 @@ export function GlobalSearch() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl overflow-hidden">
+      <div className="w-full max-w-2xl rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
         {/* 搜索框 */}
-        <div className="flex items-center gap-3 p-4 border-b border-white/10">
-          <Search className="h-5 w-5 text-[#888]" />
+        <div className="flex items-center gap-3 p-4 border-b border-border">
+          <Search className="h-5 w-5 text-muted-foreground" />
           <input
             ref={inputRef}
             type="text"
             placeholder="搜索项目、会话、任务..."
-            className="flex-1 bg-transparent text-white placeholder-[#888] focus:outline-none"
+            className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
             aria-label="搜索输入框"
           />
-          <kbd className="hidden md:flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs text-[#888]">
+          <kbd className="hidden md:flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
             <Command className="h-3 w-3" /> K
           </kbd>
           <button
             onClick={() => setIsOpen(false)}
-            className="p-1 rounded hover:bg-white/10"
+            className="p-1 rounded hover:bg-muted"
             aria-label="关闭搜索"
           >
-            <X className="h-4 w-4 text-[#888]" />
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
@@ -143,52 +143,52 @@ export function GlobalSearch() {
                     aria-selected={index === selectedIndex}
                     className={`w-full flex items-center gap-3 rounded-lg p-3 ${
                       index === selectedIndex
-                        ? "bg-white/10 border-l-2 border-emerald-500"
-                        : "hover:bg-white/5"
+                        ? "bg-muted border-l-2 border-primary"
+                        : "hover:bg-muted/50"
                     } text-left`}
                     onClick={() => {
                       navigateToItem(item);
                       setIsOpen(false);
                     }}
                   >
-                    <Icon className="h-5 w-5 text-[#888]" />
+                    <Icon className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-white truncate">
+                      <div className="text-sm font-medium text-foreground truncate">
                         {item.title}
                       </div>
                       {item.description && (
-                        <div className="text-xs text-[#888] truncate">
+                        <div className="text-xs text-muted-foreground truncate">
                           {item.description}
                         </div>
                       )}
                     </div>
-                    <ArrowRight className="h-4 w-4 text-[#666]" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </button>
                 );
               })}
             </div>
           ) : query.trim() ? (
             <div className="py-12 text-center">
-              <Search className="mx-auto h-12 w-12 text-[#666] mb-3" />
-              <p className="text-sm text-[#888]">未找到相关结果</p>
+              <Search className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground">未找到相关结果</p>
             </div>
           ) : (
             <div className="py-8 text-center">
-              <p className="text-sm text-[#888]">输入关键词开始搜索</p>
+              <p className="text-sm text-muted-foreground">输入关键词开始搜索</p>
             </div>
           )}
         </div>
 
         {/* 快捷提示 */}
-        <div className="border-t border-white/10 p-3 flex items-center gap-4 text-xs text-[#888]">
+        <div className="border-t border-border p-3 flex items-center gap-4 text-xs text-muted-foreground">
           <div>
-            <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">↑↓</kbd> 导航
+            <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">↑↓</kbd> 导航
           </div>
           <div>
-            <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">Enter</kbd> 选择
+            <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">Enter</kbd> 选择
           </div>
           <div>
-            <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">Esc</kbd> 关闭
+            <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">Esc</kbd> 关闭
           </div>
         </div>
       </div>

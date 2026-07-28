@@ -319,7 +319,7 @@ export function ReviewCenterPage() {
                                   }
                                   aria-label="删除"
                                 >
-                                  <Trash2 className="h-4 w-4 text-red-400" />
+                                  <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>删除</TooltipContent>

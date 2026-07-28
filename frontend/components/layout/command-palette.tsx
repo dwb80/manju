@@ -476,12 +476,12 @@ export function CommandPalette() {
       aria-label="命令面板"
     >
       <div
-        className="bg-[#1a1a1a] border border-white/15 rounded-xl shadow-2xl w-[36rem] max-w-full overflow-hidden"
+        className="bg-card border border-border rounded-xl shadow-2xl w-[36rem] max-w-full overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 搜索输入 */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
-          <Command className="h-4 w-4 text-white/50 shrink-0" />
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+          <Command className="h-4 w-4 text-foreground/50 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -492,12 +492,12 @@ export function CommandPalette() {
             }}
             onKeyDown={onInputKeyDown}
             placeholder="输入命令、页面或关键词…"
-            className="flex-1 bg-transparent border-none outline-none text-sm text-white placeholder:text-white/40"
+            className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-foreground/40"
             aria-label="命令搜索"
             autoComplete="off"
             spellCheck={false}
           />
-          <kbd className="text-[10px] text-white/40 border border-white/10 px-1.5 py-0.5 rounded">
+          <kbd className="text-[10px] text-foreground/40 border border-border px-1.5 py-0.5 rounded">
             {shortcutLabel}
           </kbd>
         </div>
@@ -509,13 +509,13 @@ export function CommandPalette() {
           role="listbox"
         >
           {filtered.length === 0 ? (
-            <div className="px-6 py-12 text-center text-sm text-white/40">
+            <div className="px-6 py-12 text-center text-sm text-foreground/40">
               未找到匹配「{query}」的命令
             </div>
           ) : (
             grouped.map(([group, items]) => (
               <div key={group} className="mb-1">
-                <div className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-white/40">
+                <div className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-foreground/40">
                   {group}
                 </div>
                 {items.map((item) => {
@@ -534,16 +534,16 @@ export function CommandPalette() {
                       className={cn(
                         "w-full flex items-center gap-3 px-4 py-2 text-left transition-colors",
                         active
-                          ? "bg-emerald-500/15 text-white"
-                          : "text-white/80 hover:bg-white/5",
+                          ? "bg-primary/15 text-foreground"
+                          : "text-foreground/80 hover:bg-muted/50",
                       )}
                     >
                       <span
                         className={cn(
                           "grid h-7 w-7 shrink-0 place-items-center rounded-md border",
                           active
-                            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
-                            : "border-white/10 bg-white/5 text-white/60",
+                            ? "border-primary/50 bg-primary/10 text-primary"
+                            : "border-border bg-muted/50 text-foreground/60",
                         )}
                       >
                         <Icon className="h-3.5 w-3.5" />
@@ -553,16 +553,16 @@ export function CommandPalette() {
                           {item.title}
                         </span>
                         {item.description && (
-                          <span className="block text-[11px] text-white/40 truncate">
+                          <span className="block text-[11px] text-foreground/40 truncate">
                             {item.description}
                           </span>
                         )}
                       </span>
                       {active && (
-                        <CornerDownLeft className="h-3.5 w-3.5 text-emerald-300" />
+                        <CornerDownLeft className="h-3.5 w-3.5 text-primary" />
                       )}
                       {!active && (
-                        <ChevronRight className="h-3.5 w-3.5 text-white/20" />
+                        <ChevronRight className="h-3.5 w-3.5 text-foreground/20" />
                       )}
                     </button>
                   );
@@ -573,16 +573,16 @@ export function CommandPalette() {
         </div>
 
         {/* 底部提示 */}
-        <div className="flex items-center justify-between border-t border-white/10 px-4 py-2 text-[10px] text-white/40">
+        <div className="flex items-center justify-between border-t border-border px-4 py-2 text-[10px] text-foreground/40">
           <div className="flex items-center gap-3">
             <span>
-              <kbd className="border border-white/10 px-1 rounded">↑↓</kbd> 选择
+              <kbd className="border border-border px-1 rounded">↑↓</kbd> 选择
             </span>
             <span>
-              <kbd className="border border-white/10 px-1 rounded">Enter</kbd> 执行
+              <kbd className="border border-border px-1 rounded">Enter</kbd> 执行
             </span>
             <span>
-              <kbd className="border border-white/10 px-1 rounded">Esc</kbd> 关闭
+              <kbd className="border border-border px-1 rounded">Esc</kbd> 关闭
             </span>
           </div>
           <span>{filtered.length} 条结果</span>

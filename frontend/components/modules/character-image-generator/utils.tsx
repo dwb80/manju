@@ -13,7 +13,7 @@ export function ThumbnailImage({ url, alt }: { url: string; alt: string }) {
   }, [url]);
   if (status === "error") {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center bg-[#2a1a1a] text-red-300">
+      <div className="flex h-full w-full flex-col items-center justify-center bg-destructive/10 text-destructive">
         <X className="h-4 w-4" />
         <span className="mt-1 text-[9px]">加载失败</span>
       </div>
@@ -22,8 +22,8 @@ export function ThumbnailImage({ url, alt }: { url: string; alt: string }) {
   return (
     <>
       {status === "loading" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a]">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-500" />
+        <div className="absolute inset-0 flex items-center justify-center bg-card">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
         </div>
       )}
       <img

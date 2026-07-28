@@ -400,16 +400,16 @@ export function SlashCommandMenu({ editor }: SlashCommandMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-64 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl overflow-hidden"
+      className="fixed z-50 w-64 bg-card border border-border rounded-lg shadow-xl overflow-hidden"
       style={{ top: coords.top, left: coords.left }}
     >
       {loadingAction ? (
-        <div className="px-3 py-3 text-sm text-gray-200 flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+        <div className="px-3 py-3 text-sm text-muted-foreground flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-info" />
           AI生成中...
         </div>
       ) : filteredCommands.length === 0 ? (
-        <div className="px-3 py-3 text-sm text-gray-500">没有匹配的命令</div>
+        <div className="px-3 py-3 text-sm text-muted-foreground">没有匹配的命令</div>
       ) : (
         <div className="max-h-80 overflow-y-auto py-1">
           {filteredCommands.map((cmd, index) => {
@@ -423,13 +423,13 @@ export function SlashCommandMenu({ editor }: SlashCommandMenuProps) {
                 onClick={() => executeCommand(cmd)}
                 className={cn(
                   'w-full flex items-start gap-3 px-3 py-2 text-left transition-colors',
-                  active ? 'bg-white/10' : 'hover:bg-white/5'
+                  active ? 'bg-muted' : 'hover:bg-muted/50'
                 )}
               >
-                <Icon className="h-4 w-4 mt-0.5 text-blue-400 shrink-0" />
+                <Icon className="h-4 w-4 mt-0.5 text-info shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm text-gray-100">/{cmd.label}</div>
-                  <div className="text-xs text-gray-500 truncate">{cmd.description}</div>
+                  <div className="text-sm text-muted-foreground">/{cmd.label}</div>
+                  <div className="text-xs text-muted-foreground truncate">{cmd.description}</div>
                 </div>
               </button>
             )

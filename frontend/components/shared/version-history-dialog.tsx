@@ -50,9 +50,9 @@ export interface VersionHistoryDialogProps {
 
 /** 变更类型对应的中文标签与配色。 */
 const CHANGE_TYPE_META: Record<AssetVersionChangeType, { label: string; className: string }> = {
-  create: { label: "创建", className: "bg-emerald-500/20 text-emerald-300" },
-  update: { label: "修改", className: "bg-blue-500/20 text-blue-300" },
-  restore: { label: "回滚", className: "bg-amber-500/20 text-amber-300" },
+  create: { label: "创建", className: "bg-primary/20 text-primary" },
+  update: { label: "修改", className: "bg-info/20 text-info" },
+  restore: { label: "回滚", className: "bg-warning/20 text-warning" },
 };
 
 /** 格式化时间戳为本地可读字符串。 */
@@ -92,14 +92,14 @@ function SnapshotViewer({
         <DialogHeader>
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2 text-foreground">
-              <FileText className="h-4 w-4 text-emerald-400" />
+              <FileText className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold">v{version.version} 完整快照</span>
               <span className="text-xs text-muted-foreground">· {formatTime(version.created_at)}</span>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-white/10 hover:text-foreground"
+              className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label="关闭"
             >
               <X className="h-4 w-4" />
@@ -185,7 +185,7 @@ export function VersionHistoryDialog({
           {/* 标题栏 */}
           <DialogHeader>
             <div className="flex items-center gap-2 text-foreground">
-              <History className="h-5 w-5 text-emerald-400" />
+              <History className="h-5 w-5 text-primary" />
               <div>
                 <DialogTitle>
                   {entityLabel}版本历史
@@ -216,7 +216,7 @@ export function VersionHistoryDialog({
                   return (
                     <li
                       key={v.id}
-                      className="rounded-lg border border-white/10 bg-[#252525] p-3 hover:border-emerald-500/30 transition-colors"
+                      className="rounded-lg border border-border bg-secondary p-3 hover:border-primary/30 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -226,7 +226,7 @@ export function VersionHistoryDialog({
                               {meta.label}
                             </span>
                             {isLatest && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary">
                                 当前
                               </span>
                             )}

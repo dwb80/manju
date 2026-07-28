@@ -152,14 +152,14 @@ export function PropPanel({
   })
 
   return (
-    <div className="prop-panel bg-[#1a1a1a] h-full overflow-y-auto">
+    <div className="prop-panel bg-card h-full overflow-y-auto">
       {/* 标题和搜索 */}
-      <div className="p-3 border-b border-white/10 sticky top-0 bg-[#1a1a1a] z-10">
+      <div className="p-3 border-b border-border sticky top-0 bg-card z-10">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-white flex items-center gap-1.5">
-            <span className="text-amber-400">●</span>
+          <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            <span className="text-warning">●</span>
             道具资产
-            <span className="text-[10px] text-[#666]">· {propAssets.length} · 来自剧本中心</span>
+            <span className="text-[10px] text-muted-foreground">· {propAssets.length} · 来自剧本中心</span>
           </h3>
           <Button
             variant="ghost"
@@ -173,7 +173,7 @@ export function PropPanel({
           </Button>
         </div>
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-[#888]" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
           <Input
             placeholder="搜索道具名 / 类别 / 标签..."
             value={searchQuery}
@@ -186,7 +186,7 @@ export function PropPanel({
       {/* 道具列表 */}
       <div className="p-2">
         {filteredProps.length === 0 ? (
-          <div className="text-center py-8 text-[#666] text-sm">
+          <div className="text-center py-8 text-muted-foreground text-sm">
             {searchQuery ? '未找到匹配的道具' : '暂无道具资产'}
             {!searchQuery && (
               <Button
@@ -207,12 +207,12 @@ export function PropPanel({
               return (
                 <div
                   key={prop.id}
-                  className="group relative p-2 rounded bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 cursor-pointer"
+                  className="group relative p-2 rounded bg-muted/50 hover:bg-muted transition-colors border border-transparent hover:border-border cursor-pointer"
                   onClick={() => onSelectProp(prop)}
                 >
                   {/* 缩略图（1:1 方形）—— 仅在有图时渲染；无图时改为紧凑元信息行 */}
                   {prop.image || prop.thumbnail ? (
-                    <div className="relative w-full aspect-square rounded overflow-hidden mb-2 bg-[#232326]">
+                    <div className="relative w-full aspect-square rounded overflow-hidden mb-2 bg-secondary">
                       <img
                         src={prop.image || prop.thumbnail}
                         alt={prop.name}
@@ -220,14 +220,14 @@ export function PropPanel({
                       />
                       {/* 右上角：类别徽章 */}
                       {catMeta && (
-                        <span className="absolute top-1 right-1 text-[9px] px-1.5 py-0.5 rounded bg-black/60 text-amber-300 backdrop-blur-sm">
+                        <span className="absolute top-1 right-1 text-[9px] px-1.5 py-0.5 rounded bg-black/60 text-warning backdrop-blur-sm">
                           {catMeta.label}
                         </span>
                       )}
                       {/* 左下角：主色色块 */}
                       {prop.color && (
                         <span
-                          className="absolute bottom-1 left-1 w-3 h-3 rounded-sm border border-white/30"
+                          className="absolute bottom-1 left-1 w-3 h-3 rounded-sm border border-border"
                           style={{ backgroundColor: prop.color }}
                           title={`主色: ${prop.color}`}
                         />
@@ -235,17 +235,17 @@ export function PropPanel({
                     </div>
                   ) : (
                     /* 无图时：紧凑行（不占 1:1 高度） */
-                    <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-[#666]">
-                      <Package className="h-3 w-3 text-amber-400/40 flex-shrink-0" />
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-muted-foreground">
+                      <Package className="h-3 w-3 text-warning/40 flex-shrink-0" />
                       <span>暂无道具图</span>
                       {catMeta && (
-                        <span className="px-1.5 py-0.5 rounded bg-white/5 text-amber-300">
+                        <span className="px-1.5 py-0.5 rounded bg-muted/50 text-warning">
                           {catMeta.label}
                         </span>
                       )}
                       {prop.color && (
                         <span
-                          className="w-2.5 h-2.5 rounded-sm border border-white/30 flex-shrink-0"
+                          className="w-2.5 h-2.5 rounded-sm border border-border flex-shrink-0"
                           style={{ backgroundColor: prop.color }}
                           title={`主色: ${prop.color}`}
                         />
@@ -254,20 +254,20 @@ export function PropPanel({
                   )}
 
                   {/* 名称 */}
-                  <div className="font-medium text-white text-sm truncate">
+                  <div className="font-medium text-foreground text-sm truncate">
                     {prop.name || '未命名道具'}
                   </div>
 
                   {/* 外观 */}
                   {prop.appearance && (
-                    <div className="text-[10px] text-[#888] mt-0.5 truncate">
-                      <span className="text-amber-400/80">外观:</span> {prop.appearance}
+                    <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                      <span className="text-warning/80">外观:</span> {prop.appearance}
                     </div>
                   )}
 
                   {/* 材质 / 尺寸 */}
                   {(prop.material || prop.size) && (
-                    <div className="text-[10px] text-[#888] mt-0.5 flex items-center gap-2 truncate">
+                    <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-2 truncate">
                       {prop.material && <span>材质: {prop.material}</span>}
                       {prop.size && <span>尺寸: {prop.size}</span>}
                     </div>
@@ -276,7 +276,7 @@ export function PropPanel({
                   {/* 描述（最多 12 字 + ...） */}
                   {prop.description && (
                     <div
-                      className="text-xs text-[#888] truncate mt-1"
+                      className="text-xs text-muted-foreground truncate mt-1"
                       title={prop.description}
                     >
                       {truncateDesc(prop.description)}
@@ -289,32 +289,32 @@ export function PropPanel({
                       {prop.tags.slice(0, 3).map((tag, i) => (
                         <span
                           key={i}
-                          className="text-[9px] px-1 py-0.5 rounded bg-white/5 text-[#999]"
+                          className="text-[9px] px-1 py-0.5 rounded bg-muted/50 text-muted-foreground"
                         >
                           {tag}
                         </span>
                       ))}
                       {prop.tags.length > 3 && (
-                        <span className="text-[9px] text-[#666]">+{prop.tags.length - 3}</span>
+                        <span className="text-[9px] text-muted-foreground">+{prop.tags.length - 3}</span>
                       )}
                     </div>
                   )}
 
                   {/* 工厂元数据：引用次数 + 版本号 */}
-                  <div className="flex items-center gap-2 mt-1 text-[9px] text-[#666]">
+                  <div className="flex items-center gap-2 mt-1 text-[9px] text-muted-foreground">
                     {prop.usage_count != null && (
-                      <span className="text-purple-400/80">引用 {prop.usage_count} 次</span>
+                      <span className="text-chart-1/80">引用 {prop.usage_count} 次</span>
                     )}
                     {prop.version != null && (
-                      <span className="px-1 rounded bg-white/5">v{prop.version}</span>
+                      <span className="px-1 rounded bg-muted/50">v{prop.version}</span>
                     )}
                     {prop.assetId && (
-                      <span className="text-emerald-400/70">● 工厂同步</span>
+                      <span className="text-primary/70">● 工厂同步</span>
                     )}
                   </div>
 
                   {/* 操作按钮（悬浮显示） */}
-                  <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-[#1a1a1a]/80 backdrop-blur-sm rounded px-0.5">
+                  <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-card/80 backdrop-blur-sm rounded px-0.5">
                     {onViewPropDetail && (
                       <Button
                         variant="ghost"
@@ -327,7 +327,7 @@ export function PropPanel({
                         title="查看详情（可编辑，保存到剧本中心）"
                         disabled={detailLoading}
                       >
-                        <Eye className="h-3 w-3 text-emerald-400" />
+                        <Eye className="h-3 w-3 text-primary" />
                       </Button>
                     )}
                     <Button
@@ -340,7 +340,7 @@ export function PropPanel({
                       className="h-6 w-6 p-0"
                       title="从剧本移除（不会删除工厂资产）"
                     >
-                      <Trash2 className="h-3 w-3 text-red-400" />
+                      <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>
                   </div>
                 </div>

@@ -1,8 +1,8 @@
 # AI漫剧工业化生产平台 - 模型中心完整指南
 
-> **文档版本**: V1.0  
-> **最后更新**: 2026-07-10  
-> **文档状态**: 待审核
+> **所属上下文**：[DDD §3.5 AI 任务调度上下文](ddd/domain-requirements-spec.md#35-ai任务调度上下文-ai-task-orchestration)（含 `ModelConfig` / `PromptTemplate` 聚合）
+> **聚合根**：`ModelConfig` / `PromptTemplate`
+> **文档治理**：按 [DDD 治理规范](ddd/governance.md) 维护，术语以 DDD §2 统一语言为准。
 
 ---
 
@@ -23,7 +23,7 @@
 ### 1.1 模块定位
 
 **模型中心**是AI漫剧平台的核心基础设施，负责：
-- 管理所有AI模型（聊天、图片、视频）
+- 管理所有AI模型（文本、图片、视频）
 - 提供模型配置和参数管理
 - 支持智能模型选择策略
 - 记录模型调用和成本统计
@@ -57,7 +57,7 @@
 
 | 类型 | 模型名称 | 用途 | 特点 |
 |------|---------|------|------|
-| **聊天模型** | Agnes 2.0 Flash | 剧本创作、剧情分析、分镜拆解 | 512K上下文、视觉理解、Thinking模式 |
+| **文本模型** | Agnes 2.0 Flash | 剧本创作、剧情分析、分镜拆解 | 512K上下文、视觉理解、Thinking模式 |
 | **图片模型** | Agnes Image 2.1 Flash | 角色设计、场景设计、分镜图 | 图生图、关键帧模式、高信息密度 |
 | **视频模型** | Agnes Video V2.0 | 图生视频、文生视频、关键帧模式 | 异步生成、帧数约束、一致性控制 |
 
@@ -75,7 +75,7 @@
 - **Feature 2.1**: 智能模式（自动推荐）
 - **Feature 2.2**: 专家模式（手动选择）
 - **Feature 2.3**: 管理员模式（策略配置）
-- **Feature 2.4**: 默认模型设置
+- **Feature 2.4**: 默认模型配置
 
 ### Epic 3: 模型调用与记录
 - **Feature 3.1**: 模型调用接口
@@ -129,18 +129,18 @@
    - 自定义请求头
    - 状态查询Endpoint（视频模型）
 5. 管理员配置能力标签：
-   - 视觉理解支持（聊天模型）
-   - Thinking模式支持（聊天模型）
-   - 工具调用支持（聊天模型）
-   - 流式响应支持（聊天模型）
+   - 视觉理解支持（文本模型）
+   - Thinking模式支持（文本模型）
+   - 工具调用支持（文本模型）
+   - 流式响应支持（文本模型）
    - 图生图支持（图片模型）
    - 关键帧模式支持（图片/视频模型）
    - 图生视频支持（视频模型）
    - 异步生成支持（视频模型）
 6. 管理员配置参数：
-   - 最大上下文长度（聊天模型）
-   - 最大输出token数（聊天模型）
-   - 默认温度（聊天模型）
+   - 最大上下文长度（文本模型）
+   - 最大输出token数（文本模型）
+   - 默认温度（文本模型）
    - 支持的图片尺寸（图片模型）
    - 默认推理步数（图片模型）
    - 支持的返回格式（图片模型）
@@ -160,13 +160,13 @@
 **正常流程**:
 - 支持三种模型类型的注册：
   
-  **聊天模型配置示例**:
+  **文本模型配置示例**:
   ```typescript
   {
     id: "agnes-2.0-flash",
     name: "Agnes 2.0 Flash",
     type: "chat",
-    description: "快速响应的聊天模型，支持视觉理解和Thinking模式",
+    description: "快速响应的文本模型，支持视觉理解和Thinking模式",
     version: "2.0",
     provider: "Agnes AI",
     apiConfig: {
@@ -290,12 +290,11 @@
 **优先级**: P0（阻塞）  
 **验收标准**:
 - AC1: Given 管理员填写完整配置, When 点击保存, Then 成功注册模型
-- AC2: Given 注册聊天模型, When 配置完成, Then 包含所有聊天模型特定参数
+- AC2: Given 注册文本模型, When 配置完成, Then 包含所有文本模型特定参数
 - AC3: Given 注册图片模型, When 配置完成, Then 包含所有图片模型特定参数
 - AC4: Given 注册视频模型, When 配置完成, Then 包含所有视频模型特定参数和约束规则
 - AC5: Given 模型ID已存在, When 提交注册, Then 提示错误信息
 
-**来源**: AI推导补充，依据：模型管理体系设计
 
 ---
 
@@ -315,7 +314,7 @@
 5. 系统保存能力标签配置
 
 **正常流程**:
-- 聊天模型能力标签：
+- 文本模型能力标签：
   - ✅ 视觉理解支持（visionSupport）
   - ✅ Thinking模式支持（thinkingMode）
   - ✅ 工具调用支持（toolCalling）
@@ -347,12 +346,11 @@
 
 **优先级**: P1（必须）  
 **验收标准**:
-- AC1: Given 聊天模型, When 显示能力标签, Then 只显示聊天相关能力选项
+- AC1: Given 文本模型, When 显示能力标签, Then 只显示文本相关能力选项
 - AC2: Given 图片模型, When 显示能力标签, Then 只显示图片相关能力选项
 - AC3: Given 视频模型, When 显示能力标签, Then 只显示视频相关能力选项
 - AC4: Given 管理员勾选能力, When 保存配置, Then 能力标签正确保存
 
-**来源**: AI推导补充，依据：模型能力标签设计
 
 ---
 
@@ -374,7 +372,7 @@
 7. 系统保存参数配置
 
 **正常流程**:
-- 聊天模型参数配置：
+- 文本模型参数配置：
   - `maxContext`: 最大上下文长度（默认512000）
   - `maxTokens`: 最大输出token数（默认65500）
   - `defaultTemperature`: 默认温度（范围0-2，默认0.7）
@@ -410,13 +408,12 @@
 
 **优先级**: P1（必须）  
 **验收标准**:
-- AC1: Given 聊天模型, When 配置参数, Then 包含maxContext、maxTokens、temperature
+- AC1: Given 文本模型, When 配置参数, Then 包含maxContext、maxTokens、temperature
 - AC2: Given 图片模型, When 配置参数, Then 包含supportedSizes、defaultSteps、responseFormats
 - AC3: Given 视频模型, When 配置参数, Then 包含supportedRatios、maxDuration、frameRateRange
 - AC4: Given 视频模型, When 配置约束规则, Then 正确保存8n+1规则
 - AC5: Given 参数值超出范围, When 提交配置, Then 提示错误信息
 
-**来源**: AI推导补充，依据：模型参数管理需求
 
 ---
 
@@ -481,7 +478,6 @@
 - AC2: Given 视频模型, When 配置API, Then 包含statusEndpoint字段
 - AC3: Given endpoint格式错误, When 提交配置, Then 提示错误信息
 
-**来源**: AI推导补充，依据：API集成需求
 
 ---
 
@@ -560,13 +556,12 @@
 
 **优先级**: P1（必须）  
 **验收标准**:
-- AC1: Given 用户创建剧本任务, When 选择智能模式, Then 系统推荐聊天模型
+- AC1: Given 用户创建剧本任务, When 选择智能模式, Then 系统推荐文本模型
 - AC2: Given 用户创建角色任务, When 选择智能模式, Then 系统推荐图片模型
 - AC3: Given 用户创建视频任务, When 选择智能模式, Then 系统推荐视频模型
 - AC4: Given 任务质量要求高, When 推荐模型, Then 推荐高性能模型
 - AC5: Given 无匹配模型, When 智能推荐, Then 提示错误信息
 
-**来源**: AI推导补充，依据：智能模型选择策略设计
 
 ---
 
@@ -650,7 +645,6 @@
 - AC3: Given 用户配置参数, When 参数不合理, Then 提示错误信息
 - AC4: Given 用户选择模型, When 确认执行, Then 使用选中模型执行任务
 
-**来源**: AI推导补充，依据：专家模式设计
 
 ---
 
@@ -735,14 +729,13 @@
 - AC3: Given 管理员配置成本策略, When 保存配置, Then 成本控制生效
 - AC4: Given 配置不合理, When 提交配置, Then 提示错误信息
 
-**来源**: AI推导补充，依据：企业管理员控制设计
 
 ---
 
-#### Feature 2.4: 默认模型设置
+#### Feature 2.4: 默认模型配置
 
 **需求ID**: MODEL-DEFAULT-001  
-**需求名称**: 默认模型设置  
+**需求名称**: 默认模型配置  
 **功能描述**: 用户可以设置自己常用的默认模型，下次创建任务时自动使用  
 **触发条件**: 用户在模型中心点击"设为默认"按钮  
 **前置条件**: 用户已登录，模型可用  
@@ -800,7 +793,6 @@
 - AC2: Given 用户创建任务, When 未选择模型, Then 自动使用默认模型
 - AC3: Given 用户设置不可用模型为默认, When 提交, Then 提示错误信息
 
-**来源**: AI推导补充，依据：用户默认模型设置需求
 
 ---
 
@@ -812,7 +804,7 @@
 
 **需求ID**: MODEL-CALL-001  
 **需求名称**: 模型调用接口  
-**功能描述**: 提供统一的模型调用接口，支持聊天、图片、视频三种类型  
+**功能描述**: 提供统一的模型调用接口，支持文本、图片、视频三种类型  
 **触发条件**: 业务模块调用模型中心接口  
 **前置条件**: 模型已注册且可用，用户有调用权限  
 
@@ -835,7 +827,7 @@
     modelId?: string;          // 指定模型ID（可选）
     taskType: "chat" | "image" | "video";
     taskName: string;          // 任务名称
-    prompt: string;            // 提示词
+    prompt: string;            // Prompt
     parameters: Record<string, any>;  // 参数配置
     userId: string;            // 用户ID
     projectId?: string;        // 项目ID（可选）
@@ -858,7 +850,7 @@
   
 - 调用示例：
   
-  **聊天模型调用**:
+  **文本模型调用**:
   ```typescript
   const request = {
     taskType: "chat",
@@ -927,13 +919,12 @@
 
 **优先级**: P0（阻塞）  
 **验收标准**:
-- AC1: Given 业务模块调用聊天模型, When 参数合理, Then 成功返回结果
+- AC1: Given 业务模块调用文本模型, When 参数合理, Then 成功返回结果
 - AC2: Given 业务模块调用图片模型, When 参数合理, Then 成功返回图片URL
 - AC3: Given 业务模块调用视频模型, When 参数合理, Then 返回pending状态和taskId
 - AC4: Given 参数不合理, When 调用模型, Then 返回错误信息
 - AC5: Given 用户配额超限, When 调用模型, Then 拒绝调用并提示
 
-**来源**: AI推导补充，依据：模型调用接口设计
 
 ---
 
@@ -1003,7 +994,7 @@
   
 - 验证示例：
   
-  **聊天模型参数验证**:
+  **文本模型参数验证**:
   ```
   ✓ model: agnes-2.0-flash (必填)
   ✓ prompt: "生成剧本" (必填)
@@ -1050,7 +1041,6 @@
 - AC3: Given 参数超出范围, When 验证参数, Then 返回错误信息
 - AC4: Given 视频帧数不符合8n+1规则, When 验证参数, Then 返回错误信息
 
-**来源**: AI推导补充，依据：参数验证需求
 
 ---
 
@@ -1082,7 +1072,7 @@
     modelName: string;         // 模型名称
     taskType: string;          // 任务类型
     taskName: string;          // 任务名称
-    prompt: string;            // 提示词
+    prompt: string;            // Prompt
     parameters: Record<string, any>;  // 参数配置
     result?: any;              // 生成结果
     status: "success" | "failed" | "pending";  // 调用状态
@@ -1146,7 +1136,6 @@
 - AC2: Given 模型调用失败, When 调用完成, Then 保存失败记录
 - AC3: Given 调用记录保存, When 查询记录, Then 可查询到完整信息
 
-**来源**: AI推导补充，依据：调用记录管理需求
 
 ---
 
@@ -1260,7 +1249,6 @@
 - AC3: Given 任务状态failed, When 查询完成, Then 返回错误信息
 - AC4: Given 任务超时, When 查询超时, Then 标记为failed
 
-**来源**: AI推导补充，依据：视频模型异步生成需求
 
 ---
 
@@ -1343,7 +1331,6 @@
 - AC2: Given 无调用记录, When 查看统计, Then 显示"暂无数据"
 - AC3: Given 查看今日统计, When 筛选时间范围, Then 显示今日数据
 
-**来源**: AI推导补充，依据：调用统计需求
 
 ---
 
@@ -1417,7 +1404,7 @@
   ────────────────────
   
   按模型统计：
-  Agnes 2.0 Flash：$5.67 (聊天)
+  Agnes 2.0 Flash：$5.67 (文本)
   Agnes Image 2.1：$10.23 (图片)
   Agnes Video V2.0：$7.55 (视频)
   ```
@@ -1442,7 +1429,6 @@
 - AC3: Given 按模型筛选, When 查看成本, Then 显示各模型成本
 - AC4: Given 按时间筛选, When 查看成本, Then 显示指定时间范围成本
 
-**来源**: AI推导补充，依据：成本管理需求
 
 ---
 
@@ -1527,7 +1513,6 @@
 - AC2: Given 查看性能趋势, When 选择时间范围, Then 显示趋势图表
 - AC3: Given 性能异常, When 成功率下降, Then 自动告警
 
-**来源**: AI推导补充，依据：性能分析需求
 
 ---
 
@@ -1611,7 +1596,6 @@
 - AC3: Given 重复评分, When 提交评分, Then 提示错误信息
 - AC4: Given 模型评分高, When 推荐模型, Then 优先推荐高评分模型
 
-**来源**: AI推导补充，依据：模型评分系统需求
 
 ---
 
@@ -1710,7 +1694,6 @@
 - AC3: Given 用户在黑名单, When 验证权限, Then 拒绝访问
 - AC4: Given 管理员配置权限, When 保存配置, Then 权限立即生效
 
-**来源**: AI推导补充，依据：模型访问权限需求
 
 ---
 
@@ -1810,7 +1793,6 @@
 - AC3: Given 配额重置时间到达, When 自动重置, Then 配额清零
 - AC4: Given 管理员配置配额, When 保存配置, Then 配额立即生效
 
-**来源**: AI推导补充，依据：用户配额限制需求
 
 ---
 
@@ -1851,7 +1833,7 @@
   ```typescript
   function estimateCost(model: ModelConfig, params: Record<string, any>): number {
     if (model.type === "chat") {
-      // 聊天模型成本估算
+      // 文本模型成本估算
       const inputTokens = estimateInputTokens(params.prompt);
       const outputTokens = params.max_tokens || 2000;
       const inputCost = parseFloat(model.pricing.current.chat.input.replace("$", "").split(" ")[0]);
@@ -1913,10 +1895,9 @@
 - AC1: Given 预算充足, When 验证预算, Then 允许调用
 - AC2: Given 预算不足, When 验证预算, Then 拒绝调用
 - AC3: Given 预算重置时间到达, When 自动重置, Then 预算清零
-- AC4: Given 成本估算, When 调用聊天模型, Then 估算token成本
+- AC4: Given 成本估算, When 调用文本模型, Then 估算token成本
 - AC5: Given 成本估算, When 调用视频模型, Then 估算时长成本
 
-**来源**: AI推导补充，依据：成本预算控制需求
 
 ---
 
@@ -1943,7 +1924,7 @@
   
   ────────────────────
   
-  聊天模型
+  文本模型
   
   Agnes 2.0 Flash    [启用] ✓
   Agnes 2.0 Pro      [启用] ✓
@@ -1998,18 +1979,22 @@
 - AC3: Given 禁用默认模型, When 提交配置, Then 提示先设置新默认模型
 - AC4: Given 模型被禁用, When 用户调用, Then 拒绝调用
 
-**来源**: AI推导补充，依据：企业模型池管理需求
 
 ---
 
 ## 四、数据模型设计
 
+> **权威来源声明**：物理表清单与表名以 [sqlite-plan.md](sqlite-plan.md) 为权威来源。当前实际存在的模型相关物理表为 `models`（见 [sqlite-plan §AI 任务调度上下文](sqlite-plan.md#ai-任务调度上下文)）。本节中 `model_call_records`、`model_scores`、`user_quotas`、`user_budgets`、`model_permissions` 为**规划中的扩展表**，尚未在 sqlite-plan.md 中登记，需在实现时同步添加。
+
 ### 4.1 核心表结构
 
-#### 模型配置表（model_configs）
+#### 模型配置表（models）
+
+> 表名 `models` 与 [sqlite-plan.md](sqlite-plan.md) 保持一致。以下 DDL 为目标结构，实际字段以 `backend/src/storage/schema.ts` 中 `models` 的 `FieldSpec` 定义为准。
 
 ```sql
-CREATE TABLE model_configs (
+-- 表名: models (与 sqlite-plan.md 一致)
+-- 注意: 以下为模型中心目标结构，当前实际字段以 schema.ts 为准
   id TEXT PRIMARY KEY,                    -- 模型ID
   name TEXT NOT NULL,                     -- 模型名称
   type TEXT NOT NULL,                     -- 模型类型：chat/image/video
@@ -2055,10 +2040,12 @@ CREATE TABLE model_configs (
 
 ---
 
-#### 模型调用记录表（model_call_records）
+#### 模型调用记录表（model_call_records）—— 规划中
+
+> 尚未在 sqlite-plan.md 中登记，实现时需同步添加。
 
 ```sql
-CREATE TABLE model_call_records (
+-- 规划中: model_call_records (需同步至 sqlite-plan.md)
   id TEXT PRIMARY KEY,                    -- 记录ID
   task_id TEXT NOT NULL,                  -- 任务ID
   user_id TEXT NOT NULL,                  -- 用户ID
@@ -2067,7 +2054,7 @@ CREATE TABLE model_call_records (
   model_name TEXT NOT NULL,               -- 模型名称
   task_type TEXT NOT NULL,                -- 任务类型
   task_name TEXT NOT NULL,                -- 任务名称
-  prompt TEXT NOT NULL,                   -- 提示词
+  prompt TEXT NOT NULL,                   -- Prompt
   parameters TEXT,                        -- 参数配置（JSON）
   result TEXT,                            -- 生成结果（JSON）
   status TEXT NOT NULL,                   -- 调用状态：success/failed/pending
@@ -2086,10 +2073,12 @@ CREATE TABLE model_call_records (
 
 ---
 
-#### 模型评分表（model_scores）
+#### 模型评分表（model_scores）—— 规划中
+
+> 尚未在 sqlite-plan.md 中登记，实现时需同步添加。
 
 ```sql
-CREATE TABLE model_scores (
+-- 规划中: model_scores (需同步至 sqlite-plan.md)
   id TEXT PRIMARY KEY,                    -- 评分ID
   task_id TEXT NOT NULL,                  -- 任务ID
   user_id TEXT NOT NULL,                  -- 用户ID
@@ -2102,10 +2091,12 @@ CREATE TABLE model_scores (
 
 ---
 
-#### 用户配额表（user_quotas）
+#### 用户配额表（user_quotas）—— 规划中
+
+> 尚未在 sqlite-plan.md 中登记，实现时需同步添加。
 
 ```sql
-CREATE TABLE user_quotas (
+-- 规划中: user_quotas (需同步至 sqlite-plan.md)
   id TEXT PRIMARY KEY,                    -- 配额ID
   user_id TEXT NOT NULL UNIQUE,           -- 用户ID
   daily_quota INTEGER,                    -- 每日配额
@@ -2122,10 +2113,12 @@ CREATE TABLE user_quotas (
 
 ---
 
-#### 用户成本预算表（user_budgets）
+#### 用户成本预算表（user_budgets）—— 规划中
+
+> 尚未在 sqlite-plan.md 中登记，实现时需同步添加。
 
 ```sql
-CREATE TABLE user_budgets (
+-- 规划中: user_budgets (需同步至 sqlite-plan.md)
   id TEXT PRIMARY KEY,                    -- 预算ID
   user_id TEXT NOT NULL UNIQUE,           -- 用户ID
   daily_budget REAL,                      -- 每日预算（美元）
@@ -2142,10 +2135,12 @@ CREATE TABLE user_budgets (
 
 ---
 
-#### 模型权限表（model_permissions）
+#### 模型权限表（model_permissions）—— 规划中
+
+> 尚未在 sqlite-plan.md 中登记，实现时需同步添加。
 
 ```sql
-CREATE TABLE model_permissions (
+-- 规划中: model_permissions (需同步至 sqlite-plan.md)
   id TEXT PRIMARY KEY,                    -- 权限ID
   model_id TEXT NOT NULL,                 -- 模型ID
   allowed_roles TEXT,                     -- 允许的角色（JSON数组）
@@ -2161,12 +2156,12 @@ CREATE TABLE model_permissions (
 ### 4.2 索引设计
 
 ```sql
--- 模型配置表索引
-CREATE INDEX idx_model_configs_type ON model_configs(type);
-CREATE INDEX idx_model_configs_default ON model_configs(is_default);
-CREATE INDEX idx_model_configs_enabled ON model_configs(is_enabled);
+-- 模型配置表索引 (表名: models)
+CREATE INDEX idx_models_type ON models(type);
+CREATE INDEX idx_models_default ON models(is_default);
+CREATE INDEX idx_models_enabled ON models(is_enabled);
 
--- 模型调用记录表索引
+-- 模型调用记录表索引 (规划中)
 CREATE INDEX idx_model_call_records_user ON model_call_records(user_id);
 CREATE INDEX idx_model_call_records_model ON model_call_records(model_id);
 CREATE INDEX idx_model_call_records_project ON model_call_records(project_id);
@@ -2183,7 +2178,7 @@ CREATE INDEX idx_model_scores_task ON model_scores(task_id);
 
 ## 五、API集成设计
 
-### 5.1 Agnes 2.0 Flash（聊天模型）
+### 5.1 Agnes 2.0 Flash（文本模型）
 
 #### API Endpoint
 ```
@@ -2426,7 +2421,7 @@ interface ModelCenterAPI {
 │                                                                 │
 │  类型切换                                                       │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐   │
-│  │   💬 聊天模型   │  │   🖼️ 图片模型   │  │   🎬 视频模型   │   │
+│  │   💬 文本模型   │  │   🖼️ 图片模型   │  │   🎬 视频模型   │   │
 │  └────────────────┘  └────────────────┘  └────────────────┘   │
 │                                                                 │
 │  ─────────────────────────────────────────────────────────────  │
@@ -2435,7 +2430,7 @@ interface ModelCenterAPI {
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │                                                           │  │
 │  │  💬 Agnes 2.0 Flash               ⭐ 默认    ✓ 可用       │  │
-│  │  快速响应的聊天模型                                        │  │
+│  │  快速响应的文本模型                                        │  │
 │  │  ───────────────────────────────────────────────────────  │  │
 │  │  能力：[视觉理解] [Thinking模式] [工具调用] [流式响应]    │  │
 │  │  性能：响应时间 500ms | 成功率 99.7% | 并发 100           │  │
@@ -2450,7 +2445,7 @@ interface ModelCenterAPI {
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │                                                           │  │
 │  │  💬 Agnes 2.0 Pro                            ✓ 可用       │  │
-│  │  专业版聊天模型，支持更长的上下文和更复杂的推理            │  │
+│  │  专业版文本模型，支持更长的上下文和更复杂的推理            │  │
 │  │  ───────────────────────────────────────────────────────  │  │
 │  │  能力：[长上下文] [复杂推理]                              │  │
 │  │  性能：响应时间 1200ms | 成功率 99.2% | 并发 50           │  │
@@ -2474,7 +2469,7 @@ interface ModelCenterAPI {
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │ 模型ID：agnes-2.0-flash                                  │   │
 │  │ 模型名称：Agnes 2.0 Flash                                │   │
-│  │ 类型：聊天模型                                           │   │
+│  │ 类型：文本模型                                           │   │
 │  │ 版本：2.0                                                │   │
 │  │ 提供商：Agnes AI                                         │   │
 │  │ 状态：可用 ✓                                             │   │
@@ -2626,7 +2621,7 @@ interface ModelCenterAPI {
 │  模型池管理（当前选中）                                         │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │                                                           │  │
-│  │  💬 聊天模型                                              │  │
+│  │  💬 文本模型                                              │  │
 │  │  ──────────────────────────────────────────────────────  │  │
 │  │  Agnes 2.0 Flash      [启用] ✓  [默认] ⭐  [配置]        │  │
 │  │  Agnes 2.0 Pro        [启用] ✓            [配置]        │  │
@@ -2667,8 +2662,8 @@ interface ModelCenterAPI {
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │ 模型ID*：        [agnes-2.0-flash                   ]    │  │
 │  │ 模型名称*：      [Agnes 2.0 Flash                    ]    │  │
-│  │ 模型类型*：      [聊天模型 ▼]                           │  │
-│  │ 模型描述：       [快速响应的聊天模型...              ]    │  │
+│  │ 模型类型*：      [文本模型 ▼]                           │  │
+│  │ 模型描述：       [快速响应的文本模型...              ]    │  │
 │  │ 版本：           [2.0                                 ]    │  │
 │  │ 提供商：         [Agnes AI                            ]    │  │
 │  └───────────────────────────────────────────────────────────┘  │
@@ -2811,12 +2806,12 @@ interface ModelCenterAPI {
 ### 7.4 实施检查清单
 
 #### 数据库设计
-- [ ] 创建 `model_configs` 表
-- [ ] 创建 `model_call_records` 表
-- [ ] 创建 `model_scores` 表
-- [ ] 创建 `user_quotas` 表
-- [ ] 创建 `user_budgets` 表
-- [ ] 创建 `model_permissions` 表
+- [x] `models` 表已存在（见 [sqlite-plan.md](sqlite-plan.md)），扩展字段待添加
+- [ ] 创建 `model_call_records` 表（规划中，需同步至 sqlite-plan.md）
+- [ ] 创建 `model_scores` 表（规划中，需同步至 sqlite-plan.md）
+- [ ] 创建 `user_quotas` 表（规划中，需同步至 sqlite-plan.md）
+- [ ] 创建 `user_budgets` 表（规划中，需同步至 sqlite-plan.md）
+- [ ] 创建 `model_permissions` 表（规划中，需同步至 sqlite-plan.md）
 - [ ] 创建所有索引
 
 #### 类型定义
@@ -2856,10 +2851,10 @@ interface ModelCenterAPI {
 
 ## 附录：相关文档
 
-- **AI模型体系设计**: [06-ai-model-system.md](file:///d:/trae/manju/docs/06-ai-model-system.md)
-- **剧本中心完整指南**: [script-center-guide.md](file:///d:/trae/manju/docs/script-center-guide.md)
-- **API规格说明书**: [api-specification.md](file:///d:/trae/manju/docs/api-specification.md)
-- **数据模型设计**: [04-data-model.md](file:///d:/trae/manju/docs/04-data-model.md)
+- **AI模型体系设计**: [AI 任务调度 §3.5](ddd/contexts/05-ai-task-orchestration.md)
+- **剧本中心完整指南**: [script-center-guide.md](script-center-guide.md)
+- **API规格说明书**: [API 接口说明](api.md)
+- **数据模型设计**: [SQLite 存储方案](sqlite-plan.md)
 
 ---
 
@@ -2871,7 +2866,7 @@ interface ModelCenterAPI {
 - ✅ 任务优先，而不是模型优先
 - ✅ 普通用户使用智能模式，专业用户使用专家模式
 - ✅ 管理员配置企业模型池和权限策略
-- ✅ 支持三种模型类型：聊天、图片、视频
+- ✅ 支持三种模型类型：文本、图片、视频
 - ✅ 支持特殊功能：视觉理解、Thinking模式、关键帧模式、异步生成
 
 **关键特性**:

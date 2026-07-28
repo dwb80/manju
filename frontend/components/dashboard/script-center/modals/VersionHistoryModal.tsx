@@ -63,7 +63,7 @@ export function VersionHistoryModal({
   return (
     <DraggableModal title="版本历史" onClose={onClose} width={500} maxHeight={600}>
       <div className="p-3">
-        <Suspense fallback={<div className="p-4 text-center text-gray-400">加载中...</div>}>
+        <Suspense fallback={<div className="p-4 text-center text-muted-foreground">加载中...</div>}>
           <VersionHistory
             versions={versions as any}
             onRestore={async (versionId) => {

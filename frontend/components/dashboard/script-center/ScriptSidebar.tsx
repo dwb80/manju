@@ -215,10 +215,10 @@ export function ScriptSidebar({
   }
 
   const statusColors: Record<string, string> = {
-    draft: 'text-gray-400',
-    review: 'text-yellow-400',
-    approved: 'text-emerald-400',
-    production: 'text-blue-400',
+    draft: 'text-muted-foreground',
+    review: 'text-chart-5',
+    approved: 'text-primary',
+    production: 'text-info',
   }
 
   const toJumpTarget = (node: NavTreeNode): SidebarJumpTarget => ({
@@ -231,10 +231,10 @@ export function ScriptSidebar({
   })
 
   return (
-    <div className="script-sidebar h-full bg-[#1a1a1a] border-r border-white/10 flex flex-col">
+    <div className="script-sidebar h-full bg-card border-r border-border flex flex-col">
       {/* 标题和添加按钮 */}
-      <div className="p-3 border-b border-white/10 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-white">剧集列表</h2>
+      <div className="p-3 border-b border-border flex items-center justify-between">
+        <h2 className="text-sm font-medium text-foreground">剧集列表</h2>
         <Button variant="ghost" size="sm" onClick={onAddEpisode} className="h-6 text-xs">
           <Plus className="h-3 w-3 mr-1" />
           添加剧集
@@ -252,8 +252,8 @@ export function ScriptSidebar({
                   <div key={node.id} className="rounded-lg overflow-hidden">
                     <div
                       className={`flex items-center gap-1 p-2 rounded cursor-pointer transition-colors ${selectedEpisode === node.id
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'hover:bg-white/5 text-gray-300'
+                        ? 'bg-primary/20 text-primary'
+                        : 'hover:bg-muted/50 text-muted-foreground'
                         }`}
                       onClick={() => {
                         // 单击：选中 + 跳转
@@ -263,7 +263,7 @@ export function ScriptSidebar({
                     >
                       {/* 展开/折叠按钮：单独处理，避免和跳转冲突 */}
                       <button
-                        className="text-gray-500 hover:text-gray-300 flex-shrink-0"
+                        className="text-muted-foreground hover:text-muted-foreground flex-shrink-0"
                         onClick={(e) => {
                           e.stopPropagation()
                           toggleEpisode(node.id)
@@ -276,38 +276,38 @@ export function ScriptSidebar({
                           <ChevronRight className="h-3 w-3" />
                         )}
                       </button>
-                      <FileText className="h-3 w-3 text-emerald-400 flex-shrink-0" />
+                      <FileText className="h-3 w-3 text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium text-white truncate">
+                          <span className="text-sm font-medium text-foreground truncate">
                             第{node.episodeNo ?? 1}集
                           </span>
                           {node.title && (
-                            <span className="text-xs text-[#888] truncate">- {node.title}</span>
+                            <span className="text-xs text-muted-foreground truncate">- {node.title}</span>
                           )}
                         </div>
                       </div>
                       {node.status && (
-                        <span className={`text-xs ${statusColors[node.status] || 'text-gray-400'}`}>
+                        <span className={`text-xs ${statusColors[node.status] || 'text-muted-foreground'}`}>
                           ●
                         </span>
                       )}
                     </div>
                     {expandedEpisodes.has(node.id) && childScenes.length > 0 && (
-                      <div className="ml-5 mt-1 space-y-1 border-l border-white/10 pl-2">
+                      <div className="ml-5 mt-1 space-y-1 border-l border-border pl-2">
                         {childScenes.map((scene) => (
                           <div
                             key={scene.id}
                             className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors ${selectedScene === scene.id
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'hover:bg-white/5 text-gray-400'
+                              ? 'bg-primary/20 text-primary'
+                              : 'hover:bg-muted/50 text-muted-foreground'
                               }`}
                             onClick={() => {
                               onSelectScene(scene.id)
                               onJumpToScene?.(toJumpTarget(scene))
                             }}
                           >
-                            <span className="text-gray-500 text-xs">景</span>
+                            <span className="text-muted-foreground text-xs">景</span>
                             <span className="text-xs truncate">
                               {scene.location || '未命名'}{scene.time ? ' · ' + scene.time : ''}
                             </span>
@@ -323,15 +323,15 @@ export function ScriptSidebar({
                   <div
                     key={node.id}
                     className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors ${selectedScene === node.id
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : 'hover:bg-white/5 text-gray-300'
+                      ? 'bg-primary/20 text-primary'
+                      : 'hover:bg-muted/50 text-muted-foreground'
                       }`}
                     onClick={() => {
                       onSelectScene(node.id)
                       onJumpToScene?.(toJumpTarget(node))
                     }}
                   >
-                    <span className="text-gray-500 text-xs">景</span>
+                    <span className="text-muted-foreground text-xs">景</span>
                     <span className="text-xs truncate">
                       {node.location || '未命名'}{node.time ? ' · ' + node.time : ''}
                     </span>
@@ -342,17 +342,17 @@ export function ScriptSidebar({
               return (
                 <div
                   key={node.id}
-                  className="flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors hover:bg-white/5 text-gray-300"
+                  className="flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors hover:bg-muted/50 text-muted-foreground"
                   onClick={() => onJumpToEpisode?.(toJumpTarget(node))}
                 >
-                  <FileText className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                  <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                   <span className="text-xs truncate">{node.title}</span>
                 </div>
               )
             })}
           </div>
         ) : displayEpisodes.length === 0 ? (
-          <div className="p-4 text-center text-[#888] text-sm">
+          <div className="p-4 text-center text-muted-foreground text-sm">
             <Film className="h-8 w-8 mx-auto mb-2 opacity-40" />
             暂无剧集，点击上方按钮添加
           </div>
@@ -361,7 +361,7 @@ export function ScriptSidebar({
             {displayEpisodes.map((episode) => (
               <div
                 key={episode.id}
-                className={`rounded-lg overflow-hidden ${draggedId === episode.id ? 'opacity-40' : ''} ${dragOverId === episode.id ? 'border-t-2 border-emerald-500' : ''}`}
+                className={`rounded-lg overflow-hidden ${draggedId === episode.id ? 'opacity-40' : ''} ${dragOverId === episode.id ? 'border-t-2 border-primary' : ''}`}
               >
                 {/* 剧集标题 */}
                 <div
@@ -392,8 +392,8 @@ export function ScriptSidebar({
                     setDragOverId(null)
                   }}
                   className={`flex items-center gap-1 p-2 rounded cursor-pointer transition-colors group ${selectedEpisode === episode.id
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'hover:bg-white/5 text-gray-300'
+                    ? 'bg-primary/20 text-primary'
+                    : 'hover:bg-muted/50 text-muted-foreground'
                     }`}
                   onClick={() => {
                     // 单击：选中 + 跳转到正文中该剧集对应位置
@@ -405,7 +405,7 @@ export function ScriptSidebar({
                 >
                   {/* 展开/折叠箭头：单独按钮，避免和跳转冲突 */}
                   <button
-                    className="text-gray-500 hover:text-gray-300 flex-shrink-0"
+                    className="text-muted-foreground hover:text-muted-foreground flex-shrink-0"
                     onClick={(e) => {
                       e.stopPropagation()
                       toggleEpisode(episode.id)
@@ -418,7 +418,7 @@ export function ScriptSidebar({
                       <ChevronRight className="h-3 w-3" />
                     )}
                   </button>
-                  <FileText className="h-3 w-3 text-emerald-400 flex-shrink-0" />
+                  <FileText className="h-3 w-3 text-primary flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     {renaming?.type === 'episode' && renaming.id === episode.id ? (
                       <input
@@ -432,22 +432,22 @@ export function ScriptSidebar({
                           if (e.key === 'Escape') cancelRename()
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full h-5 px-1 rounded bg-[#252525] border border-emerald-500/50 text-sm text-white focus:outline-none"
+                        className="w-full h-5 px-1 rounded bg-secondary border border-primary/50 text-sm text-foreground focus:outline-none"
                       />
                     ) : (
                       <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium text-white truncate">
+                        <span className="text-sm font-medium text-foreground truncate">
                           第{episode.episodeNo}集
                         </span>
                         {episode.title && (
-                          <span className="text-xs text-[#888] truncate">- {episode.title}</span>
+                          <span className="text-xs text-muted-foreground truncate">- {episode.title}</span>
                         )}
                       </div>
                     )}
                   </div>
                   {/* 状态标记 */}
                   {episode.status && (
-                    <span className={`text-xs ${statusColors[episode.status] || 'text-gray-400'}`}>
+                    <span className={`text-xs ${statusColors[episode.status] || 'text-muted-foreground'}`}>
                       ●
                     </span>
                   )}
@@ -455,16 +455,16 @@ export function ScriptSidebar({
 
                 {/* 场景列表 */}
                 {expandedEpisodes.has(episode.id) && (
-                  <div className="ml-5 mt-1 space-y-1 border-l border-white/10 pl-2">
+                  <div className="ml-5 mt-1 space-y-1 border-l border-border pl-2">
                     {episode.scenes.length === 0 ? (
-                      <div className="text-xs text-[#666] py-1 px-2">暂无场景</div>
+                      <div className="text-xs text-muted-foreground py-1 px-2">暂无场景</div>
                     ) : (
                       episode.scenes.map((scene) => (
                         <div
                           key={scene.id}
                           className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors ${selectedScene === scene.id
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : 'hover:bg-white/5 text-gray-400'
+                            ? 'bg-primary/20 text-primary'
+                            : 'hover:bg-muted/50 text-muted-foreground'
                             }`}
                           onClick={() => {
                             // 单击：选中 + 跳转到正文中该场景对应位置
@@ -473,7 +473,7 @@ export function ScriptSidebar({
                           }}
                           onContextMenu={(e) => handleContextMenu(e, { kind: 'scene', scene, episodeId: episode.id })}
                         >
-                          <span className="text-gray-500 text-xs">景</span>
+                          <span className="text-muted-foreground text-xs">景</span>
                           {renaming?.type === 'scene' && renaming.id === scene.id ? (
                             <input
                               ref={renameInputRef}
@@ -486,7 +486,7 @@ export function ScriptSidebar({
                                 if (e.key === 'Escape') cancelRename()
                               }}
                               onClick={(e) => e.stopPropagation()}
-                              className="flex-1 h-5 px-1 rounded bg-[#252525] border border-emerald-500/50 text-xs text-white focus:outline-none"
+                              className="flex-1 h-5 px-1 rounded bg-secondary border border-primary/50 text-xs text-foreground focus:outline-none"
                             />
                           ) : (
                             <span className="text-xs truncate">
@@ -497,7 +497,7 @@ export function ScriptSidebar({
                       ))
                     )}
                     <button
-                      className="w-full text-left px-2 py-1 text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
+                      className="w-full text-left px-2 py-1 text-xs text-muted-foreground hover:text-muted-foreground transition-colors flex items-center gap-1"
                       onClick={() => onAddScene(episode.id)}
                     >
                       <Plus className="h-3 w-3" />
@@ -515,12 +515,12 @@ export function ScriptSidebar({
       {contextMenu && (
         <div
           ref={menuRef}
-          className="fixed z-50 min-w-[140px] py-1 bg-[#252525] border border-white/10 rounded-md shadow-xl"
+          className="fixed z-50 min-w-[140px] py-1 bg-secondary border border-border rounded-md shadow-xl"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           {/* 新建 */}
           <button
-            className="w-full px-3 py-1.5 text-left text-xs text-gray-300 hover:bg-white/5 flex items-center gap-2"
+            className="w-full px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/50 flex items-center gap-2"
             onClick={() => {
               const item = contextMenu.item
               if (item.kind === 'episode') {
@@ -538,7 +538,7 @@ export function ScriptSidebar({
           </button>
           {/* 重命名 */}
           <button
-            className="w-full px-3 py-1.5 text-left text-xs text-gray-300 hover:bg-white/5 flex items-center gap-2"
+            className="w-full px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/50 flex items-center gap-2"
             onClick={() => {
               if (contextMenu.item.kind === 'episode') {
                 startRenameEpisode(contextMenu.item.episode)
@@ -552,7 +552,7 @@ export function ScriptSidebar({
           </button>
           {/* 复制 */}
           <button
-            className="w-full px-3 py-1.5 text-left text-xs text-gray-300 hover:bg-white/5 flex items-center gap-2"
+            className="w-full px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/50 flex items-center gap-2"
             onClick={handleDuplicate}
           >
             <Copy className="h-3 w-3" />
@@ -560,7 +560,7 @@ export function ScriptSidebar({
           </button>
           {/* 删除 */}
           <button
-            className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+            className="w-full px-3 py-1.5 text-left text-xs text-destructive hover:bg-destructive/10 flex items-center gap-2"
             onClick={handleDelete}
           >
             <Trash2 className="h-3 w-3" />

@@ -181,7 +181,7 @@ export function TemplateSelector({
         {/* 标题栏 */}
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-md bg-emerald-500/15 text-emerald-300">
+            <div className="grid h-9 w-9 place-items-center rounded-md bg-primary/15 text-primary">
               <LayoutTemplate className="h-4 w-4" />
             </div>
             <div>
@@ -212,23 +212,23 @@ export function TemplateSelector({
                 return (
                   <div
                     key={tpl.id}
-                    className="group flex flex-col gap-2 rounded-lg border border-border bg-card p-3 hover:border-emerald-500/60 transition-colors"
+                    className="group flex flex-col gap-2 rounded-lg border border-border bg-card p-3 hover:border-primary/60 transition-colors"
                   >
                     {/* 缩略图占位 / 头部 */}
                     <div className="flex items-center gap-2">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 text-emerald-300 text-sm font-semibold">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-sm font-semibold">
                         {(tpl.name || "?").charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-medium text-foreground truncate">{tpl.name}</h3>
                         <div className="flex flex-wrap items-center gap-1 mt-0.5">
                           {primary && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary">
                               {primary}
                             </span>
                           )}
                           {secondary && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground">
                               {secondary}
                             </span>
                           )}

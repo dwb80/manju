@@ -55,3 +55,7 @@ export type { CopyToProjectDialogProps } from './copy-to-project-dialog';
 // 模块间引用选择器（分镜→场景、视频→分镜、音频→角色）
 export { EntityPicker } from './entity-picker';
 export type { EntityPickerProps } from './entity-picker';
+
+// 流水线流程组件（多阶段进度可视化）
+export { PipelineFlow } from './pipeline-flow';
+export type { PipelineFlowProps, PipelineFlowStage, PipelineFlowStatus } from './pipeline-flow';

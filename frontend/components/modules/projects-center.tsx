@@ -341,7 +341,7 @@ export function ProjectsCenterPage() {
 
         <PageCard>
           {loadError && (
-            <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               加载项目失败：{loadError}（请确认后端服务已启动）
             </div>
           )}
@@ -378,7 +378,7 @@ export function ProjectsCenterPage() {
                             {project.is_pinned && (
                               <Badge variant="warning">置顶</Badge>
                             )}
-                            <span className="font-medium text-white">{project.name}</span>
+                            <span className="font-medium text-foreground">{project.name}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground hidden md:table-cell">{project.category}</TableCell>
@@ -400,11 +400,11 @@ export function ProjectsCenterPage() {
                                   className="gap-1 px-2"
                                 >
                                   {openingScriptFor === project.id ? (
-                                    <Loader2 className="h-4 w-4 text-emerald-400 animate-spin" />
+                                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
                                   ) : (
-                                    <FileText className="h-4 w-4 text-emerald-400" />
+                                    <FileText className="h-4 w-4 text-primary" />
                                   )}
-                                  <span className="text-xs text-emerald-400 whitespace-nowrap">
+                                  <span className="text-xs text-primary whitespace-nowrap">
                                     {openingScriptFor === project.id ? "加载中…" : "打开剧本"}
                                   </span>
                                 </Button>
@@ -435,7 +435,7 @@ export function ProjectsCenterPage() {
                                   onClick={() => setDeleteConfirm({ id: project.id, name: project.name })}
                                   aria-label="删除"
                                 >
-                                  <Trash2 className="h-4 w-4 text-red-400" />
+                                  <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>删除</TooltipContent>
@@ -555,7 +555,7 @@ export function ProjectsCenterPage() {
                   <DetailRow label="更新时间" value={new Date(viewingProject.updated_at).toLocaleString()} />
                   <DetailRow label="项目描述" value={viewingProject.description || "-"} long />
                 </div>
-                <DialogFooter className="mt-6 gap-2 border-t border-white/5 pt-4">
+                <DialogFooter className="mt-6 gap-2 border-t border-border/50 pt-4">
                   <Button size="sm" variant="secondary" onClick={() => setViewingProject(null)} className="px-4">
                     关闭
                   </Button>

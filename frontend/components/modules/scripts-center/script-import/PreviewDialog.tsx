@@ -79,27 +79,27 @@ export function PreviewDialog({
       // 阻止冒泡到任何父级 onClick handler
       onClick={stopProp}
     >
-      <div className="w-[920px] max-w-[95vw] max-h-[90vh] bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-[920px] max-w-[95vw] max-h-[90vh] bg-card rounded-xl border border-border shadow-2xl flex flex-col overflow-hidden">
         {/* 标题栏 */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-[#252525] flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary flex-shrink-0">
           <div className="flex items-center gap-3">
             <div>
-              <div className="text-sm font-medium text-white">导入预览</div>
+              <div className="text-sm font-medium text-foreground">导入预览</div>
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-[#888] flex-shrink-0">剧本标题</span>
+                <span className="text-xs text-muted-foreground flex-shrink-0">剧本标题</span>
                 <input
-                  className="h-8 w-80 max-w-[50vw] rounded border border-white/10 bg-[#1a1a1a] px-2 text-sm text-white outline-none focus:border-emerald-500/60"
+                  className="h-8 w-80 max-w-[50vw] rounded border border-border bg-card px-2 text-sm text-foreground outline-none focus:border-primary/60"
                   value={preview.title}
                   onChange={(event) => onTitleChange(event.target.value)}
                   placeholder="请输入剧本标题"
                   disabled={isImporting}
                 />
               </div>
-              <div className="text-xs text-[#888] mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 请确认解析结果。点击「确认导入」将写入数据库，AI 完整数据将一并保存（不写入任何工厂）。
               </div>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full border bg-purple-500/20 text-purple-300 border-purple-500/40">
+            <span className="text-[10px] px-2 py-0.5 rounded-full border bg-chart-1/20 text-chart-1 border-chart-1/40">
               AI 大模型
             </span>
           </div>
@@ -107,7 +107,7 @@ export function PreviewDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="text-gray-400 hover:text-white transition-colors text-xl leading-none w-7 h-7 flex items-center justify-center rounded hover:bg-white/10"
+            className="text-muted-foreground hover:text-foreground transition-colors text-xl leading-none w-7 h-7 flex items-center justify-center rounded hover:bg-muted"
             aria-label="关闭"
             disabled={isImporting}
           >
@@ -116,40 +116,40 @@ export function PreviewDialog({
         </div>
 
         {/* 统计信息 */}
-        <div className="px-4 py-2 border-b border-white/10 bg-[#1f1f1f] flex items-center gap-4 text-xs flex-wrap flex-shrink-0">
-          <span className="text-[#888]">
-            格式: <span className="text-white">{preview.format.toUpperCase()}</span>
+        <div className="px-4 py-2 border-b border-border bg-muted flex items-center gap-4 text-xs flex-wrap flex-shrink-0">
+          <span className="text-muted-foreground">
+            格式: <span className="text-foreground">{preview.format.toUpperCase()}</span>
           </span>
-          <span className="text-[#888]">
-            剧集: <span className="text-emerald-400">{stats.episodes}</span>
+          <span className="text-muted-foreground">
+            剧集: <span className="text-primary">{stats.episodes}</span>
           </span>
-          <span className="text-[#888]">
-            场景: <span className="text-emerald-400">{stats.scenes}</span>
+          <span className="text-muted-foreground">
+            场景: <span className="text-primary">{stats.scenes}</span>
           </span>
-          <span className="text-[#888]">
-            对白: <span className="text-emerald-400">{stats.dialogues}</span>
+          <span className="text-muted-foreground">
+            对白: <span className="text-primary">{stats.dialogues}</span>
           </span>
-          <span className="text-[#888]">
-            角色: <span className="text-emerald-400">{stats.characters}</span>
+          <span className="text-muted-foreground">
+            角色: <span className="text-primary">{stats.characters}</span>
             {stats.characters > 0 && (
               <span className="ml-1">
-                <span className="text-green-400">✓{stats.matched}</span>
+                <span className="text-success">✓{stats.matched}</span>
                 {" / "}
-                <span className="text-blue-400">+{stats.willCreate}</span>
+                <span className="text-info">+{stats.willCreate}</span>
                 {stats.unresolved > 0 && (
                   <>
                     {" / "}
-                    <span className="text-gray-500">?{stats.unresolved}</span>
+                    <span className="text-muted-foreground">?{stats.unresolved}</span>
                   </>
                 )}
               </span>
             )}
           </span>
-          <span className="text-[#888]">
-            道具: <span className="text-emerald-400">{stats.propAssetsCount}</span>
+          <span className="text-muted-foreground">
+            道具: <span className="text-primary">{stats.propAssetsCount}</span>
           </span>
           {preview.episodes.length === 0 && (
-            <span className="text-yellow-400">⚠ 未识别到剧集</span>
+            <span className="text-chart-5">⚠ 未识别到剧集</span>
           )}
         </div>
 
@@ -185,9 +185,9 @@ export function PreviewDialog({
         </div>
 
         {/* 底部操作 */}
-        <div className="px-4 py-3 border-t border-white/10 bg-[#252525] flex items-center justify-end gap-2 flex-shrink-0">
+        <div className="px-4 py-3 border-t border-border bg-secondary flex items-center justify-end gap-2 flex-shrink-0">
           {hasUnresolved && (
-            <span className="text-xs text-amber-400 mr-auto">
+            <span className="text-xs text-warning mr-auto">
               资产匹配中，请稍候...
             </span>
           )}

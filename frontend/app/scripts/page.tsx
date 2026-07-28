@@ -37,7 +37,7 @@ export default function ScriptsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center h-full min-h-0 bg-[#0a0a0a] text-emerald-400 animate-pulse">
+        <div className="flex items-center justify-center h-full min-h-0 bg-background text-primary animate-pulse">
           加载中...
         </div>
       }

@@ -776,11 +776,11 @@ export function ScriptsCenterPage({
       backPath="/projects"
     >
       {/* 工作流程提示 - 修正为正确的定位 */}
-      <div className="mb-6 flex items-start gap-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-        <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-blue-200">
+      <div className="mb-4 flex items-start gap-3 rounded-lg border border-info/20 bg-info/10 p-4">
+        <Info className="h-5 w-5 text-info flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-info">
           <p className="font-medium mb-1">剧本分析与资产生成流程</p>
-          <p className="text-blue-300/80 text-xs">
+          <p className="text-info/80 text-xs">
             导入/创作剧本 → AI分析提取角色、场景、道具文字描述 → 确认后流转到角色工厂、场景工厂、道具工厂 → 审批通过后转入审核中心
           </p>
         </div>
@@ -793,9 +793,9 @@ export function ScriptsCenterPage({
             <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="搜索剧本标题或作者..." />
             <FilterSelect value={statusFilter} onChange={setStatusFilter} options={statusOptions} placeholder="状态筛选" />
             {/* 视图切换 */}
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#252525] border border-white/10">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary border border-border">
               <button
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === "list" ? "bg-emerald-500/20 text-emerald-400" : "text-[#888] hover:text-white"
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-primary-foreground"
                   }`}
                 onClick={() => setViewMode("list")}
                 title="列表视图"
@@ -804,7 +804,7 @@ export function ScriptsCenterPage({
                 列表
               </button>
               <button
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === "classification" ? "bg-emerald-500/20 text-emerald-400" : "text-[#888] hover:text-white"
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${viewMode === "classification" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-primary-foreground"
                   }`}
                 onClick={() => setViewMode("classification")}
                 title="分类视图"
@@ -841,8 +841,8 @@ export function ScriptsCenterPage({
       <PageCard title={viewMode === "list" ? "剧本列表" : "分类视图"}>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 text-emerald-400 animate-spin" />
-            <span className="ml-2 text-[#888]">加载中...</span>
+            <Loader2 className="h-6 w-6 text-primary animate-spin" />
+            <span className="ml-2 text-muted-foreground">加载中...</span>
           </div>
         ) : viewMode === "classification" ? (
           classificationScripts.length > 0 ? (
@@ -940,16 +940,16 @@ export function ScriptsCenterPage({
           wide
         >
           <div className="space-y-4">
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-200">
+            <div className="rounded-lg border border-warning/20 bg-warning/5 p-3 text-sm text-warning">
               回收站内的剧本会在 30 天后自动清理。30 天内可恢复剧本或彻底删除（会级联清理剧集/场景/对白等所有关联数据）。
             </div>
             {isRecycleBinLoading ? (
-              <div className="flex items-center justify-center py-12 text-[#888]">
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
                 加载中...
               </div>
             ) : deletedScripts.length === 0 ? (
-              <div className="rounded-lg border border-white/10 bg-[#1f1f1f] py-12 text-center text-[#888]">
+              <div className="rounded-lg border border-border bg-muted py-12 text-center text-muted-foreground">
                 回收站是空的
               </div>
             ) : (

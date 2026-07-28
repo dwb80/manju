@@ -7,6 +7,10 @@ import { api } from "@/lib/api-client";
 import { createLogger } from "@/lib/logger";
 import { useProjectStore } from "@/lib/stores/project-store";
 import { UserAccountMenu } from "@/components/auth/user-account-menu";
+import { ThemeToggle } from "./theme-toggle";
+import { Breadcrumb } from "./breadcrumb";
+import { Search } from "lucide-react";
+import { openCommandPalette } from "./command-palette";
 
 const log = createLogger("global-top-bar");
 
@@ -73,19 +77,33 @@ export function GlobalTopBar() {
   );
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6">
-      <div className="flex min-w-0 items-center gap-4">
-        <h2 className="shrink-0 text-lg font-semibold text-card-foreground">当前项目</h2>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-topbar px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
         <ShadcnSelect
           value={selectedProjectId ?? ""}
           onChange={(value) => setSelectedProjectId(value)}
           options={projectOptions}
           placeholder={projectsLoading ? "加载项目中" : "选择项目"}
           disabled={projectsLoading || projectOptions.length === 0}
-          className="w-64"
+          className="w-56"
         />
+        <Breadcrumb />
       </div>
-      <UserAccountMenu />
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={openCommandPalette}
+          className="flex h-8 items-center gap-2 rounded-md border border-border bg-muted/50 px-2.5 text-caption text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted hover:text-foreground"
+          aria-label="打开全局搜索"
+          title="全局搜索（Ctrl+K）"
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span className="hidden lg:inline">搜索</span>
+          <kbd className="hidden rounded bg-background px-1.5 py-0.5 text-micro xl:inline">Ctrl K</kbd>
+        </button>
+        <ThemeToggle />
+        <UserAccountMenu />
+      </div>
     </header>
   );
 }

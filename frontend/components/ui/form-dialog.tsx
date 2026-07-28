@@ -374,7 +374,7 @@ export function FormDialog({
             >
               {/* P0-1：必填图例移到表单顶部第一行（在字段组之上） */}
               {hasRequired && (
-                <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[11px] text-muted-foreground">
+                <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
                   <span className="flex items-center gap-1.5">
                     <span aria-hidden className="form-required-dot" />
                     <span>为必填项（共 {requiredCount} 项）</span>
@@ -388,7 +388,7 @@ export function FormDialog({
                 <FormFieldsRenderer form={form} groups={groupedFields} />
               </div>
 
-              <DialogFooter className="mt-6 gap-2 border-t border-white/[0.06] bg-white/[0.01] -mx-6 px-6 -mb-6 pb-4 pt-4">
+              <DialogFooter className="mt-6 gap-2 border-t border-border/60 bg-muted/20 -mx-6 px-6 -mb-6 pb-4 pt-4">
                 <Button
                   type="button"
                   size="sm"
@@ -471,7 +471,7 @@ function FormFieldLabel({
       {required && (
         <span
           aria-hidden
-          className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
+          className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.12)]"
         />
       )}
       {!required && (
@@ -491,7 +491,7 @@ function FormFieldLabel({
  * - 标签左对齐 + 13px + font-medium + text-foreground/80。
  * - horizontal 短字段：3:9 栅格，items-center；长字段：3:9 栅格，items-start，标签加 padding-top。
  * - 字段行间距 gap-y-5（20px），控件行内间距 gap-x-4。
- * - 错误提示：text-red-400，固定高度区域（避免抖动），顶部 6px 间距。
+ * - 错误提示：text-destructive，固定高度区域（避免抖动），顶部 6px 间距。
  * - 提示文案：text-muted-foreground/80，12px。
  */
 function FormFieldsRenderer({
@@ -685,7 +685,7 @@ function renderFieldControl(
       const cfg = field.entityMultiConfig;
       if (!cfg) {
         return (
-          <div className="text-xs text-red-400">
+          <div className="text-xs text-destructive">
             entity-multi 字段缺少 entityMultiConfig 配置
           </div>
         );

@@ -28,29 +28,29 @@ interface HealthMetricItem {
 /** 颜色配置 */
 const colorConfig = {
   emerald: {
-    text: "text-emerald-400",
-    bg: "bg-emerald-500",
-    bgLight: "bg-emerald-500/20",
+    text: "text-primary",
+    bg: "bg-primary",
+    bgLight: "bg-primary/20",
   },
   blue: {
-    text: "text-blue-400",
-    bg: "bg-blue-500",
-    bgLight: "bg-blue-500/20",
+    text: "text-info",
+    bg: "bg-info",
+    bgLight: "bg-info/20",
   },
   purple: {
-    text: "text-purple-400",
-    bg: "bg-purple-500",
-    bgLight: "bg-purple-500/20",
+    text: "text-chart-1",
+    bg: "bg-chart-1",
+    bgLight: "bg-chart-1/20",
   },
   orange: {
-    text: "text-orange-400",
-    bg: "bg-orange-500",
-    bgLight: "bg-orange-500/20",
+    text: "text-chart-3",
+    bg: "bg-chart-3",
+    bgLight: "bg-chart-3/20",
   },
   red: {
-    text: "text-red-400",
-    bg: "bg-red-500",
-    bgLight: "bg-red-500/20",
+    text: "text-destructive",
+    bg: "bg-destructive",
+    bgLight: "bg-destructive/20",
   },
 };
 
@@ -77,11 +77,11 @@ const StarRating = memo(function StarRating({ score }: { score: number }) {
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
           key={star}
-          className={`h-4 w-4 ${star <= stars ? "text-amber-400 fill-amber-400" : "text-[#333]"
+          className={`h-4 w-4 ${star <= stars ? "text-warning fill-warning" : "text-muted-foreground"
             }`}
         />
       ))}
-      <span className="ml-2 text-sm text-[#888]">{score}分</span>
+      <span className="ml-2 text-sm text-muted-foreground">{score}分</span>
     </div>
   );
 });
@@ -100,19 +100,19 @@ const MetricCard = memo(function MetricCard({
   const displayValue = type === "percentage" ? `${value}%` : `${value}${unit || ""}`;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4">
+    <div className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${colors.bgLight}`}>
             <Icon className={`h-4 w-4 ${colors.text}`} />
           </div>
-          <span className="text-sm text-[#888]">{label}</span>
+          <span className="text-sm text-muted-foreground">{label}</span>
         </div>
         <span className={`text-lg font-bold ${colors.text}`}>{displayValue}</span>
       </div>
 
       {type === "percentage" && (
-        <div className="h-2 overflow-hidden rounded-full bg-white/10">
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
           <div
             className={`h-full rounded-full ${colors.bg} transition-all duration-300`}
             style={{ width: `${invert ? 100 - value : value}%` }}
@@ -166,33 +166,33 @@ export const ProductionHealth = memo(function ProductionHealth({
   ];
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#252525] p-6">
+    <div className="rounded-xl border border-border bg-secondary p-6">
       {/* 标题 */}
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500/20 to-pink-500/20">
-          <Heart className="h-5 w-5 text-rose-400" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-chart-4/20 to-chart-4/20">
+          <Heart className="h-5 w-5 text-chart-4" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-white">生产健康度</h2>
-          <p className="text-sm text-[#888]">AI生产质量指标</p>
+          <h2 className="text-lg font-bold text-foreground">生产健康度</h2>
+          <p className="text-sm text-muted-foreground">AI生产质量指标</p>
         </div>
       </div>
 
       {/* 整体健康度 */}
-      <div className="mb-6 rounded-lg border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#222] p-4">
+      <div className="mb-6 rounded-lg border border-border bg-gradient-to-br from-background to-muted p-4">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm text-[#888]">整体健康度</span>
+          <span className="text-sm text-muted-foreground">整体健康度</span>
           <StarRating score={data.overallScore} />
         </div>
-        <div className="relative h-4 overflow-hidden rounded-full bg-white/10">
+        <div className="relative h-4 overflow-hidden rounded-full bg-muted">
           <div
             className={`h-full rounded-full bg-gradient-to-r transition-all duration-500 ${data.overallScore >= 80
-                ? "from-emerald-500 to-green-500"
+                ? "from-primary to-success"
                 : data.overallScore >= 60
-                  ? "from-blue-500 to-cyan-500"
+                  ? "from-info to-chart-2"
                   : data.overallScore >= 40
-                    ? "from-orange-500 to-amber-500"
-                    : "from-red-500 to-rose-500"
+                    ? "from-chart-3 to-warning"
+                    : "from-destructive to-chart-4"
               }`}
             style={{ width: `${data.overallScore}%` }}
           />

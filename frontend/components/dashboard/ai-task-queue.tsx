@@ -48,13 +48,13 @@ export const AITaskQueue = memo(function AITaskQueue({
   const getStatusColor = (status: AITask["status"]) => {
     switch (status) {
       case "success":
-        return "text-emerald-400";
+        return "text-primary";
       case "processing":
-        return "text-blue-400";
+        return "text-info";
       case "failed":
-        return "text-red-400";
+        return "text-destructive";
       default:
-        return "text-yellow-400";
+        return "text-chart-5";
     }
   };
 
@@ -72,13 +72,13 @@ export const AITaskQueue = memo(function AITaskQueue({
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1a1a1a]">
+    <div className="rounded-xl border border-border bg-card">
       {/* 头部
         * 评审优化：去掉 "AI任务队列" 重复标题（页面级 H1 已含相同文案）
         * 改为功能性副标题 "跨项目任务监控"，保持标题层级 H1→H3
         */}
-      <div className="flex items-center justify-between border-b border-white/10 p-4">
-        <h3 className="text-lg font-semibold text-white">跨项目任务监控</h3>
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <h3 className="text-card-title text-foreground">跨项目任务监控</h3>
         <Button variant="secondary" size="sm" onClick={onRefresh} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           刷新
@@ -86,45 +86,45 @@ export const AITaskQueue = memo(function AITaskQueue({
       </div>
 
       {/* 任务列表 */}
-      <div className="divide-y divide-white/5">
+      <div className="divide-y divide-border">
         {tasks.length === 0 ? (
-          <div className="p-8 text-center text-[#666]">
+          <div className="p-8 text-center text-muted-foreground">
             暂无任务
           </div>
         ) : (
           tasks.map((task) => (
-            <div key={task.id} className="flex items-center gap-4 p-4">
+            <div key={task.id} className="group flex items-center gap-3 px-4 py-2.5">
               {/* 类型图标 */}
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${task.type === "image" ? "bg-purple-500/20 text-purple-400" : "bg-orange-500/20 text-orange-400"}`}>
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${task.type === "image" ? "bg-chart-1/20 text-chart-1" : "bg-chart-3/20 text-chart-3"}`}>
                 {task.type === "image" ? <Image className="h-5 w-5" /> : <Video className="h-5 w-5" />}
               </div>
 
               {/* 任务信息 */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="truncate font-medium text-white">{task.title}</span>
-                  <span className="text-xs text-[#888]">{task.model}</span>
+                  <span className="truncate font-medium text-foreground">{task.title}</span>
+                  <span className="text-xs text-muted-foreground">{task.model}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <span className={`text-xs ${getStatusColor(task.status)}`}>
                     {getStatusLabel(task.status)}
                   </span>
                   {task.progress > 0 && task.progress < 100 && (
-                    <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-emerald-500 transition-all"
+                        className="h-full bg-primary transition-all"
                         style={{ width: `${task.progress}%` }}
                       />
                     </div>
                   )}
                   {task.remainingTime && (
-                    <span className="text-xs text-[#666]">{task.remainingTime}</span>
+                    <span className="text-xs text-muted-foreground">{task.remainingTime}</span>
                   )}
                 </div>
               </div>
 
               {/* 操作按钮 */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
                 {task.status === "processing" && (
                   <Button variant="ghost" size="sm" onClick={() => onCancel([task.id])}>
                     <Pause className="h-4 w-4" />

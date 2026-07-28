@@ -45,11 +45,11 @@ const GENRE_TYPES = [
 ]
 
 const STATUS_TYPES = [
-  { value: 'draft', label: '草稿', icon: FileText, color: 'gray' },
-  { value: 'review', label: '审核中', icon: AlertCircle, color: 'yellow' },
-  { value: 'approved', label: '已通过', icon: CheckCircle, color: 'green' },
-  { value: 'rejected', label: '已拒绝', icon: AlertCircle, color: 'red' },
-  { value: 'completed', label: '已完成', icon: CheckCircle, color: 'blue' },
+  { value: 'draft', label: '草稿', icon: FileText, color: 'text-muted-foreground' },
+  { value: 'review', label: '审核中', icon: AlertCircle, color: 'text-warning' },
+  { value: 'approved', label: '已通过', icon: CheckCircle, color: 'text-success' },
+  { value: 'rejected', label: '已拒绝', icon: AlertCircle, color: 'text-destructive' },
+  { value: 'completed', label: '已完成', icon: CheckCircle, color: 'text-info' },
 ]
 
 const PROGRESS_TYPES = [
@@ -157,23 +157,23 @@ export function ClassificationView({
   const renderScriptItem = (script: ScriptItem) => (
     <div
       key={script.id}
-      className="flex items-center gap-2 p-2 rounded bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
+      className="flex items-center gap-2 p-2 rounded bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
       onClick={() => onScriptSelect?.(script.id)}
     >
-      <Film className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+      <Film className="h-4 w-4 text-primary flex-shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-white truncate">{script.title}</div>
-        <div className="text-xs text-[#888]">{new Date(script.updatedAt).toLocaleDateString()}</div>
+        <div className="text-sm text-foreground truncate">{script.title}</div>
+        <div className="text-xs text-muted-foreground">{new Date(script.updatedAt).toLocaleDateString()}</div>
       </div>
       {script.progress !== undefined && (
         <div className="flex items-center gap-2">
-          <div className="w-16 bg-white/10 rounded-full h-1.5">
+          <div className="w-16 bg-muted rounded-full h-1.5">
             <div
-              className="bg-blue-400 h-1.5 rounded-full"
+              className="bg-info h-1.5 rounded-full"
               style={{ width: `${script.progress}%` }}
             />
           </div>
-          <span className="text-xs text-[#888]">{script.progress}%</span>
+          <span className="text-xs text-muted-foreground">{script.progress}%</span>
         </div>
       )}
     </div>
@@ -190,7 +190,7 @@ export function ClassificationView({
     return (
       <div
         key={category.value}
-        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${isActive ? 'bg-blue-500/10 border border-blue-500/20' : 'hover:bg-white/5'
+        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${isActive ? 'bg-info/10 border border-info/20' : 'hover:bg-muted/50'
           }`}
         onClick={() => {
           const filterType = expandedCategories.has('genre') ? 'type' :
@@ -201,25 +201,25 @@ export function ClassificationView({
         {typeof category.icon === 'string' ? (
           <span className="text-lg">{category.icon}</span>
         ) : category.icon ? (
-          <category.icon className={`h-4 w-4 text-${category.color}-400`} />
+          <category.icon className={`h-4 w-4 ${category.color}`} />
         ) : (
-          <FolderOpen className="h-4 w-4 text-[#888]" />
+          <FolderOpen className="h-4 w-4 text-muted-foreground" />
         )}
         <div className="flex-1">
-          <span className="text-sm text-white">{category.label}</span>
+          <span className="text-sm text-foreground">{category.label}</span>
         </div>
-        <span className="text-xs text-[#888]">{category.scripts.length}</span>
+        <span className="text-xs text-muted-foreground">{category.scripts.length}</span>
       </div>
     )
   }
 
   return (
-    <div className="classification-view bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden">
+    <div className="classification-view bg-card rounded-lg border border-border overflow-hidden">
       {/* 标题 */}
-      <div className="p-3 border-b border-white/10 flex items-center justify-between">
+      <div className="p-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FolderOpen className="h-4 w-4 text-[#888]" />
-          <h3 className="text-sm font-medium text-white">剧本分类</h3>
+          <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-foreground">剧本分类</h3>
         </div>
         <div className="flex gap-1">
           <Button
@@ -246,19 +246,19 @@ export function ClassificationView({
         {viewMode === 'category' ? (
           <div className="p-2 space-y-3">
             {/* 按类型分类 */}
-            <div className="border border-white/10 rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div
-                className="flex items-center justify-between p-2 bg-white/5 cursor-pointer hover:bg-white/10"
+                className="flex items-center justify-between p-2 bg-muted/50 cursor-pointer hover:bg-muted"
                 onClick={() => toggleCategory('genre')}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-lg">🎭</span>
-                  <span className="text-sm font-medium text-white">按类型</span>
+                  <span className="text-sm font-medium text-foreground">按类型</span>
                 </div>
                 {expandedCategories.has('genre') ? (
-                  <ChevronDown className="h-4 w-4 text-[#888]" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <ChevronRight className="h-4 w-4 text-[#888]" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 )}
               </div>
               {expandedCategories.has('genre') && (
@@ -269,19 +269,19 @@ export function ClassificationView({
             </div>
 
             {/* 按状态分类 */}
-            <div className="border border-white/10 rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div
-                className="flex items-center justify-between p-2 bg-white/5 cursor-pointer hover:bg-white/10"
+                className="flex items-center justify-between p-2 bg-muted/50 cursor-pointer hover:bg-muted"
                 onClick={() => toggleCategory('status')}
               >
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-400" />
-                  <span className="text-sm font-medium text-white">按状态</span>
+                  <Clock className="h-4 w-4 text-info" />
+                  <span className="text-sm font-medium text-foreground">按状态</span>
                 </div>
                 {expandedCategories.has('status') ? (
-                  <ChevronDown className="h-4 w-4 text-[#888]" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <ChevronRight className="h-4 w-4 text-[#888]" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 )}
               </div>
               {expandedCategories.has('status') && (
@@ -292,19 +292,19 @@ export function ClassificationView({
             </div>
 
             {/* 按进度分类 */}
-            <div className="border border-white/10 rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div
-                className="flex items-center justify-between p-2 bg-white/5 cursor-pointer hover:bg-white/10"
+                className="flex items-center justify-between p-2 bg-muted/50 cursor-pointer hover:bg-muted"
                 onClick={() => toggleCategory('progress')}
               >
                 <div className="flex items-center gap-2">
-                  <Loader className="h-4 w-4 text-emerald-400" />
-                  <span className="text-sm font-medium text-white">按进度</span>
+                  <Loader className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">按进度</span>
                 </div>
                 {expandedCategories.has('progress') ? (
-                  <ChevronDown className="h-4 w-4 text-[#888]" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <ChevronRight className="h-4 w-4 text-[#888]" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 )}
               </div>
               {expandedCategories.has('progress') && (
@@ -317,7 +317,7 @@ export function ClassificationView({
         ) : (
           <div className="p-2">
             {getFilteredScripts().length === 0 ? (
-              <div className="text-center py-8 text-[#666] text-sm">
+              <div className="text-center py-8 text-muted-foreground text-sm">
                 {scripts.length === 0 ? '暂无剧本' : '未找到匹配的剧本'}
               </div>
             ) : (
@@ -330,12 +330,12 @@ export function ClassificationView({
       </div>
 
       {/* 统计信息 */}
-      <div className="p-3 border-t border-white/10 bg-white/5">
-        <div className="text-xs text-[#888] mb-1">总计</div>
-        <div className="text-sm text-white">
+      <div className="p-3 border-t border-border bg-muted/50">
+        <div className="text-xs text-muted-foreground mb-1">总计</div>
+        <div className="text-sm text-foreground">
           {scripts.length} 个剧本
           {Object.keys(selectedFilters).length > 0 && (
-            <span className="ml-2 text-blue-400">
+            <span className="ml-2 text-info">
               (已筛选 {getFilteredScripts().length} 个)
             </span>
           )}

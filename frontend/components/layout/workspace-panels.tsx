@@ -24,13 +24,13 @@ type ChatPanelProps = {
 /** 渲染单条工具调用的摘要信息。 */
 function ToolCallItem({ toolCall }: { toolCall: ChatToolCall }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-[#252525] px-3 py-2 text-sm">
-      <div className="flex items-center gap-2 font-medium text-emerald-100">
+    <div className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm">
+      <div className="flex items-center gap-2 font-medium text-primary">
         <Wrench className="h-3.5 w-3.5" />
         {toolCall.function.name}
       </div>
       {toolCall.function.arguments && (
-        <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded bg-black/30 p-2 text-xs text-[#b4b4b4]">
+        <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded bg-black/30 p-2 text-xs text-muted-foreground">
           {toolCall.function.arguments}
         </pre>
       )}
@@ -49,7 +49,7 @@ export function ChatPanel({ messages, lastAssistantMessageIndex, currentConversa
       <div className="grid min-h-[42vh] place-items-center text-center">
         <div>
           <div className="mb-3 text-3xl font-semibold">今天想创作什么？</div>
-          <div className="text-sm text-[#b4b4b4]">聊天、生成图片、生成视频，都从下面的输入框开始。</div>
+          <div className="text-sm text-muted-foreground">聊天、生成图片、生成视频，都从下面的输入框开始。</div>
         </div>
       </div>
     );
@@ -61,7 +61,7 @@ export function ChatPanel({ messages, lastAssistantMessageIndex, currentConversa
     const hasToolCalls = Array.isArray(message.meta?.tool_calls) && message.meta!.tool_calls.length > 0;
     return (
       <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-        <div className={message.role === "user" ? "max-w-[78%] rounded-3xl bg-[#2f2f2f] px-5 py-3" : "w-full max-w-full px-1"}>
+        <div className={message.role === "user" ? "max-w-[78%] rounded-3xl bg-secondary px-5 py-3" : "w-full max-w-full px-1"}>
           {attachments.length > 0 && (
             <div className="mb-3 grid grid-cols-2 gap-2">
               {attachments.map((attachment) => (
@@ -74,19 +74,19 @@ export function ChatPanel({ messages, lastAssistantMessageIndex, currentConversa
           )}
           {message.content && <div className="whitespace-pre-wrap text-[15px] leading-7">{message.content}</div>}
           {hasReasoning && (
-            <details className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-              <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-100">
+            <details className="mt-3 rounded-xl border border-primary/20 bg-primary/5">
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm font-medium text-primary">
                 <ChevronDown className="h-4 w-4 details-open:rotate-180" />
                 Thinking 过程
               </summary>
-              <div className="border-t border-emerald-500/10 px-3 py-2 text-sm text-[#b4b4b4]">
+              <div className="border-t border-primary/10 px-3 py-2 text-sm text-muted-foreground">
                 <div className="whitespace-pre-wrap">{message.meta!.reasoning}</div>
               </div>
             </details>
           )}
           {hasToolCalls && (
             <div className="mt-3 space-y-2">
-              <div className="text-xs font-medium text-[#888]">工具调用</div>
+              <div className="text-xs font-medium text-muted-foreground">工具调用</div>
               {message.meta!.tool_calls!.map((toolCall) => (
                 <ToolCallItem key={toolCall.id} toolCall={toolCall} />
               ))}
@@ -144,17 +144,17 @@ export function FavoritePanel({
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xl font-semibold">收藏</div>
-          <div className="text-sm text-[#b4b4b4]">已收藏的图片和视频会显示在这里。</div>
+          <div className="text-sm text-muted-foreground">已收藏的图片和视频会显示在这里。</div>
         </div>
         <Button size="sm" variant="ghost" onClick={onRefresh}><RefreshCw className="h-4 w-4" />刷新</Button>
       </div>
 
       {favorites.length === 0 ? (
-        <Card className="border-white/10 bg-[#2a2a2a] p-6 text-sm text-[#b4b4b4]">还没有收藏内容。可以在图片或视频作品下点击收藏。</Card>
+        <Card className="border-border bg-secondary p-6 text-sm text-muted-foreground">还没有收藏内容。可以在图片或视频作品下点击收藏。</Card>
       ) : (
         <div className="flex flex-col gap-3">
           {favorites.map((item) => (
-            <Card key={item.favorite.id} className="overflow-hidden border-white/10 bg-[#2a2a2a]">
+            <Card key={item.favorite.id} className="overflow-hidden border-border bg-secondary">
               {item.image && (
                 <div className="space-y-3">
                   {item.image.image_urls.map((url, index) => (
@@ -178,13 +178,13 @@ export function FavoritePanel({
                 <div className="space-y-3 p-3">
                   <div className="flex justify-between gap-3 text-sm">
                     <span>{item.video.prompt}</span>
-                    <span className="shrink-0 text-[#b4b4b4]">{statusText(item.video.status)}</span>
+                    <span className="shrink-0 text-muted-foreground">{statusText(item.video.status)}</span>
                   </div>
                   {item.video.video_url && <video className="w-full rounded-lg" src={item.video.video_url} controls preload="metadata" />}
                   <div className="flex flex-wrap gap-2">
-                    {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm" href={`/videos/${item.video.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" />查看</a>}
-                    {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm" href={item.video.video_url} download={`${item.video.id}.mp4`} target="_blank"><Download className="h-4 w-4" />下载</a>}
-                    {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm" href={item.video.video_url} target="_blank"><ExternalLink className="h-4 w-4" />打开</a>}
+                    {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm" href={`/videos/${item.video.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" />查看</a>}
+                    {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm" href={item.video.video_url} download={`${item.video.id}.mp4`} target="_blank"><Download className="h-4 w-4" />下载</a>}
+                    {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm" href={item.video.video_url} target="_blank"><ExternalLink className="h-4 w-4" />打开</a>}
                     {item.video.video_url && <Button size="sm" variant="secondary" onClick={() => onCopy(item.video!.video_url)}><Copy className="h-4 w-4" />复制</Button>}
                     <Button size="sm" variant="destructive" onClick={() => onRemoveFavorite(item.favorite.id)}><Trash2 className="h-4 w-4" />取消收藏</Button>
                   </div>
@@ -192,7 +192,7 @@ export function FavoritePanel({
               )}
 
               {!item.image && !item.video && (
-                <div className="flex items-center justify-between gap-3 p-4 text-sm text-[#b4b4b4]">
+                <div className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
                   <span>收藏的内容已不存在或暂不支持展示：{item.favorite.type} / {item.favorite.ref_id}</span>
                   <Button size="sm" variant="destructive" onClick={() => onRemoveFavorite(item.favorite.id)}><Trash2 className="h-4 w-4" />取消收藏</Button>
                 </div>
@@ -246,9 +246,9 @@ export function ImagePanel({
       <div className="agnes-panel rounded-2xl p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="text-xs font-medium text-emerald-200/80">Runway-style media workspace</div>
+            <div className="text-xs font-medium text-primary/80">Runway-style media workspace</div>
             <div className="mt-1 text-2xl font-semibold">图片作品</div>
-            <div className="mt-1 text-sm text-[#b4b4b4]">素材优先展示，提示词、状态和复用动作放在结果下方。</div>
+            <div className="mt-1 text-sm text-muted-foreground">素材优先展示，提示词、状态和复用动作放在结果下方。</div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="agnes-status-pill" data-status="success">本页 {visibleImages.length} 张</span>
@@ -270,7 +270,7 @@ export function ImagePanel({
               <div className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-xs text-[#888]">图片作品 / {index + 1}</div>
+                    <div className="text-xs text-muted-foreground">图片作品 / {index + 1}</div>
                     <div className="mt-1 line-clamp-2 text-sm leading-6">{task.prompt}</div>
                   </div>
                   <span className="agnes-status-pill" data-status={task.status}>{statusText(task.status)}</span>
@@ -294,7 +294,7 @@ export function ImagePanel({
       {currentImageRequests.map((request) => (
         <Card key={request.id} className="agnes-panel overflow-hidden rounded-2xl">
           <div className="flex justify-end p-4 pb-3">
-            <div className="max-w-[86%] rounded-3xl bg-[#2f2f2f] px-4 py-3 text-sm leading-6">
+            <div className="max-w-[86%] rounded-3xl bg-secondary px-4 py-3 text-sm leading-6">
               <div className="whitespace-pre-wrap">{request.prompt}</div>
               {request.attachments.length > 0 && (
                 <div className="mt-3 grid grid-cols-4 gap-2 max-sm:grid-cols-3">
@@ -310,13 +310,13 @@ export function ImagePanel({
           </div>
 
           {request.status === "generating" && (
-            <div className="mx-4 mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+            <div className="mx-4 mb-4 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary">
               <Loader2 className="h-4 w-4 animate-spin" />正在生成图片...
             </div>
           )}
 
           {request.status === "failed" && (
-            <div className="mx-4 mb-4 rounded-lg bg-red-500/10 p-3 text-sm text-red-200">{request.error}</div>
+            <div className="mx-4 mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{request.error}</div>
           )}
 
           {request.task && (
@@ -363,12 +363,12 @@ type VideoPanelProps = {
 export function VideoPanel({ videos, videoSettings, attachmentCount, renderFavoriteAction, onRefresh, onCopy, onDeleteVideo }: VideoPanelProps) {
   return (
     <section className="mx-auto w-full max-w-[980px] space-y-4">
-      <div className="rounded-[22px] border border-white/10 bg-[#202020] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+      <div className="rounded-[22px] border border-border bg-muted p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="text-sm font-medium text-emerald-200/90">Agnes Video V2.0 工作台</div>
-            <div className="mt-1 text-2xl font-semibold text-white">视频生成</div>
-            <div className="mt-2 max-w-2xl text-sm leading-6 text-[#cfcfcf]">输入提示词即可文生视频；上传参考图后可图生视频；多张参考图会按关键帧模式参与生成。</div>
+            <div className="text-sm font-medium text-primary/90">Agnes Video V2.0 工作台</div>
+            <div className="mt-1 text-2xl font-semibold text-foreground">视频生成</div>
+            <div className="mt-2 max-w-2xl text-sm leading-6 text-foreground/80">输入提示词即可文生视频；上传参考图后可图生视频；多张参考图会按关键帧模式参与生成。</div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="agnes-status-pill" data-status="success">共 {videos.length} 个任务</span>
@@ -377,28 +377,28 @@ export function VideoPanel({ videos, videoSettings, attachmentCount, renderFavor
           </div>
         </div>
         <div className="mt-5 grid grid-cols-3 gap-3 max-md:grid-cols-1">
-          <div className="rounded-2xl border border-white/10 bg-[#2a2a2a] p-4">
-            <div className="text-sm font-semibold text-white">当前规格</div>
-            <div className="mt-2 text-2xl font-semibold text-white">{videoSettings.width}x{videoSettings.height}</div>
-            <div className="mt-1 text-sm text-[#cfcfcf]">{videoSettings.ratio} · 约 {estimateVideoSeconds(videoSettings.num_frames, videoSettings.frame_rate)} 秒</div>
+          <div className="rounded-2xl border border-border bg-secondary p-4">
+            <div className="text-sm font-semibold text-foreground">当前规格</div>
+            <div className="mt-2 text-2xl font-semibold text-foreground">{videoSettings.width}x{videoSettings.height}</div>
+            <div className="mt-1 text-sm text-foreground/80">{videoSettings.ratio} · 约 {estimateVideoSeconds(videoSettings.num_frames, videoSettings.frame_rate)} 秒</div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-[#2a2a2a] p-4">
-            <div className="text-sm font-semibold text-white">生成模式</div>
-            <div className="mt-2 text-2xl font-semibold text-white">{videoSettings.mode === "keyframes" ? "关键帧" : "文生/图生"}</div>
-            <div className="mt-1 text-sm text-[#cfcfcf]">{attachmentCount > 0 ? `已添加 ${attachmentCount} 张参考图` : "未添加参考图"}</div>
+          <div className="rounded-2xl border border-border bg-secondary p-4">
+            <div className="text-sm font-semibold text-foreground">生成模式</div>
+            <div className="mt-2 text-2xl font-semibold text-foreground">{videoSettings.mode === "keyframes" ? "关键帧" : "文生/图生"}</div>
+            <div className="mt-1 text-sm text-foreground/80">{attachmentCount > 0 ? `已添加 ${attachmentCount} 张参考图` : "未添加参考图"}</div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-[#2a2a2a] p-4">
-            <div className="text-sm font-semibold text-white">任务状态</div>
-            <div className="mt-2 text-2xl font-semibold text-white">{videos.filter((video) => ["pending", "processing"].includes(video.status)).length}</div>
-            <div className="mt-1 text-sm text-[#cfcfcf]">正在排队或生成的视频</div>
+          <div className="rounded-2xl border border-border bg-secondary p-4">
+            <div className="text-sm font-semibold text-foreground">任务状态</div>
+            <div className="mt-2 text-2xl font-semibold text-foreground">{videos.filter((video) => ["pending", "processing"].includes(video.status)).length}</div>
+            <div className="mt-1 text-sm text-foreground/80">正在排队或生成的视频</div>
           </div>
         </div>
       </div>
       {videos.length === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-white/15 bg-[#202020]/70 p-8">
+        <div className="rounded-[22px] border border-dashed border-border bg-muted/70 p-8">
           <div className="mx-auto max-w-2xl text-center">
-            <div className="text-lg font-semibold text-white">还没有视频任务</div>
-            <div className="mt-2 text-sm leading-6 text-[#cfcfcf]">在底部输入视频描述，或先上传分镜底图/参考图。生成后这里会展示播放器、进度、下载、收藏和二次复用入口。</div>
+            <div className="text-lg font-semibold text-foreground">还没有视频任务</div>
+            <div className="mt-2 text-sm leading-6 text-foreground/80">在底部输入视频描述，或先上传分镜底图/参考图。生成后这里会展示播放器、进度、下载、收藏和二次复用入口。</div>
           </div>
           <div className="mt-6 grid grid-cols-3 gap-3 max-md:grid-cols-1">
             {[
@@ -406,10 +406,10 @@ export function VideoPanel({ videos, videoSettings, attachmentCount, renderFavor
               ["2", "上传参考", "可拖入分镜底图，作为图生视频或关键帧素材。"],
               ["3", "生成管理", "任务会在这里显示进度，完成后可预览和下载。"],
             ].map(([step, title, text]) => (
-              <div key={step} className="rounded-2xl border border-white/10 bg-[#2a2a2a] p-4">
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-500/15 text-sm font-semibold text-emerald-100">{step}</div>
-                <div className="mt-3 text-sm font-semibold text-white">{title}</div>
-                <div className="mt-2 text-sm leading-6 text-[#cfcfcf]">{text}</div>
+              <div key={step} className="rounded-2xl border border-border bg-secondary p-4">
+                <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">{step}</div>
+                <div className="mt-3 text-sm font-semibold text-foreground">{title}</div>
+                <div className="mt-2 text-sm leading-6 text-foreground/80">{text}</div>
               </div>
             ))}
           </div>
@@ -422,44 +422,44 @@ export function VideoPanel({ videos, videoSettings, attachmentCount, renderFavor
                 {video.video_url ? (
                   <video className="max-h-[68vh] w-full rounded-xl bg-black object-contain" src={video.video_url} controls preload="metadata" />
                 ) : (
-                  <div className="grid min-h-64 place-items-center rounded-xl border border-dashed border-white/10 bg-black/30 text-sm text-[#b4b4b4]">
+                  <div className="grid min-h-64 place-items-center rounded-xl border border-dashed border-border bg-black/30 text-sm text-muted-foreground">
                     {video.status === "failed" ? "视频生成失败" : "等待视频结果"}
                   </div>
                 )}
               </div>
-              <div className="flex flex-col border-l border-white/10 bg-[#181818] p-4 max-xl:border-l-0 max-xl:border-t">
+              <div className="flex flex-col border-l border-border bg-card p-4 max-xl:border-l-0 max-xl:border-t">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-xs text-[#888]">视频生成任务</div>
-                    <div className="mt-1 text-base font-semibold text-white">{video.video_url ? "可播放预览" : "生成中"}</div>
+                    <div className="text-xs text-muted-foreground">视频生成任务</div>
+                    <div className="mt-1 text-base font-semibold text-foreground">{video.video_url ? "可播放预览" : "生成中"}</div>
                   </div>
                   <span className="agnes-status-pill" data-status={video.status}>{statusText(video.status)}</span>
                 </div>
-                <div className="mt-4 line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-[#d8d8d8]">{video.prompt}</div>
-                <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-[#b4b4b4]">
-                  <div className="rounded-lg bg-white/[0.04] px-3 py-2">
-                    <div className="text-[#888]">视频 ID</div>
-                    <div className="mt-1 truncate text-white">{video.video_id || video.id}</div>
+                <div className="mt-4 line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-foreground/80">{video.prompt}</div>
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <div className="rounded-lg bg-muted/50 px-3 py-2">
+                    <div className="text-muted-foreground">视频 ID</div>
+                    <div className="mt-1 truncate text-foreground">{video.video_id || video.id}</div>
                   </div>
-                  <div className="rounded-lg bg-white/[0.04] px-3 py-2">
-                    <div className="text-[#888]">进度</div>
-                    <div className="mt-1 text-white">{video.progress ?? (video.video_url ? 100 : 0)}%</div>
+                  <div className="rounded-lg bg-muted/50 px-3 py-2">
+                    <div className="text-muted-foreground">进度</div>
+                    <div className="mt-1 text-foreground">{video.progress ?? (video.video_url ? 100 : 0)}%</div>
                   </div>
-                  <div className="rounded-lg bg-white/[0.04] px-3 py-2">
-                    <div className="text-[#888]">规格</div>
-                    <div className="mt-1 text-white">{video.size || "API 标准化中"}</div>
+                  <div className="rounded-lg bg-muted/50 px-3 py-2">
+                    <div className="text-muted-foreground">规格</div>
+                    <div className="mt-1 text-foreground">{video.size || "API 标准化中"}</div>
                   </div>
-                  <div className="rounded-lg bg-white/[0.04] px-3 py-2">
-                    <div className="text-[#888]">时长</div>
-                    <div className="mt-1 text-white">{video.seconds ? `${video.seconds}s` : "生成后确认"}</div>
+                  <div className="rounded-lg bg-muted/50 px-3 py-2">
+                    <div className="text-muted-foreground">时长</div>
+                    <div className="mt-1 text-foreground">{video.seconds ? `${video.seconds}s` : "生成后确认"}</div>
                   </div>
                 </div>
-                {video.error && <div className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-200">{video.error}</div>}
+                {video.error && <div className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{video.error}</div>}
                 {video.video_url && (
                   <div className="agnes-action-bar -mx-4 -mb-4 mt-auto flex flex-wrap gap-2 px-4 py-3">
-                    <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm hover:bg-white/15" href={`/videos/${video.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" />查看</a>
-                    <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm hover:bg-white/15" href={video.video_url} download={`${video.id}.mp4`} target="_blank"><Download className="h-4 w-4" />下载</a>
-                    <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm hover:bg-white/15" href={video.video_url} target="_blank"><ExternalLink className="h-4 w-4" />打开</a>
+                    <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm hover:bg-muted" href={`/videos/${video.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" />查看</a>
+                    <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm hover:bg-muted" href={video.video_url} download={`${video.id}.mp4`} target="_blank"><Download className="h-4 w-4" />下载</a>
+                    <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm hover:bg-muted" href={video.video_url} target="_blank"><ExternalLink className="h-4 w-4" />打开</a>
                     <Button size="sm" variant="secondary" onClick={() => onCopy(video.video_url)}><Copy className="h-4 w-4" />复制</Button>
                     {renderFavoriteAction("video", video.id)}
                     <Button size="sm" variant="destructive" onClick={() => onDeleteVideo(video.id)}><Trash2 className="h-4 w-4" /></Button>

@@ -45,18 +45,18 @@ export function SelectAllRow({
   partialLabel?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 pb-3 mb-3 border-b border-white/10">
+    <div className="flex flex-wrap items-center gap-3 pb-3 mb-3 border-b border-border">
       {showSelectAll && (
         <button
           type="button"
           onClick={onToggle}
-          className="flex items-center gap-2 text-xs text-[#888] hover:text-white transition-colors"
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           aria-label={isAllSelected ? "取消全选" : selectAllLabel}
         >
           {isAllSelected ? (
-            <CheckSquare className="h-4 w-4 text-emerald-400" />
+            <CheckSquare className="h-4 w-4 text-primary" />
           ) : isPartial ? (
-            <Square className="h-4 w-4 text-emerald-400 opacity-50" />
+            <Square className="h-4 w-4 text-primary opacity-50" />
           ) : (
             <Square className="h-4 w-4" />
           )}

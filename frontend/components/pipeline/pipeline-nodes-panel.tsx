@@ -44,21 +44,21 @@ const buttonBase: React.CSSProperties = {
 
 const pauseBtn: React.CSSProperties = {
   ...buttonBase,
-  background: "rgba(245,158,11,0.15)",
-  borderColor: "rgba(245,158,11,0.40)",
-  color: "rgb(252,211,77)",
+  background: "hsl(var(--warning) / 0.15)",
+  borderColor: "hsl(var(--warning) / 0.40)",
+  color: "hsl(var(--warning))",
 };
 const resumeBtn: React.CSSProperties = {
   ...buttonBase,
-  background: "rgba(34,197,94,0.15)",
-  borderColor: "rgba(34,197,94,0.40)",
-  color: "rgb(134,239,172)",
+  background: "hsl(var(--success) / 0.15)",
+  borderColor: "hsl(var(--success) / 0.40)",
+  color: "hsl(var(--success))",
 };
 const skipBtn: React.CSSProperties = {
   ...buttonBase,
-  background: "rgba(107,114,128,0.15)",
-  borderColor: "rgba(107,114,128,0.40)",
-  color: "rgb(209,213,219)",
+  background: "hsl(var(--muted-foreground) / 0.15)",
+  borderColor: "hsl(var(--muted-foreground) / 0.40)",
+  color: "hsl(var(--muted-foreground))",
 };
 
 interface Toast {
@@ -161,7 +161,7 @@ export function PipelineNodesPanel({ runId }: PipelineNodesPanelProps) {
 
   if (loading && nodes.length === 0) {
     return (
-      <div role="status" aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 8, padding: 16, color: "rgba(255,255,255,0.6)" }}>
+      <div role="status" aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 8, padding: 16, color: "hsl(var(--foreground) / 0.6)" }}>
         <Loader2 size={16} className="animate-spin" />
         正在加载节点…
       </div>
@@ -170,7 +170,7 @@ export function PipelineNodesPanel({ runId }: PipelineNodesPanelProps) {
 
   if (error && nodes.length === 0) {
     return (
-      <div role="alert" style={{ display: "flex", alignItems: "center", gap: 8, padding: 16, color: "rgb(252,165,165)" }}>
+      <div role="alert" style={{ display: "flex", alignItems: "center", gap: 8, padding: 16, color: "hsl(var(--destructive))" }}>
         <AlertTriangle size={16} />
         加载失败: {error}
         <button type="button" style={{ ...skipBtn, marginLeft: 8 }} onClick={refresh}>
@@ -183,7 +183,7 @@ export function PipelineNodesPanel({ runId }: PipelineNodesPanelProps) {
 
   if (nodes.length === 0) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 16, color: "rgba(255,255,255,0.4)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 16, color: "hsl(var(--foreground) / 0.4)" }}>
         <ListChecks size={16} />
         该 run 暂无节点。
       </div>
@@ -192,7 +192,7 @@ export function PipelineNodesPanel({ runId }: PipelineNodesPanelProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "hsl(var(--foreground) / 0.6)", fontSize: 12 }}>
         <span>共 {nodes.length} 个节点</span>
         <button type="button" aria-pressed={view === "graph"} aria-label="显示依赖关系图，快捷键 1" onClick={() => setView("graph")} style={skipBtn}>依赖图</button>
         <button type="button" aria-pressed={view === "list"} aria-label="显示节点列表，快捷键 2" onClick={() => setView("list")} style={skipBtn}>列表</button>
@@ -201,7 +201,7 @@ export function PipelineNodesPanel({ runId }: PipelineNodesPanelProps) {
       {view === "graph" ? <PipelineDagView nodes={nodes} dependencies={dependencies} /> : null}
       {view === "list" ? <div role="list" aria-label="流水线节点列表">
       {nodes.map((n) => {
-        const color = PIPELINE_NODE_STATUS_COLORS[n.status] ?? "#94a3b8";
+        const color = PIPELINE_NODE_STATUS_COLORS[n.status] ?? "hsl(var(--muted-foreground))";
         const label = PIPELINE_NODE_STATUS_LABELS[n.status] ?? n.status;
         const canPause = n.status === "pending";
         const canResume = n.status === "paused";
@@ -215,8 +215,8 @@ export function PipelineNodesPanel({ runId }: PipelineNodesPanelProps) {
               alignItems: "center",
               gap: 12,
               padding: "10px 14px",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.10)",
+              background: "hsl(var(--foreground) / 0.04)",
+              border: "1px solid hsl(var(--foreground) / 0.10)",
               borderRadius: 8,
             }}
           >
@@ -232,7 +232,7 @@ export function PipelineNodesPanel({ runId }: PipelineNodesPanelProps) {
             />
             <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, color: "white" }}>{n.name || n.id}</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
+              <div style={{ fontSize: 11, color: "hsl(var(--foreground) / 0.45)" }}>
                 {n.type} · {label} · 重试 {n.retry_count}
               </div>
             </div>
@@ -298,23 +298,23 @@ export function PipelineNodesPanel({ runId }: PipelineNodesPanelProps) {
                 fontSize: 13,
                 background:
                   t.tone === "error"
-                    ? "rgba(239,68,68,0.20)"
+                    ? "hsl(var(--destructive) / 0.20)"
                     : t.tone === "success"
-                      ? "rgba(34,197,94,0.20)"
-                      : "rgba(59,130,246,0.20)",
+                      ? "hsl(var(--success) / 0.20)"
+                      : "hsl(var(--info) / 0.20)",
                 border: `1px solid ${
                   t.tone === "error"
-                    ? "rgba(239,68,68,0.50)"
+                    ? "hsl(var(--destructive) / 0.50)"
                     : t.tone === "success"
-                      ? "rgba(34,197,94,0.50)"
-                      : "rgba(59,130,246,0.50)"
+                      ? "hsl(var(--success) / 0.50)"
+                      : "hsl(var(--info) / 0.50)"
                 }`,
                 color:
                   t.tone === "error"
-                    ? "rgb(252,165,165)"
+                    ? "hsl(var(--destructive))"
                     : t.tone === "success"
-                      ? "rgb(134,239,172)"
-                      : "rgb(147,197,253)",
+                      ? "hsl(var(--success))"
+                      : "hsl(var(--info))",
                 backdropFilter: "blur(8px)",
               }}
             >

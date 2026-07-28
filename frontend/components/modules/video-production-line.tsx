@@ -13,8 +13,10 @@
  */
 
 import { useEffect, useState, useRef } from "react";
-import { Video, Pencil, Trash2, CheckSquare, RefreshCcw, RotateCcw, Play } from "lucide-react";
+import { Video, Pencil, Trash2, CheckSquare, RefreshCcw, RotateCcw, Play, FileText, Film, Package, Images, ClipboardCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { PipelineFlow, type PipelineFlowStage } from "@/components/shared/pipeline-flow";
 import { FactoryCRUDPage, type FactoryCRUDPageProps, getEntityLabel } from "@/components/factory";
 import { toast } from "@/components/common/toast";
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
@@ -78,7 +80,7 @@ function VideoCard({
 }) {
   const status = v.status ?? "queued";
   const color =
-    VIDEO_STATUS_COLORS[status as keyof typeof VIDEO_STATUS_COLORS] ?? "bg-gray-500/20 text-gray-400";
+    VIDEO_STATUS_COLORS[status as keyof typeof VIDEO_STATUS_COLORS] ?? "bg-muted/20 text-muted-foreground";
   const label = VIDEO_STATUS_LABELS[status as keyof typeof VIDEO_STATUS_LABELS] ?? status;
   const progress = status === "completed" ? 100 : v.progress ?? 0;
   const display = getEntityLabel(v, "未命名视频");
@@ -136,10 +138,10 @@ function VideoCard({
 
   return (
     <div
-      className={`group relative rounded-lg border bg-[#202020] p-4 transition-colors ${
+      className={`group relative rounded-lg border bg-muted p-4 transition-colors ${
         actions.selected
-          ? "border-emerald-500 ring-1 ring-emerald-500/40"
-          : "border-white/10 hover:border-emerald-500/50"
+          ? "border-primary ring-1 ring-primary/40"
+          : "border-border hover:border-primary/50"
       }`}
     >
       <button
@@ -150,24 +152,24 @@ function VideoCard({
         }}
         className={`absolute left-2 top-2 z-10 grid h-5 w-5 place-items-center rounded border transition-opacity ${
           actions.selected
-            ? "border-emerald-500 bg-emerald-500 opacity-100"
-            : "border-white/40 bg-black/30 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
+            ? "border-primary bg-primary opacity-100"
+            : "border-border bg-black/30 opacity-0 group-hover:opacity-100 hover:border-primary"
         }`}
         aria-label={actions.selected ? "取消选择" : "选择"}
       >
-        {actions.selected && <CheckSquare className="h-3 w-3 text-white" />}
+        {actions.selected && <CheckSquare className="h-3 w-3 text-foreground" />}
       </button>
 
       <div className="pl-7">
         <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <h3 className="text-sm font-medium text-white truncate">{display}</h3>
+          <h3 className="text-sm font-medium text-foreground truncate">{display}</h3>
           <span className={`px-2 py-0.5 rounded text-xs ${color}`}>{label}</span>
-          <span className="text-emerald-300/90 bg-emerald-500/10 px-1.5 py-0.5 rounded text-xs">
+          <span className="text-primary/90 bg-primary/10 px-1.5 py-0.5 rounded text-xs">
             第 {v.episode ?? 1} 集
           </span>
-          <span className="text-xs text-[#888]">时长: {v.duration ?? 0}s</span>
-          {v.resolution && <span className="text-xs text-[#888]">{v.resolution}</span>}
-          {v.fps ? <span className="text-xs text-[#888]">{v.fps} FPS</span> : null}
+          <span className="text-xs text-muted-foreground">时长: {v.duration ?? 0}s</span>
+          {v.resolution && <span className="text-xs text-muted-foreground">{v.resolution}</span>}
+          {v.fps ? <span className="text-xs text-muted-foreground">{v.fps} FPS</span> : null}
         </div>
 
         {/* 缩略图 / 播放器 */}
@@ -177,24 +179,24 @@ function VideoCard({
               <video
                 src={v.file_url}
                 controls
-                className="w-full max-h-72 rounded border border-white/10 bg-black"
+                className="w-full max-h-72 rounded border border-border bg-black"
                 poster={v.image_url || undefined}
               />
             ) : (
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
-                className="relative w-full max-h-48 aspect-video rounded border border-white/10 overflow-hidden group/preview"
+                className="relative w-full max-h-48 aspect-video rounded border border-border overflow-hidden group/preview"
               >
                 {v.image_url ? (
                   <img src={v.image_url} alt={display} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-[#1a1a1a] grid place-items-center text-[#666] text-xs">
+                  <div className="w-full h-full bg-card grid place-items-center text-muted-foreground text-xs">
                     视频已生成
                   </div>
                 )}
                 <span className="absolute inset-0 grid place-items-center bg-black/30 group-hover/preview:bg-black/50 transition-colors">
-                  <Play className="h-10 w-10 text-white opacity-80" />
+                  <Play className="h-10 w-10 text-foreground opacity-80" />
                 </span>
               </button>
             )}
@@ -204,7 +206,7 @@ function VideoCard({
             <img
               src={v.image_url}
               alt={display}
-              className="w-full max-h-40 rounded border border-white/10 object-cover"
+              className="w-full max-h-40 rounded border border-border object-cover"
             />
           </div>
         ) : null}
@@ -212,13 +214,13 @@ function VideoCard({
         {/* 进度条（处理中 / 排队） */}
         {(status === "processing" || status === "queued") && (
           <div className="mb-2">
-            <div className="w-full bg-[#1a1a1a] rounded-full h-2 mb-1">
+            <div className="w-full bg-card rounded-full h-2 mb-1">
               <div
-                className="bg-emerald-500 h-2 rounded-full transition-all"
+                className="bg-primary h-2 rounded-full transition-all"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="text-[10px] text-emerald-300/80">
+            <div className="text-[10px] text-primary/80">
               {status === "queued" ? "排队中..." : "处理中..."} {progress}%
             </div>
           </div>
@@ -226,8 +228,8 @@ function VideoCard({
 
         {/* 错误信息 + 重试 / 重新生成 */}
         {status === "failed" && (
-          <div className="mb-2 rounded border border-red-500/40 bg-red-500/10 p-2">
-            <div className="text-xs text-red-300 mb-1.5">生成失败：{v.error || "未知错误"}</div>
+          <div className="mb-2 rounded border border-destructive/40 bg-destructive/10 p-2">
+            <div className="text-xs text-destructive mb-1.5">生成失败：{v.error || "未知错误"}</div>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -243,7 +245,7 @@ function VideoCard({
                 variant="ghost"
                 onClick={handleRegenerate}
                 disabled={busy !== null}
-                className="text-emerald-300"
+                className="text-primary"
               >
                 <RotateCcw className="mr-1 h-3 w-3" />
                 重新生成
@@ -252,14 +254,14 @@ function VideoCard({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-4 text-xs text-[#888]">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           {v.resolution && <span>分辨率: {v.resolution}</span>}
           {v.fps ? <span>帧率: {v.fps}</span> : null}
           {v.format && <span>格式: {v.format}</span>}
           {v.tags && v.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {v.tags.slice(0, 3).map((tag, idx) => (
-                <span key={idx} className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400">{tag}</span>
+                <span key={idx} className="px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary">{tag}</span>
               ))}
             </div>
           )}
@@ -271,7 +273,7 @@ function VideoCard({
           <Pencil className="mr-1 h-3 w-3" />
           编辑
         </Button>
-        <Button variant="ghost" size="sm" onClick={actions.onDelete} className="text-red-400">
+        <Button variant="ghost" size="sm" onClick={actions.onDelete} className="text-destructive">
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
@@ -350,5 +352,20 @@ const config: FactoryCRUDPageProps<VideoTask> = {
 };
 
 export function VideoProductionLinePage() {
-  return <FactoryCRUDPage<VideoTask> {...config} />;
+  const router = useRouter();
+  const stages: PipelineFlowStage[] = [
+    { id: "scripts", name: "剧本", status: "done", icon: FileText },
+    { id: "storyboards", name: "分镜", status: "done", icon: Film },
+    { id: "assets", name: "资产", status: "done", icon: Package },
+    { id: "images", name: "图片", status: "done", icon: Images },
+    { id: "video-production", name: "视频", status: "running", icon: Video },
+    { id: "review", name: "审核", status: "pending", icon: ClipboardCheck },
+  ];
+
+  return (
+    <FactoryCRUDPage<VideoTask>
+      {...config}
+      headerContent={<PipelineFlow stages={stages} onStageClick={(stage) => router.push(stage === "images" ? "/assets" : `/${stage}`)} />}
+    />
+  );
 }

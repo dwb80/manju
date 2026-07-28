@@ -110,28 +110,28 @@ export function DataCenter({
   ) => {
     const Icon = icon;
     return (
-      <div data-testid="metric-card" className="rounded-xl border border-white/10 bg-[#1a1a1a] p-4 transition-all hover:border-white/20">
+      <div data-testid="metric-card" className="rounded-xl border border-border bg-card p-4 transition-all hover:border-border">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className={cn("rounded-lg p-2", bgColor)}>
               <Icon className={cn("h-5 w-5", color)} />
             </div>
             <div>
-              <div className="text-xs text-[#888]">{title}</div>
+              <div className="text-xs text-muted-foreground">{title}</div>
               <div className="mt-1 flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-white">{value}</span>
-                <span className="text-xs text-[#666]">{unit}</span>
+                <span className="text-2xl font-bold text-foreground">{value}</span>
+                <span className="text-xs text-muted-foreground">{unit}</span>
               </div>
             </div>
           </div>
           {trend !== undefined && (
             <div className="flex items-center gap-1">
               {trend > 0 ? (
-                <TrendingUp className="h-3 w-3 text-emerald-400" />
+                <TrendingUp className="h-3 w-3 text-primary" />
               ) : (
-                <TrendingUp className="h-3 w-3 rotate-180 text-red-400" />
+                <TrendingUp className="h-3 w-3 rotate-180 text-destructive" />
               )}
-              <span className={cn("text-xs", trend > 0 ? "text-emerald-400" : "text-red-400")}>
+              <span className={cn("text-xs", trend > 0 ? "text-primary" : "text-destructive")}>
                 {Math.abs(trend).toFixed(1)}%
               </span>
             </div>
@@ -148,7 +148,7 @@ export function DataCenter({
     const maxValue = Math.max(...data, 1);
     return (
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-white">{title}</h3>
+        <h3 className="text-sm font-medium text-foreground">{title}</h3>
         <div className="flex h-[120px] items-end gap-1.5">
           {data.map((value, index) => {
             const heightPercent = (value / maxValue) * 100;
@@ -168,7 +168,7 @@ export function DataCenter({
             );
           })}
         </div>
-        <div className="flex justify-between text-xs text-[#666]">
+        <div className="flex justify-between text-xs text-muted-foreground">
           <span>7天前</span>
           <span>今天</span>
         </div>
@@ -186,12 +186,12 @@ export function DataCenter({
 
     return (
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-white">{title}</h3>
+        <h3 className="text-sm font-medium text-foreground">{title}</h3>
         <div className="relative h-[120px]">
           {/* 网格线 */}
           <div className="absolute left-0 top-0 flex h-full w-full flex-col justify-between">
             {[0, 50, 100].map((percent) => (
-              <div key={percent} className="h-px w-full bg-white/5" />
+              <div key={percent} className="h-px w-full bg-muted/50" />
             ))}
           </div>
 
@@ -229,7 +229,7 @@ export function DataCenter({
             })}
           </svg>
         </div>
-        <div className="flex justify-between text-xs text-[#666]">
+        <div className="flex justify-between text-xs text-muted-foreground">
           <span>7天前</span>
           <span>今天</span>
         </div>
@@ -250,18 +250,18 @@ export function DataCenter({
     return (
       <button
         onClick={onClick}
-        className="group flex items-center justify-between rounded-lg border border-white/10 bg-[#1a1a1a] p-4 text-left transition-all hover:border-white/20 hover:bg-[#202020]"
+        className="group flex items-center justify-between rounded-lg border border-border bg-card p-4 text-left transition-all hover:border-border hover:bg-muted"
       >
         <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-blue-500/10 p-2 transition-all group-hover:bg-blue-500/20">
-            <Icon className="h-5 w-5 text-blue-400" />
+          <div className="rounded-lg bg-info/10 p-2 transition-all group-hover:bg-info/20">
+            <Icon className="h-5 w-5 text-info" />
           </div>
           <div>
-            <div className="text-sm font-medium text-white">{title}</div>
-            <div className="text-xs text-[#888]">{description}</div>
+            <div className="text-sm font-medium text-foreground">{title}</div>
+            <div className="text-xs text-muted-foreground">{description}</div>
           </div>
         </div>
-        <ChevronRight className="h-5 w-5 text-[#666] transition-all group-hover:text-white" />
+        <ChevronRight className="h-5 w-5 text-muted-foreground transition-all group-hover:text-foreground" />
       </button>
     );
   };
@@ -279,8 +279,8 @@ export function DataCenter({
             `$${metrics.monthlyAICost.toFixed(2)}`,
             "美元",
             DollarSign,
-            "text-emerald-400",
-            "bg-emerald-500/10",
+            "text-primary",
+            "bg-primary/10",
             12.5
           )}
           {renderMetricCard(
@@ -288,8 +288,8 @@ export function DataCenter({
             metrics.monthlyTasks,
             "个",
             Activity,
-            "text-blue-400",
-            "bg-blue-500/10",
+            "text-info",
+            "bg-info/10",
             8.3
           )}
           {renderMetricCard(
@@ -297,8 +297,8 @@ export function DataCenter({
             metrics.avgResponseTime.toFixed(1),
             "秒",
             Clock,
-            "text-purple-400",
-            "bg-purple-500/10",
+            "text-chart-1",
+            "bg-chart-1/10",
             -5.2
           )}
           {renderMetricCard(
@@ -306,8 +306,8 @@ export function DataCenter({
             metrics.efficiencyIndex,
             "分",
             Zap,
-            "text-yellow-400",
-            "bg-yellow-500/10",
+            "text-chart-5",
+            "bg-chart-5/10",
             3.7
           )}
         </div>
@@ -315,27 +315,27 @@ export function DataCenter({
         {/* 图表区域 */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* AI成本趋势 */}
-          <div className="rounded-xl border border-white/10 bg-[#1a1a1a] p-6">
+          <div className="rounded-xl border border-border bg-card p-6">
             {renderBarChart(
               metrics.costTrend,
               "AI成本趋势(过去7天)",
-              "bg-gradient-to-t from-emerald-500/80 to-emerald-400/80"
+              "bg-gradient-to-t from-primary/80 to-primary/80"
             )}
           </div>
 
           {/* 生产效率趋势 */}
-          <div className="rounded-xl border border-white/10 bg-[#1a1a1a] p-6">
+          <div className="rounded-xl border border-border bg-card p-6">
             {renderLineChart(
               metrics.efficiencyTrend,
               "生产效率趋势(过去7天)",
-              "#3b82f6"
+              "hsl(var(--info))"
             )}
           </div>
         </div>
 
         {/* 快捷入口 */}
         <div className="space-y-3">
-          <h3 className="text-sm font-medium text-white">快捷入口</h3>
+          <h3 className="text-sm font-medium text-foreground">快捷入口</h3>
           <div className="grid gap-3 sm:grid-cols-3">
             {renderQuickAccess(
               "AI成本详情",
@@ -364,18 +364,18 @@ export function DataCenter({
   return (
     <div className="space-y-6">
       {/* 顶部标题区域 */}
-      <div className="rounded-xl border border-white/10 bg-[#1a1a1a] p-6">
+      <div className="rounded-xl border border-border bg-card p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {/* 标题和简介 */}
           <div>
-            <h2 className="text-xl font-bold text-white">数据统计与分析</h2>
-            <p className="mt-1 text-sm text-[#888]">
+            <h2 className="text-xl font-bold text-foreground">数据统计与分析</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               监控AI成本、生产效率和团队绩效，助力数据驱动决策
             </p>
           </div>
 
           {/* 时间范围筛选 */}
-          <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#202020] p-1">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted p-1">
             {(["today", "week", "month", "all"] as const).map((range) => (
               <button
                 key={range}
@@ -383,8 +383,8 @@ export function DataCenter({
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
                   timeRange === range
-                    ? "bg-white/10 text-white"
-                    : "text-[#888] hover:text-white hover:bg-white/5"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
                 {range === "today" && "今天"}
@@ -402,7 +402,7 @@ export function DataCenter({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveDetail("overview")}
-            className="flex items-center gap-1 text-sm text-[#888] transition-colors hover:text-white"
+            className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4 rotate-180" />
             <span>返回概览</span>
@@ -411,7 +411,7 @@ export function DataCenter({
       )}
 
       {/* 主内容区域 */}
-      <div className="rounded-xl border border-white/10 bg-[#181818] p-6">
+      <div className="rounded-xl border border-border bg-card p-6">
         {activeDetail === "overview" && renderOverview()}
 
         {activeDetail === "cost" && (

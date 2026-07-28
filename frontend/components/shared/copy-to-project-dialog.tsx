@@ -132,7 +132,7 @@ export function CopyToProjectDialog({
         {/* 标题栏 */}
         <DialogHeader>
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-300">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
               <Copy className="h-5 w-5" />
             </div>
             <div>
@@ -170,7 +170,7 @@ export function CopyToProjectDialog({
                   type="checkbox"
                   checked={allSelected}
                   onChange={toggleAll}
-                  className="h-4 w-4 rounded border-white/30 bg-transparent accent-emerald-500"
+                  className="h-4 w-4 rounded border-border bg-transparent accent-primary"
                 />
                 <span>全选</span>
                 <span className="ml-auto text-[10px] text-muted-foreground">
@@ -181,13 +181,13 @@ export function CopyToProjectDialog({
                 {projects.map((p) => (
                   <label
                     key={p.id}
-                    className="flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-white/5 cursor-pointer"
+                    className="flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted/50 cursor-pointer"
                   >
                     <input
                       type="checkbox"
                       checked={selected.has(p.id)}
                       onChange={() => toggleProject(p.id)}
-                      className="h-4 w-4 rounded border-white/30 bg-transparent accent-emerald-500"
+                      className="h-4 w-4 rounded border-border bg-transparent accent-primary"
                     />
                     <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <span className="truncate flex-1">{p.name}</span>

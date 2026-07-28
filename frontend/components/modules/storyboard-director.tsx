@@ -11,8 +11,10 @@
  */
 
 import { useEffect, useState, useMemo } from "react";
-import { Film, Pencil, Trash2, CheckSquare, Wand2, Users, Package, Scissors, Plus, Video } from "lucide-react";
+import { Film, Pencil, Trash2, CheckSquare, Wand2, Users, Package, Scissors, Plus, Video, FileText, Images, ClipboardCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { PipelineFlow, type PipelineFlowStage } from "@/components/shared/pipeline-flow";
 import { FactoryCRUDPage, type FactoryCRUDPageProps, getEntityLabel } from "@/components/factory";
 import type { FormFieldConfig } from "@/components/ui/form-dialog";
 import { toast } from "@/components/common/toast";
@@ -168,7 +170,7 @@ const config: FactoryCRUDPageProps<Storyboard> = {
 
   // 占位渲染（真正的渲染在 <StoryboardDirectorPage /> 中以 JSX 形式提供）
   renderCard: (sb) => (
-    <div className="rounded-lg border border-white/10 bg-[#202020] p-4 text-xs text-[#666]">
+    <div className="rounded-lg border border-border bg-muted p-4 text-xs text-muted-foreground">
       {sb.title || sb.description || getEntityLabel(sb, "占位分镜")}
     </div>
   ),
@@ -243,7 +245,7 @@ function StoryboardRow({
   const status = sb.status ?? "draft";
   const color =
     STORYBOARD_STATUS_COLORS[status as keyof typeof STORYBOARD_STATUS_COLORS] ??
-    "bg-gray-500/20 text-gray-400";
+    "bg-muted/20 text-muted-foreground";
   const label = STORYBOARD_STATUS_LABELS[status as keyof typeof STORYBOARD_STATUS_LABELS] ?? status;
   const sceneName = sb.scene_id ? sceneNameMap[sb.scene_id] : undefined;
   const characterNames = (sb.character_asset_ids ?? [])
@@ -257,10 +259,10 @@ function StoryboardRow({
 
   return (
     <div
-      className={`group relative rounded-lg border bg-[#202020] p-4 transition-colors ${
+      className={`group relative rounded-lg border bg-muted p-4 transition-colors ${
         actions.selected
-          ? "border-emerald-500 ring-1 ring-emerald-500/40"
-          : "border-white/10 hover:border-emerald-500/50"
+          ? "border-primary ring-1 ring-primary/40"
+          : "border-border hover:border-primary/50"
       }`}
     >
       <button
@@ -271,52 +273,52 @@ function StoryboardRow({
         }}
         className={`absolute left-2 top-2 z-10 grid h-5 w-5 place-items-center rounded border transition-opacity ${
           actions.selected
-            ? "border-emerald-500 bg-emerald-500 opacity-100"
-            : "border-white/40 bg-black/30 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:border-emerald-400"
+            ? "border-primary bg-primary opacity-100"
+            : "border-border bg-black/30 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:border-primary"
         }`}
         aria-label={actions.selected ? "取消选择" : "选择"}
       >
-        {actions.selected && <CheckSquare className="h-3 w-3 text-white" />}
+        {actions.selected && <CheckSquare className="h-3 w-3 text-foreground" />}
       </button>
 
       <div className="flex items-start gap-3 pl-7">
-        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded bg-[#1a1a1a] text-emerald-400 font-bold text-sm">
+        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded bg-card text-primary font-bold text-sm">
           {sb.storyboard_number || "SB"}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className={`px-2 py-0.5 rounded text-xs ${color}`}>{label}</span>
-            <span className="text-xs text-emerald-300/90 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+            <span className="text-xs text-primary/90 bg-primary/10 px-1.5 py-0.5 rounded">
               第 {sb.episode ?? 1} 集
             </span>
             {sb.scene_id && (
-              <span className="text-xs text-[#888]">
+              <span className="text-xs text-muted-foreground">
                 场景：
                 {sceneName ? (
-                  <span className="text-white/80">{sceneName}</span>
+                  <span className="text-foreground/80">{sceneName}</span>
                 ) : (
-                  <span className="text-[#666]">未命名</span>
+                  <span className="text-muted-foreground">未命名</span>
                 )}
               </span>
             )}
-            <span className="text-xs text-[#888]">
+            <span className="text-xs text-muted-foreground">
               镜头: {storyboardShots.length}
             </span>
           </div>
-          <p className="text-sm text-white font-medium">{sb.title || "未命名分镜"}</p>
-          <p className="text-sm text-white/70 line-clamp-2">{sb.description}</p>
+          <p className="text-sm text-foreground font-medium">{sb.title || "未命名分镜"}</p>
+          <p className="text-sm text-foreground/70 line-clamp-2">{sb.description}</p>
           {sb.dialogue && (
-            <p className="mt-1 text-sm text-white/70 italic line-clamp-1">&quot;{sb.dialogue}&quot;</p>
+            <p className="mt-1 text-sm text-foreground/70 italic line-clamp-1">&quot;{sb.dialogue}&quot;</p>
           )}
           {(characterNames.length > 0 || propNames.length > 0) && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {characterNames.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1">
-                  <Users className="h-3 w-3 text-blue-400" />
+                  <Users className="h-3 w-3 text-info" />
                   {characterNames.map((name, idx) => (
                     <span
                       key={`${name}-${idx}`}
-                      className="inline-flex items-center rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-300"
+                      className="inline-flex items-center rounded bg-info/10 px-1.5 py-0.5 text-xs text-info"
                     >
                       {name}
                     </span>
@@ -325,11 +327,11 @@ function StoryboardRow({
               )}
               {propNames.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1">
-                  <Package className="h-3 w-3 text-amber-400" />
+                  <Package className="h-3 w-3 text-warning" />
                   {propNames.map((name, idx) => (
                     <span
                       key={`${name}-${idx}`}
-                      className="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-300"
+                      className="inline-flex items-center rounded bg-warning/10 px-1.5 py-0.5 text-xs text-warning"
                     >
                       {name}
                     </span>
@@ -343,9 +345,9 @@ function StoryboardRow({
 
       {/* 镜头列表（展开时显示） */}
       {expanded && (
-        <div className="mt-3 pl-7 border-t border-white/5 pt-3">
+        <div className="mt-3 pl-7 border-t border-border/50 pt-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-[#888]">镜头列表</span>
+            <span className="text-xs text-muted-foreground">镜头列表</span>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => onAutoSplit(sb.id)} disabled={isSplitting}>
                 <Scissors className={`mr-1 h-3 w-3 ${isSplitting ? "animate-spin" : ""}`} />
@@ -358,34 +360,34 @@ function StoryboardRow({
             </div>
           </div>
           {storyboardShots.length === 0 ? (
-            <div className="text-xs text-[#666] py-2">暂无镜头，点击「AI 拆分」或「添加镜头」</div>
+            <div className="text-xs text-muted-foreground py-2">暂无镜头，点击「AI 拆分」或「添加镜头」</div>
           ) : (
             <div className="space-y-2">
               {storyboardShots.map((shot) => {
                 const shotStatus = shot.status ?? "draft";
-                const shotColor = SHOT_STATUS_COLORS[shotStatus as keyof typeof SHOT_STATUS_COLORS] ?? "bg-gray-500/20 text-gray-400";
+                const shotColor = SHOT_STATUS_COLORS[shotStatus as keyof typeof SHOT_STATUS_COLORS] ?? "bg-muted/20 text-muted-foreground";
                 const shotLabel = SHOT_STATUS_LABELS[shotStatus as keyof typeof SHOT_STATUS_LABELS] ?? shotStatus;
                 return (
-                  <div key={shot.id} className="flex items-center gap-2 rounded bg-[#1a1a1a] p-2 text-xs">
-                    <span className="font-mono text-emerald-400 w-12">{shot.shot_number}</span>
+                  <div key={shot.id} className="flex items-center gap-2 rounded bg-card p-2 text-xs">
+                    <span className="font-mono text-primary w-12">{shot.shot_number}</span>
                     <span className={`px-1.5 py-0.5 rounded ${shotColor}`}>{shotLabel}</span>
-                    <span className="flex-1 truncate text-white/80">{shot.title}</span>
-                    <span className="text-[#666]">{shot.duration}s</span>
-                    {shot.shot_size && <span className="text-[#888]">{shot.shot_size}</span>}
+                    <span className="flex-1 truncate text-foreground/80">{shot.title}</span>
+                    <span className="text-muted-foreground">{shot.duration}s</span>
+                    {shot.shot_size && <span className="text-muted-foreground">{shot.shot_size}</span>}
                     {shot.image_url && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={shot.image_url} alt="" className="h-8 w-12 object-cover rounded" />
                     )}
                     {shot.video_url && (
-                      <span className="text-emerald-400 text-[10px] bg-emerald-500/10 px-1 rounded">已生成</span>
+                      <span className="text-primary text-[10px] bg-primary/10 px-1 rounded">已生成</span>
                     )}
-                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-emerald-400" onClick={() => onGenerateShotVideo(sb.id, shot.id)} disabled={generatingShotId === shot.id}>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-primary" onClick={() => onGenerateShotVideo(sb.id, shot.id)} disabled={generatingShotId === shot.id}>
                       <Video className={`h-3 w-3 ${generatingShotId === shot.id ? "animate-pulse" : ""}`} />
                     </Button>
                     <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => onEditShot(shot)}>
                       <Pencil className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-400" onClick={() => onDeleteShot(shot.id)}>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-destructive" onClick={() => onDeleteShot(shot.id)}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
@@ -410,7 +412,7 @@ function StoryboardRow({
           size="sm"
           onClick={() => onGenerateVideo(sb.id)}
           disabled={isGeneratingVideo}
-          className="flex-1 text-emerald-300"
+          className="flex-1 text-primary"
         >
           <Video className={`mr-1 h-3 w-3 ${isGeneratingVideo ? "animate-pulse" : ""}`} />
           {isGeneratingVideo ? "生成中..." : "图生视频"}
@@ -423,7 +425,7 @@ function StoryboardRow({
         >
           {expanded ? "收起镜头" : `展开镜头 (${storyboardShots.length})`}
         </Button>
-        <Button variant="ghost" size="sm" onClick={actions.onDelete} className="text-red-400">
+        <Button variant="ghost" size="sm" onClick={actions.onDelete} className="text-destructive">
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
@@ -432,6 +434,7 @@ function StoryboardRow({
 }
 
 export function StoryboardDirectorPage() {
+  const router = useRouter();
   const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
   const [list, setList] = useState<Storyboard[]>([]);
   const [shots, setShots] = useState<Shot[]>([]);
@@ -680,6 +683,19 @@ export function StoryboardDirectorPage() {
   return (
     <FactoryCRUDPage<Storyboard>
       {...config}
+      headerContent={
+        <PipelineFlow
+          stages={[
+            { id: "scripts", name: "剧本", status: "done", icon: FileText },
+            { id: "storyboards", name: "分镜", status: "running", icon: Film },
+            { id: "assets", name: "资产", status: "pending", icon: Package },
+            { id: "images", name: "图片", status: "pending", icon: Images },
+            { id: "video-production", name: "视频", status: "pending", icon: Video },
+            { id: "review", name: "审核", status: "pending", icon: ClipboardCheck },
+          ] satisfies PipelineFlowStage[]}
+          onStageClick={(stage) => router.push(stage === "images" ? "/assets" : `/${stage}`)}
+        />
+      }
       toolbarExtra={
         <Button
           variant="secondary"

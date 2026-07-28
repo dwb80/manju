@@ -256,7 +256,7 @@ export default function PipelinePage() {
         {error ? (
           <div
             role="alert"
-            className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-red-200"
+            className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
           >
             <AlertTriangle className="h-3.5 w-3.5" />
             {error}
@@ -291,7 +291,7 @@ export default function PipelinePage() {
               <Card key={g.project?.id ?? "__none__"}>
                 <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
                   <div className="flex items-center gap-2">
-                    <FolderKanban className="h-4 w-4 text-blue-300" />
+                    <FolderKanban className="h-4 w-4 text-info" />
                     <CardTitle className="text-sm font-semibold">{g.projectLabel}</CardTitle>
                     <span className="text-[11px] text-muted-foreground">{g.runs.length} 个 run</span>
                   </div>
@@ -299,7 +299,7 @@ export default function PipelinePage() {
                     <Button
                       variant="link"
                       size="sm"
-                      className="h-auto p-0 text-xs text-blue-300"
+                      className="h-auto p-0 text-xs text-info"
                       onClick={() =>
                         router.push(`/projects/${encodeURIComponent(g.project!.id)}`)
                       }
@@ -319,7 +319,7 @@ export default function PipelinePage() {
                         type="button"
                         key={run.id}
                         onClick={() => handleOpenRun(run.id)}
-                        className="group flex w-full items-center gap-3 rounded-md border border-white/10 bg-black/30 px-3 py-2.5 text-left text-foreground transition-colors hover:border-blue-300/50 hover:bg-blue-500/5"
+                        className="group flex w-full items-center gap-3 rounded-md border border-border bg-black/30 px-3 py-2.5 text-left text-foreground transition-colors hover:border-info/50 hover:bg-info/5"
                         aria-label={`打开 run ${run.name ?? run.id}`}
                       >
                         <Badge variant={meta.variant} className="gap-1">
@@ -339,9 +339,9 @@ export default function PipelinePage() {
                           </span>
                         </span>
                         <div className="flex w-[120px] flex-col items-end gap-1">
-                          <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
+                          <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
                             <div
-                              className="h-full bg-gradient-to-r from-blue-500 to-blue-300 transition-[width] duration-200"
+                              className="h-full bg-gradient-to-r from-info to-info transition-[width] duration-200"
                               style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
                             />
                           </div>

@@ -46,10 +46,10 @@ export function RecycleBinRow<TEntity extends FactoryEntity>({
   const deletedAt = item.deleted_at;
   return (
     <div
-      className={`group flex items-center gap-3 rounded-lg border bg-[#1f1f1f] px-4 py-3 transition-colors ${
+      className={`group flex items-center gap-3 rounded-lg border bg-muted px-4 py-3 transition-colors ${
         selected
-          ? "border-emerald-500 ring-1 ring-emerald-500/40"
-          : "border-white/10 hover:border-white/20"
+          ? "border-primary ring-1 ring-primary/40"
+          : "border-border hover:border-border"
       }`}
     >
       <button
@@ -57,25 +57,25 @@ export function RecycleBinRow<TEntity extends FactoryEntity>({
         onClick={onToggleSelect}
         className={`grid h-5 w-5 shrink-0 place-items-center rounded border transition-opacity ${
           selected
-            ? "border-emerald-500 bg-emerald-500"
-            : "border-white/40 bg-black/30 hover:border-emerald-400"
+            ? "border-primary bg-primary"
+            : "border-border bg-black/30 hover:border-primary"
         }`}
         aria-label={selected ? "取消选择" : "选择"}
       >
-        {selected && <CheckSquare className="h-3 w-3 text-white" />}
+        {selected && <CheckSquare className="h-3 w-3 text-foreground" />}
       </button>
       <SafeImage
         src={image}
         alt={getEntityLabel(item)}
-        className="h-10 w-10 rounded-md bg-[#2a2a2a]"
+        className="h-10 w-10 rounded-md bg-secondary"
         fallbackIcon={false}
         fallbackLabel={getEntityLabel(item).slice(0, 2) || entityLabel.slice(0, 2)}
       />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 text-sm text-white truncate">
+        <div className="flex items-center gap-2 text-sm text-foreground truncate">
           {getEntityLabel(item)}
         </div>
-        <div className="text-xs text-[#666] truncate">
+        <div className="text-xs text-muted-foreground truncate">
           {metaLabel}: {deletedAt ? new Date(deletedAt).toLocaleString() : "—"}
         </div>
       </div>

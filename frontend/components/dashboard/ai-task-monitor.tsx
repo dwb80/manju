@@ -24,18 +24,18 @@ export interface AITaskMonitorProps {
 const taskTypeConfig: Record<"image" | "video" | "voiceover", { icon: typeof Image; color: string; bgColor: string }> = {
   image: {
     icon: Image,
-    color: "text-pink-400",
-    bgColor: "bg-pink-500/20",
+    color: "text-chart-4",
+    bgColor: "bg-chart-4/20",
   },
   video: {
     icon: Video,
-    color: "text-purple-400",
-    bgColor: "bg-purple-500/20",
+    color: "text-chart-1",
+    bgColor: "bg-chart-1/20",
   },
   voiceover: {
     icon: Mic,
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-500/20",
+    color: "text-chart-2",
+    bgColor: "bg-chart-2/20",
   },
 };
 
@@ -77,7 +77,7 @@ const TaskCard = memo(function TaskCard({
   const Icon = typeConfig.icon;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4 transition-all hover:border-white/20">
+    <div className="rounded-lg border border-border bg-card p-4 transition-all hover:border-border">
       {/* 头部：类型图标和标题 */}
       <div className="mb-3 flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -85,27 +85,27 @@ const TaskCard = memo(function TaskCard({
             <Icon className={`h-5 w-5 ${typeConfig.color}`} />
           </div>
           <div>
-            <h4 className="text-sm font-medium text-white">{task.title}</h4>
-            <span className="text-xs text-[#666]">{task.model}</span>
+            <h4 className="text-sm font-medium text-foreground">{task.title}</h4>
+            <span className="text-xs text-muted-foreground">{task.model}</span>
           </div>
         </div>
 
         {/* 状态标签 */}
         {task.status === "running" && (
-          <div className="flex items-center gap-1.5 rounded-full bg-blue-500/20 px-2 py-1">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-blue-400"></div>
-            <span className="text-xs text-blue-400">运行中</span>
+          <div className="flex items-center gap-1.5 rounded-full bg-info/20 px-2 py-1">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-info"></div>
+            <span className="text-xs text-info">运行中</span>
           </div>
         )}
         {task.status === "waiting" && (
-          <div className="flex items-center gap-1.5 rounded-full bg-[#666]/20 px-2 py-1">
-            <span className="text-xs text-[#888]">等待中</span>
+          <div className="flex items-center gap-1.5 rounded-full bg-muted-foreground/20 px-2 py-1">
+            <span className="text-xs text-muted-foreground">等待中</span>
           </div>
         )}
         {task.status === "paused" && (
-          <div className="flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2 py-1">
-            <Pause className="h-3 w-3 text-amber-400" />
-            <span className="text-xs text-amber-400">已暂停</span>
+          <div className="flex items-center gap-1.5 rounded-full bg-warning/20 px-2 py-1">
+            <Pause className="h-3 w-3 text-warning" />
+            <span className="text-xs text-warning">已暂停</span>
           </div>
         )}
       </div>
@@ -113,16 +113,16 @@ const TaskCard = memo(function TaskCard({
       {/* 进度条 */}
       <div className="mb-3">
         <div className="mb-1 flex items-center justify-between text-xs">
-          <span className="text-[#888]">进度</span>
-          <span className="text-white">{task.progress}%</span>
+          <span className="text-muted-foreground">进度</span>
+          <span className="text-foreground">{task.progress}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/10">
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
           <div
             className={`h-full rounded-full transition-all duration-300 ${task.status === "waiting"
-              ? "bg-[#666]"
+              ? "bg-muted-foreground"
               : task.status === "paused"
-                ? "bg-amber-500"
-                : "bg-gradient-to-r from-blue-500 to-purple-500"
+                ? "bg-warning"
+                : "bg-gradient-to-r from-info to-chart-1"
               }`}
             style={{ width: `${task.progress}%` }}
           />
@@ -131,7 +131,7 @@ const TaskCard = memo(function TaskCard({
 
       {/* 底部：剩余时间和操作 */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-[#888]">
+        <span className="text-xs text-muted-foreground">
           剩余时间：{formatRemainingTime(task.remainingTime)}
         </span>
 
@@ -139,7 +139,7 @@ const TaskCard = memo(function TaskCard({
           {task.status === "running" && (
             <button
               onClick={() => onPause?.(task.id)}
-              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-[#888] transition-colors hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <Pause className="h-3 w-3" />
               暂停
@@ -148,7 +148,7 @@ const TaskCard = memo(function TaskCard({
           {task.status === "waiting" && (
             <button
               onClick={() => onRetry?.(task.id)}
-              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-[#888] transition-colors hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <RotateCcw className="h-3 w-3" />
               重试
@@ -156,7 +156,7 @@ const TaskCard = memo(function TaskCard({
           )}
           <button
             onClick={() => onViewLog?.(task.id)}
-            className="flex items-center gap-1 rounded px-2 py-1 text-xs text-[#888] transition-colors hover:bg-white/10 hover:text-white"
+            className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <FileText className="h-3 w-3" />
             日志
@@ -175,15 +175,15 @@ export const AITaskMonitor = memo(function AITaskMonitor({
   onViewLog,
 }: AITaskMonitorProps) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#252525] p-6">
+    <div className="rounded-xl border border-border bg-secondary p-6">
       {/* 标题 */}
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-          <Cpu className="h-5 w-5 text-purple-400" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-chart-1/20 to-chart-4/20">
+          <Cpu className="h-5 w-5 text-chart-1" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-white">AI任务监控</h2>
-          <p className="text-sm text-[#888]">
+          <h2 className="text-lg font-bold text-foreground">AI任务监控</h2>
+          <p className="text-sm text-muted-foreground">
             {tasks.filter((t) => t.status === "running").length} 个任务运行中
           </p>
         </div>
@@ -205,8 +205,8 @@ export const AITaskMonitor = memo(function AITaskMonitor({
       {/* 空状态 */}
       {tasks.length === 0 && (
         <div className="flex h-40 flex-col items-center justify-center">
-          <Cpu className="mb-2 h-12 w-12 text-[#333]" />
-          <p className="text-sm text-[#666]">暂无运行中的AI任务</p>
+          <Cpu className="mb-2 h-12 w-12 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">暂无运行中的AI任务</p>
         </div>
       )}
     </div>

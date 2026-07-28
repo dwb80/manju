@@ -63,9 +63,9 @@ export function ScriptToolbar({ editor, onAnalyze }: ScriptToolbarProps) {
   }
 
   return (
-    <div className="script-toolbar border-b border-white/10 bg-[#252525] p-2 flex items-center gap-1 flex-wrap">
+    <div className="script-toolbar border-b border-border bg-secondary p-2 flex items-center gap-1 flex-wrap">
       {/* 文本格式化 */}
-      <div className="flex items-center gap-1 border-r border-white/10 pr-2">
+      <div className="flex items-center gap-1 border-r border-border pr-2">
         <ToolbarButton
           onClick={() => safeRun(() => editor.chain().focus().toggleBold().run())}
           disabled={!can()?.chain().focus().toggleBold().run()}
@@ -103,7 +103,7 @@ export function ScriptToolbar({ editor, onAnalyze }: ScriptToolbarProps) {
       </div>
 
       {/* 标题 */}
-      <div className="flex items-center gap-1 border-r border-white/10 pr-2">
+      <div className="flex items-center gap-1 border-r border-border pr-2">
         <ToolbarButton
           onClick={() => safeRun(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}
           active={editor.isActive('heading', { level: 1 })}
@@ -125,7 +125,7 @@ export function ScriptToolbar({ editor, onAnalyze }: ScriptToolbarProps) {
       </div>
 
       {/* 列表和引用 */}
-      <div className="flex items-center gap-1 border-r border-white/10 pr-2">
+      <div className="flex items-center gap-1 border-r border-border pr-2">
         <ToolbarButton
           onClick={() => safeRun(() => editor.chain().focus().toggleBulletList().run())}
           active={editor.isActive('bulletList')}
@@ -153,7 +153,7 @@ export function ScriptToolbar({ editor, onAnalyze }: ScriptToolbarProps) {
       </div>
 
       {/* 对齐 */}
-      <div className="flex items-center gap-1 border-r border-white/10 pr-2">
+      <div className="flex items-center gap-1 border-r border-border pr-2">
         <ToolbarButton
           onClick={() => safeRun(() => editor.chain().focus().setTextAlign('left').run())}
           active={editor.isActive({ textAlign: 'left' })}
@@ -175,7 +175,7 @@ export function ScriptToolbar({ editor, onAnalyze }: ScriptToolbarProps) {
       </div>
 
       {/* 剧本元素插入 */}
-      <div className="flex items-center gap-1 border-r border-white/10 pr-2">
+      <div className="flex items-center gap-1 border-r border-border pr-2">
         <ToolbarButton
           onClick={() => safeRun(() => editor.chain().focus().insertContent({
             type: 'episode',
@@ -197,7 +197,7 @@ export function ScriptToolbar({ editor, onAnalyze }: ScriptToolbarProps) {
         <ToolbarButton
           onClick={() => safeRun(() => editor.chain().focus().insertContent({
             type: 'character',
-            attrs: { name: '角色名', color: '#4A90E2' },
+            attrs: { name: '角色名', color: 'hsl(var(--info))' },
             content: [{ type: 'text', text: '角色名' }],
           }).run())}
           label="人"

@@ -56,7 +56,7 @@ export function PageContainer({
   showSearchButton = true,
   showNotificationButton = true,
   customHeader,
-  backgroundColor = "#1a1a1a",
+  backgroundColor = "var(--bg-app)",
   showFooter = false,
 }: PageContainerProps) {
   const router = useRouter();
@@ -72,25 +72,25 @@ export function PageContainer({
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor }}>
       {/* 顶部导航栏 */}
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#1a1a1a]/95 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur">
         {customHeader || (
-          <div className="px-6 py-4">
+          <div className="px-4 py-3">
             <div className="flex items-center justify-between">
               {/* 左侧：返回按钮和标题 */}
               <div className="flex items-center gap-4">
                 {showBackButton && (
                   <button
                     onClick={handleBack}
-                    className="flex items-center gap-2 text-[#888] hover:text-white transition-colors"
+                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                     aria-label="返回上一页"
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                 )}
                 <div>
-                  <h1 className="text-xl font-semibold text-white">{title}</h1>
+                  <h1 className="text-page-title text-foreground">{title}</h1>
                   {description && (
-                    <p className="mt-1 text-sm text-[#888]">{description}</p>
+                    <p className="mt-1 text-body text-muted-foreground">{description}</p>
                   )}
                 </div>
               </div>
@@ -100,7 +100,7 @@ export function PageContainer({
                 {showSearchButton && (
                   <button
                     onClick={handleSearch}
-                    className="rounded-lg p-2 text-[#888] hover:bg-white/10 hover:text-white transition-colors"
+                    className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     aria-label="全局搜索（Ctrl+K）"
                     title="全局搜索（Ctrl+K）"
                   >
@@ -110,12 +110,12 @@ export function PageContainer({
 
                 {showNotificationButton && (
                   <button
-                    className="relative rounded-lg p-2 text-[#888] hover:bg-white/10 hover:text-white transition-colors"
+                    className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     aria-label="通知"
                     title="通知"
                   >
                     <Bell className="h-5 w-5" />
-                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />
                   </button>
                 )}
 
@@ -128,21 +128,21 @@ export function PageContainer({
 
       {/* 主内容区域 */}
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">
+        <div className="p-4">
           {children}
         </div>
       </main>
 
       {/* 底部状态栏（可选） */}
       {showFooter && (
-        <footer className="border-t border-white/10 px-6 py-3">
-          <div className="flex items-center justify-between text-xs text-[#888]">
+        <footer className="border-t border-border px-6 py-3">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-500" />
+              <div className="h-2 w-2 rounded-full bg-primary" />
               <span>系统运行正常</span>
             </div>
             <div>
-              按 <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">Ctrl</kbd> + <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">K</kbd> 快速搜索
+              按 <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">Ctrl</kbd> + <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">K</kbd> 快速搜索
             </div>
           </div>
         </footer>
@@ -179,14 +179,14 @@ export function PageCard({
 }: PageCardProps) {
   return (
     <div
-      className={`rounded-xl ${showBorder ? "border border-white/10" : ""
-        } bg-[#202020] p-6 ${className}`}
+      className={`rounded-xl ${showBorder ? "border border-border" : ""
+        } bg-muted p-4 ${className}`}
     >
       {title && (
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <h2 className="text-card-title text-foreground">{title}</h2>
           {description && (
-            <p className="mt-1 text-sm text-[#888]">{description}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           )}
         </div>
       )}
@@ -215,9 +215,9 @@ export function PageDivider({ title }: PageDividerProps) {
   return (
     <div className="my-6">
       {title && (
-        <div className="mb-3 text-sm font-medium text-[#888]">{title}</div>
+        <div className="mb-3 text-sm font-medium text-muted-foreground">{title}</div>
       )}
-      <div className="h-px bg-white/10" />
+      <div className="h-px bg-muted" />
     </div>
   );
 }

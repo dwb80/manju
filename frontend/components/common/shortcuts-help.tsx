@@ -31,7 +31,7 @@ export function ShortcutsHelp() {
     <>
       {/* 快捷键帮助按钮 */}
       <button
-        className="fixed right-4 bottom-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#202020] text-[#888] transition-all duration-200 hover:border-white/20 hover:bg-[#2a2a2a] hover:text-white"
+        className="fixed right-4 bottom-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground transition-all duration-200 hover:border-border hover:bg-secondary hover:text-foreground"
         onClick={() => setIsOpen(true)}
         aria-label="快捷键帮助"
       >
@@ -42,22 +42,22 @@ export function ShortcutsHelp() {
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setIsOpen(false)}>
           <div
-            className="w-full max-w-md rounded-2xl border border-white/10 bg-[#181818] p-6 shadow-xl"
+            className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             {/* 标题 */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Keyboard className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="text-base font-semibold text-white">快捷键指南</div>
-                  <div className="text-xs text-[#888]">使用快捷键提高工作效率</div>
+                  <div className="text-base font-semibold text-foreground">快捷键指南</div>
+                  <div className="text-xs text-muted-foreground">使用快捷键提高工作效率</div>
                 </div>
               </div>
               <button
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-[#888] transition-colors hover:bg-white/20 hover:text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 onClick={() => setIsOpen(false)}
                 aria-label="关闭"
               >
@@ -69,17 +69,17 @@ export function ShortcutsHelp() {
             <div className="mt-6 space-y-4">
               {["全局", "操作", "创作"].map((category) => (
                 <div key={category}>
-                  <div className="mb-2 text-xs font-medium uppercase tracking-wider text-[#777]">{category}</div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{category}</div>
                   <div className="space-y-2">
                     {shortcuts
                       .filter((shortcut) => shortcut.category === category)
                       .map((shortcut, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between rounded-lg border border-white/10 bg-[#202020] px-4 py-3"
+                          className="flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-3"
                         >
-                          <div className="text-sm text-[#b4b4b4]">{shortcut.description}</div>
-                          <kbd className="rounded-md bg-white/10 px-2 py-1 text-xs font-medium text-white">{shortcut.key}</kbd>
+                          <div className="text-sm text-muted-foreground">{shortcut.description}</div>
+                          <kbd className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">{shortcut.key}</kbd>
                         </div>
                       ))}
                   </div>
@@ -88,8 +88,8 @@ export function ShortcutsHelp() {
             </div>
 
             {/* 底部提示 */}
-            <div className="mt-6 rounded-lg border border-white/10 bg-[#2a2a2a] p-4 text-xs text-[#888]">
-              <div className="font-medium text-white">提示</div>
+            <div className="mt-6 rounded-lg border border-border bg-secondary p-4 text-xs text-muted-foreground">
+              <div className="font-medium text-foreground">提示</div>
               <div className="mt-1">在输入框中时，只有 Ctrl 组合快捷键有效。其他快捷键需要先离开输入框才能使用。</div>
             </div>
 

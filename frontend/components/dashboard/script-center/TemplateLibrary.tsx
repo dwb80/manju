@@ -242,32 +242,32 @@ export function TemplateLibrary({
 
   if (loading) {
     return (
-      <div className="template-library bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden p-8">
-        <div className="text-center text-[#666]">加载模板库...</div>
+      <div className="template-library bg-card rounded-lg border border-border overflow-hidden p-8">
+        <div className="text-center text-muted-foreground">加载模板库...</div>
       </div>
     )
   }
 
   return (
-    <div className="template-library bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden">
+    <div className="template-library bg-card rounded-lg border border-border overflow-hidden">
       {/* 标题 */}
-      <div className="p-3 border-b border-white/10 flex items-center justify-between">
+      <div className="p-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-[#888]" />
-          <h3 className="text-sm font-medium text-white">剧本模板库</h3>
-          <span className="text-xs text-[#666]">({templates.length})</span>
+          <BookOpen className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-foreground">剧本模板库</h3>
+          <span className="text-xs text-muted-foreground">({templates.length})</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-1 rounded ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-[#888]'
+            className={`p-1 rounded ${viewMode === 'grid' ? 'bg-muted text-foreground' : 'text-muted-foreground'
               }`}
           >
             <Grid className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-1 rounded ${viewMode === 'list' ? 'bg-white/10 text-white' : 'text-[#888]'
+            className={`p-1 rounded ${viewMode === 'list' ? 'bg-muted text-foreground' : 'text-muted-foreground'
               }`}
           >
             <List className="h-4 w-4" />
@@ -276,16 +276,16 @@ export function TemplateLibrary({
       </div>
 
       {/* 搜索和分类 */}
-      <div className="p-3 border-b border-white/10 space-y-3">
+      <div className="p-3 border-b border-border space-y-3">
         {/* 搜索框 */}
         <div className="relative">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#888]" />
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索模板..."
-            className="w-full bg-white/5 border border-white/10 rounded pl-9 pr-3 py-2 text-sm text-white placeholder-[#666]"
+            className="w-full bg-muted/50 border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
           />
         </div>
 
@@ -296,8 +296,8 @@ export function TemplateLibrary({
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
               className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${selectedCategory === category.id
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
-                  : 'bg-white/5 text-[#888] border border-white/10 hover:bg-white/10'
+                  ? 'bg-primary/20 text-primary border border-primary/50'
+                  : 'bg-muted/50 text-muted-foreground border border-border hover:bg-muted'
                 }`}
             >
               <span>{category.icon}</span>
@@ -310,7 +310,7 @@ export function TemplateLibrary({
       {/* 模板列表 */}
       <div className="p-3">
         {filteredTemplates.length === 0 ? (
-          <div className="text-center py-8 text-[#666] text-sm">
+          <div className="text-center py-8 text-muted-foreground text-sm">
             未找到匹配的模板
           </div>
         ) : viewMode === 'grid' ? (
@@ -318,26 +318,26 @@ export function TemplateLibrary({
             {filteredTemplates.map((template) => (
               <div
                 key={template.id}
-                className="border border-white/10 rounded overflow-hidden hover:border-white/20 transition-colors"
+                className="border border-border rounded overflow-hidden hover:border-border transition-colors"
               >
                 {/* 分类图标 */}
-                <div className="p-3 bg-white/5 flex items-center justify-between">
+                <div className="p-3 bg-muted/50 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">{getCategoryIcon(template.category)}</span>
                     <div>
-                      <div className="text-sm font-medium text-white">{template.name}</div>
-                      <div className="text-xs text-[#888]">{getCategoryLabel(template.category)}</div>
+                      <div className="text-sm font-medium text-foreground">{template.name}</div>
+                      <div className="text-xs text-muted-foreground">{getCategoryLabel(template.category)}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                    <span className="text-xs text-white">{template.rating}</span>
+                    <Star className="h-3 w-3 text-chart-5 fill-chart-5" />
+                    <span className="text-xs text-foreground">{template.rating}</span>
                   </div>
                 </div>
 
                 {/* 描述 */}
                 <div className="p-2">
-                  <div className="text-xs text-[#888] line-clamp-2">{template.description}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2">{template.description}</div>
                 </div>
 
                 {/* 标签 */}
@@ -345,7 +345,7 @@ export function TemplateLibrary({
                   {template.tags.slice(0, 3).map((tag, i) => (
                     <span
                       key={i}
-                      className="text-xs px-1.5 py-0.5 rounded bg-white/5 text-[#888]"
+                      className="text-xs px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground"
                     >
                       {tag}
                     </span>
@@ -353,7 +353,7 @@ export function TemplateLibrary({
                 </div>
 
                 {/* 统计 */}
-                <div className="px-2 pb-2 flex items-center gap-2 text-xs text-[#666]">
+                <div className="px-2 pb-2 flex items-center gap-2 text-xs text-muted-foreground">
                   <MessageSquare className="h-3 w-3" />
                   <span>{template.reviews} 评论</span>
                   <Clock className="h-3 w-3 ml-2" />
@@ -361,7 +361,7 @@ export function TemplateLibrary({
                 </div>
 
                 {/* 操作按钮 */}
-                <div className="p-2 border-t border-white/5 flex gap-2">
+                <div className="p-2 border-t border-border/50 flex gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -389,20 +389,20 @@ export function TemplateLibrary({
             {filteredTemplates.map((template) => (
               <div
                 key={template.id}
-                className="p-3 border border-white/10 rounded hover:border-white/20 transition-colors"
+                className="p-3 border border-border rounded hover:border-border transition-colors"
               >
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">{getCategoryIcon(template.category)}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <div className="text-sm font-medium text-white">{template.name}</div>
+                      <div className="text-sm font-medium text-foreground">{template.name}</div>
                       <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                        <span className="text-xs text-white">{template.rating}</span>
+                        <Star className="h-3 w-3 text-chart-5 fill-chart-5" />
+                        <span className="text-xs text-foreground">{template.rating}</span>
                       </div>
                     </div>
-                    <div className="text-xs text-[#888] mb-2">{template.description}</div>
-                    <div className="flex items-center gap-2 text-xs text-[#666]">
+                    <div className="text-xs text-muted-foreground mb-2">{template.description}</div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{getCategoryLabel(template.category)}</span>
                       <span>•</span>
                       <span>{template.reviews} 评论</span>
@@ -440,16 +440,16 @@ export function TemplateLibrary({
       {/* 预览对话框 */}
       {previewingTemplate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#1a1a1a] rounded-lg border border-white/10 w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <div className="bg-card rounded-lg border border-border w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
             {/* 标题 */}
-            <div className="p-3 border-b border-white/10 flex items-center justify-between">
+            <div className="p-3 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{getCategoryIcon(previewingTemplate.category)}</span>
                 <div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-sm font-medium text-foreground">
                     {previewingTemplate.name}
                   </div>
-                  <div className="text-xs text-[#888]">
+                  <div className="text-xs text-muted-foreground">
                     {getCategoryLabel(previewingTemplate.category)}
                   </div>
                 </div>
@@ -469,19 +469,19 @@ export function TemplateLibrary({
               {/* 评分和统计 */}
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                  <span className="text-sm font-bold text-white">
+                  <Star className="h-4 w-4 text-chart-5 fill-chart-5" />
+                  <span className="text-sm font-bold text-foreground">
                     {previewingTemplate.rating}
                   </span>
-                  <span className="text-xs text-[#888]">
+                  <span className="text-xs text-muted-foreground">
                     ({previewingTemplate.reviews} 评论)
                   </span>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-[#888]">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <User className="h-3 w-3" />
                   <span>{previewingTemplate.author}</span>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-[#888]">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   <span>{previewingTemplate.downloads} 下载</span>
                 </div>
@@ -489,18 +489,18 @@ export function TemplateLibrary({
 
               {/* 描述 */}
               <div className="mb-4">
-                <div className="text-xs text-[#888] mb-1">描述</div>
-                <div className="text-sm text-white">{previewingTemplate.description}</div>
+                <div className="text-xs text-muted-foreground mb-1">描述</div>
+                <div className="text-sm text-foreground">{previewingTemplate.description}</div>
               </div>
 
               {/* 标签 */}
               <div className="mb-4">
-                <div className="text-xs text-[#888] mb-1">标签</div>
+                <div className="text-xs text-muted-foreground mb-1">标签</div>
                 <div className="flex flex-wrap gap-2">
                   {previewingTemplate.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className="text-xs px-2 py-1 rounded bg-white/5 text-white"
+                      className="text-xs px-2 py-1 rounded bg-muted/50 text-foreground"
                     >
                       {tag}
                     </span>
@@ -510,11 +510,11 @@ export function TemplateLibrary({
 
               {/* 特性 */}
               <div className="mb-4">
-                <div className="text-xs text-[#888] mb-1">模板特性</div>
-                <ul className="text-sm text-white space-y-1">
+                <div className="text-xs text-muted-foreground mb-1">模板特性</div>
+                <ul className="text-sm text-foreground space-y-1">
                   {previewingTemplate.features.map((feature, i) => (
                     <li key={i} className="flex items-center gap-2">
-                      <ChevronRight className="h-3 w-3 text-emerald-400" />
+                      <ChevronRight className="h-3 w-3 text-primary" />
                       <span>{feature}</span>
                     </li>
                   ))}
@@ -523,15 +523,15 @@ export function TemplateLibrary({
 
               {/* 结构 */}
               <div className="mb-4">
-                <div className="text-xs text-[#888] mb-1">剧本结构</div>
+                <div className="text-xs text-muted-foreground mb-1">剧本结构</div>
                 <div className="flex items-center gap-2">
                   {previewingTemplate.structure.map((step, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400">
+                      <div className="text-xs px-2 py-1 rounded bg-primary/20 text-primary">
                         {i + 1}. {step}
                       </div>
                       {i < previewingTemplate.structure.length - 1 && (
-                        <ChevronRight className="h-3 w-3 text-[#888]" />
+                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
                       )}
                     </div>
                   ))}
@@ -540,16 +540,16 @@ export function TemplateLibrary({
 
               {/* 预览内容 */}
               <div className="mb-4">
-                <div className="text-xs text-[#888] mb-1">内容预览</div>
-                <div className="p-3 bg-white/5 rounded border border-white/10 text-xs text-white whitespace-pre-wrap">
+                <div className="text-xs text-muted-foreground mb-1">内容预览</div>
+                <div className="p-3 bg-muted/50 rounded border border-border text-xs text-foreground whitespace-pre-wrap">
                   {previewingTemplate.preview}
                 </div>
               </div>
             </div>
 
             {/* 操作按钮 */}
-            <div className="p-3 border-t border-white/10 flex items-center justify-between">
-              <div className="text-xs text-[#888]">点击"使用此模板"创建新剧本</div>
+            <div className="p-3 border-t border-border flex items-center justify-between">
+              <div className="text-xs text-muted-foreground">点击"使用此模板"创建新剧本</div>
               <div className="flex gap-2">
                 <Button
                   variant="ghost"

@@ -96,14 +96,14 @@ export function ImageUploader({
   if (value) {
     return (
       <div className="relative group">
-        <div className="aspect-video w-full overflow-hidden rounded-md border border-white/10 bg-[#1a1a1a]">
+        <div className="aspect-video w-full overflow-hidden rounded-md border border-border bg-card">
           <img src={value} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
         </div>
         <button
           type="button"
           onClick={handleClear}
           disabled={disabled}
-          className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+          className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
           aria-label="移除图片"
         >
           <X className="h-3.5 w-3.5" />
@@ -137,7 +137,7 @@ export function ImageUploader({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || isUploading}
-            className="flex-1 h-24 rounded-md border-2 border-dashed border-white/10 bg-[#1a1a1a] hover:border-primary/50 hover:bg-[#202020] transition-colors flex flex-col items-center justify-center gap-1.5 text-[#888] disabled:opacity-50"
+            className="flex-1 h-24 rounded-md border-2 border-dashed border-border bg-card hover:border-primary/50 hover:bg-muted transition-colors flex flex-col items-center justify-center gap-1.5 text-muted-foreground disabled:opacity-50"
           >
             {isUploading ? (
               <>
@@ -184,7 +184,7 @@ export function ImageUploader({
           </div>
         </div>
       )}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

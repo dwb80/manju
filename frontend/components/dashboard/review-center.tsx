@@ -24,26 +24,26 @@ const reviewTypeConfig: Record<ReviewType, { name: string; icon: typeof Image; c
   image: {
     name: "图片",
     icon: Image,
-    color: "text-pink-400",
-    bgColor: "bg-pink-500/20",
+    color: "text-chart-4",
+    bgColor: "bg-chart-4/20",
   },
   video: {
     name: "视频",
     icon: Video,
-    color: "text-purple-400",
-    bgColor: "bg-purple-500/20",
+    color: "text-chart-1",
+    bgColor: "bg-chart-1/20",
   },
   script: {
     name: "剧本",
     icon: FileText,
-    color: "text-blue-400",
-    bgColor: "bg-blue-500/20",
+    color: "text-info",
+    bgColor: "bg-info/20",
   },
   storyboard: {
     name: "分镜",
     icon: Layers,
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-500/20",
+    color: "text-chart-2",
+    bgColor: "bg-chart-2/20",
   },
 };
 
@@ -63,7 +63,7 @@ const ReviewItemCard = memo(function ReviewItemCard({
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center justify-center rounded-xl border border-white/10 bg-[#1a1a1a] p-4 transition-all hover:border-white/20 hover:bg-[#222]"
+      className="group flex flex-col items-center justify-center rounded-xl border border-border bg-card p-4 transition-all hover:border-border hover:bg-muted"
     >
       {/* 图标 */}
       <div
@@ -73,13 +73,13 @@ const ReviewItemCard = memo(function ReviewItemCard({
       </div>
 
       {/* 类型名称 */}
-      <span className="mb-1 text-sm text-[#888]">{config.name}</span>
+      <span className="mb-1 text-sm text-muted-foreground">{config.name}</span>
 
       {/* 数量 */}
       <span className={`text-2xl font-bold ${config.color}`}>{count}</span>
 
       {/* 待审核标签 */}
-      <span className="mt-1 text-xs text-[#666]">待审核</span>
+      <span className="mt-1 text-xs text-muted-foreground">待审核</span>
     </button>
   );
 });
@@ -104,16 +104,16 @@ export const ReviewCenter = memo(function ReviewCenter({
   const totalPending = reviewItems.reduce((sum, item) => sum + item.count, 0);
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#252525] p-6">
+    <div className="rounded-xl border border-border bg-secondary p-6">
       {/* 标题 */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/20">
-            <ClipboardCheck className="h-5 w-5 text-orange-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-chart-3/20 to-warning/20">
+            <ClipboardCheck className="h-5 w-5 text-chart-3" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">待审核中心</h2>
-            <p className="text-sm text-[#888]">共 {totalPending} 项待审核</p>
+            <h2 className="text-lg font-bold text-foreground">待审核中心</h2>
+            <p className="text-sm text-muted-foreground">共 {totalPending} 项待审核</p>
           </div>
         </div>
       </div>
@@ -133,8 +133,8 @@ export const ReviewCenter = memo(function ReviewCenter({
       {/* 空状态 */}
       {totalPending === 0 && (
         <div className="flex h-40 flex-col items-center justify-center">
-          <ClipboardCheck className="mb-2 h-12 w-12 text-[#333]" />
-          <p className="text-sm text-[#666]">暂无待审核内容</p>
+          <ClipboardCheck className="mb-2 h-12 w-12 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">暂无待审核内容</p>
         </div>
       )}
     </div>

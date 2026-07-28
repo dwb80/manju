@@ -88,12 +88,12 @@ export function VersionHistory({
   }, [selectedVersions, onCompare])
 
   return (
-    <div className="version-history bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden">
+    <div className="version-history bg-card rounded-lg border border-border overflow-hidden">
       {/* 标题 */}
-      <div className="p-3 border-b border-white/10 flex items-center justify-between">
+      <div className="p-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <History className="h-4 w-4 text-[#888]" />
-          <h3 className="text-sm font-medium text-white">版本历史</h3>
+          <History className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-foreground">版本历史</h3>
         </div>
         {onCompare && versions.length >= 2 && (
           <Button
@@ -110,9 +110,9 @@ export function VersionHistory({
 
       {/* 对比模式工具栏 */}
       {compareMode && (
-        <div className="p-3 border-b border-white/10 bg-blue-500/10">
+        <div className="p-3 border-b border-border bg-info/10">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-blue-400">
+            <div className="text-xs text-info">
               已选择 {selectedVersions.length}/2 个版本
             </div>
             {selectedVersions.length === 2 && (
@@ -132,7 +132,7 @@ export function VersionHistory({
       {/* 版本列表 */}
       <div className="overflow-y-auto max-h-[400px]">
         {versions.length === 0 ? (
-          <div className="text-center py-8 text-[#666] text-sm">
+          <div className="text-center py-8 text-muted-foreground text-sm">
             暂无历史版本
           </div>
         ) : (
@@ -140,7 +140,7 @@ export function VersionHistory({
             {versions.map((version) => (
               <div
                 key={version.id}
-                className={`p-3 hover:bg-white/5 transition-colors ${selectedVersions.includes(version.id) ? 'bg-blue-500/10' : ''
+                className={`p-3 hover:bg-muted/50 transition-colors ${selectedVersions.includes(version.id) ? 'bg-info/10' : ''
                   }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -149,28 +149,28 @@ export function VersionHistory({
                       {compareMode && (
                         <div
                           className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer ${selectedVersions.includes(version.id)
-                            ? 'bg-blue-500 border-blue-500'
-                            : 'border-[#666]'
+                            ? 'bg-info border-info'
+                            : 'border-border'
                             }`}
                           onClick={() => toggleVersionSelection(version.id)}
                         >
                           {selectedVersions.includes(version.id) && (
-                            <Check className="h-3 w-3 text-white" />
+                            <Check className="h-3 w-3 text-foreground" />
                           )}
                         </div>
                       )}
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         V{version.version}
                       </span>
-                      <span className="text-xs text-[#888]">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(version.timestamp).toLocaleString()}
                       </span>
                     </div>
-                    <div className="text-xs text-[#888] truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                       {version.changes}
                     </div>
                     {version.author && (
-                      <div className="text-xs text-[#666] mt-1">
+                      <div className="text-xs text-muted-foreground mt-1">
                         作者: {version.author}
                       </div>
                     )}
@@ -202,7 +202,7 @@ export function VersionHistory({
                         variant="ghost"
                         size="sm"
                         onClick={() => onDelete(version.id)}
-                        className="h-7 w-7 p-0 text-red-400 hover:text-red-300"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                         title="删除版本"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -219,9 +219,9 @@ export function VersionHistory({
       {/* 版本对比对话框 */}
       {showCompareDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#1a1a1a] rounded-lg border border-white/10 p-4 w-[640px] max-h-[80vh] overflow-hidden flex flex-col">
+          <div className="bg-card rounded-lg border border-border p-4 w-[640px] max-h-[80vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-medium text-white">版本对比</div>
+              <div className="text-sm font-medium text-foreground">版本对比</div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -235,27 +235,27 @@ export function VersionHistory({
               {compareResult ? (
                 <div className="space-y-4">
                   {/* 这里应该显示diff结果，简化实现 */}
-                  <div className="bg-green-500/10 p-3 rounded border border-green-500/20">
-                    <div className="text-sm font-medium text-green-400 mb-2">新增内容</div>
-                    <pre className="text-xs text-[#888] whitespace-pre-wrap">
+                  <div className="bg-success/10 p-3 rounded border border-success/20">
+                    <div className="text-sm font-medium text-success mb-2">新增内容</div>
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
                       {JSON.stringify(compareResult, null, 2)}
                     </pre>
                   </div>
-                  <div className="bg-red-500/10 p-3 rounded border border-red-500/20">
-                    <div className="text-sm font-medium text-red-400 mb-2">删除内容</div>
-                    <pre className="text-xs text-[#888] whitespace-pre-wrap">
+                  <div className="bg-destructive/10 p-3 rounded border border-destructive/20">
+                    <div className="text-sm font-medium text-destructive mb-2">删除内容</div>
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
                       {/* 显示删除的内容 */}
                     </pre>
                   </div>
-                  <div className="bg-yellow-500/10 p-3 rounded border border-yellow-500/20">
-                    <div className="text-sm font-medium text-yellow-400 mb-2">修改内容</div>
-                    <pre className="text-xs text-[#888] whitespace-pre-wrap">
+                  <div className="bg-chart-5/10 p-3 rounded border border-chart-5/20">
+                    <div className="text-sm font-medium text-chart-5 mb-2">修改内容</div>
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
                       {/* 显示修改的内容 */}
                     </pre>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-[#666]">加载中...</div>
+                <div className="text-center py-8 text-muted-foreground">加载中...</div>
               )}
             </div>
           </div>

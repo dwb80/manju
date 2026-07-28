@@ -244,29 +244,29 @@ export function AIGenerateImageDialog({
       aria-modal="true"
       aria-label={title}
     >
-      <div className="w-full max-w-3xl max-h-[calc(100vh-4rem)] rounded-2xl border border-white/10 bg-[#202020] p-5 shadow-2xl flex flex-col">
+      <div className="w-full max-w-3xl max-h-[calc(100vh-4rem)] rounded-2xl border border-border bg-muted p-5 shadow-2xl flex flex-col">
         {/* 标题栏 */}
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <Wand2 className="h-5 w-5 text-emerald-400" />
-            <h2 className="text-base font-semibold text-white">{title}</h2>
+            <Wand2 className="h-5 w-5 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">{title}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center"
+            className="h-8 w-8 rounded-md hover:bg-muted flex items-center justify-center"
             aria-label="关闭"
             disabled={isSubmitting}
           >
-            <X className="h-4 w-4 text-[#888]" />
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
           {/* 1. 描述 + 风格 + 数量 */}
           <div>
-            <label className="block text-sm font-medium text-[#888] mb-1.5">
-              描述 <span className="text-red-400">*</span>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+              描述 <span className="text-destructive">*</span>
             </label>
             <Textarea
               value={prompt}
@@ -277,7 +277,7 @@ export function AIGenerateImageDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-[#888] mb-1.5">风格</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1.5">风格</label>
               <select
                 value={style}
                 onChange={(e) => setStyle(e.target.value)}
@@ -289,7 +289,7 @@ export function AIGenerateImageDialog({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#888] mb-1.5">数量</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1.5">数量</label>
               <select
                 value={count}
                 onChange={(e) => setCount(e.target.value)}
@@ -308,7 +308,7 @@ export function AIGenerateImageDialog({
               size="sm"
               onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim()}
-              className="bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+              className="bg-primary/20 text-primary hover:bg-primary/30"
             >
               {isGenerating ? (
                 <>
@@ -323,15 +323,15 @@ export function AIGenerateImageDialog({
               )}
             </Button>
             {candidates.length > 0 && !isGenerating && (
-              <span className="text-xs text-[#888]">已生成 {candidates.length} 张候选图，请点击选中</span>
+              <span className="text-xs text-muted-foreground">已生成 {candidates.length} 张候选图，请点击选中</span>
             )}
           </div>
 
           {/* 2. 候选图 */}
           <div>
             {isGenerating ? (
-              <div className="flex items-center justify-center py-8 text-[#888] border border-dashed border-white/10 rounded-lg">
-                <Loader2 className="h-5 w-5 mr-2 animate-spin text-emerald-400" />
+              <div className="flex items-center justify-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+                <Loader2 className="h-5 w-5 mr-2 animate-spin text-primary" />
                 AI 正在生成图片，请稍候…
               </div>
             ) : candidates.length > 0 ? (
@@ -344,26 +344,26 @@ export function AIGenerateImageDialog({
                       type="button"
                       onClick={() => setSelectedIndex(idx)}
                       className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all ${selected
-                          ? "border-emerald-400 ring-2 ring-emerald-400/40 scale-[1.02]"
-                          : "border-white/10 hover:border-white/30"
+                          ? "border-primary ring-2 ring-primary/40 scale-[1.02]"
+                          : "border-border hover:border-border"
                         }`}
                       aria-label={`候选图 ${idx + 1}`}
                     >
                       <img
                         src={url}
                         alt={`候选图 ${idx + 1}`}
-                        className="w-full h-full object-cover bg-[#1a1a1a]"
+                        className="w-full h-full object-cover bg-card"
                         onError={(e) => {
                           const t = e.target as HTMLImageElement;
                           t.style.display = "none";
                         }}
                       />
                       {selected && (
-                        <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
-                          <Check className="h-3.5 w-3.5 text-white" />
+                        <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                          <Check className="h-3.5 w-3.5 text-foreground" />
                         </div>
                       )}
-                      <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/60 text-[10px] text-white/90">
+                      <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/60 text-[10px] text-foreground/90">
                         #{idx + 1}
                       </div>
                     </button>
@@ -371,7 +371,7 @@ export function AIGenerateImageDialog({
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-[#666] border border-dashed border-white/10 rounded-lg">
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
                 <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
                 <span className="text-xs">填写描述后点击「生成预览」</span>
               </div>
@@ -380,14 +380,14 @@ export function AIGenerateImageDialog({
 
           {/* 3. 元数据表单：name + type + extras */}
           {selectedIndex !== null && (
-            <div className="space-y-3 pt-2 border-t border-white/10">
-              <div className="text-xs text-emerald-400 pt-1">
+            <div className="space-y-3 pt-2 border-t border-border">
+              <div className="text-xs text-primary pt-1">
                 ✓ 已选中「{name || "未命名"}」，将创建资产并设置主图为候选 #{selectedIndex + 1}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-[#888] mb-1.5">
-                    名称 <span className="text-red-400">*</span>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+                    名称 <span className="text-destructive">*</span>
                   </label>
                   <input
                     type="text"
@@ -398,7 +398,7 @@ export function AIGenerateImageDialog({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#888] mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     {typeField.label}
                   </label>
                   <select
@@ -416,7 +416,7 @@ export function AIGenerateImageDialog({
                 <div className="space-y-3">
                   {extraFields.map((f) => (
                     <div key={f.name}>
-                      <label className="block text-sm font-medium text-[#888] mb-1.5">{f.label}</label>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1.5">{f.label}</label>
                       <input
                         type="text"
                         value={extras[f.name] ?? ""}
@@ -432,14 +432,14 @@ export function AIGenerateImageDialog({
           )}
 
           {error && (
-            <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2">
+            <div className="text-xs text-warning bg-warning/10 border border-warning/20 rounded-md px-3 py-2">
               {error}
             </div>
           )}
         </div>
 
         {/* 操作按钮 */}
-        <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-white/10 flex-shrink-0">
+        <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-border flex-shrink-0">
           <Button
             type="button"
             size="sm"
@@ -454,7 +454,7 @@ export function AIGenerateImageDialog({
             size="sm"
             onClick={handleConfirm}
             disabled={isSubmitting || isGenerating || selectedIndex === null}
-            className="bg-emerald-500 hover:bg-emerald-600"
+            className="bg-primary hover:bg-primary/90"
           >
             {isSubmitting ? (
               <>

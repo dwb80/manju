@@ -26,7 +26,7 @@ const backLinkStyle: React.CSSProperties = {
   borderRadius: 6,
   background: "transparent",
   color: "white",
-  border: "1px solid rgba(255,255,255,0.15)",
+  border: "1px solid hsl(var(--foreground) / 0.15)",
   cursor: "pointer",
   fontSize: 13,
 };
@@ -37,7 +37,7 @@ const primaryButtonStyle: React.CSSProperties = {
   gap: 4,
   padding: "6px 12px",
   borderRadius: 6,
-  background: "linear-gradient(135deg, rgb(34,197,94) 0%, rgb(16,185,129) 100%)",
+  background: "linear-gradient(135deg, hsl(var(--success)) 0%, hsl(var(--primary)) 100%)",
   color: "white",
   border: "none",
   cursor: "pointer",
@@ -78,17 +78,17 @@ export default function SceneConsistencyPackPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#0a0a0a", color: "white", gap: 12 }}>
-        <Loader2 size={32} className="animate-spin" color="rgb(52,211,153)" />
-        <p style={{ fontSize: 13, color: "#888" }}>正在加载场景「{id}」…</p>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--bg-app)", color: "var(--text-primary)", gap: 12 }}>
+        <Loader2 size={32} className="animate-spin" color="hsl(var(--primary))" />
+        <p style={{ fontSize: 13, color: "var(--text-muted)" }}>正在加载场景「{id}」…</p>
       </div>
     );
   }
 
   if (error || !scene) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#0a0a0a", color: "white", gap: 16 }}>
-        <AlertTriangle size={40} color="rgb(248,113,113)" />
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--bg-app)", color: "var(--text-primary)", gap: 16 }}>
+        <AlertTriangle size={40} color="hsl(var(--destructive))" />
         <h1 style={{ fontSize: 18, fontWeight: 500 }}>{error ?? "场景不存在"}</h1>
         <div style={{ display: "flex", gap: 8 }}>
           <button type="button" style={backLinkStyle} onClick={() => router.push("/scenes")}>
@@ -104,16 +104,16 @@ export default function SceneConsistencyPackPage({ params }: PageProps) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "white", padding: "24px 32px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg-app)", color: "var(--text-primary)", padding: "24px 32px" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button type="button" style={backLinkStyle} onClick={() => router.push("/scenes")}>
             <ArrowLeft size={14} />
             场景工厂
           </button>
-          <span style={{ color: "rgba(255,255,255,0.3)" }}>/</span>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>场景「{scene.name}」</span>
-          <span style={{ color: "rgba(255,255,255,0.3)" }}>/</span>
+          <span style={{ color: "hsl(var(--foreground) / 0.3)" }}>/</span>
+          <span style={{ fontSize: 13, color: "hsl(var(--foreground) / 0.6)" }}>场景「{scene.name}」</span>
+          <span style={{ color: "hsl(var(--foreground) / 0.3)" }}>/</span>
           <span style={{ fontSize: 13, color: "white" }}>一致性包</span>
         </div>
         <ConsistencyPackPanel

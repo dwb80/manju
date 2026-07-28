@@ -49,7 +49,7 @@ export function ProjectDangerDialog({
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <div className="flex items-start gap-3">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-500/15 text-red-200">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-destructive/15 text-destructive">
                             <AlertTriangle className="h-5 w-5" />
                         </div>
                         <div>

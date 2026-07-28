@@ -236,13 +236,13 @@ export function CommentSystem({
   const resolvedCount = comments.filter((c) => c.status === 'resolved').length
 
   return (
-    <div className="comment-system bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden h-full flex flex-col">
+    <div className="comment-system bg-card rounded-lg border border-border overflow-hidden h-full flex flex-col">
       {/* 标题 */}
-      <div className="p-3 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+      <div className="p-3 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-[#888]" />
-          <h3 className="text-sm font-medium text-white">评论与批注</h3>
-          <span className="text-xs text-[#666]">({comments.length})</span>
+          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-foreground">评论与批注</h3>
+          <span className="text-xs text-muted-foreground">({comments.length})</span>
         </div>
         {selectedText && (
           <Button
@@ -258,12 +258,12 @@ export function CommentSystem({
       </div>
 
       {/* 过滤器 */}
-      <div className="p-2 border-b border-white/10 flex gap-2 flex-shrink-0">
+      <div className="p-2 border-b border-border flex gap-2 flex-shrink-0">
         <button
           onClick={() => setFilter('all')}
           className={`text-xs px-2 py-1 rounded ${filter === 'all'
-            ? 'bg-white/10 text-white'
-            : 'text-[#888] hover:text-white'
+            ? 'bg-muted text-foreground'
+            : 'text-muted-foreground hover:text-foreground'
             }`}
         >
           全部 ({comments.length})
@@ -271,8 +271,8 @@ export function CommentSystem({
         <button
           onClick={() => setFilter('active')}
           className={`text-xs px-2 py-1 rounded ${filter === 'active'
-            ? 'bg-blue-500/20 text-blue-400'
-            : 'text-[#888] hover:text-white'
+            ? 'bg-info/20 text-info'
+            : 'text-muted-foreground hover:text-foreground'
             }`}
         >
           活跃 ({activeCount})
@@ -280,8 +280,8 @@ export function CommentSystem({
         <button
           onClick={() => setFilter('resolved')}
           className={`text-xs px-2 py-1 rounded ${filter === 'resolved'
-            ? 'bg-emerald-500/20 text-emerald-400'
-            : 'text-[#888] hover:text-white'
+            ? 'bg-primary/20 text-primary'
+            : 'text-muted-foreground hover:text-foreground'
             }`}
         >
           已解决 ({resolvedCount})
@@ -290,9 +290,9 @@ export function CommentSystem({
 
       {/* 添加评论对话框 */}
       {showAddComment && selectedText && (
-        <div className="p-3 border-b border-white/10 bg-blue-500/5 flex-shrink-0">
+        <div className="p-3 border-b border-border bg-info/5 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs text-[#888]">选中文字：</div>
+            <div className="text-xs text-muted-foreground">选中文字：</div>
             <Button
               variant="ghost"
               size="sm"
@@ -302,14 +302,14 @@ export function CommentSystem({
               <X className="h-3 w-3" />
             </Button>
           </div>
-          <div className="bg-white/5 p-2 rounded mb-2 text-xs text-white border border-white/10">
+          <div className="bg-muted/50 p-2 rounded mb-2 text-xs text-foreground border border-border">
             {selectedText}
           </div>
           <textarea
             value={newCommentText}
             onChange={(e) => setNewCommentText(e.target.value)}
             placeholder="输入评论内容..."
-            className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm text-white resize-none"
+            className="w-full bg-muted/50 border border-border rounded p-2 text-sm text-foreground resize-none"
             rows={3}
           />
           <div className="flex justify-end gap-2 mt-2">
@@ -337,9 +337,9 @@ export function CommentSystem({
       {/* 评论列表 */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="text-center py-8 text-[#666] text-sm">加载中...</div>
+          <div className="text-center py-8 text-muted-foreground text-sm">加载中...</div>
         ) : filteredComments.length === 0 ? (
-          <div className="text-center py-8 text-[#666] text-sm">
+          <div className="text-center py-8 text-muted-foreground text-sm">
             {filter === 'all' ? '暂无评论' : `暂无${filter === 'active' ? '活跃' : '已解决'}评论`}
           </div>
         ) : (
@@ -351,25 +351,25 @@ export function CommentSystem({
                   }`}
               >
                 {/* 选中的文本 */}
-                <div className="bg-white/5 p-2 rounded mb-2 text-xs text-white border-l-2 border-blue-500">
+                <div className="bg-muted/50 p-2 rounded mb-2 text-xs text-foreground border-l-2 border-info">
                   {comment.selectedText}
                 </div>
 
                 {/* 评论内容 */}
                 <div className="flex items-start gap-2 mb-2">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <User className="h-3 w-3 text-blue-400" />
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-info/20 flex items-center justify-center">
+                    <User className="h-3 w-3 text-info" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         {comment.author}
                       </span>
-                      <span className="text-xs text-[#666]">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(comment.timestamp).toLocaleString()}
                       </span>
                     </div>
-                    <div className="text-sm text-white">{comment.text}</div>
+                    <div className="text-sm text-foreground">{comment.text}</div>
                   </div>
                 </div>
 
@@ -378,19 +378,19 @@ export function CommentSystem({
                   <div className="ml-8 space-y-2 mb-2">
                     {comment.replies.map((reply) => (
                       <div key={reply.id} className="flex items-start gap-2">
-                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-white/5 flex items-center justify-center">
-                          <User className="h-2.5 w-2.5 text-[#888]" />
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-muted/50 flex items-center justify-center">
+                          <User className="h-2.5 w-2.5 text-muted-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium text-white">
+                            <span className="text-xs font-medium text-foreground">
                               {reply.author}
                             </span>
-                            <span className="text-xs text-[#666]">
+                            <span className="text-xs text-muted-foreground">
                               {new Date(reply.timestamp).toLocaleString()}
                             </span>
                           </div>
-                          <div className="text-xs text-white">{reply.text}</div>
+                          <div className="text-xs text-foreground">{reply.text}</div>
                         </div>
                       </div>
                     ))}
@@ -404,7 +404,7 @@ export function CommentSystem({
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       placeholder="输入回复..."
-                      className="w-full bg-white/5 border border-white/10 rounded p-2 text-xs text-white resize-none"
+                      className="w-full bg-muted/50 border border-border rounded p-2 text-xs text-foreground resize-none"
                       rows={2}
                     />
                     <div className="flex justify-end gap-2 mt-1">
@@ -448,7 +448,7 @@ export function CommentSystem({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleResolveComment(comment.id)}
-                      className="h-6 text-xs text-emerald-400 hover:text-emerald-300"
+                      className="h-6 text-xs text-primary hover:text-primary"
                     >
                       <CheckCircle className="h-3 w-3 mr-1" />
                       解决
@@ -458,7 +458,7 @@ export function CommentSystem({
                     variant="ghost"
                     size="sm"
                     onClick={() => requestDeleteComment(comment.id)}
-                    className="h-6 text-xs text-red-400 hover:text-red-300"
+                    className="h-6 text-xs text-destructive hover:text-destructive"
                   >
                     <Trash2 className="h-3 w-3 mr-1" />
                     删除

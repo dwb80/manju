@@ -121,9 +121,9 @@ const sceneFields: FormFieldConfig[] = [
 
 /** 场景类型颜色映射 */
 const typeColors: Record<string, string> = {
-  indoor: "bg-blue-500/20 text-blue-400",
-  outdoor: "bg-emerald-500/20 text-emerald-400",
-  virtual: "bg-purple-500/20 text-purple-400",
+  indoor: "bg-info/20 text-info",
+  outdoor: "bg-primary/20 text-primary",
+  virtual: "bg-chart-1/20 text-chart-1",
 };
 
 /** FactoryCRUDPage 需要的全部配置。 */
@@ -186,9 +186,9 @@ function SceneCard({
 
   return (
     <div
-      className={`group relative flex flex-col rounded-lg border bg-[#252525] overflow-hidden transition-colors ${actions.selected
-          ? "border-emerald-500 ring-1 ring-emerald-500/40"
-          : "border-white/10 hover:border-white/20"
+      className={`group relative flex flex-col rounded-lg border bg-secondary overflow-hidden transition-colors ${actions.selected
+          ? "border-primary ring-1 ring-primary/40"
+          : "border-border hover:border-border"
         }`}
     >
       <button
@@ -198,17 +198,17 @@ function SceneCard({
           actions.onToggleSelect();
         }}
         className={`absolute left-2 top-2 z-10 grid h-5 w-5 place-items-center rounded border transition-opacity ${actions.selected
-            ? "border-emerald-500 bg-emerald-500 opacity-100"
-            : "border-white/40 bg-black/40 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
+            ? "border-primary bg-primary opacity-100"
+            : "border-border bg-black/40 opacity-0 group-hover:opacity-100 hover:border-primary"
           }`}
         aria-label={actions.selected ? "取消选择" : "选择"}
       >
         {actions.selected && (
-          <CheckSquare className="h-3 w-3 text-white" />
+          <CheckSquare className="h-3 w-3 text-foreground" />
         )}
       </button>
 
-      <div className="relative aspect-[16/9] bg-[#1a1a1a] flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-[16/9] bg-card flex items-center justify-center overflow-hidden">
         {scene.image ? (
           <img
             src={scene.image}
@@ -233,7 +233,7 @@ function SceneCard({
           <Avatar src={null} name={scene.name} size={56} />
         </div>
         {(scene.time_of_day || scene.weather) && (
-          <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center gap-1.5 text-[10px] text-white/90">
+          <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center gap-1.5 text-[10px] text-foreground/90">
             {scene.time_of_day && (
               <span className="px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm">{scene.time_of_day}</span>
             )}
@@ -245,14 +245,14 @@ function SceneCard({
       </div>
       <div className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-medium text-white">{scene.name}</h3>
-          <span className={`px-2 py-0.5 rounded text-xs ${typeColors[scene.type] ?? "bg-gray-500/20 text-gray-400"}`}>
+          <h3 className="font-medium text-foreground">{scene.name}</h3>
+          <span className={`px-2 py-0.5 rounded text-xs ${typeColors[scene.type] ?? "bg-muted/20 text-muted-foreground"}`}>
             {typeLabels[scene.type] ?? scene.type}
           </span>
         </div>
-        <p className="text-xs text-[#888] line-clamp-2 mb-2">{scene.description}</p>
+        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{scene.description}</p>
         <div className="flex items-center justify-between">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[#666]">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {scene.lighting && <span>光线: {scene.lighting}</span>}
           </div>
           <div className="flex items-center gap-2">
@@ -265,7 +265,7 @@ function SceneCard({
               onClick={handleInsert}
               disabled={inserting}
               title="基于此场景快速新建一个分镜"
-              className="text-emerald-300"
+              className="text-primary"
             >
               {inserting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
             </Button>
@@ -275,13 +275,13 @@ function SceneCard({
                 size="sm"
                 onClick={actions.onCopyToProjects}
                 title="复制到其他项目"
-                className="text-emerald-300"
+                className="text-primary"
               >
                 <Copy className="h-4 w-4" />
               </Button>
             )}
             <Button variant="ghost" size="sm" onClick={actions.onDelete}>
-              <Trash2 className="h-4 w-4 text-red-400" />
+              <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
         </div>

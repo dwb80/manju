@@ -20,7 +20,7 @@
  * @module ai-tasks/page
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ListChecks,
   CheckCircle2,
@@ -28,10 +28,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { AITaskQueue, type AITask } from "@/components/dashboard/ai-task-queue";
-import {
-  StandalonePageHeader,
-  StatsOverview,
-} from "@/components/layout";
+import { PageContainer, PageCard } from "@/components/layout/page-container";
+import { FilterSelect, ModuleToolbar, SearchInput, StatCard, StatCardGrid } from "@/components/shared";
 import { createLogger } from "@/lib/logger";
 import { api } from "@/lib/api-client";
 
@@ -69,6 +67,8 @@ export default function AITasksPage() {
   const [lastUpdate, setLastUpdate] = useState<string>("");
   // 总任务数
   const [totalCount, setTotalCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   /**
    * 加载任务列表数据
@@ -191,63 +191,51 @@ export default function AITasksPage() {
   const runningCount = tasks.filter(
     (t) => t.status === "pending" || t.status === "processing",
   ).length
+  const filteredTasks = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return tasks.filter((task) => {
+      const matchesQuery = !query || [task.title, task.model, task.type].some((value) => value.toLowerCase().includes(query));
+      return matchesQuery && (!statusFilter || task.status === statusFilter);
+    });
+  }, [searchQuery, statusFilter, tasks]);
 
   return (
-    <main className="min-h-screen bg-[#181818] text-[#ececec]">
-      {/* === 统一页面头 === */}
-      <StandalonePageHeader
-        title="AI 任务队列"
-        description="监控和管理跨项目、跨会话的AI生成任务，支持图片和视频生成任务的搜索、筛选和批量操作"
-        breadcrumbs={["首页", "AI任务队列"]}
-        extraRight={
-          <div className="flex items-center gap-2">
-            <ListChecks className="h-4 w-4" />
-            <span>共 {totalCount} 个任务</span>
-          </div>
+    <PageContainer
+      title="AI 任务队列"
+      description="监控和管理跨项目、跨会话的 AI 生成任务"
+      actions={<span className="text-caption text-muted-foreground">共 {totalCount} 个任务</span>}
+    >
+      <PageCard className="mb-4">
+        <StatCardGrid columns={4}>
+          <StatCard label="总任务" value={totalCount} icon={ListChecks} color="blue" />
+          <StatCard label="进行中" value={runningCount} icon={Loader2} color="orange" />
+          <StatCard label="已完成" value={successCount} icon={CheckCircle2} color="emerald" />
+          <StatCard label="失败" value={failedCount} icon={XCircle} color="orange" />
+        </StatCardGrid>
+      </PageCard>
+
+      <ModuleToolbar
+        left={
+          <>
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="搜索任务标题、模型或类型..." />
+            <FilterSelect
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="全部状态"
+              options={[
+                { value: "pending", label: "队列中" },
+                { value: "processing", label: "进行中" },
+                { value: "success", label: "成功" },
+                { value: "failed", label: "失败" },
+              ]}
+            />
+          </>
         }
       />
 
-      <div className="px-6 py-4">
-        {/* === 统一统计卡组 === */}
-        <StatsOverview
-          columns={4}
-          cards={[
-            {
-              tone: "blue",
-              icon: <ListChecks className="h-4 w-4" />,
-              title: "总任务",
-              value: totalCount,
-              sub: "全部任务",
-            },
-            {
-              tone: "amber",
-              icon: <Loader2 className="h-4 w-4" />,
-              title: "进行中",
-              value: runningCount,
-              sub: "排队 / 运行",
-            },
-            {
-              tone: "emerald",
-              icon: <CheckCircle2 className="h-4 w-4" />,
-              title: "已完成",
-              value: successCount,
-              sub: "成功",
-            },
-            {
-              tone: "red",
-              icon: <XCircle className="h-4 w-4" />,
-              title: "失败",
-              value: failedCount,
-              sub: "需处理",
-            },
-          ]}
-        />
-      </div>
-
-      {/* 页面主体：任务队列组件 */}
-      <section className="px-6 py-6">
+      <section>
         <AITaskQueue
-          tasks={tasks}
+          tasks={filteredTasks}
           onRefresh={handleRefresh}
           onCancel={handleCancel}
           onRetry={handleRetry}
@@ -257,7 +245,7 @@ export default function AITasksPage() {
       </section>
 
       {/* 页面底部信息 */}
-      <footer className="border-t border-white/10 px-6 py-4 text-xs text-[#666]">
+      <footer className="mt-4 border-t border-border py-3 text-caption text-muted-foreground">
         <div className="flex items-center justify-between">
           <div>数据来源：真实API接口</div>
           <div suppressHydrationWarning>
@@ -265,6 +253,6 @@ export default function AITasksPage() {
           </div>
         </div>
       </footer>
-    </main>
+    </PageContainer>
   );
 }

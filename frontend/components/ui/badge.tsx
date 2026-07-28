@@ -1,4 +1,4 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
-const styles = { default: "bg-white text-black", secondary: "bg-white/10 text-white", destructive: "bg-red-500/15 text-red-300", outline: "border border-white/15 text-neutral-300", success: "bg-emerald-500/15 text-emerald-300", warning: "bg-amber-500/15 text-amber-300", info: "bg-blue-500/15 text-blue-300", muted: "bg-neutral-700/50 text-neutral-300" };
+const styles = { default: "bg-secondary text-secondary-foreground", secondary: "bg-muted text-muted-foreground", destructive: "bg-destructive/15 text-destructive", outline: "border border-border text-muted-foreground", success: "bg-success/15 text-success", warning: "bg-warning/15 text-warning", info: "bg-info/15 text-info", muted: "bg-muted/50 text-muted-foreground" };
 export function Badge({ className, variant = "default", ...props }: HTMLAttributes<HTMLSpanElement> & { variant?: keyof typeof styles }) { return <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", styles[variant], className)} {...props} />; }

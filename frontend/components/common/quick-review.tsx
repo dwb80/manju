@@ -57,7 +57,7 @@ export function QuickReview({ contentId, onApprove, onReject, onPending }: Quick
   };
 
   return (
-    <div className="space-y-4 rounded-lg border border-white/10 bg-[#252525] p-4">
+    <div className="space-y-4 rounded-lg border border-border bg-secondary p-4">
       {/* 快捷按钮 */}
       <div className="flex gap-2">
         <Button
@@ -84,7 +84,7 @@ export function QuickReview({ contentId, onApprove, onReject, onPending }: Quick
 
       {/* 快捷短语 */}
       <div>
-        <div className="mb-2 text-xs font-medium text-[#888]">快捷短语</div>
+        <div className="mb-2 text-xs font-medium text-muted-foreground">快捷短语</div>
         <div className="flex flex-wrap gap-2">
           {quickComments.map((comment) => (
             <button
@@ -95,8 +95,8 @@ export function QuickReview({ contentId, onApprove, onReject, onPending }: Quick
               }}
               className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
                 selectedComment === comment.label
-                  ? "border-white/30 bg-white/10 text-white"
-                  : "border-white/10 bg-transparent text-[#888] hover:border-white/20 hover:text-white"
+                  ? "border-border bg-muted text-foreground"
+                  : "border-border bg-transparent text-muted-foreground hover:border-border hover:text-foreground"
               }`}
               aria-pressed={selectedComment === comment.label}
             >
@@ -108,12 +108,12 @@ export function QuickReview({ contentId, onApprove, onReject, onPending }: Quick
 
       {/* 自定义备注 */}
       <div>
-        <label htmlFor="custom-comment" className="mb-2 block text-xs font-medium text-[#888]">
+        <label htmlFor="custom-comment" className="mb-2 block text-xs font-medium text-muted-foreground">
           审核备注（可选）
         </label>
         <textarea
           id="custom-comment"
-          className="w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-white placeholder-[#666] focus:border-emerald-500/50 focus:outline-none"
+          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
           placeholder="输入详细的审核意见..."
           rows={3}
           value={customComment}
@@ -122,15 +122,15 @@ export function QuickReview({ contentId, onApprove, onReject, onPending }: Quick
       </div>
 
       {/* 键盘快捷键提示 */}
-      <div className="flex items-center justify-between text-xs text-[#666]">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         <div>
-          <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">A</kbd> 通过
+          <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">A</kbd> 通过
         </div>
         <div>
-          <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">R</kbd> 拒绝
+          <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">R</kbd> 拒绝
         </div>
         <div>
-          <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">Enter</kbd> 提交
+          <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">Enter</kbd> 提交
         </div>
       </div>
     </div>

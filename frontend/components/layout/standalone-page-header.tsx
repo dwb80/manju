@@ -58,7 +58,7 @@ export interface StandalonePageHeaderProps {
   extraRight?: ReactNode;
   /** 返回路径（默认 "/"） */
   backPath?: string;
-  /** 自定义背景色（默认 #181818） */
+  /** 自定义背景色（默认使用顶部栏语义令牌） */
   backgroundColor?: string;
   /** 自定义背景透明度（默认 95） */
   opacity?: number;
@@ -73,7 +73,7 @@ export function StandalonePageHeader({
   breadcrumbs = [],
   extraRight,
   backPath = "/",
-  backgroundColor = "#181818",
+  backgroundColor = "var(--bg-topbar)",
   opacity = 95,
 }: StandalonePageHeaderProps) {
   const router = useRouter();
@@ -95,8 +95,8 @@ export function StandalonePageHeader({
 
   return (
     <header
-      className="sticky top-0 z-10 border-b border-white/10 px-6 py-4 backdrop-blur"
-      style={{ backgroundColor: `${backgroundColor}/${opacity}` }}
+      className="sticky top-0 z-10 border-b border-border px-6 py-4 backdrop-blur"
+      style={{ backgroundColor: `color-mix(in srgb, ${backgroundColor} ${opacity}%, transparent)` }}
     >
       <div className="flex items-center justify-between">
         {/* 左侧：返回按钮 + 面包屑 */}
@@ -104,7 +104,7 @@ export function StandalonePageHeader({
           {/* 返回首页按钮 */}
           <button
             onClick={handleBack}
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#888] transition-colors hover:bg-white/10 hover:text-white"
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label={`返回${backPath === "/" ? "首页" : "上一页"}`}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -113,7 +113,7 @@ export function StandalonePageHeader({
 
           {/* 分隔线 */}
           {breadcrumbs.length > 0 && (
-            <div className="h-4 w-px bg-white/20" aria-hidden="true" />
+            <div className="h-4 w-px bg-muted" aria-hidden="true" />
           )}
 
           {/* 面包屑导航 */}
@@ -165,7 +165,7 @@ export function StandalonePageHeader({
 
         {/* 右侧：辅助信息 */}
         {extraRight && (
-          <div className="flex items-center gap-4 text-xs text-[#888]">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
             {extraRight}
           </div>
         )}
@@ -173,9 +173,9 @@ export function StandalonePageHeader({
 
       {/* 页面主标题与描述 */}
       <div className="mt-4">
-        <h1 className="text-2xl font-bold text-white">{title}</h1>
+        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
         {description && (
-          <p className="mt-1 text-sm text-[#888]">{description}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         )}
       </div>
     </header>

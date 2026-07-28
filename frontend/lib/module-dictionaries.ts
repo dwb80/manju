@@ -32,14 +32,14 @@ export const STORYBOARD_STATUS_LABELS: Record<StoryboardStatus, string> = {
 };
 
 export const STORYBOARD_STATUS_COLORS: Record<StoryboardStatus, string> = {
-  draft: "bg-gray-500/20 text-gray-400",
-  generating: "bg-blue-500/20 text-blue-400",
-  ready: "bg-emerald-500/20 text-emerald-400",
-  in_review: "bg-yellow-500/20 text-yellow-400",
-  approved: "bg-green-500/20 text-green-400",
-  needs_fix: "bg-orange-500/20 text-orange-400",
-  rejected: "bg-red-500/20 text-red-400",
-  archived: "bg-purple-500/20 text-purple-400",
+  draft: "bg-muted/20 text-muted-foreground",
+  generating: "bg-info/20 text-info",
+  ready: "bg-primary/20 text-primary",
+  in_review: "bg-chart-5/20 text-chart-5",
+  approved: "bg-success/20 text-success",
+  needs_fix: "bg-chart-3/20 text-chart-3",
+  rejected: "bg-destructive/20 text-destructive",
+  archived: "bg-chart-1/20 text-chart-1",
 };
 
 export const STORYBOARD_STATUS_OPTIONS: FilterOption[] = [
@@ -76,14 +76,14 @@ export const SHOT_STATUS_LABELS: Record<ShotStatus, string> = {
 };
 
 export const SHOT_STATUS_COLORS: Record<ShotStatus, string> = {
-  draft: "bg-gray-500/20 text-gray-400",
-  generating: "bg-blue-500/20 text-blue-400",
-  ready: "bg-emerald-500/20 text-emerald-400",
-  in_review: "bg-yellow-500/20 text-yellow-400",
-  approved: "bg-green-500/20 text-green-400",
-  needs_fix: "bg-orange-500/20 text-orange-400",
-  rejected: "bg-red-500/20 text-red-400",
-  archived: "bg-purple-500/20 text-purple-400",
+  draft: "bg-muted/20 text-muted-foreground",
+  generating: "bg-info/20 text-info",
+  ready: "bg-primary/20 text-primary",
+  in_review: "bg-chart-5/20 text-chart-5",
+  approved: "bg-success/20 text-success",
+  needs_fix: "bg-chart-3/20 text-chart-3",
+  rejected: "bg-destructive/20 text-destructive",
+  archived: "bg-chart-1/20 text-chart-1",
 };
 
 export const SHOT_STATUS_OPTIONS: FilterOption[] = [
@@ -108,10 +108,10 @@ export const VIDEO_STATUS_LABELS: Record<VideoTaskStatus, string> = {
 };
 
 export const VIDEO_STATUS_COLORS: Record<VideoTaskStatus, string> = {
-  queued: "bg-gray-500/20 text-gray-400",
-  processing: "bg-blue-500/20 text-blue-400",
-  completed: "bg-emerald-500/20 text-emerald-400",
-  failed: "bg-red-500/20 text-red-400",
+  queued: "bg-muted/20 text-muted-foreground",
+  processing: "bg-info/20 text-info",
+  completed: "bg-primary/20 text-primary",
+  failed: "bg-destructive/20 text-destructive",
 };
 
 export const VIDEO_STATUS_OPTIONS: FilterOption[] = [
@@ -131,9 +131,9 @@ export const AUDIO_TYPE_LABELS: Record<AudioKind, string> = {
 };
 
 export const AUDIO_TYPE_COLORS: Record<AudioKind, string> = {
-  voiceover: "bg-emerald-500/20 text-emerald-400",
-  bgm: "bg-blue-500/20 text-blue-400",
-  sfx: "bg-purple-500/20 text-purple-400",
+  voiceover: "bg-primary/20 text-primary",
+  bgm: "bg-info/20 text-info",
+  sfx: "bg-chart-1/20 text-chart-1",
 };
 
 export const AUDIO_TYPE_OPTIONS: FilterOption[] = [
@@ -156,10 +156,10 @@ export const PROJECT_CLIP_STATUS_LABELS: Record<string, string> = {
 };
 
 export const PROJECT_CLIP_STATUS_COLORS: Record<string, string> = {
-  todo: "bg-gray-500/20 text-gray-400",
-  editing: "bg-blue-500/20 text-blue-400",
-  review: "bg-yellow-500/20 text-yellow-400",
-  done: "bg-emerald-500/20 text-emerald-400",
+  todo: "bg-muted/20 text-muted-foreground",
+  editing: "bg-info/20 text-info",
+  review: "bg-chart-5/20 text-chart-5",
+  done: "bg-primary/20 text-primary",
 };
 
 export const PROJECT_CLIP_STATUS_OPTIONS: { value: string; label: string }[] = [

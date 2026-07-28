@@ -136,10 +136,10 @@ const characterFields: FormFieldConfig[] = [
 
 /** 角色类型颜色映射 */
 const roleColors: Record<string, string> = {
-  protagonist: "bg-emerald-500/20 text-emerald-400",
-  supporting: "bg-blue-500/20 text-blue-400",
-  antagonist: "bg-red-500/20 text-red-400",
-  minor: "bg-gray-500/20 text-gray-400",
+  protagonist: "bg-primary/20 text-primary",
+  supporting: "bg-info/20 text-info",
+  antagonist: "bg-destructive/20 text-destructive",
+  minor: "bg-muted/20 text-muted-foreground",
 };
 
 /** 角色卡片（含 UsageBadge onOpenSource + 插入到分镜） */
@@ -200,10 +200,10 @@ function CharacterCard({
   return (
     <>
       <div
-        className={`group relative rounded-lg border bg-[#202020] p-4 transition-colors ${
+        className={`group relative rounded-lg border bg-muted p-4 transition-colors ${
           actions.selected
-            ? "border-emerald-500 ring-1 ring-emerald-500/40"
-            : "border-white/10 hover:border-emerald-500/50"
+            ? "border-primary ring-1 ring-primary/40"
+            : "border-border hover:border-primary/50"
         }`}
       >
       <button
@@ -214,27 +214,27 @@ function CharacterCard({
         }}
         className={`absolute left-2 top-2 z-10 grid h-5 w-5 place-items-center rounded border transition-opacity ${
           actions.selected
-            ? "border-emerald-500 bg-emerald-500 opacity-100"
-            : "border-white/40 bg-black/30 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
+            ? "border-primary bg-primary opacity-100"
+            : "border-border bg-black/30 opacity-0 group-hover:opacity-100 hover:border-primary"
         }`}
         aria-label={actions.selected ? "取消选择" : "选择"}
       >
         {actions.selected && (
-          <CheckSquare className="h-3 w-3 text-white" />
+          <CheckSquare className="h-3 w-3 text-foreground" />
         )}
       </button>
 
       <div className="flex items-center gap-3 mb-3 pl-7">
         <Avatar src={character.image} name={character.name} size={40} />
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-medium text-white truncate">{character.name}</h3>
-          <span className={`text-xs px-1.5 py-0.5 rounded ${roleColors[character.role] ?? "bg-gray-500/20 text-gray-400"}`}>
+          <h3 className="text-sm font-medium text-foreground truncate">{character.name}</h3>
+          <span className={`text-xs px-1.5 py-0.5 rounded ${roleColors[character.role] ?? "bg-muted/20 text-muted-foreground"}`}>
             {roleLabels[character.role] ?? character.role}
           </span>
         </div>
         {!character.image && (
           <span
-            className="hidden group-hover:flex items-center gap-1 text-[10px] text-emerald-400/80 bg-emerald-500/10 px-1.5 py-0.5 rounded"
+            className="hidden group-hover:flex items-center gap-1 text-[10px] text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded"
             title="可上传角色形象图"
           >
             <ImageIcon className="h-3 w-3" />
@@ -246,43 +246,43 @@ function CharacterCard({
       {/* 身份 + 年龄 + 性别 */}
       <div className="flex flex-wrap gap-1 mb-2">
         {character.identity && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300">{character.identity}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-info/10 text-info">{character.identity}</span>
         )}
         {character.gender && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-chart-1/10 text-chart-1">
             {character.gender === "male" ? "男" : character.gender === "female" ? "女" : "其他"}
           </span>
         )}
         {character.age !== undefined && character.age > 0 && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300">{character.age}岁</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3">{character.age}岁</span>
         )}
         {character.dialogue_count !== undefined && character.dialogue_count > 0 && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/10 text-gray-400">{character.dialogue_count}句对白</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/10 text-muted-foreground">{character.dialogue_count}句对白</span>
         )}
       </div>
 
       {/* 外貌概览 */}
       {(character.face || character.hair || character.body || character.temperament) && (
-        <p className="text-[10px] text-[#666] mb-2 line-clamp-2">
+        <p className="text-[10px] text-muted-foreground mb-2 line-clamp-2">
           {[character.face, character.hair, character.body, character.temperament].filter(Boolean).join(" / ")}
         </p>
       )}
 
       {/* 服装概览 */}
       {(character.costume_name || character.costume_color || character.costume_style) && (
-        <p className="text-[10px] text-[#666] mb-2 line-clamp-1">
+        <p className="text-[10px] text-muted-foreground mb-2 line-clamp-1">
           {[character.costume_name, character.costume_color, character.costume_style].filter(Boolean).join(" / ")}
         </p>
       )}
 
       {character.description && (
-        <p className="text-xs text-[#888] mb-2 line-clamp-2">{character.description}</p>
+        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{character.description}</p>
       )}
 
       {Array.isArray(character.traits) && character.traits.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">
           {character.traits.map((trait, idx) => (
-            <span key={idx} className="text-xs px-1.5 py-0.5 rounded bg-white/5 text-[#aaa]">
+            <span key={idx} className="text-xs px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground">
               {trait}
             </span>
           ))}
@@ -310,7 +310,7 @@ function CharacterCard({
           onClick={handleInsert}
           disabled={inserting}
           title="基于此角色快速新建一个分镜"
-          className="text-emerald-300"
+          className="text-primary"
         >
           {inserting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
         </Button>
@@ -320,12 +320,12 @@ function CharacterCard({
             size="sm"
             onClick={actions.onCopyToProjects}
             title="复制到其他项目"
-            className="text-emerald-300"
+            className="text-primary"
           >
             <Copy className="h-3 w-3" />
           </Button>
         )}
-        <Button variant="ghost" size="sm" onClick={actions.onDelete} className="text-red-400">
+        <Button variant="ghost" size="sm" onClick={actions.onDelete} className="text-destructive">
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>

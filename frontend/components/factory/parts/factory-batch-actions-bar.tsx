@@ -49,9 +49,9 @@ export function FactoryBatchActionsBar({
   onChangeType?: (value: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5">
-      <span className="text-xs font-medium text-emerald-300">已选 {count} 项</span>
-      <span className="h-4 w-px bg-white/10" />
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5">
+      <span className="text-xs font-medium text-primary">已选 {count} 项</span>
+      <span className="h-4 w-px bg-muted" />
       <Button variant="ghost" size="sm" onClick={onSelectAll} className="text-xs">
         <CheckSquare className="mr-1 h-3 w-3" />
         {selectAllLabel}
@@ -62,7 +62,7 @@ export function FactoryBatchActionsBar({
       </Button>
       {batchTypeConfig && onChangeType && (
         <>
-          <span className="h-4 w-px bg-white/10" />
+          <span className="h-4 w-px bg-muted" />
           <BatchChangeTypeMenu
             options={batchTypeConfig.options}
             onSelect={onChangeType}

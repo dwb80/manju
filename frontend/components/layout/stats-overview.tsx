@@ -64,46 +64,46 @@ const TONE_CLASS: Record<StatsCardTone, {
   iconText: string;
 }> = {
   blue: {
-    border: "border-blue-500/20",
-    bg: "bg-blue-500/10",
-    text: "text-blue-300",
-    iconBg: "bg-blue-500/20",
-    iconText: "text-blue-400",
+    border: "border-info/20",
+    bg: "bg-info/10",
+    text: "text-info",
+    iconBg: "bg-info/20",
+    iconText: "text-info",
   },
   purple: {
-    border: "border-purple-500/20",
-    bg: "bg-purple-500/10",
-    text: "text-purple-300",
-    iconBg: "bg-purple-500/20",
-    iconText: "text-purple-400",
+    border: "border-chart-1/20",
+    bg: "bg-chart-1/10",
+    text: "text-chart-1",
+    iconBg: "bg-chart-1/20",
+    iconText: "text-chart-1",
   },
   amber: {
-    border: "border-amber-500/20",
-    bg: "bg-amber-500/10",
-    text: "text-amber-300",
-    iconBg: "bg-amber-500/20",
-    iconText: "text-amber-400",
+    border: "border-warning/20",
+    bg: "bg-warning/10",
+    text: "text-warning",
+    iconBg: "bg-warning/20",
+    iconText: "text-warning",
   },
   emerald: {
-    border: "border-emerald-500/20",
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-300",
-    iconBg: "bg-emerald-500/20",
-    iconText: "text-emerald-400",
+    border: "border-primary/20",
+    bg: "bg-primary/10",
+    text: "text-primary",
+    iconBg: "bg-primary/20",
+    iconText: "text-primary",
   },
   red: {
-    border: "border-red-500/20",
-    bg: "bg-red-500/10",
-    text: "text-red-300",
-    iconBg: "bg-red-500/20",
-    iconText: "text-red-400",
+    border: "border-destructive/20",
+    bg: "bg-destructive/10",
+    text: "text-destructive",
+    iconBg: "bg-destructive/20",
+    iconText: "text-destructive",
   },
   cyan: {
-    border: "border-cyan-500/20",
-    bg: "bg-cyan-500/10",
-    text: "text-cyan-300",
-    iconBg: "bg-cyan-500/20",
-    iconText: "text-cyan-400",
+    border: "border-chart-2/20",
+    bg: "bg-chart-2/10",
+    text: "text-chart-2",
+    iconBg: "bg-chart-2/20",
+    iconText: "text-chart-2",
   },
 };
 
@@ -159,7 +159,7 @@ export function StatsOverview({
                   <span className={tone.iconText}>{card.icon}</span>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">{card.title}</div>
+                  <div className="text-sm font-semibold text-foreground">{card.title}</div>
                   {card.sub && (
                     <div className={`text-xs ${tone.text}`}>{card.sub}</div>
                   )}
@@ -167,7 +167,7 @@ export function StatsOverview({
               </div>
               {/* 右侧：主数值 */}
               <div className="text-right">
-                <div className="text-lg font-bold text-white">{card.value}</div>
+                <div className="text-lg font-bold text-foreground">{card.value}</div>
               </div>
             </div>
           </div>

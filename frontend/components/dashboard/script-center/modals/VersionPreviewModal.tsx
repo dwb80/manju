@@ -90,10 +90,10 @@ export function VersionPreviewModal({ version, onClose }: VersionPreviewModalPro
       maxHeight={Math.min(640, typeof window !== 'undefined' ? window.innerHeight - 80 : 640)}
     >
       {version.changes && (
-        <div className="text-xs text-[#888] px-4 pt-2">{version.changes}</div>
+        <div className="text-xs text-muted-foreground px-4 pt-2">{version.changes}</div>
       )}
       <div className="flex-1 overflow-y-auto p-4">
-        <pre className="text-xs text-[#ccc] whitespace-pre-wrap">
+        <pre className="text-xs text-foreground/80 whitespace-pre-wrap">
           {extractTextFromEditorJson(version.content)}
         </pre>
       </div>

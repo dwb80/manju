@@ -270,11 +270,11 @@ export function ProjectDataTab({
    * 获取进度条颜色
    */
   const getProgressColor = (percentage: number): string => {
-    if (percentage >= 80) return "bg-emerald-500";
-    if (percentage >= 60) return "bg-cyan-500";
-    if (percentage >= 40) return "bg-yellow-500";
-    if (percentage >= 20) return "bg-orange-500";
-    return "bg-red-500";
+    if (percentage >= 80) return "bg-primary";
+    if (percentage >= 60) return "bg-chart-2";
+    if (percentage >= 40) return "bg-chart-5";
+    if (percentage >= 20) return "bg-chart-3";
+    return "bg-destructive";
   };
 
   /**
@@ -328,32 +328,32 @@ export function ProjectDataTab({
       label: "剧集数",
       value: projectSummary?.episodes || 0,
       subText: "总剧集",
-      iconBgColor: "bg-purple-500/20",
-      iconColor: "text-purple-400",
+      iconBgColor: "bg-chart-1/20",
+      iconColor: "text-chart-1",
     },
     {
       icon: Users,
       label: "团队成员",
       value: projectSummary?.members || 0,
       subText: "位成员",
-      iconBgColor: "bg-blue-500/20",
-      iconColor: "text-blue-400",
+      iconBgColor: "bg-info/20",
+      iconColor: "text-info",
     },
     {
       icon: MapPin,
       label: "里程碑",
       value: projectSummary?.milestones || 0,
       subText: `${projectSummary?.open_milestones || 0} 进行中`,
-      iconBgColor: "bg-amber-500/20",
-      iconColor: "text-amber-400",
+      iconBgColor: "bg-warning/20",
+      iconColor: "text-warning",
     },
     {
       icon: TrendingUp,
       label: "对话数",
       value: projectSummary?.conversations || 0,
       subText: "次对话",
-      iconBgColor: "bg-emerald-500/20",
-      iconColor: "text-emerald-400",
+      iconBgColor: "bg-primary/20",
+      iconColor: "text-primary",
     },
   ];
 
@@ -366,32 +366,32 @@ export function ProjectDataTab({
       label: "图片生成",
       value: aiUsageStats?.imageGenerations || 0,
       subText: "次生成",
-      iconBgColor: "bg-pink-500/20",
-      iconColor: "text-pink-400",
+      iconBgColor: "bg-chart-4/20",
+      iconColor: "text-chart-4",
     },
     {
       icon: Video,
       label: "视频生成",
       value: aiUsageStats?.videoGenerations || 0,
       subText: "次生成",
-      iconBgColor: "bg-indigo-500/20",
-      iconColor: "text-indigo-400",
+      iconBgColor: "bg-chart-6/20",
+      iconColor: "text-chart-6",
     },
     {
       icon: DollarSign,
       label: "成本估算",
       value: aiUsageStats ? formatCost(aiUsageStats.estimatedCost) : "$0.00",
       subText: "累计成本",
-      iconBgColor: "bg-green-500/20",
-      iconColor: "text-green-400",
+      iconBgColor: "bg-success/20",
+      iconColor: "text-success",
     },
     {
       icon: Timer,
       label: "平均响应",
       value: aiUsageStats ? `${aiUsageStats.avgResponseTime}s` : "--",
       subText: "响应时间",
-      iconBgColor: "bg-cyan-500/20",
-      iconColor: "text-cyan-400",
+      iconBgColor: "bg-chart-2/20",
+      iconColor: "text-chart-2",
     },
   ];
 
@@ -404,66 +404,66 @@ export function ProjectDataTab({
       label: "角色资产",
       value: assetStats?.characters || 0,
       subText: "个角色",
-      iconBgColor: "bg-violet-500/20",
-      iconColor: "text-violet-400",
+      iconBgColor: "bg-chart-1/20",
+      iconColor: "text-chart-1",
     },
     {
       icon: MapPin,
       label: "场景资产",
       value: assetStats?.scenes || 0,
       subText: "个场景",
-      iconBgColor: "bg-teal-500/20",
-      iconColor: "text-teal-400",
+      iconBgColor: "bg-chart-2/20",
+      iconColor: "text-chart-2",
     },
     {
       icon: Image,
       label: "图片资产",
       value: assetStats?.images || 0,
       subText: "张图片",
-      iconBgColor: "bg-rose-500/20",
-      iconColor: "text-rose-400",
+      iconBgColor: "bg-chart-4/20",
+      iconColor: "text-chart-4",
     },
     {
       icon: Video,
       label: "视频资产",
       value: assetStats?.videos || 0,
       subText: "个视频",
-      iconBgColor: "bg-sky-500/20",
-      iconColor: "text-sky-400",
+      iconBgColor: "bg-ring/20",
+      iconColor: "text-ring",
     },
   ];
 
   return (
     <div className="space-y-6">
       {/* 整体进度卡片 */}
-      <div className="rounded-[22px] border border-white/10 bg-gradient-to-br from-[#202020] to-[#1a1a1a] p-6 shadow-lg">
+      <div className="rounded-[22px] border border-border bg-gradient-to-br from-muted to-background p-6 shadow-lg">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-white">项目整体进度</h3>
-            <p className="mt-1 text-sm text-[#888]">
+            <h3 className="text-lg font-semibold text-foreground">项目整体进度</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               综合分镜和视频完成情况
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20">
-              <TrendingUp className="h-7 w-7 text-cyan-400" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-chart-2/20 to-chart-1/20">
+              <TrendingUp className="h-7 w-7 text-chart-2" />
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold text-white">{overallProgress}%</div>
-              <div className="text-xs text-[#888]">完成度</div>
+              <div className="text-3xl font-bold text-foreground">{overallProgress}%</div>
+              <div className="text-xs text-muted-foreground">完成度</div>
             </div>
           </div>
         </div>
 
         {/* 整体进度条 */}
         <div className="space-y-2">
-          <div className="h-4 overflow-hidden rounded-full bg-white/5">
+          <div className="h-4 overflow-hidden rounded-full bg-muted/50">
             <div
               className={`h-full rounded-full transition-all duration-500 ${getProgressColor(overallProgress)}`}
               style={{ width: `${overallProgress}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-[#888]">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>开始</span>
             <span>{overallProgress}% 完成</span>
             <span>完成</span>
@@ -473,31 +473,31 @@ export function ProjectDataTab({
 
       {/* 进度统计网格 */}
       <div>
-        <h4 className="mb-4 text-base font-semibold text-white">进度统计</h4>
+        <h4 className="mb-4 text-base font-semibold text-foreground">进度统计</h4>
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           {progressCards.map((card, index) => {
             const Icon = card.icon;
             return (
               <div
                 key={index}
-                className="rounded-xl border border-white/10 bg-[#202020] p-5 transition-all hover:border-white/20"
+                className="rounded-xl border border-border bg-muted p-5 transition-all hover:border-border"
               >
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`rounded-lg bg-white/5 p-2`}>
-                      <Icon className="h-5 w-5 text-white/70" />
+                    <div className={`rounded-lg bg-muted/50 p-2`}>
+                      <Icon className="h-5 w-5 text-foreground/70" />
                     </div>
-                    <span className="text-sm font-medium text-white">
+                    <span className="text-sm font-medium text-foreground">
                       {card.label}
                     </span>
                   </div>
-                  <div className="text-2xl font-bold text-white">
+                  <div className="text-2xl font-bold text-foreground">
                     {card.percentage}%
                   </div>
                 </div>
 
                 {/* 进度条 */}
-                <div className="mb-2 h-2 overflow-hidden rounded-full bg-white/5">
+                <div className="mb-2 h-2 overflow-hidden rounded-full bg-muted/50">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${card.barColor}`}
                     style={{ width: `${card.percentage}%` }}
@@ -506,7 +506,7 @@ export function ProjectDataTab({
 
                 {/* 子标签 */}
                 {card.subLabel && (
-                  <div className="text-xs text-[#888]">{card.subLabel}</div>
+                  <div className="text-xs text-muted-foreground">{card.subLabel}</div>
                 )}
               </div>
             );
@@ -516,14 +516,14 @@ export function ProjectDataTab({
 
       {/* 项目数据统计 */}
       <div>
-        <h4 className="mb-4 text-base font-semibold text-white">项目数据</h4>
+        <h4 className="mb-4 text-base font-semibold text-foreground">项目数据</h4>
         <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
           {statCards.map((card, index) => {
             const Icon = card.icon;
             return (
               <div
                 key={index}
-                className="rounded-xl border border-white/10 bg-[#202020] p-5 transition-all hover:border-white/20"
+                className="rounded-xl border border-border bg-muted p-5 transition-all hover:border-border"
               >
                 <div className="mb-3 flex items-center gap-3">
                   <div
@@ -531,11 +531,11 @@ export function ProjectDataTab({
                   >
                     <Icon className={`h-5 w-5 ${card.iconColor}`} />
                   </div>
-                  <div className="text-sm text-[#888]">{card.label}</div>
+                  <div className="text-sm text-muted-foreground">{card.label}</div>
                 </div>
-                <div className="text-3xl font-bold text-white">{card.value}</div>
+                <div className="text-3xl font-bold text-foreground">{card.value}</div>
                 {card.subText && (
-                  <div className="mt-1 text-xs text-[#666]">{card.subText}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{card.subText}</div>
                 )}
               </div>
             );
@@ -546,14 +546,14 @@ export function ProjectDataTab({
       {/* 资产统计 */}
       {assetStats && (
         <div>
-          <h4 className="mb-4 text-base font-semibold text-white">资产统计</h4>
+          <h4 className="mb-4 text-base font-semibold text-foreground">资产统计</h4>
           <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
             {assetStatCards.map((card, index) => {
               const Icon = card.icon;
               return (
                 <div
                   key={index}
-                  className="rounded-xl border border-white/10 bg-[#202020] p-5 transition-all hover:border-white/20"
+                  className="rounded-xl border border-border bg-muted p-5 transition-all hover:border-border"
                 >
                   <div className="mb-3 flex items-center gap-3">
                     <div
@@ -561,13 +561,13 @@ export function ProjectDataTab({
                     >
                       <Icon className={`h-5 w-5 ${card.iconColor}`} />
                     </div>
-                    <div className="text-sm text-[#888]">{card.label}</div>
+                    <div className="text-sm text-muted-foreground">{card.label}</div>
                   </div>
-                  <div className="text-3xl font-bold text-white">
+                  <div className="text-3xl font-bold text-foreground">
                     {card.value}
                   </div>
                   {card.subText && (
-                    <div className="mt-1 text-xs text-[#666]">{card.subText}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{card.subText}</div>
                   )}
                 </div>
               );
@@ -578,15 +578,15 @@ export function ProjectDataTab({
 
       {/* AI使用统计 */}
       <div>
-        <h4 className="mb-4 text-base font-semibold text-white">AI使用统计</h4>
-        <div className="rounded-[22px] border border-white/10 bg-[#202020] p-6">
+        <h4 className="mb-4 text-base font-semibold text-foreground">AI使用统计</h4>
+        <div className="rounded-[22px] border border-border bg-muted p-6">
           <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
             {aiStatCards.map((card, index) => {
               const Icon = card.icon;
               return (
                 <div
                   key={index}
-                  className="rounded-xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:bg-white/[0.04]"
+                  className="rounded-xl border border-border/50 bg-muted/30 p-4 transition-all hover:bg-muted/50"
                 >
                   <div className="mb-3 flex items-center gap-2">
                     <div
@@ -594,11 +594,11 @@ export function ProjectDataTab({
                     >
                       <Icon className={`h-4 w-4 ${card.iconColor}`} />
                     </div>
-                    <div className="text-xs text-[#888]">{card.label}</div>
+                    <div className="text-xs text-muted-foreground">{card.label}</div>
                   </div>
-                  <div className="text-2xl font-bold text-white">{card.value}</div>
+                  <div className="text-2xl font-bold text-foreground">{card.value}</div>
                   {card.subText && (
-                    <div className="mt-1 text-xs text-[#666]">{card.subText}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{card.subText}</div>
                   )}
                 </div>
               );
@@ -607,14 +607,14 @@ export function ProjectDataTab({
 
           {/* AI统计说明 */}
           {!aiUsageStats && (
-            <div className="mt-4 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-4">
+            <div className="mt-4 rounded-lg border border-chart-2/20 bg-chart-2/5 p-4">
               <div className="flex items-start gap-3">
-                <Zap className="mt-0.5 h-5 w-5 text-cyan-400" />
+                <Zap className="mt-0.5 h-5 w-5 text-chart-2" />
                 <div>
-                  <div className="text-sm font-medium text-cyan-400">
+                  <div className="text-sm font-medium text-chart-2">
                     AI使用数据未启用
                   </div>
-                  <div className="mt-1 text-xs text-[#888]">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     启用AI使用统计后，将在此显示图片生成次数、视频生成次数、成本估算等数据。
                   </div>
                 </div>
@@ -627,49 +627,49 @@ export function ProjectDataTab({
       {/* 时间数据 */}
       {timeData && (
         <div>
-          <h4 className="mb-4 text-base font-semibold text-white">时间数据</h4>
-          <div className="rounded-[22px] border border-white/10 bg-[#202020] p-6">
+          <h4 className="mb-4 text-base font-semibold text-foreground">时间数据</h4>
+          <div className="rounded-[22px] border border-border bg-muted p-6">
             <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
               {/* 创建时间 */}
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
                 <div className="mb-2 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-[#888]" />
-                  <span className="text-sm text-[#888]">创建时间</span>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">创建时间</span>
                 </div>
-                <div className="text-base font-semibold text-white">
+                <div className="text-base font-semibold text-foreground">
                   {timeData.createdAt}
                 </div>
               </div>
 
               {/* 项目持续时间 */}
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
                 <div className="mb-2 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-[#888]" />
-                  <span className="text-sm text-[#888]">已持续时间</span>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">已持续时间</span>
                 </div>
-                <div className="text-base font-semibold text-white">
+                <div className="text-base font-semibold text-foreground">
                   {timeData.durationDays} 天
                 </div>
               </div>
 
               {/* 截止日期 */}
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
                 <div className="mb-2 flex items-center gap-2">
-                  <Timer className="h-4 w-4 text-[#888]" />
-                  <span className="text-sm text-[#888]">
+                  <Timer className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
                     {timeData.remainingDays !== null ? "剩余天数" : "截止日期"}
                   </span>
                 </div>
-                <div className="text-base font-semibold text-white">
+                <div className="text-base font-semibold text-foreground">
                   {timeData.remainingDays !== null ? (
                     <>
                       <span
                         className={
                           timeData.remainingDays < 0
-                            ? "text-red-400"
+                            ? "text-destructive"
                             : timeData.remainingDays < 7
-                            ? "text-orange-400"
-                            : "text-white"
+                            ? "text-chart-3"
+                            : "text-foreground"
                         }
                       >
                         {timeData.remainingDays < 0
@@ -677,13 +677,13 @@ export function ProjectDataTab({
                           : `${timeData.remainingDays} 天`}
                       </span>
                       {timeData.dueDate && (
-                        <div className="mt-1 text-xs text-[#666]">
+                        <div className="mt-1 text-xs text-muted-foreground">
                           截止: {timeData.dueDate}
                         </div>
                       )}
                     </>
                   ) : (
-                    <span className="text-[#666]">未设置</span>
+                    <span className="text-muted-foreground">未设置</span>
                   )}
                 </div>
               </div>
@@ -691,7 +691,7 @@ export function ProjectDataTab({
 
             {/* 最近活动时间 */}
             {projectSummary?.latest_activity_at && (
-              <div className="mt-4 flex items-center gap-2 text-sm text-[#888]">
+              <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>
                   最近活动:{" "}
@@ -708,9 +708,9 @@ export function ProjectDataTab({
       {/* 空状态提示 */}
       {!projectSummary && (
         <div className="flex h-64 flex-col items-center justify-center text-center">
-          <BarChart3 className="mb-4 h-12 w-12 text-[#333]" />
-          <div className="text-base font-medium text-[#666]">暂无项目数据</div>
-          <div className="mt-1 text-sm text-[#444]">
+          <BarChart3 className="mb-4 h-12 w-12 text-muted-foreground" />
+          <div className="text-base font-medium text-muted-foreground">暂无项目数据</div>
+          <div className="mt-1 text-sm text-muted-foreground">
             项目数据将在创建后显示在此处
           </div>
         </div>

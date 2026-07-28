@@ -272,10 +272,10 @@ export function HomeDashboard() {
   }, [selectedProjectId]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#181818] overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col bg-card overflow-hidden">
       {/* 视图切换条：原本在顶栏右侧的"项目驾驶舱 / AI创作工作台 / 生产流水线"。
           抽出作为二级切换条，三视图都能切，避开顶栏拥挤。 */}
-      <div className="flex items-center justify-end gap-2 border-b border-white/10 bg-[#1a1a1a] px-6 py-3">
+      <div className="flex items-center justify-end gap-2 border-b border-border bg-card px-6 py-3">
         <Button
           variant={currentView === "cockpit" ? "default" : "ghost"}
           size="sm"
@@ -382,19 +382,19 @@ function ProjectCockpit({
 
       {/* 进度详情 */}
       {selectedProject && (
-        <Card className="bg-[#202020] border-white/10">
+        <Card className="bg-muted border-border">
           <CardHeader>
-            <CardTitle className="text-white">{selectedProject.name}</CardTitle>
-            <CardDescription className="text-[#888]">
+            <CardTitle className="text-foreground">{selectedProject.name}</CardTitle>
+            <CardDescription className="text-muted-foreground">
               {selectedProject.category} · 负责人: {selectedProject.owner}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* 当前阶段 */}
             <div className="flex items-center justify-between">
-              <div className="text-sm text-[#888]">当前阶段</div>
+              <div className="text-sm text-muted-foreground">当前阶段</div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 text-sm">
+                <span className="px-2 py-1 rounded bg-primary/20 text-primary text-sm">
                   {projectStats.currentStage}
                 </span>
               </div>
@@ -403,8 +403,8 @@ function ProjectCockpit({
             {/* 进度条 */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#888]">生产进度</span>
-                <span className="text-white">{projectStats.overallProgress}%</span>
+                <span className="text-muted-foreground">生产进度</span>
+                <span className="text-foreground">{projectStats.overallProgress}%</span>
               </div>
               <Progress value={projectStats.overallProgress} className="h-2" />
             </div>
@@ -415,8 +415,8 @@ function ProjectCockpit({
                 <div
                   key={i}
                   className={`px-2 py-1 rounded text-xs text-center ${i < projectStats.completedEpisodes
-                    ? "bg-emerald-500/20 text-emerald-400"
-                    : "bg-[#252525] text-[#888]"
+                    ? "bg-primary/20 text-primary"
+                    : "bg-secondary text-muted-foreground"
                     }`}
                 >
                   EP{i + 1}
@@ -430,25 +430,25 @@ function ProjectCockpit({
       {/* 待办事项和风险预警 */}
       <div className="grid grid-cols-2 gap-4">
         {/* 待办事项 */}
-        <Card className="bg-[#202020] border-white/10">
+        <Card className="bg-muted border-border">
           <CardHeader>
-            <CardTitle className="text-white text-base">待办事项</CardTitle>
+            <CardTitle className="text-foreground text-base">待办事项</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-[#888]">驾驶舱不生成模拟待办，请前往待办中心查看已保存任务。</p>
+            <p className="text-sm text-muted-foreground">驾驶舱不生成模拟待办，请前往待办中心查看已保存任务。</p>
             <Button variant="outline" size="sm" onClick={() => onNavigate("/todos")}>查看我的待办</Button>
           </CardContent>
         </Card>
 
         {/* 风险预警 */}
-        <Card className="bg-[#202020] border-white/10">
+        <Card className="bg-muted border-border">
           <CardHeader>
-            <CardTitle className="text-white text-base">风险预警</CardTitle>
+            <CardTitle className="text-foreground text-base">风险预警</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {projectStats.riskItems > 0 && <RiskItem title="存在未关闭的高风险问题" severity="high" description={`共 ${projectStats.riskItems} 项，请在项目中心处理`} />}
             {projectStats.delayedItems > 0 && <RiskItem title="存在延期里程碑" severity="medium" description={`共 ${projectStats.delayedItems} 项，请检查交付日期`} />}
-            {projectStats.riskItems === 0 && projectStats.delayedItems === 0 && <p className="text-sm text-[#888]">当前真实项目数据中未发现高风险或延期项。</p>}
+            {projectStats.riskItems === 0 && projectStats.delayedItems === 0 && <p className="text-sm text-muted-foreground">当前真实项目数据中未发现高风险或延期项。</p>}
           </CardContent>
         </Card>
       </div>
@@ -468,8 +468,8 @@ function CreativeWorkspace({
     <div className="space-y-6">
       {/* 欢迎区域 */}
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-white">我要创作</h2>
-        <p className="text-[#888] mt-2">选择任务类型，开始您的创作之旅</p>
+        <h2 className="text-2xl font-bold text-foreground">我要创作</h2>
+        <p className="text-muted-foreground mt-2">选择任务类型，开始您的创作之旅</p>
       </div>
 
       {/* 任务卡网格 */}
@@ -477,24 +477,24 @@ function CreativeWorkspace({
         {taskCards.map((card) => (
           <Card
             key={card.id}
-            className="bg-[#202020] border-white/10 hover:border-emerald-500/50 transition-colors cursor-pointer group"
+            className="bg-muted border-border hover:border-primary/50 transition-colors cursor-pointer group"
             onClick={() => card.route && onNavigate(card.route)}
           >
             <CardContent className="pt-6 pb-4">
-              <div className={`flex flex-col items-center text-center gap-3 ${card.color === "emerald" ? "text-emerald-400" :
-                card.color === "blue" ? "text-blue-400" :
-                  card.color === "purple" ? "text-purple-400" :
-                    card.color === "orange" ? "text-orange-400" :
-                      card.color === "pink" ? "text-pink-400" :
-                        card.color === "cyan" ? "text-cyan-400" :
-                          card.color === "amber" ? "text-amber-400" :
-                            "text-white"
+              <div className={`flex flex-col items-center text-center gap-3 ${card.color === "emerald" ? "text-primary" :
+                card.color === "blue" ? "text-info" :
+                  card.color === "purple" ? "text-chart-1" :
+                    card.color === "orange" ? "text-chart-3" :
+                      card.color === "pink" ? "text-chart-4" :
+                        card.color === "cyan" ? "text-chart-2" :
+                          card.color === "amber" ? "text-warning" :
+                            "text-foreground"
                 }`}>
-                <div className="p-3 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
+                <div className="p-3 rounded-xl bg-muted/50 group-hover:bg-muted transition-colors">
                   {card.icon}
                 </div>
                 <h3 className="text-base font-semibold">{card.title}</h3>
-                <p className="text-sm text-[#888]">{card.description}</p>
+                <p className="text-sm text-muted-foreground">{card.description}</p>
                 <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </CardContent>
@@ -503,9 +503,9 @@ function CreativeWorkspace({
       </div>
 
       {/* 快速入口 */}
-      <Card className="bg-[#202020] border-white/10">
+      <Card className="bg-muted border-border">
         <CardHeader>
-          <CardTitle className="text-white text-base">快速入口</CardTitle>
+          <CardTitle className="text-foreground text-base">快速入口</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">
@@ -542,31 +542,31 @@ function ProductionPipeline({
   return (
     <div className="space-y-6">
       {/* 流水线进度 */}
-      <Card className="bg-[#202020] border-white/10">
+      <Card className="bg-muted border-border">
         <CardHeader>
-          <CardTitle className="text-white text-base">生产流水线</CardTitle>
-          <CardDescription className="text-[#888]">各阶段生产进度</CardDescription>
+          <CardTitle className="text-foreground text-base">生产流水线</CardTitle>
+          <CardDescription className="text-muted-foreground">各阶段生产进度</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between gap-4">
             {stages.map((stage, index) => (
               <div key={stage.name} className="flex flex-col items-center gap-2 w-full">
-                <div className={`text-sm font-medium ${stage.color === "emerald" ? "text-emerald-400" :
-                  stage.color === "blue" ? "text-blue-400" :
-                    stage.color === "purple" ? "text-purple-400" :
-                      stage.color === "orange" ? "text-orange-400" :
-                        stage.color === "pink" ? "text-pink-400" :
-                          "text-white"
+                <div className={`text-sm font-medium ${stage.color === "emerald" ? "text-primary" :
+                  stage.color === "blue" ? "text-info" :
+                    stage.color === "purple" ? "text-chart-1" :
+                      stage.color === "orange" ? "text-chart-3" :
+                        stage.color === "pink" ? "text-chart-4" :
+                          "text-foreground"
                   }`}>
                   {stage.name}
                 </div>
                 <Progress value={stage.progress} className="h-3 w-full" />
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-[#888]">{stage.progress}%</span>
-                  <span className="text-white">{stage.count}集</span>
+                  <span className="text-muted-foreground">{stage.progress}%</span>
+                  <span className="text-foreground">{stage.count}集</span>
                 </div>
                 {index < stages.length - 1 && (
-                  <ChevronRight className="h-4 w-4 text-[#888]" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 )}
               </div>
             ))}
@@ -575,10 +575,10 @@ function ProductionPipeline({
       </Card>
 
       {/* 实时任务队列 */}
-      <Card className="bg-[#202020] border-white/10">
+      <Card className="bg-muted border-border">
         <CardHeader>
-          <CardTitle className="text-white text-base">实时任务队列</CardTitle>
-          <CardDescription className="text-[#888]">正在执行的AI任务</CardDescription>
+          <CardTitle className="text-foreground text-base">实时任务队列</CardTitle>
+          <CardDescription className="text-muted-foreground">正在执行的AI任务</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {tasks.map((task) => (
@@ -588,24 +588,24 @@ function ProductionPipeline({
       </Card>
 
       {/* 资源消耗 */}
-      <Card className="bg-[#202020] border-white/10">
+      <Card className="bg-muted border-border">
         <CardHeader>
-          <CardTitle className="text-white text-base">资源消耗</CardTitle>
-          <CardDescription className="text-[#888]">GPU / 任务 / 成本（数据接入中）</CardDescription>
+          <CardTitle className="text-foreground text-base">资源消耗</CardTitle>
+          <CardDescription className="text-muted-foreground">GPU / 任务 / 成本（数据接入中）</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4">
             <div className="flex flex-col items-center gap-2">
-              <div className="text-2xl font-bold text-emerald-400">—</div>
-              <div className="text-sm text-[#888]">GPU 使用率</div>
+              <div className="text-2xl font-bold text-primary">—</div>
+              <div className="text-sm text-muted-foreground">GPU 使用率</div>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <div className="text-2xl font-bold text-blue-400">—</div>
-              <div className="text-sm text-[#888]">任务完成数</div>
+              <div className="text-2xl font-bold text-info">—</div>
+              <div className="text-sm text-muted-foreground">任务完成数</div>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <div className="text-2xl font-bold text-purple-400">—</div>
-              <div className="text-sm text-[#888]">AI成本消耗</div>
+              <div className="text-2xl font-bold text-chart-1">—</div>
+              <div className="text-sm text-muted-foreground">AI成本消耗</div>
             </div>
           </div>
         </CardContent>
@@ -631,22 +631,22 @@ function MetricCard({
   alert?: boolean;
 }) {
   const colorClass = {
-    emerald: "text-emerald-400 bg-emerald-500/10",
-    blue: "text-blue-400 bg-blue-500/10",
-    purple: "text-purple-400 bg-purple-500/10",
-    orange: "text-orange-400 bg-orange-500/10",
-    red: "text-red-400 bg-red-500/10",
-    cyan: "text-cyan-400 bg-cyan-500/10",
-  }[color] || "text-white bg-white/5";
+    emerald: "text-primary bg-primary/10",
+    blue: "text-info bg-info/10",
+    purple: "text-chart-1 bg-chart-1/10",
+    orange: "text-chart-3 bg-chart-3/10",
+    red: "text-destructive bg-destructive/10",
+    cyan: "text-chart-2 bg-chart-2/10",
+  }[color] || "text-foreground bg-muted/50";
 
   return (
-    <Card className={`bg-[#202020] border-white/10 ${alert ? "border-red-500/30" : ""}`}>
+    <Card className={`bg-muted border-border ${alert ? "border-destructive/30" : ""}`}>
       <CardContent className="pt-4 pb-3">
         <div className="flex items-center gap-2 mb-2">
           <div className={`p-1.5 rounded ${colorClass.split(" ")[1]}`}>
             {icon}
           </div>
-          <span className="text-xs text-[#888]">{title}</span>
+          <span className="text-xs text-muted-foreground">{title}</span>
         </div>
         <div className={`text-lg font-bold ${colorClass.split(" ")[0]}`}>
           {value}
@@ -671,20 +671,20 @@ function RiskItem({
   description: string;
 }) {
   const severityColors = {
-    high: "bg-red-500/20 text-red-400 border-red-500/30",
-    medium: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-    low: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    high: "bg-destructive/20 text-destructive border-destructive/30",
+    medium: "bg-chart-3/20 text-chart-3 border-chart-3/30",
+    low: "bg-chart-5/20 text-chart-5 border-chart-5/30",
   };
 
   return (
     <div className={`py-2 px-3 rounded border ${severityColors[severity]}`}>
       <div className="flex items-center justify-between mb-1">
         <span className="text-sm font-medium">{title}</span>
-        <span className="text-xs px-1.5 py-0.5 rounded bg-white/10">
+        <span className="text-xs px-1.5 py-0.5 rounded bg-muted">
           {severity === "high" ? "高" : severity === "medium" ? "中" : "低"}
         </span>
       </div>
-      <div className="text-xs text-[#888]">{description}</div>
+      <div className="text-xs text-muted-foreground">{description}</div>
     </div>
   );
 }
@@ -692,26 +692,26 @@ function RiskItem({
 /** 任务队列项 */
 function TaskQueueItem({ task }: { task: RealTimeTask }) {
   return (
-    <div className="flex items-center justify-between py-2 px-3 rounded bg-[#252525]">
+    <div className="flex items-center justify-between py-2 px-3 rounded bg-secondary">
       <div className="flex items-center gap-3">
-        <div className={`flex items-center justify-center h-6 w-6 rounded ${task.status === "running" ? "bg-emerald-500/20 text-emerald-400" :
-          task.status === "queued" ? "bg-blue-500/20 text-blue-400" :
-            "bg-[#303030] text-[#888]"
+        <div className={`flex items-center justify-center h-6 w-6 rounded ${task.status === "running" ? "bg-primary/20 text-primary" :
+          task.status === "queued" ? "bg-info/20 text-info" :
+            "bg-secondary text-muted-foreground"
           }`}>
           {task.status === "running" ? <Play className="h-3 w-3" /> :
             task.status === "queued" ? <Clock className="h-3 w-3" /> :
               <CheckCircle2 className="h-3 w-3" />}
         </div>
         <div>
-          <div className="text-sm text-white">{task.name}</div>
-          <div className="text-xs text-[#888]">模型: {task.model}</div>
+          <div className="text-sm text-foreground">{task.name}</div>
+          <div className="text-xs text-muted-foreground">模型: {task.model}</div>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-xs text-[#888]">{task.duration}秒</span>
-        <span className={`text-xs px-2 py-0.5 rounded ${task.status === "running" ? "bg-emerald-500/20 text-emerald-400" :
-          task.status === "queued" ? "bg-blue-500/20 text-blue-400" :
-            "bg-[#303030] text-[#666]"
+        <span className="text-xs text-muted-foreground">{task.duration}秒</span>
+        <span className={`text-xs px-2 py-0.5 rounded ${task.status === "running" ? "bg-primary/20 text-primary" :
+          task.status === "queued" ? "bg-info/20 text-info" :
+            "bg-secondary text-muted-foreground"
           }`}>
           {task.status === "running" ? "运行中" :
             task.status === "queued" ? "排队中" :

@@ -70,17 +70,17 @@ export function EmptyState({
   return (
     <div className={`flex flex-col items-center justify-center py-12 ${className}`}>
       <div className="mb-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#252525] border border-white/10">
-          <Icon className="h-8 w-8 text-[#888]" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary border border-border">
+          <Icon className="h-8 w-8 text-muted-foreground" />
         </div>
       </div>
 
-      <h3 className="mb-2 text-lg font-medium text-white">
+      <h3 className="mb-2 text-lg font-medium text-foreground">
         {displayTitle}
       </h3>
 
       {displayDescription && (
-        <p className="mb-4 text-sm text-[#888] text-center max-w-md">
+        <p className="mb-4 text-sm text-muted-foreground text-center max-w-md">
           {displayDescription}
         </p>
       )}
@@ -110,9 +110,9 @@ export function LoadingState({
   return (
     <div className={`flex flex-col items-center justify-center py-12 ${className}`}>
       <div className="mb-4">
-        <div className="h-8 w-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
-      <p className="text-sm text-[#888]">{message}</p>
+      <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   );
 }
@@ -139,10 +139,10 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <div className={`flex flex-col items-center justify-center py-12 ${className}`}>
-      <div className="mb-4 text-red-400">
+      <div className="mb-4 text-destructive">
         <FileX className="h-12 w-12" />
       </div>
-      <p className="mb-4 text-sm text-[#888]">{message}</p>
+      <p className="mb-4 text-sm text-muted-foreground">{message}</p>
       {onRetry && (
         <Button onClick={onRetry} variant="secondary" size="sm">
           重新加载
@@ -159,12 +159,12 @@ export function EmptyStoryboards({ onCreateStoryboard }: { onCreateStoryboard?: 
   return (
     <div className="flex flex-col items-center justify-center py-10">
       <div className="mb-4">
-        <div className="w-16 h-16 rounded-full bg-[#252525] border border-white/10 flex items-center justify-center">
-          <Inbox className="h-8 w-8 text-[#888]" />
+        <div className="w-16 h-16 rounded-full bg-secondary border border-border flex items-center justify-center">
+          <Inbox className="h-8 w-8 text-muted-foreground" />
         </div>
       </div>
-      <h3 className="text-base font-semibold text-white mb-2">暂无分镜</h3>
-      <p className="text-sm text-[#888] mb-4">创建分镜开始您的创作</p>
+      <h3 className="text-base font-semibold text-foreground mb-2">暂无分镜</h3>
+      <p className="text-sm text-muted-foreground mb-4">创建分镜开始您的创作</p>
       {onCreateStoryboard && (
         <Button onClick={onCreateStoryboard} size="sm">
           创建分镜
@@ -183,12 +183,12 @@ export function EmptyClips({ onSyncClips }: { onSyncClips?: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-10">
       <div className="mb-4">
-        <div className="w-16 h-16 rounded-full bg-[#252525] border border-white/10 flex items-center justify-center">
-          <Inbox className="h-8 w-8 text-[#888]" />
+        <div className="w-16 h-16 rounded-full bg-secondary border border-border flex items-center justify-center">
+          <Inbox className="h-8 w-8 text-muted-foreground" />
         </div>
       </div>
-      <h3 className="text-base font-semibold text-white mb-2">暂无剪辑条目</h3>
-      <p className="text-sm text-[#888] mb-4">同步剪辑内容到项目</p>
+      <h3 className="text-base font-semibold text-foreground mb-2">暂无剪辑条目</h3>
+      <p className="text-sm text-muted-foreground mb-4">同步剪辑内容到项目</p>
       {onSyncClips && (
         <Button onClick={onSyncClips} size="sm">
           同步剪辑

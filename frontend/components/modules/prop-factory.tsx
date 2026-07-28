@@ -129,14 +129,14 @@ const propFields: FormFieldConfig[] = [
 
 /** 道具类别颜色映射 */
 const categoryColors: Record<string, string> = {
-  weapon: "bg-red-500/20 text-red-400",
-  tool: "bg-blue-500/20 text-blue-400",
-  clothing: "bg-purple-500/20 text-purple-400",
-  food: "bg-orange-500/20 text-orange-400",
-  vehicle: "bg-cyan-500/20 text-cyan-400",
-  artifact: "bg-yellow-500/20 text-yellow-400",
-  furniture: "bg-emerald-500/20 text-emerald-400",
-  other: "bg-gray-500/20 text-gray-400",
+  weapon: "bg-destructive/20 text-destructive",
+  tool: "bg-info/20 text-info",
+  clothing: "bg-chart-1/20 text-chart-1",
+  food: "bg-chart-3/20 text-chart-3",
+  vehicle: "bg-chart-2/20 text-chart-2",
+  artifact: "bg-chart-5/20 text-chart-5",
+  furniture: "bg-primary/20 text-primary",
+  other: "bg-muted/20 text-muted-foreground",
 };
 
 /** FactoryCRUDPage 需要的全部配置。 */
@@ -199,10 +199,10 @@ function PropCard({
 
   return (
     <div
-      className={`group relative flex flex-col rounded-lg border bg-[#252525] overflow-hidden transition-colors ${
+      className={`group relative flex flex-col rounded-lg border bg-secondary overflow-hidden transition-colors ${
         actions.selected
-          ? "border-emerald-500 ring-1 ring-emerald-500/40"
-          : "border-white/10 hover:border-white/20"
+          ? "border-primary ring-1 ring-primary/40"
+          : "border-border hover:border-border"
       }`}
     >
       <button
@@ -213,17 +213,17 @@ function PropCard({
         }}
         className={`absolute left-2 top-2 z-10 grid h-5 w-5 place-items-center rounded border transition-opacity ${
           actions.selected
-            ? "border-emerald-500 bg-emerald-500 opacity-100"
-            : "border-white/40 bg-black/40 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
+            ? "border-primary bg-primary opacity-100"
+            : "border-border bg-black/40 opacity-0 group-hover:opacity-100 hover:border-primary"
         }`}
         aria-label={actions.selected ? "取消选择" : "选择"}
       >
         {actions.selected && (
-          <CheckSquare className="h-3 w-3 text-white" />
+          <CheckSquare className="h-3 w-3 text-foreground" />
         )}
       </button>
 
-      <div className="relative aspect-[16/9] bg-[#1a1a1a] flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-[16/9] bg-card flex items-center justify-center overflow-hidden">
         {prop.image ? (
           <img
             src={prop.image}
@@ -250,13 +250,13 @@ function PropCard({
       </div>
       <div className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-medium text-white">{prop.name}</h3>
-          <span className={`px-2 py-0.5 rounded text-xs ${categoryColors[prop.category] ?? "bg-gray-500/20 text-gray-400"}`}>
+          <h3 className="font-medium text-foreground">{prop.name}</h3>
+          <span className={`px-2 py-0.5 rounded text-xs ${categoryColors[prop.category] ?? "bg-muted/20 text-muted-foreground"}`}>
             {categoryLabels[prop.category] ?? prop.category}
           </span>
         </div>
-        <p className="text-xs text-[#888] line-clamp-2 mb-2">{prop.description}</p>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-[#666] mb-2">
+        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{prop.description}</p>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
           {prop.material && <span>材质: {prop.material}</span>}
           {prop.color && <span>颜色: {prop.color}</span>}
           {prop.size && <span>尺寸: {prop.size}</span>}
@@ -264,7 +264,7 @@ function PropCard({
         {prop.tags && prop.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
             {prop.tags.slice(0, 3).map((tag, idx) => (
-              <span key={idx} className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400">{tag}</span>
+              <span key={idx} className="px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary">{tag}</span>
             ))}
           </div>
         )}
@@ -278,7 +278,7 @@ function PropCard({
             onClick={handleInsert}
             disabled={inserting}
             title="基于此道具快速新建一个分镜"
-            className="text-emerald-300"
+            className="text-primary"
           >
             {inserting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
           </Button>
@@ -288,13 +288,13 @@ function PropCard({
               size="sm"
               onClick={actions.onCopyToProjects}
               title="复制到其他项目"
-              className="text-emerald-300"
+              className="text-primary"
             >
               <Copy className="h-4 w-4" />
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={actions.onDelete}>
-            <Trash2 className="h-4 w-4 text-red-400" />
+            <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
         <div className="mt-2 flex items-center gap-2">
@@ -413,7 +413,7 @@ const config: FactoryCRUDPageProps<Prop> = {
   pageSize: 12,
   selectAllLabel: "全选所有页",
   loadingView: (
-    <div className="flex items-center justify-center py-12 text-[#888]">加载中...</div>
+    <div className="flex items-center justify-center py-12 text-muted-foreground">加载中...</div>
   ),
 
   aiConfig: {

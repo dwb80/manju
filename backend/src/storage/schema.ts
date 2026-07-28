@@ -168,6 +168,7 @@ export const characterImageHistoryFields: FieldSpec<CharacterImageHistory>[] = [
   { key: "view_type", type: "string" },
   { key: "is_applied", type: "boolean" },
   { key: "applied_at", type: "string" },
+  { key: "is_primary", type: "number" },
   { key: "created_at", type: "string" },
 ];
 
@@ -193,6 +194,7 @@ export const propImageHistoryFields: FieldSpec<PropImageHistory>[] = [
   { key: "view_type", type: "string" },
   { key: "is_applied", type: "boolean" },
   { key: "applied_at", type: "string" },
+  { key: "is_primary", type: "number" },
   { key: "created_at", type: "string" },
 ];
 
@@ -218,6 +220,7 @@ export const sceneImageHistoryFields: FieldSpec<SceneImageHistory>[] = [
   { key: "view_type", type: "string" },
   { key: "is_applied", type: "boolean" },
   { key: "applied_at", type: "string" },
+  { key: "is_primary", type: "number" },
   { key: "created_at", type: "string" },
 ];
 

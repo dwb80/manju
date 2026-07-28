@@ -55,17 +55,17 @@ export function Toast({ type, title, description, progress, onCancel, duration =
   }, [type, duration, id, onClose]);
 
   const typeStyles = {
-    success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-100",
-    progress: "border-blue-500/30 bg-blue-500/10 text-blue-100",
-    error: "border-red-500/30 bg-red-500/10 text-red-100",
-    action: "border-amber-500/30 bg-amber-500/10 text-amber-100",
+    success: "border-primary/30 bg-primary/10 text-primary",
+    progress: "border-info/30 bg-info/10 text-info",
+    error: "border-destructive/30 bg-destructive/10 text-destructive",
+    action: "border-warning/30 bg-warning/10 text-warning",
   };
 
   const typeIcons = {
-    success: <CheckCircle className="h-5 w-5 text-emerald-400" />,
-    progress: <Loader2 className="h-5 w-5 animate-spin text-blue-400" />,
-    error: <XCircle className="h-5 w-5 text-red-400" />,
-    action: <CheckCircle className="h-5 w-5 text-amber-400" />,
+    success: <CheckCircle className="h-5 w-5 text-primary" />,
+    progress: <Loader2 className="h-5 w-5 animate-spin text-info" />,
+    error: <XCircle className="h-5 w-5 text-destructive" />,
+    action: <CheckCircle className="h-5 w-5 text-warning" />,
   };
 
   return (
@@ -74,7 +74,7 @@ export function Toast({ type, title, description, progress, onCancel, duration =
         }`}
     >
       {/* 图标 */}
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">{typeIcons[type]}</div>
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">{typeIcons[type]}</div>
 
       {/* 内容 */}
       <div className="min-w-0 flex-1">
@@ -84,8 +84,8 @@ export function Toast({ type, title, description, progress, onCancel, duration =
         {/* 进度条 */}
         {type === "progress" && progress !== undefined && (
           <div className="mt-3">
-            <div className="h-2 rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-blue-500 transition-all duration-200" style={{ width: `${progress}%` }} />
+            <div className="h-2 rounded-full bg-muted">
+              <div className="h-full rounded-full bg-info transition-all duration-200" style={{ width: `${progress}%` }} />
             </div>
             <div className="mt-1.5 text-xs opacity-80">{progress}% 完成</div>
           </div>
@@ -100,7 +100,7 @@ export function Toast({ type, title, description, progress, onCancel, duration =
               setVisible(false);
               setTimeout(() => onClose(id), 300);
             }}
-            className="mt-2 inline-flex items-center rounded-md border border-amber-400/40 bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-100 hover:bg-amber-500/30 transition-colors"
+            className="mt-2 inline-flex items-center rounded-md border border-warning/40 bg-warning/20 px-3 py-1 text-xs font-medium text-warning hover:bg-warning/30 transition-colors"
           >
             {action.label}
           </button>
@@ -110,7 +110,7 @@ export function Toast({ type, title, description, progress, onCancel, duration =
       {/* 操作按钮 */}
       {type === "progress" && onCancel && (
         <button
-          className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
+          className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
           onClick={onCancel}
           aria-label="取消"
         >
@@ -121,7 +121,7 @@ export function Toast({ type, title, description, progress, onCancel, duration =
       {/* 关闭按钮 */}
       {(type === "success" || type === "error") && (
         <button
-          className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
+          className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
           onClick={() => {
             setVisible(false);
             setTimeout(() => onClose(id), 300);

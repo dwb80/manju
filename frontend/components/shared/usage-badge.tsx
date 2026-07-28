@@ -103,7 +103,7 @@ export function UsageBadge({ entityType, entityId, entityName, initialCount, onO
         <button
           type="button"
           onClick={handleOpen}
-          className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300 hover:bg-emerald-500/25 transition-colors"
+          className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] text-primary hover:bg-primary/25 transition-colors"
         >
           <Link2 className="h-3 w-3" />
           被 {count} 处引用
@@ -157,23 +157,23 @@ function UsageDialog({
       onClick={onClose}
     >
       <div
-        className="relative w-[640px] max-w-[95vw] max-h-[80vh] flex flex-col rounded-lg border border-white/10 bg-[#1a1a1a] shadow-2xl"
+        className="relative w-[640px] max-w-[95vw] max-h-[80vh] flex flex-col rounded-lg border border-border bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
           <div>
-            <h2 className="text-base font-medium text-white">
+            <h2 className="text-base font-medium text-foreground">
               「{entityName}」的引用清单
             </h2>
-            <p className="mt-0.5 text-xs text-[#888]">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               该{typeName}在剧本/分镜/对白中的所有引用
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-[#888] hover:bg-white/10 hover:text-white"
+            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             aria-label="关闭"
           >
             <X className="h-4 w-4" />
@@ -183,13 +183,13 @@ function UsageDialog({
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {loading && (
-            <div className="flex items-center justify-center gap-2 py-12 text-[#888]">
+            <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               正在查询引用...
             </div>
           )}
           {!loading && usage && allRefs.length === 0 && (
-            <div className="py-12 text-center text-sm text-[#666]">
+            <div className="py-12 text-center text-sm text-muted-foreground">
               该{typeName}暂无任何引用
             </div>
           )}
@@ -206,29 +206,29 @@ function UsageDialog({
                 if (items.length === 0) return null;
                 return (
                   <div key={category}>
-                    <h3 className="mb-1.5 text-xs font-medium text-[#888]">
+                    <h3 className="mb-1.5 text-xs font-medium text-muted-foreground">
                       {typeLabels[category]}（{items.length}）
                     </h3>
                     <div className="space-y-1.5">
                       {items.map((ref) => (
                         <div
                           key={`${ref.type}-${ref.id}`}
-                          className="flex items-start gap-2 rounded-md border border-white/10 bg-[#252525] px-3 py-2 hover:border-emerald-500/40"
+                          className="flex items-start gap-2 rounded-md border border-border bg-secondary px-3 py-2 hover:border-primary/40"
                         >
-                          <span className="mt-0.5 inline-flex items-center rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                          <span className="mt-0.5 inline-flex items-center rounded bg-primary/15 px-1.5 py-0.5 text-[10px] text-primary">
                             {typeLabels[ref.type]}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="truncate text-sm text-white">{ref.title}</p>
+                            <p className="truncate text-sm text-foreground">{ref.title}</p>
                             {ref.context && (
-                              <p className="mt-0.5 line-clamp-2 text-xs text-[#888]">{ref.context}</p>
+                              <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{ref.context}</p>
                             )}
                           </div>
                           {onOpenSource && (
                             <button
                               type="button"
                               onClick={() => onOpenSource(ref)}
-                              className="rounded p-1 text-[#888] hover:bg-white/10 hover:text-white"
+                              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                               title="跳转到源"
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
@@ -245,7 +245,7 @@ function UsageDialog({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-white/10 px-5 py-2.5 text-xs text-[#666]">
+        <div className="border-t border-border px-5 py-2.5 text-xs text-muted-foreground">
           共 {usage?.total ?? 0} 处引用
           {usage && usage.usage_count !== usage.total ? ` · 缓存值 ${usage.usage_count}` : ""}
         </div>

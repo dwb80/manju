@@ -121,6 +121,8 @@ export interface ProjectEpisode {
   summary: string;
   due_date: string;
   notes: string;
+  /** 目标时长（秒），用于 Timeline 总时长不变量校验（Σ clip.duration ≤ target_duration）。 */
+  target_duration?: number;
   created_at: string;
   updated_at: string;
 }

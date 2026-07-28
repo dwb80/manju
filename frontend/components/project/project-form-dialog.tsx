@@ -43,11 +43,11 @@ type ProjectFormDialogProps = {
 
 /** 输入控件统一样式：38px 高度、深色背景、边框 + 焦点态、主色 ring。 */
 const baseInputClassName =
-    "h-[38px] w-full rounded-md border border-white/10 bg-[#1f1f1f] px-3 text-[13px] leading-5 text-white placeholder:text-muted-foreground/40 outline-none transition-colors hover:border-white/20 focus:border-emerald-500/70 focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:bg-white/[0.02] disabled:text-muted-foreground";
+    "h-[38px] w-full rounded-md border border-border bg-muted px-3 text-[13px] leading-5 text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors hover:border-border focus:border-primary/70 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-muted/30 disabled:text-muted-foreground";
 
 /** 错误态：在基础样式上叠加红框 + 红光环。 */
 const errorInputClassName =
-    "border-red-500/60 focus:border-red-500 focus:ring-2 focus:ring-red-500/20";
+    "border-destructive/60 focus:border-destructive focus:ring-2 focus:ring-destructive/20";
 
 /** 带单位后缀的输入框（用于集数等场景）。 */
 function InputWithUnit({
@@ -73,7 +73,7 @@ function RequiredDot() {
     return (
         <span
             aria-hidden
-            className="mt-[7px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
+            className="mt-[7px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.12)]"
         />
     );
 }
@@ -111,7 +111,7 @@ function FieldRow({
             <div className="col-span-12 md:col-span-9 space-y-1.5">
                 {children}
                 {error ? (
-                    <p role="alert" className="text-[12px] leading-4 text-red-400">
+                    <p role="alert" className="text-[12px] leading-4 text-destructive">
                         {error}
                     </p>
                 ) : hint ? (
@@ -150,7 +150,7 @@ function LongFieldRow({
             <div className="col-span-12 md:col-span-9 space-y-1.5">
                 {children}
                 {error ? (
-                    <p role="alert" className="text-[12px] leading-4 text-red-400">
+                    <p role="alert" className="text-[12px] leading-4 text-destructive">
                         {error}
                     </p>
                 ) : hint ? (
@@ -277,9 +277,9 @@ export function ProjectFormDialog({ projectFormMode, projectFormTarget, projectF
                 aria-modal="true"
                 aria-label={titleText}
             >
-                <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-[0_24px_64px_-12px_rgba(0,0,0,0.6)]">
+                <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_64px_-12px_rgba(0,0,0,0.6)]">
                     {/* 标题区 */}
-                    <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-6 py-5">
+                    <div className="flex items-start justify-between gap-4 border-b border-border/60 px-6 py-5">
                         <div className="space-y-1">
                             <h2 className="text-base font-semibold tracking-tight text-foreground">{titleText}</h2>
                             <p className="text-[12px] leading-5 text-muted-foreground/80">
@@ -287,15 +287,15 @@ export function ProjectFormDialog({ projectFormMode, projectFormTarget, projectF
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-muted-foreground">
+                            <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] text-muted-foreground">
                                 <span
                                     aria-hidden
-                                    className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
+                                    className="inline-block h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.12)]"
                                 />
                                 <span>为必填项（共 {requiredCount} 项）</span>
                             </div>
                             <button
-                                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
                                 onClick={handleCloseClick}
                                 aria-label="关闭项目表单"
                                 type="button"
@@ -383,7 +383,7 @@ export function ProjectFormDialog({ projectFormMode, projectFormTarget, projectF
                                     >
                                         {["策划中", "剧本中", "分镜中", "资产制作", "生成中", "剪辑中", "审核中", "已交付"].map(
                                             (status) => (
-                                                <option key={status} value={status} className="bg-[#1a1a1a] text-white">
+                                                <option key={status} value={status} className="bg-card text-foreground">
                                                     {status}
                                                 </option>
                                             ),
@@ -462,7 +462,7 @@ export function ProjectFormDialog({ projectFormMode, projectFormTarget, projectF
                                 >
                                     <textarea
                                         id="project-description"
-                                        className="min-h-[88px] w-full resize-none rounded-md border border-white/10 bg-[#1f1f1f] px-3 py-2 text-[13px] leading-6 text-white placeholder:text-muted-foreground/40 outline-none transition-colors hover:border-white/20 focus:border-emerald-500/70 focus:ring-2 focus:ring-emerald-500/20"
+                                        className="min-h-[88px] w-full resize-none rounded-md border border-border bg-muted px-3 py-2 text-[13px] leading-6 text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors hover:border-border focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
                                         value={projectFormDraft.description}
                                         placeholder="项目定位、受众、风格参考、交付目标等"
                                         onChange={(event) => onFieldChange("description", event.target.value)}
@@ -473,7 +473,7 @@ export function ProjectFormDialog({ projectFormMode, projectFormTarget, projectF
                     </div>
 
                     {/* 底部按钮区：与表单内容用 1px 弱线分隔 */}
-                    <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] bg-white/[0.01] px-6 py-4">
+                    <div className="flex items-center justify-end gap-2 border-t border-border/60 bg-muted/20 px-6 py-4">
                         <Button
                             size="sm"
                             variant="secondary"
@@ -487,7 +487,7 @@ export function ProjectFormDialog({ projectFormMode, projectFormTarget, projectF
                             size="sm"
                             onClick={onSubmit}
                             disabled={hasError}
-                            className="gap-1.5 bg-white px-4 text-[#1a1a1a] shadow-sm hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="gap-1.5 bg-secondary px-4 text-foreground shadow-sm hover:bg-secondary/90 disabled:cursor-not-allowed disabled:opacity-60"
                             type="button"
                             title={hasError ? "请先修复表单中的错误" : undefined}
                         >

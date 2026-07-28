@@ -24,19 +24,19 @@ export function TasksTab(props: Pick<
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-white/10 bg-[#202020] p-5">
+      <div className="rounded-2xl border border-border bg-muted p-5">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-base font-semibold text-white">{editingTaskId ? "编辑制作任务" : "新增制作任务"}</div>
-            <div className="mt-1 text-sm text-[#bdbdbd]">维护任务标题、状态、负责人、截止日期和备注；下方看板按状态展示。</div>
+            <div className="text-base font-semibold text-foreground">{editingTaskId ? "编辑制作任务" : "新增制作任务"}</div>
+            <div className="mt-1 text-sm text-muted-foreground">维护任务标题、状态、负责人、截止日期和备注；下方看板按状态展示。</div>
           </div>
           {editingTaskId && <Button size="sm" variant="secondary" onClick={resetProjectTaskForm}>取消编辑</Button>}
         </div>
         <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
           <label className="space-y-1.5 lg:col-span-2">
-            <span className="block text-sm font-medium text-[#d8d8d8]">任务名称</span>
+            <span className="block text-sm font-medium text-foreground/80">任务名称</span>
             <input
-              className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500"
+              className="h-11 w-full rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
               value={taskDraft.title ?? ""}
               placeholder="任务名称"
               onChange={(event) => setTaskDraft((draft) => ({ ...draft, title: event.target.value }))}
@@ -49,9 +49,9 @@ export function TasksTab(props: Pick<
             />
           </label>
           <label className="space-y-1.5">
-            <span className="block text-sm font-medium text-[#d8d8d8]">状态</span>
+            <span className="block text-sm font-medium text-foreground/80">状态</span>
             <select
-              className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500"
+              className="h-11 w-full rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
               value={taskDraft.status ?? "todo"}
               onChange={(event) => setTaskDraft((draft) => ({ ...draft, status: event.target.value as ProjectTaskStatus }))}
             >
@@ -59,7 +59,7 @@ export function TasksTab(props: Pick<
             </select>
           </label>
           <label className="space-y-1.5">
-            <span className="block text-sm font-medium text-[#d8d8d8]">负责人</span>
+            <span className="block text-sm font-medium text-foreground/80">负责人</span>
             <ShadcnSelect
               options={[
                 { value: "", label: "未分配" },
@@ -71,9 +71,9 @@ export function TasksTab(props: Pick<
             />
           </label>
           <label className="space-y-1.5">
-            <span className="block text-sm font-medium text-[#d8d8d8]">截止日期</span>
+            <span className="block text-sm font-medium text-foreground/80">截止日期</span>
             <input
-              className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500"
+              className="h-11 w-full rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
               type="date"
               value={taskDraft.due_date ?? ""}
               onChange={(event) => setTaskDraft((draft) => ({ ...draft, due_date: event.target.value }))}
@@ -81,9 +81,9 @@ export function TasksTab(props: Pick<
           </label>
         </div>
         <label className="mt-3 block space-y-1.5">
-          <span className="block text-sm font-medium text-[#d8d8d8]">任务备注</span>
+          <span className="block text-sm font-medium text-foreground/80">任务备注</span>
           <textarea
-            className="min-h-20 w-full resize-y rounded-xl border border-white/10 bg-[#2f2f2f] px-3 py-3 text-sm leading-6 text-white outline-none transition-colors focus:border-emerald-500"
+            className="min-h-20 w-full resize-y rounded-xl border border-border bg-secondary px-3 py-3 text-sm leading-6 text-foreground outline-none transition-colors focus:border-primary"
             value={taskDraft.notes ?? ""}
             placeholder="任务备注、验收标准、依赖事项"
             onChange={(event) => setTaskDraft((draft) => ({ ...draft, notes: event.target.value }))}
@@ -100,24 +100,24 @@ export function TasksTab(props: Pick<
         {projectTaskColumns.map((column) => {
           const columnTasks = pagedProjectTasks.filter((task) => task.status === column.key);
           return (
-            <div key={column.key} className="min-h-28 rounded-lg border border-white/10 bg-[#202020] p-2">
-              <div className="mb-2 flex items-center justify-between text-xs text-[#b4b4b4]">
+            <div key={column.key} className="min-h-28 rounded-lg border border-border bg-muted p-2">
+              <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
                 <span>{column.label}</span>
                 <span>{columnTasks.length}</span>
               </div>
               <div className="space-y-2">
                 {columnTasks.map((task) => (
-                  <div key={task.id} className="space-y-2 rounded-md border border-white/10 bg-[#2f2f2f] p-2 text-xs">
-                    <div className="font-medium text-white">{task.title}</div>
+                  <div key={task.id} className="space-y-2 rounded-md border border-border bg-secondary p-2 text-xs">
+                    <div className="font-medium text-foreground">{task.title}</div>
                     {(task.owner || task.due_date) && (
-                      <div className="truncate text-[#b4b4b4]">{[task.owner, task.due_date].filter(Boolean).join(" · ")}</div>
+                      <div className="truncate text-muted-foreground">{[task.owner, task.due_date].filter(Boolean).join(" · ")}</div>
                     )}
-                    {task.notes && <div className="line-clamp-2 text-[#b4b4b4]">{task.notes}</div>}
+                    {task.notes && <div className="line-clamp-2 text-muted-foreground">{task.notes}</div>}
                     <div className="flex gap-1">
-                      <button className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-md bg-white/10 px-2 text-[#eeeeee] hover:bg-white/15" onClick={() => editProjectTaskItem(task)}>
+                      <button className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-md bg-muted px-2 text-foreground/90 hover:bg-muted" onClick={() => editProjectTaskItem(task)}>
                         <Pencil className="h-3.5 w-3.5" />编辑
                       </button>
-                      <button className="grid h-7 w-7 place-items-center rounded-md text-red-300 hover:bg-red-500/10" onClick={() => void deleteProjectTaskItem(task)} aria-label="删除任务">
+                      <button className="grid h-7 w-7 place-items-center rounded-md text-destructive hover:bg-destructive/10" onClick={() => void deleteProjectTaskItem(task)} aria-label="删除任务">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>

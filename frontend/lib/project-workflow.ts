@@ -307,9 +307,9 @@ export function buildProjectHealth(input: {
   if (items.length === 0) items.push("当前项目节奏正常，可以继续推进下一批分镜或生成任务");
 
   const safeScore = Math.max(0, Math.min(100, score));
-  if (safeScore >= 85) return { score: safeScore, label: "健康", tone: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200", items };
-  if (safeScore >= 65) return { score: safeScore, label: "需关注", tone: "border-yellow-500/30 bg-yellow-500/10 text-yellow-100", items };
-  return { score: safeScore, label: "有风险", tone: "border-red-500/30 bg-red-500/10 text-red-100", items };
+  if (safeScore >= 85) return { score: safeScore, label: "健康", tone: "border-primary/30 bg-primary/10 text-primary", items };
+  if (safeScore >= 65) return { score: safeScore, label: "需关注", tone: "border-chart-5/30 bg-chart-5/10 text-chart-5", items };
+  return { score: safeScore, label: "有风险", tone: "border-destructive/30 bg-destructive/10 text-destructive", items };
 }
 
 /** 从一组任务或消息中找出最新创建时间。 */

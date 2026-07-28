@@ -38,12 +38,12 @@ export const AIAssistant = memo(function AIAssistant({
   const [isOpen, setIsOpen] = useState(false);
 
   const quickActions = [
-    { icon: Sparkles, label: "创建项目", onClick: onCreateProject, color: "text-emerald-400" },
-    { icon: FileText, label: "写剧本", onClick: onWriteScript, color: "text-blue-400" },
-    { icon: Clapperboard, label: "生成分镜", onClick: onGenerateStoryboard, color: "text-purple-400" },
-    { icon: Image, label: "生成图片", onClick: onGenerateImage, color: "text-pink-400" },
-    { icon: Video, label: "生成视频", onClick: onGenerateVideo, color: "text-orange-400" },
-    { icon: AlertCircle, label: "查看失败任务", onClick: onViewFailedTasks, color: "text-red-400" },
+    { icon: Sparkles, label: "创建项目", onClick: onCreateProject, color: "text-primary" },
+    { icon: FileText, label: "写剧本", onClick: onWriteScript, color: "text-info" },
+    { icon: Clapperboard, label: "生成分镜", onClick: onGenerateStoryboard, color: "text-chart-1" },
+    { icon: Image, label: "生成图片", onClick: onGenerateImage, color: "text-chart-4" },
+    { icon: Video, label: "生成视频", onClick: onGenerateVideo, color: "text-chart-3" },
+    { icon: AlertCircle, label: "查看失败任务", onClick: onViewFailedTasks, color: "text-destructive" },
   ];
 
   return (
@@ -51,7 +51,7 @@ export const AIAssistant = memo(function AIAssistant({
       {/* 浮动按钮 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 transition-all hover:bg-emerald-600 hover:scale-110"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:scale-110"
         aria-label="打开AI助手"
       >
         {isOpen ? (
@@ -63,20 +63,20 @@ export const AIAssistant = memo(function AIAssistant({
 
       {/* 助手面板 */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-80 rounded-2xl border border-white/10 bg-[#1a1a1a] p-4 shadow-2xl">
+        <div className="fixed bottom-24 right-6 z-50 w-80 rounded-2xl border border-border bg-card p-4 shadow-2xl">
           {/* 头部 */}
           <div className="mb-4 flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20">
-              <Sparkles className="h-5 w-5 text-emerald-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
+              <Sparkles className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="font-medium text-white">AI 导演助手</div>
-              <div className="text-xs text-[#888]">今天需要帮你什么？</div>
+              <div className="font-medium text-foreground">AI 导演助手</div>
+              <div className="text-xs text-muted-foreground">今天需要帮你什么？</div>
             </div>
           </div>
 
           {/* 问候语 */}
-          <div className="mb-4 rounded-lg bg-[#252525] p-3 text-sm text-[#ccc]">
+          <div className="mb-4 rounded-lg bg-secondary p-3 text-sm text-foreground/80">
             你好，我是 AI 导演助手。
             <br />
             我可以帮助你完成漫剧创作的各个环节，从剧本到发布全流程管理。
@@ -91,16 +91,16 @@ export const AIAssistant = memo(function AIAssistant({
                   action.onClick?.();
                   setIsOpen(false);
                 }}
-                className="flex w-full items-center gap-3 rounded-lg border border-white/5 bg-[#252525] p-3 text-left transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5"
+                className="flex w-full items-center gap-3 rounded-lg border border-border/50 bg-secondary p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5"
               >
                 <action.icon className={`h-5 w-5 ${action.color}`} />
-                <span className="text-sm text-white">{action.label}</span>
+                <span className="text-sm text-foreground">{action.label}</span>
               </button>
             ))}
           </div>
 
           {/* 底部提示 */}
-          <div className="mt-4 text-center text-xs text-[#666]">
+          <div className="mt-4 text-center text-xs text-muted-foreground">
             点击任意操作开始创作
           </div>
         </div>

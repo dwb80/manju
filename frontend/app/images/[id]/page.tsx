@@ -61,19 +61,19 @@ export default function ImageDetailPage() {
   }, [params.id]);
 
   return (
-    <main className="min-h-screen bg-[#212121] text-[#ececec]">
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-white/10 bg-[#212121]/95 px-4 backdrop-blur">
+    <main className="min-h-screen bg-muted text-foreground/90">
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-muted/95 px-4 backdrop-blur">
         <Button size="sm" variant="ghost" onClick={() => window.close()}>
           <ArrowLeft className="h-4 w-4" />关闭
         </Button>
-        <div className="truncate px-4 text-sm text-[#b4b4b4]">{notice || "图片详情"}</div>
+        <div className="truncate px-4 text-sm text-muted-foreground">{notice || "图片详情"}</div>
         <Button size="sm" variant="ghost" onClick={() => void load()}>
           <RefreshCw className="h-4 w-4" />刷新
         </Button>
       </header>
 
       <section className="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-[1fr_360px]">
-        <div className="grid min-h-[calc(100vh-88px)] place-items-center rounded-lg bg-[#171717] p-3">
+        <div className="grid min-h-[calc(100vh-88px)] place-items-center rounded-lg bg-card p-3">
           {selectedUrl ? (
             <div
               className="aspect-[9/16] max-h-[calc(100vh-120px)] overflow-hidden rounded-lg"
@@ -83,22 +83,22 @@ export default function ImageDetailPage() {
               <img className="h-full w-full object-contain" src={selectedUrl} alt={task?.prompt ?? "图片作品"} />
             </div>
           ) : (
-            <div className="text-sm text-[#b4b4b4]">正在加载图片...</div>
+            <div className="text-sm text-muted-foreground">正在加载图片...</div>
           )}
         </div>
 
         <aside className="space-y-3">
-          <Card className="space-y-3 border-white/10 bg-[#2a2a2a] p-4">
-            <div className="text-sm text-[#b4b4b4]">提示词</div>
+          <Card className="space-y-3 border-border bg-secondary p-4">
+            <div className="text-sm text-muted-foreground">提示词</div>
             <div className="whitespace-pre-wrap text-sm leading-7">{task?.prompt || "-"}</div>
           </Card>
 
           {task && task.image_urls.length > 1 && (
-            <Card className="space-y-3 border-white/10 bg-[#2a2a2a] p-3">
-              <div className="text-sm text-[#b4b4b4]">全部图片</div>
+            <Card className="space-y-3 border-border bg-secondary p-3">
+              <div className="text-sm text-muted-foreground">全部图片</div>
               <div className="grid grid-cols-4 gap-2">
                 {task.image_urls.map((url, index) => (
-                  <button key={url} className={`overflow-hidden rounded-md border ${selected === index ? "border-emerald-400" : "border-white/10"}`} onClick={() => setSelected(index)}>
+                  <button key={url} className={`overflow-hidden rounded-md border ${selected === index ? "border-primary" : "border-border"}`} onClick={() => setSelected(index)}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img className="aspect-square w-full object-cover" src={url} alt={`图片 ${index + 1}`} />
                   </button>
@@ -107,23 +107,23 @@ export default function ImageDetailPage() {
             </Card>
           )}
 
-          <Card className="space-y-3 border-white/10 bg-[#2a2a2a] p-4 text-sm">
+          <Card className="space-y-3 border-border bg-secondary p-4 text-sm">
             <div className="flex justify-between gap-3">
-              <span className="text-[#b4b4b4]">状态</span>
+              <span className="text-muted-foreground">状态</span>
               <span>{task?.status ?? "-"}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-[#b4b4b4]">创建时间</span>
+              <span className="text-muted-foreground">创建时间</span>
               <span className="text-right">{task?.created_at ? new Date(task.created_at).toLocaleString() : "-"}</span>
             </div>
-            {task?.error && <div className="text-red-300">{task.error}</div>}
+            {task?.error && <div className="text-destructive">{task.error}</div>}
           </Card>
 
           <div className="flex flex-wrap gap-2">
-            <a className="inline-flex h-9 items-center gap-2 rounded-md bg-white/10 px-3 text-sm" href={selectedUrl} download={`${task?.id ?? "image"}.png`} target="_blank">
+            <a className="inline-flex h-9 items-center gap-2 rounded-md bg-muted px-3 text-sm" href={selectedUrl} download={`${task?.id ?? "image"}.png`} target="_blank">
               <Download className="h-4 w-4" />下载
             </a>
-            <a className="inline-flex h-9 items-center gap-2 rounded-md bg-white/10 px-3 text-sm" href={selectedUrl} target="_blank">
+            <a className="inline-flex h-9 items-center gap-2 rounded-md bg-muted px-3 text-sm" href={selectedUrl} target="_blank">
               <ExternalLink className="h-4 w-4" />打开原图
             </a>
             <Button size="sm" variant="secondary" disabled={!selectedUrl} onClick={() => void copy(selectedUrl)}>

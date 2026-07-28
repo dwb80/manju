@@ -58,7 +58,7 @@ export function FilterTabsBar({ tabs, activeTab, onChange, className = '' }: Fil
       role="tablist"
       aria-label="筛选维度"
       className={cn(
-        'flex items-center gap-1 border-b border-white/10 overflow-x-auto',
+        'flex items-center gap-1 border-b border-border overflow-x-auto',
         className,
       )}
     >
@@ -74,8 +74,8 @@ export function FilterTabsBar({ tabs, activeTab, onChange, className = '' }: Fil
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap transition-colors border-b-2 -mb-px',
               isActive
-                ? 'text-emerald-400 border-emerald-500'
-                : 'text-[#888] border-transparent hover:text-white hover:border-white/20',
+                ? 'text-primary border-primary'
+                : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border',
             )}
           >
             <span>{tab.label}</span>
@@ -84,8 +84,8 @@ export function FilterTabsBar({ tabs, activeTab, onChange, className = '' }: Fil
                 className={cn(
                   'text-[10px] px-1.5 py-0.5 rounded-full',
                   isActive
-                    ? 'bg-emerald-500/20 text-emerald-300'
-                    : 'bg-white/10 text-[#888]',
+                    ? 'bg-primary/20 text-primary'
+                    : 'bg-muted text-muted-foreground',
                 )}
               >
                 {tab.badge}

@@ -21,26 +21,26 @@ const costTypeConfig: Record<"gpt" | "claude" | "images" | "videos", { name: str
   gpt: {
     name: "GPT",
     icon: Sparkles,
-    color: "text-emerald-400",
-    bgColor: "bg-emerald-500/20",
+    color: "text-primary",
+    bgColor: "bg-primary/20",
   },
   claude: {
     name: "Claude",
     icon: Bot,
-    color: "text-orange-400",
-    bgColor: "bg-orange-500/20",
+    color: "text-chart-3",
+    bgColor: "bg-chart-3/20",
   },
   images: {
     name: "图片",
     icon: Image,
-    color: "text-pink-400",
-    bgColor: "bg-pink-500/20",
+    color: "text-chart-4",
+    bgColor: "bg-chart-4/20",
   },
   videos: {
     name: "视频",
     icon: Video,
-    color: "text-purple-400",
-    bgColor: "bg-purple-500/20",
+    color: "text-chart-1",
+    bgColor: "bg-chart-1/20",
   },
 };
 
@@ -50,12 +50,12 @@ const CostItemRow = memo(function CostItemRow({ type, cost }: { type: "gpt" | "c
   const Icon = config.icon;
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-3">
+    <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/50 p-3">
       <div className="flex items-center gap-3">
         <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${config.bgColor}`}>
           <Icon className={`h-4 w-4 ${config.color}`} />
         </div>
-        <span className="text-sm text-white">{config.name}</span>
+        <span className="text-sm text-foreground">{config.name}</span>
       </div>
       <span className={`text-sm font-medium ${config.color}`}>
         ¥{cost.toFixed(2)}
@@ -86,28 +86,28 @@ export const CostCenter = memo(function CostCenter({
   ];
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#252525] p-6">
+    <div className="rounded-xl border border-border bg-secondary p-6">
       {/* 标题和总成本 */}
       <div className="mb-6 flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500/20 to-green-500/20">
-            <DollarSign className="h-5 w-5 text-emerald-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-success/20">
+            <DollarSign className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">AI成本中心</h2>
-            <p className="text-sm text-[#888]">今日成本明细</p>
+            <h2 className="text-lg font-bold text-foreground">AI成本中心</h2>
+            <p className="text-sm text-muted-foreground">今日成本明细</p>
           </div>
         </div>
 
         {/* 总成本 */}
         <div className="text-right">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-400">
+            <span className="text-2xl font-bold text-primary">
               ¥{data.total.toFixed(2)}
             </span>
             {changePercent !== undefined && (
               <span
-                className={`flex items-center gap-1 text-xs ${isUp ? "text-red-400" : isDown ? "text-emerald-400" : "text-[#888]"
+                className={`flex items-center gap-1 text-xs ${isUp ? "text-destructive" : isDown ? "text-primary" : "text-muted-foreground"
                   }`}
               >
                 {isUp ? (
@@ -119,7 +119,7 @@ export const CostCenter = memo(function CostCenter({
               </span>
             )}
           </div>
-          <span className="text-xs text-[#666]">总成本</span>
+          <span className="text-xs text-muted-foreground">总成本</span>
         </div>
       </div>
 
@@ -133,8 +133,8 @@ export const CostCenter = memo(function CostCenter({
       {/* 空状态 */}
       {data.total === 0 && (
         <div className="flex h-20 flex-col items-center justify-center">
-          <DollarSign className="mb-2 h-8 w-8 text-[#333]" />
-          <p className="text-sm text-[#666]">暂无成本数据</p>
+          <DollarSign className="mb-2 h-8 w-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">暂无成本数据</p>
         </div>
       )}
     </div>

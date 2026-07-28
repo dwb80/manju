@@ -125,11 +125,11 @@ export function OnboardingFlow({ onComplete, onSkip, initialStep = 0 }: Onboardi
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#1a1a1a] p-8 shadow-2xl">
+      <div className="relative w-full max-w-2xl rounded-2xl border border-border bg-card p-8 shadow-2xl">
         {/* 关闭按钮 */}
         <button
           onClick={handleSkip}
-          className="absolute right-4 top-4 rounded-lg p-2 text-[#888] hover:bg-white/10 hover:text-white"
+          className="absolute right-4 top-4 rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
           aria-label="跳过引导"
         >
           <X className="h-5 w-5" />
@@ -140,7 +140,7 @@ export function OnboardingFlow({ onComplete, onSkip, initialStep = 0 }: Onboardi
           {steps.map((step, index) => (
             <div
               key={step.id}
-              className={`h-2 w-12 rounded-full transition-all ${index <= currentStep ? "bg-emerald-500" : "bg-white/10"
+              className={`h-2 w-12 rounded-full transition-all ${index <= currentStep ? "bg-primary" : "bg-muted"
                 }`}
             />
           ))}
@@ -150,18 +150,18 @@ export function OnboardingFlow({ onComplete, onSkip, initialStep = 0 }: Onboardi
         <div className="text-center">
           {/* 图标 */}
           <div className="mb-6 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10">
-              <CurrentIcon className="h-10 w-10 text-emerald-400" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10">
+              <CurrentIcon className="h-10 w-10 text-primary" />
             </div>
           </div>
 
           {/* 标题 */}
-          <h2 className="mb-2 text-2xl font-bold text-white">
+          <h2 className="mb-2 text-2xl font-bold text-foreground">
             {steps[currentStep].title}
           </h2>
 
           {/* 描述 */}
-          <p className="mb-6 text-sm text-[#888]">
+          <p className="mb-6 text-sm text-muted-foreground">
             {steps[currentStep].description}
           </p>
 
@@ -200,7 +200,7 @@ export function OnboardingFlow({ onComplete, onSkip, initialStep = 0 }: Onboardi
           {/* 跳过链接 */}
           <button
             onClick={handleSkip}
-            className="mt-4 text-xs text-[#666] hover:text-[#888]"
+            className="mt-4 text-xs text-muted-foreground hover:text-muted-foreground"
           >
             跳过引导，稍后再看
           </button>
@@ -214,25 +214,25 @@ export function OnboardingFlow({ onComplete, onSkip, initialStep = 0 }: Onboardi
 function WelcomeContent() {
   return (
     <div className="space-y-4 text-left">
-      <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-        <h3 className="mb-2 font-semibold text-white">🎬 AI漫剧工业化生产平台</h3>
-        <p className="text-sm text-[#888]">
+      <div className="rounded-lg border border-border bg-muted/50 p-4">
+        <h3 className="mb-2 font-semibold text-foreground">🎬 AI漫剧工业化生产平台</h3>
+        <p className="text-sm text-muted-foreground">
           从剧本到发布的全流程管理，AI辅助让创作更高效
         </p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg bg-[#252525] p-3 text-center">
-          <div className="text-2xl font-bold text-emerald-400">30%</div>
-          <div className="text-xs text-[#888]">效率提升</div>
+        <div className="rounded-lg bg-secondary p-3 text-center">
+          <div className="text-2xl font-bold text-primary">30%</div>
+          <div className="text-xs text-muted-foreground">效率提升</div>
         </div>
-        <div className="rounded-lg bg-[#252525] p-3 text-center">
-          <div className="text-2xl font-bold text-blue-400">10+</div>
-          <div className="text-xs text-[#888]">AI模型</div>
+        <div className="rounded-lg bg-secondary p-3 text-center">
+          <div className="text-2xl font-bold text-info">10+</div>
+          <div className="text-xs text-muted-foreground">AI模型</div>
         </div>
-        <div className="rounded-lg bg-[#252525] p-3 text-center">
-          <div className="text-2xl font-bold text-purple-400">24/7</div>
-          <div className="text-xs text-[#888]">在线服务</div>
+        <div className="rounded-lg bg-secondary p-3 text-center">
+          <div className="text-2xl font-bold text-chart-1">24/7</div>
+          <div className="text-xs text-muted-foreground">在线服务</div>
         </div>
       </div>
     </div>
@@ -251,13 +251,13 @@ function FeaturesContent() {
       {features.map((feature) => {
         const Icon = feature.icon;
         return (
-          <div key={feature.name} className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#252525]">
-              <Icon className="h-5 w-5 text-emerald-400" />
+          <div key={feature.name} className="flex items-start gap-3 rounded-lg border border-border bg-muted/50 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
+              <Icon className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="font-medium text-white">{feature.name}</div>
-              <div className="text-xs text-[#888]">{feature.desc}</div>
+              <div className="font-medium text-foreground">{feature.name}</div>
+              <div className="text-xs text-muted-foreground">{feature.desc}</div>
             </div>
           </div>
         );
@@ -269,25 +269,25 @@ function FeaturesContent() {
 function CreateProjectContent() {
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border-2 border-dashed border-emerald-500/30 bg-emerald-500/5 p-6 text-center">
-        <FolderOpen className="mx-auto mb-3 h-12 w-12 text-emerald-400" />
-        <p className="text-sm text-[#888]">
+      <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-6 text-center">
+        <FolderOpen className="mx-auto mb-3 h-12 w-12 text-primary" />
+        <p className="text-sm text-muted-foreground">
           创建您的第一个漫剧项目，开始AI辅助创作之旅
         </p>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-[#252525] p-3 text-center text-xs">
-          <div className="font-medium text-white">现代都市</div>
-          <div className="text-[#666]">模板</div>
+        <div className="rounded-lg bg-secondary p-3 text-center text-xs">
+          <div className="font-medium text-foreground">现代都市</div>
+          <div className="text-muted-foreground">模板</div>
         </div>
-        <div className="rounded-lg bg-[#252525] p-3 text-center text-xs">
-          <div className="font-medium text-white">古风武侠</div>
-          <div className="text-[#666]">模板</div>
+        <div className="rounded-lg bg-secondary p-3 text-center text-xs">
+          <div className="font-medium text-foreground">古风武侠</div>
+          <div className="text-muted-foreground">模板</div>
         </div>
-        <div className="rounded-lg bg-[#252525] p-3 text-center text-xs">
-          <div className="font-medium text-white">科幻冒险</div>
-          <div className="text-[#666]">模板</div>
+        <div className="rounded-lg bg-secondary p-3 text-center text-xs">
+          <div className="font-medium text-foreground">科幻冒险</div>
+          <div className="text-muted-foreground">模板</div>
         </div>
       </div>
     </div>
@@ -297,30 +297,30 @@ function CreateProjectContent() {
 function AICreationContent() {
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-[#252525] p-4">
+      <div className="rounded-lg bg-secondary p-4">
         <div className="mb-3 flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-emerald-500/20" />
-          <div className="text-sm font-medium text-white">AI助手</div>
+          <div className="h-8 w-8 rounded-full bg-primary/20" />
+          <div className="text-sm font-medium text-foreground">AI助手</div>
         </div>
-        <div className="rounded-lg bg-[#1a1a1a] p-3 text-sm text-[#ccc]">
+        <div className="rounded-lg bg-card p-3 text-sm text-foreground/80">
           "我可以帮助您生成角色设定、场景图片和动画片段。您只需要描述您想要的内容..."
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg border border-white/10 bg-[#252525] p-3">
+        <div className="rounded-lg border border-border bg-secondary p-3">
           <div className="flex items-center gap-2 mb-1">
-            <Image className="h-4 w-4 text-emerald-400" />
-            <div className="text-xs text-[#888]">图片生成</div>
+            <Image className="h-4 w-4 text-primary" />
+            <div className="text-xs text-muted-foreground">图片生成</div>
           </div>
-          <div className="text-sm text-white">平均45秒</div>
+          <div className="text-sm text-foreground">平均45秒</div>
         </div>
-        <div className="rounded-lg border border-white/10 bg-[#252525] p-3">
+        <div className="rounded-lg border border-border bg-secondary p-3">
           <div className="flex items-center gap-2 mb-1">
-            <Video className="h-4 w-4 text-blue-400" />
-            <div className="text-xs text-[#888]">视频生成</div>
+            <Video className="h-4 w-4 text-info" />
+            <div className="text-xs text-muted-foreground">视频生成</div>
           </div>
-          <div className="text-sm text-white">平均3分钟</div>
+          <div className="text-sm text-foreground">平均3分钟</div>
         </div>
       </div>
     </div>
@@ -330,19 +330,19 @@ function AICreationContent() {
 function CompleteContent() {
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-6 text-center">
-        <CheckCircle className="mx-auto mb-3 h-12 w-12 text-emerald-400" />
-        <p className="text-sm text-[#888]">
+      <div className="rounded-lg border border-primary/30 bg-primary/5 p-6 text-center">
+        <CheckCircle className="mx-auto mb-3 h-12 w-12 text-primary" />
+        <p className="text-sm text-muted-foreground">
           您已经了解了系统的核心功能，可以开始创作了！
         </p>
       </div>
 
-      <div className="rounded-lg bg-[#252525] p-4">
-        <div className="mb-2 text-xs font-medium text-white">快捷键提示</div>
-        <div className="space-y-1 text-xs text-[#888]">
-          <div><kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">Ctrl</kbd> + <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">K</kbd> 全局搜索</div>
-          <div><kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">Ctrl</kbd> + <kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">N</kbd> 新建项目</div>
-          <div><kbd className="rounded bg-white/10 px-1.5 py-0.5 text-white">?</kbd> 查看帮助</div>
+      <div className="rounded-lg bg-secondary p-4">
+        <div className="mb-2 text-xs font-medium text-foreground">快捷键提示</div>
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <div><kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">Ctrl</kbd> + <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">K</kbd> 全局搜索</div>
+          <div><kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">Ctrl</kbd> + <kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">N</kbd> 新建项目</div>
+          <div><kbd className="rounded bg-muted px-1.5 py-0.5 text-foreground">?</kbd> 查看帮助</div>
         </div>
       </div>
     </div>

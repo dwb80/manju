@@ -80,13 +80,13 @@ export function ImportFormPanel({
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-[#888]">
+      <div className="text-sm text-muted-foreground">
         支持导入多种格式的剧本文件：TXT纯文本、Markdown、Fountain剧本格式、JSON数据、Final Draft (FDX)。
       </div>
 
       {/* 格式选择 */}
       <div>
-        <div className="text-xs text-[#888] mb-2">选择导入格式</div>
+        <div className="text-xs text-muted-foreground mb-2">选择导入格式</div>
         <div className="flex flex-wrap gap-2">
           {IMPORT_FORMATS.map((fmt) => {
             const Icon = fmt.icon;
@@ -96,8 +96,8 @@ export function ImportFormPanel({
                 onClick={() => setImportFormat(fmt.value)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
                   importFormat === fmt.value
-                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50"
-                    : "bg-white/5 text-[#888] border border-white/10 hover:bg-white/10"
+                    ? "bg-primary/20 text-primary border border-primary/50"
+                    : "bg-muted/50 text-muted-foreground border border-border hover:bg-muted"
                 }`}
               >
                 <Icon className="h-3 w-3" />
@@ -126,7 +126,7 @@ export function ImportFormPanel({
           选择文件
         </Button>
         {importFileName && (
-          <span className="ml-3 text-sm text-emerald-400">
+          <span className="ml-3 text-sm text-primary">
             已选择: {importFileName}
           </span>
         )}
@@ -134,11 +134,11 @@ export function ImportFormPanel({
 
       {/* 内容输入 */}
       <div>
-        <div className="text-xs text-[#888] mb-2">
+        <div className="text-xs text-muted-foreground mb-2">
           或直接粘贴{IMPORT_FORMATS.find((f) => f.value === importFormat)?.label}内容
         </div>
         <textarea
-          className="w-full h-48 p-3 rounded-lg bg-[#1a1a1a] border border-white/10 text-sm text-white resize-none focus:outline-none focus:border-emerald-500/50"
+          className="w-full h-48 p-3 rounded-lg bg-card border border-border text-sm text-foreground resize-none focus:outline-none focus:border-primary/50"
           placeholder={getImportPlaceholder(importFormat)}
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
@@ -151,21 +151,21 @@ export function ImportFormPanel({
         // 阈值：10000 字变橙，50000 字变红 + 强制提示
         const colorClass =
           charCount > 50_000
-            ? "text-red-400"
+            ? "text-destructive"
             : charCount > 10_000
-            ? "text-amber-400"
-            : "text-emerald-400";
+            ? "text-warning"
+            : "text-primary";
         return (
-          <div className="text-xs text-[#888]">
+          <div className="text-xs text-muted-foreground">
             当前内容字数:{" "}
             <span className={colorClass}>{charCount.toLocaleString()}</span> 字
             {charCount > 50_000 && (
-              <span className="ml-2 text-red-400">
+              <span className="ml-2 text-destructive">
                 ⚠ 内容过长，可能导致 AI 解析超时或本地正则失败
               </span>
             )}
             {charCount > 10_000 && charCount <= 50_000 && (
-              <span className="ml-2 text-amber-400">· 偏长</span>
+              <span className="ml-2 text-warning">· 偏长</span>
             )}
           </div>
         );
@@ -173,25 +173,25 @@ export function ImportFormPanel({
 
       <div className="flex justify-end gap-2 items-center">
         {analysisStatus && (
-          <span className="text-xs text-purple-300 mr-auto flex items-center gap-1">
+          <span className="text-xs text-chart-1 mr-auto flex items-center gap-1">
             <Loader2 className="h-3 w-3 animate-spin" />
             {analysisStatus}
           </span>
         )}
-        <span className="text-[10px] text-[#666] mr-auto">
-          提示：<kbd className="px-1 py-0.5 rounded bg-white/5 border border-white/10">Esc</kbd> 关闭 ·
-          <kbd className="px-1 py-0.5 rounded bg-white/5 border border-white/10 ml-1">Ctrl/⌘ + Enter</kbd> 解析
+        <span className="text-[10px] text-muted-foreground mr-auto">
+          提示：<kbd className="px-1 py-0.5 rounded bg-muted/50 border border-border">Esc</kbd> 关闭 ·
+          <kbd className="px-1 py-0.5 rounded bg-muted/50 border border-border ml-1">Ctrl/⌘ + Enter</kbd> 解析
         </span>
 
         {/* 模型下拉：放在「取消」按钮左边；只显示 chat 模型（剧本分析只允许聊天模型） */}
         <div className="flex items-center gap-1.5">
-          <Cpu className="h-3.5 w-3.5 text-[#888]" />
+          <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
           <select
             aria-label="选择剧本分析模型"
             value={selectedModelId}
             onChange={(e) => setSelectedModelId(e.target.value)}
             disabled={isLoadingModels || chatModels.length === 0 || isAnalyzingScript}
-            className="h-7 max-w-[180px] rounded-md border border-white/10 bg-[#1a1a1a] px-2 text-xs text-white focus:border-emerald-500/50 focus:outline-none disabled:opacity-50"
+            className="h-7 max-w-[180px] rounded-md border border-border bg-card px-2 text-xs text-foreground focus:border-primary/50 focus:outline-none disabled:opacity-50"
             title={
               chatModels.length === 0
                 ? "暂无可用聊天模型，请到「模型中心」配置"
@@ -216,7 +216,7 @@ export function ImportFormPanel({
             type="button"
             onClick={onReloadModels}
             disabled={isLoadingModels || isAnalyzingScript}
-            className="rounded p-1 text-[#666] hover:bg-white/5 hover:text-white disabled:opacity-50"
+            className="rounded p-1 text-muted-foreground hover:bg-muted/50 hover:text-foreground disabled:opacity-50"
             title="刷新模型列表"
             aria-label="刷新模型列表"
           >
@@ -225,7 +225,7 @@ export function ImportFormPanel({
         </div>
 
         {noModelAvailable && (
-          <span className="hidden md:flex items-center gap-1 text-[10px] text-amber-400">
+          <span className="hidden md:flex items-center gap-1 text-[10px] text-warning">
             <AlertTriangle className="h-3 w-3" />
             请到「模型中心」配置
           </span>

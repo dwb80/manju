@@ -232,43 +232,43 @@ export function ModelFormDialog({
       aria-modal="true"
       aria-label={editingModel ? "编辑模型" : "注册新模型"}
     >
-      <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#202020] p-5 shadow-2xl">
+      <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-muted p-5 shadow-2xl">
         {/* 标题栏 */}
-        <div className="flex items-center justify-between mb-4 sticky top-0 bg-[#202020] z-10 pb-2">
-          <h2 className="text-base font-semibold text-white">
+        <div className="flex items-center justify-between mb-4 sticky top-0 bg-muted z-10 pb-2">
+          <h2 className="text-base font-semibold text-foreground">
             {editingModel ? "编辑模型" : "注册新模型"}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center"
+            className="h-8 w-8 rounded-md hover:bg-muted flex items-center justify-center"
             aria-label="关闭"
           >
-            <X className="h-4 w-4 text-[#888]" />
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
           {/* 基本信息 */}
           <section className="mb-5">
-            <h3 className="text-sm font-semibold text-emerald-400 mb-3 border-b border-white/10 pb-1">
+            <h3 className="text-sm font-semibold text-primary mb-3 border-b border-border pb-1">
               基本信息
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#888] mb-1.5">
-                  模型名称<span className="text-red-400 ml-1">*</span>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+                  模型名称<span className="text-destructive ml-1">*</span>
                 </label>
                 <Input
                   value={form.name}
                   onChange={(e) => handleChange("name", e.target.value)}
                   placeholder="如：Agnes 2.0 Flash"
-                  className={errors.name ? "border-red-400" : ""}
+                  className={errors.name ? "border-destructive" : ""}
                 />
-                {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
+                {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#888] mb-1.5">模型类型</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">模型类型</label>
                 <select
                   value={form.type}
                   onChange={(e) => handleChange("type", e.target.value as ModelType)}
@@ -280,7 +280,7 @@ export function ModelFormDialog({
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#888] mb-1.5">模型描述</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">模型描述</label>
                 <Textarea
                   value={form.description}
                   onChange={(e) => handleChange("description", e.target.value)}
@@ -289,7 +289,7 @@ export function ModelFormDialog({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#888] mb-1.5">版本</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">版本</label>
                 <Input
                   value={form.version}
                   onChange={(e) => handleChange("version", e.target.value)}
@@ -297,7 +297,7 @@ export function ModelFormDialog({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#888] mb-1.5">提供商</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">提供商</label>
                 <Input
                   value={form.provider}
                   onChange={(e) => handleChange("provider", e.target.value)}
@@ -305,7 +305,7 @@ export function ModelFormDialog({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#888] mb-1.5">标签（逗号分隔）</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">标签（逗号分隔）</label>
                 <Input
                   value={form.tags}
                   onChange={(e) => handleChange("tags", e.target.value)}
@@ -313,21 +313,21 @@ export function ModelFormDialog({
                 />
               </div>
               <div className="flex items-end gap-4">
-                <label className="flex items-center gap-2 text-sm text-[#888] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={form.isDefault}
                     onChange={(e) => handleChange("isDefault", e.target.checked)}
-                    className="h-4 w-4 rounded accent-emerald-500"
+                    className="h-4 w-4 rounded accent-primary"
                   />
                   设为默认模型
                 </label>
-                <label className="flex items-center gap-2 text-sm text-[#888] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={form.is_enabled}
                     onChange={(e) => handleChange("is_enabled", e.target.checked)}
-                    className="h-4 w-4 rounded accent-emerald-500"
+                    className="h-4 w-4 rounded accent-primary"
                   />
                   启用模型
                 </label>
@@ -337,26 +337,26 @@ export function ModelFormDialog({
 
           {/* API配置 */}
           <section className="mb-5">
-            <h3 className="text-sm font-semibold text-emerald-400 mb-3 border-b border-white/10 pb-1">
+            <h3 className="text-sm font-semibold text-primary mb-3 border-b border-border pb-1">
               API配置
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#888] mb-1.5">
-                  API Endpoint<span className="text-red-400 ml-1">*</span>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+                  API Endpoint<span className="text-destructive ml-1">*</span>
                 </label>
                 <Input
                   value={form.apiEndpoint}
                   onChange={(e) => handleChange("apiEndpoint", e.target.value)}
                   placeholder="https://apihub.agnes-ai.com/v1/chat/completions"
-                  className={errors.apiEndpoint ? "border-red-400" : ""}
+                  className={errors.apiEndpoint ? "border-destructive" : ""}
                 />
                 {errors.apiEndpoint && (
-                  <p className="text-xs text-red-400 mt-1">{errors.apiEndpoint}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.apiEndpoint}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#888] mb-1.5">HTTP方法</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">HTTP方法</label>
                 <select
                   value={form.apiMethod}
                   onChange={(e) => handleChange("apiMethod", e.target.value as "POST" | "GET")}
@@ -368,7 +368,7 @@ export function ModelFormDialog({
               </div>
               {isVideo && (
                 <div>
-                  <label className="block text-sm font-medium text-[#888] mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     状态查询Endpoint（视频模型）
                   </label>
                   <Input
@@ -379,7 +379,7 @@ export function ModelFormDialog({
                 </div>
               )}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#888] mb-1.5">
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                   代理服务器URL
                 </label>
                 <Input
@@ -387,7 +387,7 @@ export function ModelFormDialog({
                   onChange={(e) => handleChange("proxyURL", e.target.value)}
                   placeholder="http://127.0.0.1:7897（如不需要代理请留空）"
                 />
-                <p className="text-xs text-[#666] mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   配置代理服务器地址用于访问该模型API，如 Bitz Net 代理
                 </p>
               </div>
@@ -396,20 +396,20 @@ export function ModelFormDialog({
 
           {/* 能力标签 */}
           <section className="mb-5">
-            <h3 className="text-sm font-semibold text-emerald-400 mb-3 border-b border-white/10 pb-1">
+            <h3 className="text-sm font-semibold text-primary mb-3 border-b border-border pb-1">
               能力标签
             </h3>
             <div className="flex flex-wrap gap-4">
               {capabilityOptions.map((cap) => (
                 <label
                   key={cap.key}
-                  className="flex items-center gap-2 text-sm text-[#aaa] cursor-pointer"
+                  className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer"
                 >
                   <input
                     type="checkbox"
                     checked={Boolean(form.capabilities[cap.key])}
                     onChange={() => handleCapabilityToggle(cap.key)}
-                    className="h-4 w-4 rounded accent-emerald-500"
+                    className="h-4 w-4 rounded accent-primary"
                   />
                   {cap.label}
                 </label>
@@ -419,14 +419,14 @@ export function ModelFormDialog({
 
           {/* 参数配置 */}
           <section className="mb-5">
-            <h3 className="text-sm font-semibold text-emerald-400 mb-3 border-b border-white/10 pb-1">
+            <h3 className="text-sm font-semibold text-primary mb-3 border-b border-border pb-1">
               参数配置
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {isChat && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">最大上下文</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">最大上下文</label>
                     <Input
                       type="number"
                       value={form.maxContext}
@@ -435,7 +435,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">最大输出Token</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">最大输出Token</label>
                     <Input
                       type="number"
                       value={form.maxTokens}
@@ -444,7 +444,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">默认温度</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">默认温度</label>
                     <Input
                       type="number"
                       step="0.1"
@@ -458,7 +458,7 @@ export function ModelFormDialog({
               {isImage && (
                 <>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       支持尺寸（逗号分隔）
                     </label>
                     <Input
@@ -468,7 +468,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">默认推理步数</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">默认推理步数</label>
                     <Input
                       type="number"
                       value={form.defaultSteps}
@@ -477,7 +477,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div className="md:col-span-3">
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       返回格式（逗号分隔）
                     </label>
                     <Input
@@ -491,7 +491,7 @@ export function ModelFormDialog({
               {isVideo && (
                 <>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       支持比例（逗号分隔）
                     </label>
                     <Input
@@ -501,7 +501,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">最大时长(秒)</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">最大时长(秒)</label>
                     <Input
                       type="number"
                       value={form.maxDuration}
@@ -510,7 +510,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">最大帧数</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">最大帧数</label>
                     <Input
                       type="number"
                       value={form.maxFrames}
@@ -525,14 +525,14 @@ export function ModelFormDialog({
 
           {/* 价格信息 */}
           <section className="mb-5">
-            <h3 className="text-sm font-semibold text-emerald-400 mb-3 border-b border-white/10 pb-1">
+            <h3 className="text-sm font-semibold text-primary mb-3 border-b border-border pb-1">
               价格信息
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {isChat && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">标准-输入价格</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">标准-输入价格</label>
                     <Input
                       value={form.priceStandardInput}
                       onChange={(e) => handleChange("priceStandardInput", e.target.value)}
@@ -540,7 +540,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">标准-输出价格</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">标准-输出价格</label>
                     <Input
                       value={form.priceStandardOutput}
                       onChange={(e) => handleChange("priceStandardOutput", e.target.value)}
@@ -548,7 +548,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">当前-输入价格</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">当前-输入价格</label>
                     <Input
                       value={form.priceCurrentInput}
                       onChange={(e) => handleChange("priceCurrentInput", e.target.value)}
@@ -556,7 +556,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">当前-输出价格</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">当前-输出价格</label>
                     <Input
                       value={form.priceCurrentOutput}
                       onChange={(e) => handleChange("priceCurrentOutput", e.target.value)}
@@ -568,7 +568,7 @@ export function ModelFormDialog({
               {isImage && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">标准价格</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">标准价格</label>
                     <Input
                       value={form.priceStandardImage}
                       onChange={(e) => handleChange("priceStandardImage", e.target.value)}
@@ -576,7 +576,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">当前价格</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">当前价格</label>
                     <Input
                       value={form.priceCurrentImage}
                       onChange={(e) => handleChange("priceCurrentImage", e.target.value)}
@@ -588,7 +588,7 @@ export function ModelFormDialog({
               {isVideo && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">标准价格</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">标准价格</label>
                     <Input
                       value={form.priceStandardVideo}
                       onChange={(e) => handleChange("priceStandardVideo", e.target.value)}
@@ -596,7 +596,7 @@ export function ModelFormDialog({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#888] mb-1.5">当前价格</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">当前价格</label>
                     <Input
                       value={form.priceCurrentVideo}
                       onChange={(e) => handleChange("priceCurrentVideo", e.target.value)}
@@ -610,12 +610,12 @@ export function ModelFormDialog({
 
           {/* 性能指标 */}
           <section className="mb-5">
-            <h3 className="text-sm font-semibold text-emerald-400 mb-3 border-b border-white/10 pb-1">
+            <h3 className="text-sm font-semibold text-primary mb-3 border-b border-border pb-1">
               性能指标
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#888] mb-1.5">平均响应时间(ms)</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">平均响应时间(ms)</label>
                 <Input
                   type="number"
                   value={form.avgResponseTime}
@@ -624,7 +624,7 @@ export function ModelFormDialog({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#888] mb-1.5">成功率(%)</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">成功率(%)</label>
                 <Input
                   type="number"
                   value={form.successRate}
@@ -633,7 +633,7 @@ export function ModelFormDialog({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#888] mb-1.5">并发能力</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">并发能力</label>
                 <Input
                   type="number"
                   value={form.concurrency}
@@ -645,7 +645,7 @@ export function ModelFormDialog({
           </section>
 
           {/* 操作按钮 */}
-          <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-white/10 sticky bottom-0 bg-[#202020]">
+          <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-border sticky bottom-0 bg-muted">
             <Button type="button" size="sm" variant="secondary" onClick={onClose} disabled={isLoading}>
               取消
             </Button>

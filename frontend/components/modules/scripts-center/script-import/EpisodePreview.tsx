@@ -43,78 +43,78 @@ export function EpisodePreview({ episodes }: EpisodePreviewProps) {
         const epId = `ep-${ep.episode_no}`;
         const expanded = expandedEpisodes.has(epId);
         return (
-          <div key={epId} className="rounded-lg border border-white/10 bg-[#1f1f1f] overflow-hidden">
+          <div key={epId} className="rounded-lg border border-border bg-muted overflow-hidden">
             <button
               type="button"
               onClick={() => toggleEpisode(epId)}
-              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/5 transition-colors text-left"
+              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors text-left"
             >
-              <span className="text-xs text-gray-500 font-mono w-7 inline-block text-center">
+              <span className="text-xs text-muted-foreground font-mono w-7 inline-block text-center">
                 {expanded ? "[-]" : "[+]"}
               </span>
-              <span className="text-sm font-medium text-white flex-1">
+              <span className="text-sm font-medium text-foreground flex-1">
                 第{ep.episode_no}集 · {ep.title}
               </span>
-              <span className="text-xs text-[#888]">
+              <span className="text-xs text-muted-foreground">
                 {ep.scenes.length} 个场景
               </span>
             </button>
             {expanded && (
-              <div className="border-t border-white/10 px-3 py-2 space-y-2 bg-[#181818]">
+              <div className="border-t border-border px-3 py-2 space-y-2 bg-card">
                 {ep.synopsis && (
-                  <div className="text-xs text-[#888]">
-                    简介: <span className="text-gray-300">{ep.synopsis}</span>
+                  <div className="text-xs text-muted-foreground">
+                    简介: <span className="text-muted-foreground">{ep.synopsis}</span>
                   </div>
                 )}
                 {ep.scenes.length === 0 ? (
-                  <div className="text-xs text-yellow-400">⚠ 本集未识别到场景</div>
+                  <div className="text-xs text-chart-5">⚠ 本集未识别到场景</div>
                 ) : (
                   ep.scenes.map((scene) => {
                     const scId = `${epId}-sc-${scene.scene_no}`;
                     const scExpanded = expandedScenes.has(scId);
                     return (
-                      <div key={scId} className="rounded border border-white/5 bg-[#1a1a1a] overflow-hidden">
+                      <div key={scId} className="rounded border border-border/50 bg-card overflow-hidden">
                         <button
                           type="button"
                           onClick={() => toggleScene(scId)}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 transition-colors text-left"
+                          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-muted/50 transition-colors text-left"
                         >
-                          <span className="text-xs text-gray-500 font-mono w-5 inline-block text-center">
+                          <span className="text-xs text-muted-foreground font-mono w-5 inline-block text-center">
                             {scExpanded ? "[-]" : "[+]"}
                           </span>
-                          <span className="text-xs text-emerald-400">景{scene.scene_no}</span>
-                          <span className="text-xs text-white flex-1">
+                          <span className="text-xs text-primary">景{scene.scene_no}</span>
+                          <span className="text-xs text-foreground flex-1">
                             {formatSceneAnchor(scene)}
                             {scene.time_of_day ? ` · ${scene.time_of_day}` : ""}
                           </span>
-                          <span className="text-xs text-[#888]">
+                          <span className="text-xs text-muted-foreground">
                             {scene.dialogues.length} 句对白
                           </span>
                         </button>
                         {scExpanded && (
-                          <div className="border-t border-white/5 px-2 py-2 space-y-1">
+                          <div className="border-t border-border/50 px-2 py-2 space-y-1">
                             {scene.description && (
-                              <div className="text-xs text-[#888] line-clamp-3">
+                              <div className="text-xs text-muted-foreground line-clamp-3">
                                 {scene.description}
                               </div>
                             )}
                             {scene.dialogues.length === 0 ? (
-                              <div className="text-xs text-[#666]">无对白</div>
+                              <div className="text-xs text-muted-foreground">无对白</div>
                             ) : (
                               scene.dialogues.map((d, dIdx) => (
                                 <div
                                   key={dIdx}
-                                  className="text-xs flex gap-2 px-2 py-1 rounded bg-white/5"
+                                  className="text-xs flex gap-2 px-2 py-1 rounded bg-muted/50"
                                 >
-                                  <span className="text-emerald-400 font-medium">
+                                  <span className="text-primary font-medium">
                                     {d.character}
                                   </span>
                                   {d.emotion && (
-                                    <span className="text-yellow-400">
+                                    <span className="text-chart-5">
                                       （{d.emotion}）
                                     </span>
                                   )}
-                                  <span className="text-gray-300 flex-1">：{d.text}</span>
+                                  <span className="text-muted-foreground flex-1">：{d.text}</span>
                                 </div>
                               ))
                             )}

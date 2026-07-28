@@ -49,14 +49,14 @@ export function ScriptRow({
 
   return (
     <TableRow
-      className="cursor-pointer"
+      className="group cursor-pointer"
       onClick={onOpenEditor}
       title="点击进入编辑器"
     >
       <TableCell>
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-white/5">
-            <FileText className="h-4 w-4 text-emerald-400" />
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-muted/50">
+            <FileText className="h-4 w-4 text-primary" />
           </div>
           <div>
             <div className="font-medium text-foreground">{script.title}</div>
@@ -92,28 +92,28 @@ export function ScriptRow({
         {new Date(script.updated_at).toLocaleDateString()}
       </TableCell>
       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-1 justify-end">
+        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
           {/* 主操作：进入编辑器继续编辑（替代原先的铅笔图标） */}
           <Button
             size="sm"
             variant="outline"
             onClick={onOpenEditor}
-            className="text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10 hover:border-emerald-500/60"
+            className="text-primary border-primary/40 hover:bg-primary/10 hover:border-primary/60"
             title="进入编辑器继续编辑"
           >
             继续编辑 →
           </Button>
           <Button variant="ghost" size="icon" onClick={onAnalysis} title="剧本分析（提取角色/场景/道具）" aria-label="剧本分析">
-            <Sparkles className="h-4 w-4 text-blue-400" />
+            <Sparkles className="h-4 w-4 text-info" />
           </Button>
           <Button variant="ghost" size="icon" onClick={onTagManager} title="标签管理" aria-label="标签管理">
-            <TagIcon className="h-4 w-4 text-purple-400" />
+            <TagIcon className="h-4 w-4 text-chart-1" />
           </Button>
           <Button variant="ghost" size="icon" onClick={onApproval} title="审批流程" aria-label="审批流程">
-            <CheckCircle className="h-4 w-4 text-yellow-400" />
+            <CheckCircle className="h-4 w-4 text-chart-5" />
           </Button>
           <Button variant="ghost" size="icon" onClick={onDelete} title="删除" aria-label="删除">
-            <Trash2 className="h-4 w-4 text-red-400" />
+            <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
       </TableCell>

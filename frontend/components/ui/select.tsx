@@ -20,10 +20,10 @@ const SelectTrigger = React.forwardRef<
       "flex h-10 w-full items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background transition-colors",
       // 占位符与焦点色与 Input 对齐
       "data-[placeholder]:text-muted-foreground/70",
-      "focus:outline-none focus:ring-2 focus:ring-sky-400/40 focus:border-sky-400",
+      "focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring",
       "disabled:cursor-not-allowed disabled:opacity-50",
       // 错误态
-      "aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-500/20",
+      "aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/20",
       "[&>span]:line-clamp-1",
       className
     )}

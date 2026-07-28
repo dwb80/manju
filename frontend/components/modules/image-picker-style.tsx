@@ -58,8 +58,8 @@ export function StylePicker({
               type="button"
               onClick={() => onChange(option.value)}
               className={`group relative flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-left transition-colors ${selected
-                ? "border-emerald-500/70 bg-emerald-500/10 text-white"
-                : "border-white/10 bg-[#252525] text-gray-200 hover:border-white/30 hover:bg-[#2a2a2a]"
+                ? "border-primary/70 bg-primary/10 text-primary-foreground"
+                : "border-border bg-secondary text-muted-foreground hover:border-border hover:bg-secondary"
                 }`}
             >
               <span className="text-base leading-none" aria-hidden>
@@ -67,7 +67,7 @@ export function StylePicker({
               </span>
               <span className="text-sm">{option.label}</span>
               {selected && (
-                <span className="absolute right-1.5 top-1.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-emerald-500 text-white">
+                <span className="absolute right-1.5 top-1.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-primary text-primary-foreground">
                   <Check className="h-2.5 w-2.5" strokeWidth={3} />
                 </span>
               )}

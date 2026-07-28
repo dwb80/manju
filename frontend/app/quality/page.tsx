@@ -267,7 +267,7 @@ export default function QualityPage() {
         {error && (
           <div
             role="alert"
-            className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-red-200"
+            className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
           >
             <AlertTriangle className="h-3.5 w-3.5" />
             {error}
@@ -276,7 +276,7 @@ export default function QualityPage() {
         {info && (
           <div
             role="status"
-            className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-200"
+            className="rounded-md border border-primary/30 bg-primary/10 px-3.5 py-2.5 text-sm text-primary"
           >
             {info}
           </div>
@@ -302,7 +302,7 @@ export default function QualityPage() {
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
+                  className="h-4 w-4 rounded border-border bg-transparent accent-primary"
                   checked={config.enabled}
                   onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
                 />
@@ -314,7 +314,7 @@ export default function QualityPage() {
                   <label key={t} className="inline-flex items-center gap-1.5 text-sm">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
+                      className="h-4 w-4 rounded border-border bg-transparent accent-primary"
                       checked={config.target_types.includes(t)}
                       onChange={() => handleToggleTargetType(t)}
                     />
@@ -472,7 +472,7 @@ export default function QualityPage() {
                     const isOpen = expandedId === r.id;
                     return (
                       <Fragment key={r.id}>
-                        <TableRow className={isOpen ? "bg-white/[0.03]" : undefined}>
+                        <TableRow className={isOpen ? "bg-muted/40" : undefined}>
                           <TableCell>
                             <code className="font-mono text-[11px]">{r.id}</code>
                           </TableCell>
@@ -539,7 +539,7 @@ export default function QualityPage() {
 function ReportDetail({ report }: { report: QualityReport }) {
   const d = report.details;
   return (
-    <div className="p-4 text-xs text-neutral-300">
+    <div className="p-4 text-xs text-muted-foreground">
       <div className="mb-3 flex flex-wrap gap-4">
         <span>
           <strong>技术</strong> {d.technicalScore}

@@ -141,45 +141,45 @@ export function ImageGeneratorParams({
   };
 
   return (
-    <div className="w-[360px] flex-shrink-0 border-r border-white/10 bg-[#1a1a1a] p-4 overflow-y-auto">
+    <div className="w-[360px] flex-shrink-0 border-r border-border bg-card p-4 overflow-y-auto">
       {scriptInfo && (
-        <div className="mb-4 p-3 rounded-lg bg-white/5 border border-white/10">
-          <div className="text-xs text-gray-400 mb-2">剧本中心导入信息</div>
+        <div className="mb-4 p-3 rounded-lg bg-muted/50 border border-border">
+          <div className="text-xs text-muted-foreground mb-2">剧本中心导入信息</div>
           <div className="space-y-1 text-sm">
             {scriptInfo.name && (
               <div className="flex justify-between gap-2">
-                <span className="text-gray-400 flex-shrink-0">角色名</span>
+                <span className="text-muted-foreground flex-shrink-0">角色名</span>
                 <Tip label={scriptInfo.name} side="top">
-                  <span className="text-white truncate">{scriptInfo.name}</span>
+                  <span className="text-foreground truncate">{scriptInfo.name}</span>
                 </Tip>
               </div>
             )}
             {scriptInfo.role && (
               <div className="flex justify-between">
-                <span className="text-gray-400">类型</span>
-                <span className="text-white">
+                <span className="text-muted-foreground">类型</span>
+                <span className="text-foreground">
                   {{ protagonist: "主角", supporting: "配角", antagonist: "反派", minor: "次要" }[scriptInfo.role] || scriptInfo.role}
                 </span>
               </div>
             )}
             {scriptInfo.gender && (
               <div className="flex justify-between">
-                <span className="text-gray-400">性别</span>
-                <span className="text-white">
+                <span className="text-muted-foreground">性别</span>
+                <span className="text-foreground">
                   {{ male: "男", female: "女", other: "其他" }[scriptInfo.gender] || scriptInfo.gender}
                 </span>
               </div>
             )}
             {scriptInfo.age && (
               <div className="flex justify-between">
-                <span className="text-gray-400">年龄</span>
-                <span className="text-white">{scriptInfo.age}岁</span>
+                <span className="text-muted-foreground">年龄</span>
+                <span className="text-foreground">{scriptInfo.age}岁</span>
               </div>
             )}
             {scriptInfo.description && (
               <div className="mt-2">
-                <span className="text-gray-400">描述</span>
-                <div className="text-white text-xs mt-1 line-clamp-2" title={scriptInfo.description}>{scriptInfo.description}</div>
+                <span className="text-muted-foreground">描述</span>
+                <div className="text-foreground text-xs mt-1 line-clamp-2" title={scriptInfo.description}>{scriptInfo.description}</div>
               </div>
             )}
           </div>
@@ -189,16 +189,16 @@ export function ImageGeneratorParams({
       <div className="space-y-5">
         {/* ===== 分组 1：提示词 ===== */}
         <section>
-          <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-gray-200">
+          <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-muted-foreground">
             <span className="flex items-center gap-2">
-              <span>提示词 <span className="text-red-400">*</span></span>
+              <span>提示词 <span className="text-destructive">*</span></span>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
                 onClick={onEnhancePrompt}
                 disabled={!prompt.trim() || isEnhancing}
-                className="h-6 px-2 text-[11px] border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200 hover:border-emerald-400/60 disabled:border-white/10 disabled:text-gray-500 disabled:bg-transparent"
+                className="h-6 px-2 text-[11px] border-primary/40 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary/60 disabled:border-border disabled:text-muted-foreground disabled:bg-transparent"
               >
                 {isEnhancing ? (
                   <>
@@ -213,7 +213,7 @@ export function ImageGeneratorParams({
                 )}
               </Button>
             </span>
-            <span className="text-[11px] text-gray-400">{prompt.length} 字符</span>
+            <span className="text-[11px] text-muted-foreground">{prompt.length} 字符</span>
           </label>
           <Textarea
             value={prompt}
@@ -222,32 +222,32 @@ export function ImageGeneratorParams({
               ? "图生图：请描述你希望调整的内容，如：把服装换成黑色斗篷，雨夜氛围"
               : "请输入角色描述，如：古风少年剑客，黑发高马尾，身披白袍…"}
             rows={10}
-            className="bg-[#252525] border-white/10 text-sm"
+            className="bg-secondary border-border text-sm"
           />
         </section>
 
         {/* ===== 分组 2：基础参数 ===== */}
         <section className="space-y-3">
           <div>
-            <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-gray-200">
+            <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 模型
                 <Tip label={MODEL_OPTIONS[0].description} side="top" className="max-w-xs">
-                  <span className="cursor-help text-gray-500 hover:text-gray-300">
+                  <span className="cursor-help text-muted-foreground hover:text-muted-foreground">
                     <Info className="h-3.5 w-3.5" />
                   </span>
                 </Tip>
               </span>
             </label>
             {MODEL_OPTIONS.length === 1 ? (
-              <div className="h-10 w-full rounded-md border border-white/10 bg-[#252525] px-3 py-2 text-sm text-white flex items-center">
+              <div className="h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground flex items-center">
                 {MODEL_OPTIONS[0].label}（已固定）
               </div>
             ) : (
               <select
                 value={model}
                 onChange={(e) => onModelChange(e.target.value as ImageModel)}
-                className="h-10 w-full rounded-md border border-white/10 bg-[#252525] px-3 text-sm outline-none focus:border-emerald-500 text-white"
+                className="h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm outline-none focus:border-primary text-foreground"
               >
                 {MODEL_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -257,9 +257,9 @@ export function ImageGeneratorParams({
           </div>
 
           <div>
-            <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-gray-200">
+            <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-muted-foreground">
               <span>比例</span>
-              <span className="text-[10px] text-gray-400">
+              <span className="text-[10px] text-muted-foreground">
                 {imageSizeOptions.find((o) => o.value === size)?.label}
               </span>
             </label>
@@ -275,31 +275,31 @@ export function ImageGeneratorParams({
         </section>
 
         {/* ===== 分组 3：高级选项 ===== */}
-        <section className="rounded-lg border border-white/10 bg-[#1f1f1f]">
+        <section className="rounded-lg border border-border bg-muted">
           <button
             type="button"
             onClick={() => onShowAdvancedChange(!showAdvanced)}
             className="flex w-full items-center justify-between px-3 py-2 text-left"
           >
-            <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {showAdvanced ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
               高级选项
             </span>
-            <span className="text-[10px] text-gray-500">
+            <span className="text-[10px] text-muted-foreground">
               {style || negativePrompt || seed || responseFormat !== DEFAULT_FORMAT || count !== String(DEFAULT_COUNT) ? "已配置" : "可选"}
             </span>
           </button>
           {showAdvanced && (
-            <div className="space-y-3 border-t border-white/10 p-3">
+            <div className="space-y-3 border-t border-border p-3">
               <div>
-                <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-gray-200">
+                <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-muted-foreground">
                   <span className="flex items-center gap-1.5">生成数量</span>
-                  <span className="text-[10px] text-emerald-400">将生成 {count} 张候选</span>
+                  <span className="text-[10px] text-primary">将生成 {count} 张候选</span>
                 </label>
                 <select
                   value={count}
                   onChange={(e) => onCountChange(e.target.value)}
-                  className="h-10 w-full rounded-md border border-white/10 bg-[#252525] px-3 text-sm outline-none focus:border-emerald-500 text-white"
+                  className="h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm outline-none focus:border-primary text-foreground"
                 >
                   {COUNT_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -308,13 +308,13 @@ export function ImageGeneratorParams({
               </div>
 
               <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-200">
+                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
                   <span>输出格式</span>
                 </label>
                 <select
                   value={responseFormat}
                   onChange={(e) => onResponseFormatChange(e.target.value as ImageResponseFormat)}
-                  className="h-10 w-full rounded-md border border-white/10 bg-[#252525] px-3 text-sm outline-none focus:border-emerald-500 text-white"
+                  className="h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm outline-none focus:border-primary text-foreground"
                 >
                   {RESPONSE_FORMAT_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -323,34 +323,34 @@ export function ImageGeneratorParams({
               </div>
 
               <div>
-                <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-gray-200">
+                <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-muted-foreground">
                   <span>风格修饰</span>
-                  <span className="text-[10px] text-gray-400">
+                  <span className="text-[10px] text-muted-foreground">
                     {findStyleOption(style)?.label || "默认"}
                   </span>
                 </label>
                 <StylePicker value={style} options={styleOptions} onChange={onStyleChange} />
-                <p className="mt-1.5 text-[11px] text-gray-500">仅文生图追加（图生图忽略以保留原图特征）。</p>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">仅文生图追加（图生图忽略以保留原图特征）。</p>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-200">反向提示词</label>
+                <label className="mb-1.5 block text-sm font-medium text-muted-foreground">反向提示词</label>
                 <Input
                   value={negativePrompt}
                   onChange={(e) => onNegativePromptChange(e.target.value)}
                   placeholder="避免模糊、畸形、错误结构、水印"
-                  className="bg-[#252525] border-white/10 text-sm"
+                  className="bg-secondary border-border text-sm"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-200">随机种子（可选）</label>
+                <label className="mb-1.5 block text-sm font-medium text-muted-foreground">随机种子（可选）</label>
                 <Input
                   value={seed}
                   onChange={(e) => onSeedChange(e.target.value.replace(/[^\d-]/g, ""))}
                   placeholder="留空则随机"
                   inputMode="numeric"
-                  className="bg-[#252525] border-white/10 text-sm"
+                  className="bg-secondary border-border text-sm"
                 />
               </div>
             </div>
@@ -359,7 +359,7 @@ export function ImageGeneratorParams({
 
         {/* ===== 分组 4：参考图 ===== */}
         <section>
-          <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-gray-200">
+          <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-muted-foreground">
             <span className="flex items-center gap-1.5">参考图（图生图）</span>
             <span className="text-[10px] tabular-nums transition-colors">
               <CountHighlight value={referenceImages.length} max={MAX_REFERENCE_IMAGES} />
@@ -390,13 +390,13 @@ export function ImageGeneratorParams({
                 {referenceImages.map((url) => (
                   <div
                     key={url}
-                    className="group relative aspect-square overflow-hidden rounded-md border border-white/10 bg-[#1a1a1a] animate-in fade-in zoom-in-95 duration-200"
+                    className="group relative aspect-square overflow-hidden rounded-md border border-border bg-card animate-in fade-in zoom-in-95 duration-200"
                   >
                     <ThumbnailImage url={url} alt="参考图" />
                     <button
                       type="button"
                       onClick={() => handleRemoveReference(url)}
-                      className="absolute right-0.5 top-0.5 grid h-4 w-4 place-items-center rounded-full bg-black/70 text-white/80 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/80"
+                      className="absolute right-0.5 top-0.5 grid h-4 w-4 place-items-center rounded-full bg-black/70 text-destructive-foreground/80 opacity-0 transition group-hover:opacity-100 hover:bg-destructive/80"
                     >
                       <X className="h-2.5 w-2.5" />
                     </button>
@@ -409,7 +409,7 @@ export function ImageGeneratorParams({
             <button
               type="button"
               onClick={() => onReferenceImagesChange([])}
-              className="mt-1.5 text-[10px] text-gray-500 hover:text-red-400 transition-colors"
+              className="mt-1.5 text-[10px] text-muted-foreground hover:text-destructive transition-colors"
             >
               清空所有参考图
             </button>
@@ -420,7 +420,7 @@ export function ImageGeneratorParams({
           type="button"
           onClick={onGenerate}
           disabled={isGenerating || !prompt.trim()}
-          className="w-full bg-emerald-500 hover:bg-emerald-600"
+          className="w-full bg-primary hover:bg-primary/90"
         >
           {isGenerating ? (
             <>
@@ -441,7 +441,7 @@ export function ImageGeneratorParams({
             variant="outline"
             size="sm"
             onClick={onRegenerateSame}
-            className="w-full border-white/10 text-gray-300 hover:text-white gap-1.5"
+            className="w-full border-border text-muted-foreground hover:text-foreground gap-1.5"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             重新生成同款参数

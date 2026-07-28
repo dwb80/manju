@@ -77,7 +77,7 @@ export function AssetGenerateDialog({
                             onChange={(event) =>
                                 onFieldChange("kind", event.target.value as ProjectAssetKind)
                             }
-                            className="h-10 w-full rounded-md border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-emerald-500"
+                            className="h-10 w-full rounded-md border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-primary"
                         >
                             {projectAssetKinds.map((kind) => (
                                 <option key={kind.key} value={kind.key}>

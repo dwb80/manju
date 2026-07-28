@@ -23,33 +23,33 @@ interface MilestonesTabProps {
 export function MilestonesTab(props: MilestonesTabProps) {
     return (
         <div className="space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-[#202020]">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+            <div className="rounded-2xl border border-border bg-muted">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
                     <div>
-                        <div className="text-base font-semibold text-white">里程碑</div>
-                        <div className="mt-1 text-sm text-[#bdbdbd]">管理样片、分镜锁定、成片审核、最终交付等关键节点。</div>
+                        <div className="text-base font-semibold text-foreground">里程碑</div>
+                        <div className="mt-1 text-sm text-muted-foreground">管理样片、分镜锁定、成片审核、最终交付等关键节点。</div>
                     </div>
                     <Button size="sm" variant="secondary" onClick={props.resetProjectMilestoneForm}><Plus className="h-4 w-4" />新增里程碑</Button>
                 </div>
                 {props.filteredProjectMilestones.length === 0 ? (
                     <div className="px-5 py-10 text-center">
-                        <div className="text-base font-semibold text-white">{props.projectMilestones.length === 0 ? "暂无里程碑" : "没有匹配的里程碑"}</div>
-                        <div className="mt-2 text-sm text-[#bdbdbd]">{props.projectMilestones.length === 0 ? "可以先添加\"第一集样片交付\"作为关键节点。" : "调整搜索、状态或负责人筛选后再试。"}</div>
+                        <div className="text-base font-semibold text-foreground">{props.projectMilestones.length === 0 ? "暂无里程碑" : "没有匹配的里程碑"}</div>
+                        <div className="mt-2 text-sm text-muted-foreground">{props.projectMilestones.length === 0 ? "可以先添加\"第一集样片交付\"作为关键节点。" : "调整搜索、状态或负责人筛选后再试。"}</div>
                     </div>
                 ) : (
                     <ProjectManagementTable columns={["标题", "状态", "负责人", "截止日期", "交付说明", "操作"]}>
                         {props.pagedProjectMilestones.map((milestone) => (
-                            <tr key={milestone.id} className="align-top transition-colors hover:bg-white/[0.03]">
+                            <tr key={milestone.id} className="align-top transition-colors hover:bg-muted/40">
                                 <td className="px-4 py-4">
-                                    <div className="max-w-[260px] truncate font-semibold text-white">{milestone.title}</div>
+                                    <div className="max-w-[260px] truncate font-semibold text-foreground">{milestone.title}</div>
                                 </td>
                                 <td className="px-4 py-4">
-                                    <span className="inline-flex rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-[#dcdcdc]">{milestone.status === "planned" ? "计划中" : milestone.status === "doing" ? "进行中" : milestone.status === "done" ? "已完成" : "延期"}</span>
+                                    <span className="inline-flex rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground/80">{milestone.status === "planned" ? "计划中" : milestone.status === "doing" ? "进行中" : milestone.status === "done" ? "已完成" : "延期"}</span>
                                 </td>
-                                <td className="px-4 py-4 text-[#cfcfcf]">{milestone.owner || "未分配"}</td>
-                                <td className="px-4 py-4 text-[#cfcfcf]">{milestone.due_date || "未设置"}</td>
+                                <td className="px-4 py-4 text-foreground/80">{milestone.owner || "未分配"}</td>
+                                <td className="px-4 py-4 text-foreground/80">{milestone.due_date || "未设置"}</td>
                                 <td className="px-4 py-4">
-                                    <div className="line-clamp-2 max-w-[360px] whitespace-pre-wrap text-[#cfcfcf]">{milestone.description || "无"}</div>
+                                    <div className="line-clamp-2 max-w-[360px] whitespace-pre-wrap text-foreground/80">{milestone.description || "无"}</div>
                                 </td>
                                 <td className="px-4 py-4">
                                     <div className="flex flex-wrap gap-2">
@@ -62,21 +62,21 @@ export function MilestonesTab(props: MilestonesTabProps) {
                     </ProjectManagementTable>
                 )}
             </div>
-            <div className="rounded-2xl border border-white/10 bg-[#202020] p-5">
+            <div className="rounded-2xl border border-border bg-muted p-5">
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <div className="text-base font-semibold text-white">{props.editingMilestoneId ? "编辑里程碑" : "新增里程碑"}</div>
-                        <div className="mt-1 text-sm text-[#bdbdbd]">定义交付范围、验收标准、负责人和截止日期。</div>
+                        <div className="text-base font-semibold text-foreground">{props.editingMilestoneId ? "编辑里程碑" : "新增里程碑"}</div>
+                        <div className="mt-1 text-sm text-muted-foreground">定义交付范围、验收标准、负责人和截止日期。</div>
                     </div>
                     {props.editingMilestoneId && <Button size="sm" variant="secondary" onClick={props.resetProjectMilestoneForm}>取消编辑</Button>}
                 </div>
                 <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
                     <label className="space-y-1.5 lg:col-span-2">
-                        <span className="block text-sm font-medium text-[#d8d8d8]">里程碑标题</span>
-                        <input className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" value={props.milestoneDraft.title ?? ""} placeholder="里程碑标题" onChange={(event) => props.setMilestoneDraft((draft) => ({ ...draft, title: event.target.value }))} />
+                        <span className="block text-sm font-medium text-foreground/80">里程碑标题</span>
+                        <input className="h-11 w-full rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary" value={props.milestoneDraft.title ?? ""} placeholder="里程碑标题" onChange={(event) => props.setMilestoneDraft((draft) => ({ ...draft, title: event.target.value }))} />
                     </label>
                     <label className="space-y-1.5">
-                        <span className="block text-sm font-medium text-[#d8d8d8]">状态</span>
+                        <span className="block text-sm font-medium text-foreground/80">状态</span>
                         <ShadcnSelect
                             options={[
                                 { value: "planned", label: "计划中" },
@@ -90,7 +90,7 @@ export function MilestonesTab(props: MilestonesTabProps) {
                         />
                     </label>
                     <label className="space-y-1.5">
-                        <span className="block text-sm font-medium text-[#d8d8d8]">负责人</span>
+                        <span className="block text-sm font-medium text-foreground/80">负责人</span>
                         <ShadcnSelect
                             options={[
                                 { value: "", label: "负责人" },
@@ -102,13 +102,13 @@ export function MilestonesTab(props: MilestonesTabProps) {
                         />
                     </label>
                     <label className="space-y-1.5">
-                        <span className="block text-sm font-medium text-[#d8d8d8]">截止日期</span>
-                        <input className="h-11 w-full rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" type="date" value={props.milestoneDraft.due_date ?? ""} onChange={(event) => props.setMilestoneDraft((draft) => ({ ...draft, due_date: event.target.value }))} />
+                        <span className="block text-sm font-medium text-foreground/80">截止日期</span>
+                        <input className="h-11 w-full rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary" type="date" value={props.milestoneDraft.due_date ?? ""} onChange={(event) => props.setMilestoneDraft((draft) => ({ ...draft, due_date: event.target.value }))} />
                     </label>
                 </div>
                 <label className="mt-3 block space-y-1.5">
-                    <span className="block text-sm font-medium text-[#d8d8d8]">交付说明</span>
-                    <textarea className="min-h-24 w-full resize-y rounded-xl border border-white/10 bg-[#2f2f2f] px-3 py-3 text-sm leading-6 text-white outline-none transition-colors focus:border-emerald-500" value={props.milestoneDraft.description ?? ""} placeholder="交付范围、验收标准、依赖事项" onChange={(event) => props.setMilestoneDraft((draft) => ({ ...draft, description: event.target.value }))} />
+                    <span className="block text-sm font-medium text-foreground/80">交付说明</span>
+                    <textarea className="min-h-24 w-full resize-y rounded-xl border border-border bg-secondary px-3 py-3 text-sm leading-6 text-foreground outline-none transition-colors focus:border-primary" value={props.milestoneDraft.description ?? ""} placeholder="交付范围、验收标准、依赖事项" onChange={(event) => props.setMilestoneDraft((draft) => ({ ...draft, description: event.target.value }))} />
                 </label>
                 <div className="mt-5 flex justify-end">
                     <Button size="sm" onClick={() => void props.submitProjectMilestoneForm()}>

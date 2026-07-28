@@ -64,15 +64,15 @@ export function PropDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
-        className="bg-[#1a1a1a] border border-white/10 rounded-lg shadow-2xl max-w-2xl w-[90vw] max-h-[85vh] overflow-y-auto p-6"
+        className="bg-card border border-border rounded-lg shadow-2xl max-w-2xl w-[90vw] max-h-[85vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-white">道具详情：{prop.name}</h2>
+          <h2 className="text-lg font-medium text-foreground">道具详情：{prop.name}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-white/60 hover:text-white"
+            className="text-foreground/60 hover:text-foreground"
             aria-label="关闭"
           >
             <X className="h-5 w-5" />
@@ -83,27 +83,27 @@ export function PropDetailModal({
             <img
               src={prop.image}
               alt={prop.name}
-              className="w-full h-64 object-cover rounded border border-white/10"
+              className="w-full h-64 object-cover rounded border border-border"
             />
           </div>
         )}
         <dl className="grid grid-cols-2 gap-3 text-sm">
           {prop.category && (
             <div>
-              <dt className="text-white/50 text-xs">分类</dt>
-              <dd className="text-white/90">{prop.category}</dd>
+              <dt className="text-foreground/50 text-xs">分类</dt>
+              <dd className="text-foreground/90">{prop.category}</dd>
             </div>
           )}
           {prop.material && (
             <div>
-              <dt className="text-white/50 text-xs">材质</dt>
-              <dd className="text-white/90">{prop.material}</dd>
+              <dt className="text-foreground/50 text-xs">材质</dt>
+              <dd className="text-foreground/90">{prop.material}</dd>
             </div>
           )}
           {prop.description && (
             <div className="col-span-2">
-              <dt className="text-white/50 text-xs">描述</dt>
-              <dd className="text-white/90 whitespace-pre-wrap">{prop.description}</dd>
+              <dt className="text-foreground/50 text-xs">描述</dt>
+              <dd className="text-foreground/90 whitespace-pre-wrap">{prop.description}</dd>
             </div>
           )}
         </dl>

@@ -55,18 +55,19 @@ export function LayoutShell({ children }: Readonly<{ children: React.ReactNode }
   }, [pathname, router])
 
   const isScriptEditor = pathname?.startsWith("/scripts/")
-  // 角色图片编辑：/characters/[id]/edit（与 props/[id]/edit 共享逻辑）
+  // 资产图片编辑（独立路由）：/characters/[id]/edit、/scenes/[id]/edit、/props/[id]/edit 共享独占式布局逻辑
   const isCharacterEdit = /^\/characters\/[^/]+\/edit\/?$/.test(pathname ?? "")
+  const isSceneEdit = /^\/scenes\/[^/]+\/edit\/?$/.test(pathname ?? "")
   const isPropEdit = /^\/props\/[^/]+\/edit\/?$/.test(pathname ?? "")
 
   if (pathname === "/login") return <>{children}</>
 
-  if (isScriptEditor || isCharacterEdit || isPropEdit) {
-    // 独占式编辑页（剧本编辑器、角色图片编辑、道具编辑）不显示侧边栏，
+  if (isScriptEditor || isCharacterEdit || isSceneEdit || isPropEdit) {
+    // 独占式编辑页（剧本编辑器、角色/场景/道具图片编辑）不显示侧边栏，
     // 但仍要保留顶部导航栏，让用户能随时切换项目 / 返回其他工作区。
     return (
       <TooltipProvider delayDuration={200}>
-        <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#0a0a0a]">
+        <div className="flex h-screen w-screen flex-col overflow-hidden bg-app">
           <GlobalTopBar />
           <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
         </div>
@@ -77,7 +78,7 @@ export function LayoutShell({ children }: Readonly<{ children: React.ReactNode }
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex h-screen w-screen overflow-hidden bg-[#181818]">
+      <div className="flex h-screen w-screen overflow-hidden bg-app">
         <AppSidebar />
         <main
           id="main-content"

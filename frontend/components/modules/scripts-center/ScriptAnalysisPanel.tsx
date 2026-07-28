@@ -59,8 +59,8 @@ export function ScriptAnalysisPanel({
       {/* 分析按钮 / 结果入口栏 */}
       {extractedAssets.length === 0 ? (
         <div className="text-center py-8">
-          <BarChart3 className="h-12 w-12 text-[#666] mx-auto mb-3" />
-          <p className="text-sm text-[#888] mb-4">点击下方按钮，AI将分析剧本内容并提取角色、场景、道具的文字描述</p>
+          <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground mb-4">点击下方按钮，AI将分析剧本内容并提取角色、场景、道具的文字描述</p>
           <Button onClick={onAnalyze} disabled={isAnalyzing}>
             {isAnalyzing ? (
               <>
@@ -78,10 +78,10 @@ export function ScriptAnalysisPanel({
       ) : (
         <>
           {/* 入口栏：总览 + 进入剧本编辑器 */}
-          <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-            <div className="text-sm text-blue-200">
-              共 <span className="font-bold text-blue-400">{extractedAssets.length}</span> 个资产
-              <span className="text-blue-300/70 text-xs ml-2">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-info/10 border border-info/20">
+            <div className="text-sm text-info">
+              共 <span className="font-bold text-info">{extractedAssets.length}</span> 个资产
+              <span className="text-info/70 text-xs ml-2">
                 角色 {characters.length} · 场景 {scenes.length} · 道具 {props.length}
               </span>
             </div>
@@ -96,7 +96,7 @@ export function ScriptAnalysisPanel({
             <AssetSection
               title="角色资产"
               icon={Users}
-              iconColor="text-blue-400"
+              iconColor="text-info"
               assets={characters}
               onUpdateAsset={onUpdateAsset}
             />
@@ -107,7 +107,7 @@ export function ScriptAnalysisPanel({
             <AssetSection
               title="场景资产"
               icon={ImageIcon}
-              iconColor="text-emerald-400"
+              iconColor="text-primary"
               assets={scenes}
               onUpdateAsset={onUpdateAsset}
             />
@@ -118,7 +118,7 @@ export function ScriptAnalysisPanel({
             <AssetSection
               title="道具资产"
               icon={Package}
-              iconColor="text-yellow-400"
+              iconColor="text-chart-5"
               assets={props}
               onUpdateAsset={onUpdateAsset}
             />
@@ -164,8 +164,8 @@ function AssetSection({
     <div>
       <div className="flex items-center gap-2 mb-2">
         <Icon className={`h-4 w-4 ${iconColor}`} />
-        <span className="text-sm font-medium text-white">{title}</span>
-        <span className="text-xs text-[#888]">({assets.length})</span>
+        <span className="text-sm font-medium text-foreground">{title}</span>
+        <span className="text-xs text-muted-foreground">({assets.length})</span>
       </div>
       <div className="space-y-2">
         {assets.map((asset) => (
@@ -215,7 +215,7 @@ function AssetCard({
   };
 
   return (
-    <div className="p-3 rounded-lg border bg-white/5 border-white/10">
+    <div className="p-3 rounded-lg border bg-muted/50 border-border">
       <div className="flex-1 min-w-0">
         {isEditing ? (
           /* 编辑模式 */
@@ -225,11 +225,11 @@ function AssetCard({
                 type="text"
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                className="flex-1 h-8 px-2 rounded bg-[#252525] border border-white/10 text-sm text-white focus:outline-none focus:border-emerald-500/50"
+                className="flex-1 h-8 px-2 rounded bg-secondary border border-border text-sm text-foreground focus:outline-none focus:border-primary/50"
                 placeholder="名称"
               />
               <Button size="sm" onClick={saveEdit} title="保存">
-                <Check className="h-3 w-3 text-emerald-400" />
+                <Check className="h-3 w-3 text-primary" />
               </Button>
               <Button size="sm" variant="ghost" onClick={cancelEdit} title="取消">
                 <X className="h-3 w-3" />
@@ -239,7 +239,7 @@ function AssetCard({
               value={draft.description}
               onChange={(e) => setDraft({ ...draft, description: e.target.value })}
               rows={2}
-              className="w-full px-2 py-1 rounded bg-[#252525] border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-500/50 resize-none"
+              className="w-full px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground focus:outline-none focus:border-primary/50 resize-none"
               placeholder="描述"
             />
             {/* 类型专属属性编辑 */}
@@ -286,14 +286,14 @@ function AssetCard({
                   type="text"
                   value={draft.timeOfDay ?? ""}
                   onChange={(e) => setDraft({ ...draft, timeOfDay: e.target.value })}
-                  className="h-7 w-20 px-1 rounded bg-[#252525] border border-white/10 text-xs text-white"
+                  className="h-7 w-20 px-1 rounded bg-secondary border border-border text-xs text-foreground"
                   placeholder="时间"
                 />
                 <input
                   type="text"
                   value={draft.lighting ?? ""}
                   onChange={(e) => setDraft({ ...draft, lighting: e.target.value })}
-                  className="h-7 w-20 px-1 rounded bg-[#252525] border border-white/10 text-xs text-white"
+                  className="h-7 w-20 px-1 rounded bg-secondary border border-border text-xs text-foreground"
                   placeholder="光线"
                 />
               </div>
@@ -303,7 +303,7 @@ function AssetCard({
                 <select
                   value={draft.category ?? ""}
                   onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-                  className="h-7 px-1 rounded bg-[#252525] border border-white/10 text-xs text-white"
+                  className="h-7 px-1 rounded bg-secondary border border-border text-xs text-foreground"
                 >
                   <option value="">类别</option>
                   <option value="weapon">武器</option>
@@ -318,14 +318,14 @@ function AssetCard({
                   type="text"
                   value={draft.material ?? ""}
                   onChange={(e) => setDraft({ ...draft, material: e.target.value })}
-                  className="h-7 w-20 px-1 rounded bg-[#252525] border border-white/10 text-xs text-white"
+                  className="h-7 w-20 px-1 rounded bg-secondary border border-border text-xs text-foreground"
                   placeholder="材质"
                 />
                 <input
                   type="text"
                   value={draft.color ?? ""}
                   onChange={(e) => setDraft({ ...draft, color: e.target.value })}
-                  className="h-7 w-20 px-1 rounded bg-[#252525] border border-white/10 text-xs text-white"
+                  className="h-7 w-20 px-1 rounded bg-secondary border border-border text-xs text-foreground"
                   placeholder="颜色"
                 />
               </div>
@@ -335,19 +335,19 @@ function AssetCard({
           /* 查看模式 */
           <>
             <div className="flex items-center gap-2">
-              <span className="font-medium text-white text-sm">{asset.name}</span>
+              <span className="font-medium text-foreground text-sm">{asset.name}</span>
               {/* 编辑按钮 */}
               <button
                 onClick={startEdit}
-                className="ml-1 p-0.5 rounded text-[#888] hover:text-emerald-400 hover:bg-white/5"
+                className="ml-1 p-0.5 rounded text-muted-foreground hover:text-primary hover:bg-muted/50"
                 title="编辑"
               >
                 <Pencil className="h-3 w-3" />
               </button>
             </div>
-            <div className="text-xs text-[#888] mt-1">{asset.description}</div>
+            <div className="text-xs text-muted-foreground mt-1">{asset.description}</div>
             {/* 资产属性 */}
-            <div className="flex flex-wrap gap-2 mt-1 text-xs text-[#666]">
+            <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
               {asset.type === "character" && (
                 <>
                   {asset.role && <span>角色: {asset.role}</span>}

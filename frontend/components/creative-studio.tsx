@@ -75,22 +75,22 @@ export function CreativeStudio(props: CreativeStudioProps) {
   }, [selectedVideoId, latestVideo, props.videos]);
 
   return (
-    <div className="grid h-full grid-rows-[auto_1fr_auto] overflow-hidden bg-[#181818]">
+    <div className="grid h-full grid-rows-[auto_1fr_auto] overflow-hidden bg-card">
       {/* 顶部：创意输入 */}
-      <header className="border-b border-white/10 bg-[#202020]/90 px-6 py-4 backdrop-blur">
+      <header className="border-b border-border bg-muted/90 px-6 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-300 transition-all duration-200">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all duration-200">
                 {isImage ? <ImagePlus className="h-5 w-5" /> : <Video className="h-5 w-5" />}
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-white">{isImage ? "图片创意工作台" : "视频创意工作台"}</div>
-                <div className="text-xs text-[#a0a0a0]">输入提示词，左侧调整参数，右侧与 AI 助手协作。</div>
+                <div className="text-sm font-semibold text-foreground">{isImage ? "图片创意工作台" : "视频创意工作台"}</div>
+                <div className="text-xs text-muted-foreground">输入提示词，左侧调整参数，右侧与 AI 助手协作。</div>
               </div>
             </div>
             <div className="flex items-center gap-2.5">
-              <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#2a2a2a] p-1" role="tablist" aria-label="模式切换">
+              <div className="flex items-center gap-1 rounded-xl border border-border bg-secondary p-1" role="tablist" aria-label="模式切换">
                 <ModeTab active={false} icon={<MessageSquare className="h-3.5 w-3.5" />} label="聊天" onClick={() => props.onModeChange("chat")} />
                 <ModeTab active={isImage} icon={<ImagePlus className="h-3.5 w-3.5" />} label="图片" onClick={() => props.onModeChange("image")} />
                 <ModeTab active={!isImage} icon={<Video className="h-3.5 w-3.5" />} label="视频" onClick={() => props.onModeChange("video")} />
@@ -99,7 +99,7 @@ export function CreativeStudio(props: CreativeStudioProps) {
                 size="sm"
                 variant="ghost"
                 onClick={() => (isImage ? props.onRefreshImages() : props.onRefreshVideos())}
-                className="transition-all duration-200 hover:scale-105 hover:bg-white/10"
+                className="transition-all duration-200 hover:scale-105 hover:bg-muted"
                 aria-label="刷新内容"
               >
                 <RefreshCw className="h-4 w-4" aria-hidden="true" />
@@ -109,7 +109,7 @@ export function CreativeStudio(props: CreativeStudioProps) {
           </div>
           <div className="relative">
             <textarea
-              className="max-h-40 min-h-[64px] w-full resize-y rounded-xl border border-white/10 bg-[#2a2a2a] px-5 py-3.5 pr-28 text-sm leading-7 text-white outline-none transition-all duration-200 placeholder:text-[#777] focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+              className="max-h-40 min-h-[64px] w-full resize-y rounded-xl border border-border bg-secondary px-5 py-3.5 pr-28 text-sm leading-7 text-foreground outline-none transition-all duration-200 placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
               placeholder={isImage ? "描述你想要的画面：主体、场景、光影、风格、情绪..." : "描述视频镜头：主体动作、镜头运动、光影、风格..."}
               value={props.prompt}
               onChange={(event) => props.onPromptChange(event.target.value)}
@@ -132,10 +132,10 @@ export function CreativeStudio(props: CreativeStudioProps) {
                   event.target.value = "";
                 }}
               />
-              <Button size="icon" variant="ghost" className="h-9 w-9 transition-all duration-200 hover:scale-105 hover:bg-white/10" onClick={() => props.fileInputRef.current?.click()}>
+              <Button size="icon" variant="ghost" className="h-9 w-9 transition-all duration-200 hover:scale-105 hover:bg-muted" onClick={() => props.fileInputRef.current?.click()}>
                 <Paperclip className="h-4 w-4" />
               </Button>
-              <Button size="sm" disabled={props.submitting || !props.prompt.trim()} onClick={props.onSubmit} className="transition-all duration-200 hover:scale-[1.02] hover:bg-emerald-600 disabled:opacity-60">
+              <Button size="sm" disabled={props.submitting || !props.prompt.trim()} onClick={props.onSubmit} className="transition-all duration-200 hover:scale-[1.02] hover:bg-primary/90 disabled:opacity-60">
                 {props.submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 生成
               </Button>
@@ -144,11 +144,11 @@ export function CreativeStudio(props: CreativeStudioProps) {
           {props.attachments.length > 0 && (
             <div className="flex flex-wrap gap-2.5">
               {props.attachments.map((attachment) => (
-                <div key={attachment.id} className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#2a2a2a] px-2.5 py-2 text-xs transition-all duration-200 hover:border-white/20">
+                <div key={attachment.id} className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-2.5 py-2 text-xs transition-all duration-200 hover:border-border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className="h-7 w-7 rounded-md object-cover" src={attachment.previewUrl} alt={attachment.name} />
                   <span className="max-w-[120px] truncate">{attachment.name}</span>
-                  <button className="text-[#888] transition-colors hover:text-white" onClick={() => props.onRemoveAttachment(attachment)}>
+                  <button className="text-muted-foreground transition-colors hover:text-foreground" onClick={() => props.onRemoveAttachment(attachment)}>
                     <X className="h-3 w-3" />
                   </button>
                 </div>
@@ -161,7 +161,7 @@ export function CreativeStudio(props: CreativeStudioProps) {
       {/* 主体：左侧参数 + 中间画布 + 右侧 AI */}
       <div className="grid min-h-0 grid-cols-[280px_1fr_380px] overflow-hidden">
         {/* 左侧：专业参数 */}
-        <aside className="flex flex-col gap-4 overflow-y-auto border-r border-white/10 bg-[#1e1e1e] p-5">
+        <aside className="flex flex-col gap-4 overflow-y-auto border-r border-border bg-muted p-5">
           {isImage ? (
             <ImageParamsForm settings={props.imageSettings} onChange={props.onImageSettingsChange} />
           ) : (
@@ -170,7 +170,7 @@ export function CreativeStudio(props: CreativeStudioProps) {
         </aside>
 
         {/* 中间：实时画布 */}
-        <main ref={scrollRef} className="relative min-h-0 overflow-auto bg-[#151515]">
+        <main ref={scrollRef} className="relative min-h-0 overflow-auto bg-card">
           {isImage ? (
             <ImageCanvas
               task={selectedImageTask}
@@ -190,19 +190,19 @@ export function CreativeStudio(props: CreativeStudioProps) {
         </main>
 
         {/* 右侧：AI 助手对话 */}
-        <aside className="sticky top-0 flex min-h-0 flex-col border-l border-white/10 bg-[#1e1e1e]">
-          <div className="border-b border-white/10 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-[#777]">AI 助手</div>
+        <aside className="sticky top-0 flex min-h-0 flex-col border-l border-border bg-muted">
+          <div className="border-b border-border px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI 助手</div>
           {/* 生成历史快捷入口 */}
-          <div className="border-b border-white/10 px-5 py-2.5">
+          <div className="border-b border-border px-5 py-2.5">
             <div className="flex items-center justify-between">
-              <div className="text-xs text-[#888]">最近生成</div>
+              <div className="text-xs text-muted-foreground">最近生成</div>
               <div className="flex items-center gap-1">
                 {(isImage ? props.visibleImagesChronological : props.videos).slice(-10).map((item, index) => (
                   <div
                     key={item.id}
                     className={`h-1.5 w-1.5 rounded-full transition-all duration-200 ${index === (isImage ? props.visibleImagesChronological.length : props.videos.length) - 1
-                      ? "bg-emerald-400 scale-125"
-                      : "bg-[#555]"
+                      ? "bg-primary scale-125"
+                      : "bg-muted-foreground"
                       }`}
                   />
                 ))}
@@ -222,23 +222,23 @@ export function CreativeStudio(props: CreativeStudioProps) {
       </div>
 
       {/* 底部：历史作品瀑布流 / 画廊 */}
-      <div className="h-52 shrink-0 border-t border-white/10 bg-[#202020]">
+      <div className="h-52 shrink-0 border-t border-border bg-muted">
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-            <div className="text-xs font-semibold uppercase tracking-wider text-[#777]">历史作品</div>
+          <div className="flex items-center justify-between border-b border-border px-5 py-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">历史作品</div>
             <div className="flex items-center gap-3">
               {/* 生成历史快捷入口（最近10条） */}
               <div className="flex items-center gap-1">
                 {isImage && props.visibleImagesChronological.slice(-10).map((task, index) => (
                   <Tip key={task.id} label={task.prompt} side="top" className="max-w-md">
                     <div
-                      className={`h-2 w-2 rounded-full transition-all duration-200 ${index === props.visibleImagesChronological.length - 1 ? "bg-emerald-400 scale-150" : "bg-[#555]"}`}
+                      className={`h-2 w-2 rounded-full transition-all duration-200 ${index === props.visibleImagesChronological.length - 1 ? "bg-primary scale-150" : "bg-muted-foreground"}`}
                     />
                   </Tip>
                 ))}
-                {isImage && props.visibleImagesChronological.length === 0 && <span className="text-xs text-[#666]">无历史</span>}
+                {isImage && props.visibleImagesChronological.length === 0 && <span className="text-xs text-muted-foreground">无历史</span>}
               </div>
-              <div className="text-xs text-[#888]">
+              <div className="text-xs text-muted-foreground">
                 {isImage ? `${props.visibleImages.length} 张图片` : `${props.videos.length} 个视频`}
               </div>
             </div>
@@ -270,7 +270,7 @@ export function CreativeStudio(props: CreativeStudioProps) {
 function ModeTab({ active, icon, label, onClick }: { active: boolean; icon: ReactNode; label: string; onClick: () => void }) {
   return (
     <button
-      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium transition-all duration-200 ${active ? "bg-emerald-500/15 text-emerald-100" : "text-[#a0a0a0] hover:bg-white/5 hover:text-white"}`}
+      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium transition-all duration-200 ${active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/50 hover:text-primary-foreground"}`}
       onClick={onClick}
     >
       {icon}
@@ -287,19 +287,19 @@ function ImageParamsForm({ settings, onChange }: { settings: ImageSettings; onCh
     <div className="space-y-4 text-sm">
       {/* 基础参数 */}
       <div className="space-y-4">
-        <div className="text-xs font-semibold uppercase tracking-wider text-[#777]">基础参数</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">基础参数</div>
         <label className="block space-y-2">
-          <span className="text-xs text-[#a0a0a0]">模型</span>
-          <div className="rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white">agnes-image-2.1-flash</div>
+          <span className="text-xs text-muted-foreground">模型</span>
+          <div className="rounded-lg border border-border bg-secondary px-4 py-2.5 text-foreground">agnes-image-2.1-flash</div>
         </label>
         {/* 参数预设：常用尺寸 */}
         <div className="space-y-2">
-          <span className="text-xs text-[#a0a0a0]">快捷尺寸</span>
+          <span className="text-xs text-muted-foreground">快捷尺寸</span>
           <div className="flex gap-2">
             {["1024x1024", "1024x1792", "1792x1024"].map((size) => (
               <button
                 key={size}
-                className={`shrink-0 rounded-md border px-3 py-1.5 text-xs transition-all duration-200 ${settings.size === size ? "border-emerald-500 bg-emerald-500/10 text-emerald-300" : "border-white/10 bg-[#2a2a2a] text-[#a0a0a0] hover:bg-white/10"
+                className={`shrink-0 rounded-md border px-3 py-1.5 text-xs transition-all duration-200 ${settings.size === size ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary text-muted-foreground hover:bg-muted"
                   }`}
                 onClick={() => onChange((draft) => ({ ...draft, size: size as ImageSettings["size"] }))}
               >
@@ -309,7 +309,7 @@ function ImageParamsForm({ settings, onChange }: { settings: ImageSettings; onCh
           </div>
         </div>
         <label className="block space-y-2">
-          <span className="text-xs text-[#a0a0a0]">输出尺寸</span>
+          <span className="text-xs text-muted-foreground">输出尺寸</span>
           <ShadcnSelect
             options={imageSizeOptions.map((o) => ({ value: o.value, label: o.label }))}
             value={settings.size}
@@ -319,18 +319,18 @@ function ImageParamsForm({ settings, onChange }: { settings: ImageSettings; onCh
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block space-y-2">
-            <span className="text-xs text-[#a0a0a0]">数量</span>
+            <span className="text-xs text-muted-foreground">数量</span>
             <input
               type="number"
               min={1}
               max={4}
-              className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+              className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-foreground outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/30"
               value={settings.n}
               onChange={(event) => onChange((draft) => ({ ...draft, n: Math.min(4, Math.max(1, Number(event.target.value) || 1)) }))}
             />
           </label>
           <label className="block space-y-2">
-            <span className="text-xs text-[#a0a0a0]">输出格式</span>
+            <span className="text-xs text-muted-foreground">输出格式</span>
             <ShadcnSelect
               options={[
                 { value: "url", label: "URL" },
@@ -345,17 +345,17 @@ function ImageParamsForm({ settings, onChange }: { settings: ImageSettings; onCh
       </div>
 
       {/* 高级参数（可折叠） */}
-      <div className="border-t border-white/10 pt-4">
-        <button className="flex items-center justify-between w-full text-xs font-semibold uppercase tracking-wider text-[#777]" onClick={() => setShowAdvanced(!showAdvanced)}>
+      <div className="border-t border-border pt-4">
+        <button className="flex items-center justify-between w-full text-xs font-semibold uppercase tracking-wider text-muted-foreground" onClick={() => setShowAdvanced(!showAdvanced)}>
           <span>高级参数</span>
           <span className={`transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`}>▼</span>
         </button>
         {showAdvanced && (
           <div className="mt-4 space-y-4">
             <label className="block space-y-2">
-              <span className="text-xs text-[#a0a0a0]">随机种子</span>
+              <span className="text-xs text-muted-foreground">随机种子</span>
               <input
-                className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-foreground outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/30"
                 inputMode="numeric"
                 placeholder="可选"
                 value={settings.seed}
@@ -363,9 +363,9 @@ function ImageParamsForm({ settings, onChange }: { settings: ImageSettings; onCh
               />
             </label>
             <label className="block space-y-2">
-              <span className="text-xs text-[#a0a0a0]">反向提示词</span>
+              <span className="text-xs text-muted-foreground">反向提示词</span>
               <input
-                className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-foreground outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/30"
                 placeholder="避免模糊、畸形..."
                 value={settings.negative_prompt}
                 onChange={(event) => onChange((draft) => ({ ...draft, negative_prompt: event.target.value }))}
@@ -376,7 +376,7 @@ function ImageParamsForm({ settings, onChange }: { settings: ImageSettings; onCh
       </div>
 
       {/* 参数摘要 */}
-      <div className="rounded-lg border border-white/10 bg-[#252525] p-3 text-xs text-[#888]">
+      <div className="rounded-lg border border-border bg-secondary p-3 text-xs text-muted-foreground">
         <div>当前：{settings.size}</div>
         <div>画幅：{imageSizeOptions.find((option) => option.value === settings.size)?.ratio}</div>
         <div>模式：{settings.response_format === "url" ? "URL 输出" : "Base64 输出"}</div>
@@ -390,11 +390,11 @@ function VideoParamsForm({ settings, onChange }: { settings: VideoSettings; onCh
   return (
     <div className="space-y-4 text-sm">
       <label className="block space-y-2">
-        <span className="text-xs text-[#a0a0a0]">模型</span>
-        <div className="rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white">agnes-video-v2.0</div>
+        <span className="text-xs text-muted-foreground">模型</span>
+        <div className="rounded-lg border border-border bg-secondary px-4 py-2.5 text-foreground">agnes-video-v2.0</div>
       </label>
       <label className="block space-y-2">
-        <span className="text-xs text-[#a0a0a0]">画幅比例</span>
+        <span className="text-xs text-muted-foreground">画幅比例</span>
         <ShadcnSelect
           options={(["16:9", "9:16", "1:1", "4:3", "3:4"] as VideoSettings["ratio"][]).map((r) => ({ value: r, label: r }))}
           value={settings.ratio}
@@ -406,7 +406,7 @@ function VideoParamsForm({ settings, onChange }: { settings: VideoSettings; onCh
         />
       </label>
       <label className="block space-y-2">
-        <span className="text-xs text-[#a0a0a0]">生成模式</span>
+        <span className="text-xs text-muted-foreground">生成模式</span>
         <ShadcnSelect
           options={[
             { value: "ti2vid", label: "文生/图生视频" },
@@ -418,7 +418,7 @@ function VideoParamsForm({ settings, onChange }: { settings: VideoSettings; onCh
         />
       </label>
       <label className="block space-y-2">
-        <span className="text-xs text-[#a0a0a0]">时长档位</span>
+        <span className="text-xs text-muted-foreground">时长档位</span>
         <ShadcnSelect
           options={[
             { value: "81", label: "81 帧 · 约 3 秒" },
@@ -433,23 +433,23 @@ function VideoParamsForm({ settings, onChange }: { settings: VideoSettings; onCh
       </label>
       <div className="grid grid-cols-2 gap-3">
         <label className="block space-y-2">
-          <span className="text-xs text-[#a0a0a0]">帧率</span>
+          <span className="text-xs text-muted-foreground">帧率</span>
           <input
             type="number"
             min={1}
             max={60}
-            className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+            className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-foreground outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/30"
             value={settings.frame_rate}
             onChange={(event) => onChange((draft) => ({ ...draft, frame_rate: Number(event.target.value) }))}
           />
         </label>
         <label className="block space-y-2">
-          <span className="text-xs text-[#a0a0a0]">推理步数</span>
+          <span className="text-xs text-muted-foreground">推理步数</span>
           <input
             type="number"
             min={1}
             max={100}
-            className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+            className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-foreground outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/30"
             value={settings.num_inference_steps ?? ""}
             placeholder="默认"
             onChange={(event) => {
@@ -461,9 +461,9 @@ function VideoParamsForm({ settings, onChange }: { settings: VideoSettings; onCh
         </label>
       </div>
       <label className="block space-y-2">
-        <span className="text-xs text-[#a0a0a0]">随机种子</span>
+        <span className="text-xs text-muted-foreground">随机种子</span>
         <input
-          className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+          className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-foreground outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/30"
           inputMode="numeric"
           placeholder="可选"
           value={settings.seed}
@@ -471,15 +471,15 @@ function VideoParamsForm({ settings, onChange }: { settings: VideoSettings; onCh
         />
       </label>
       <label className="block space-y-2">
-        <span className="text-xs text-[#a0a0a0]">反向提示词</span>
+        <span className="text-xs text-muted-foreground">反向提示词</span>
         <input
-          className="w-full rounded-lg border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-white outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+          className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-foreground outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/30"
           placeholder="避免模糊、闪烁..."
           value={settings.negative_prompt}
           onChange={(event) => onChange((draft) => ({ ...draft, negative_prompt: event.target.value }))}
         />
       </label>
-      <div className="rounded-lg border border-white/10 bg-[#252525] p-3 text-xs text-[#888]">
+      <div className="rounded-lg border border-border bg-secondary p-3 text-xs text-muted-foreground">
         <div>尺寸：{settings.width}x{settings.height}</div>
         <div>时长：约 {estimateVideoSeconds(settings.num_frames, settings.frame_rate)} 秒</div>
         <div>模式：{settings.mode === "keyframes" ? "关键帧" : "文生/图生"}</div>
@@ -517,9 +517,9 @@ function ImageCanvas({
     return (
       <div className="grid h-full place-items-center p-6">
         <div className="text-center">
-          <Loader2 className="mx-auto h-10 w-10 animate-spin text-emerald-400" />
-          <div className="mt-4 text-sm text-[#b4b4b4]">正在生成图片...</div>
-          <div className="mt-1 line-clamp-2 max-w-md text-xs text-[#777]">{generatingRequest.prompt}</div>
+          <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+          <div className="mt-4 text-sm text-muted-foreground">正在生成图片...</div>
+          <div className="mt-1 line-clamp-2 max-w-md text-xs text-muted-foreground">{generatingRequest.prompt}</div>
         </div>
       </div>
     );
@@ -529,9 +529,9 @@ function ImageCanvas({
     return (
       <div className="grid h-full place-items-center p-6">
         <div className="text-center">
-          <Wand2 className="mx-auto h-10 w-10 text-[#444]" />
-          <div className="mt-4 text-sm text-[#b4b4b4]">在顶部输入提示词并点击生成</div>
-          <div className="mt-1 text-xs text-[#666]">结果将实时显示在这里</div>
+          <Wand2 className="mx-auto h-10 w-10 text-muted-foreground" />
+          <div className="mt-4 text-sm text-muted-foreground">在顶部输入提示词并点击生成</div>
+          <div className="mt-1 text-xs text-muted-foreground">结果将实时显示在这里</div>
         </div>
       </div>
     );
@@ -539,7 +539,7 @@ function ImageCanvas({
 
   return (
     <div className="flex h-full flex-col p-5">
-      <div className="flex-1 min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-[#202020] shadow-lg">
+      <div className="flex-1 min-h-0 overflow-hidden rounded-2xl border border-border bg-muted shadow-lg">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="h-full w-full object-contain"
@@ -550,8 +550,8 @@ function ImageCanvas({
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs text-[#888]">图片作品</div>
-          <div className="line-clamp-1 text-sm text-white">{task.prompt}</div>
+          <div className="text-xs text-muted-foreground">图片作品</div>
+          <div className="line-clamp-1 text-sm text-foreground">{task.prompt}</div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" onClick={() => onOpenDetail(task.id, 0)} className="transition-all duration-200 hover:scale-[1.02]"><ExternalLink className="h-4 w-4" />详情</Button>
@@ -582,9 +582,9 @@ function VideoCanvas({
     return (
       <div className="grid h-full place-items-center p-6">
         <div className="text-center">
-          <Video className="mx-auto h-10 w-10 text-[#444]" />
-          <div className="mt-4 text-sm text-[#b4b4b4]">在顶部输入提示词并点击生成</div>
-          <div className="mt-1 text-xs text-[#666]">视频任务将在这里播放</div>
+          <Video className="mx-auto h-10 w-10 text-muted-foreground" />
+          <div className="mt-4 text-sm text-muted-foreground">在顶部输入提示词并点击生成</div>
+          <div className="mt-1 text-xs text-muted-foreground">视频任务将在这里播放</div>
         </div>
       </div>
     );
@@ -595,29 +595,29 @@ function VideoCanvas({
 
   return (
     <div className="flex h-full flex-col p-5">
-      <div className="flex-1 min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-[#202020] shadow-lg">
+      <div className="flex-1 min-h-0 overflow-hidden rounded-2xl border border-border bg-muted shadow-lg">
         {isDone ? (
           <video className="h-full w-full object-contain" src={task.video_url} controls autoPlay preload="metadata" />
         ) : (
           <div className="grid h-full place-items-center">
             <div className="text-center">
-              {isRunning ? <Loader2 className="mx-auto h-10 w-10 animate-spin text-emerald-400" /> : <div className="text-red-300">生成失败</div>}
-              <div className="mt-3 text-sm text-[#b4b4b4]">{statusText(task.status)} {task.progress > 0 ? `${task.progress}%` : ""}</div>
+              {isRunning ? <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" /> : <div className="text-destructive">生成失败</div>}
+              <div className="mt-3 text-sm text-muted-foreground">{statusText(task.status)} {task.progress > 0 ? `${task.progress}%` : ""}</div>
             </div>
           </div>
         )}
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs text-[#888]">视频任务</div>
-          <div className="line-clamp-1 text-sm text-white">{task.prompt}</div>
-          <div className="text-xs text-[#777]">{task.size} · {task.seconds ? `${task.seconds}s` : ""}</div>
+          <div className="text-xs text-muted-foreground">视频任务</div>
+          <div className="line-clamp-1 text-sm text-foreground">{task.prompt}</div>
+          <div className="text-xs text-muted-foreground">{task.size} · {task.seconds ? `${task.seconds}s` : ""}</div>
         </div>
         <div className="flex flex-wrap gap-2">
           {task.video_url && (
             <>
-              <a className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white/10 px-3.5 text-xs transition-all duration-200 hover:bg-white/15 hover:scale-[1.02]" href={task.video_url} download={`${task.id}.mp4`} target="_blank" rel="noreferrer"><Download className="h-3.5 w-3.5" />下载</a>
-              <a className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white/10 px-3.5 text-xs transition-all duration-200 hover:bg-white/15 hover:scale-[1.02]" href={task.video_url} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5" />打开</a>
+              <a className="inline-flex h-8 items-center gap-1.5 rounded-md bg-muted px-3.5 text-xs transition-all duration-200 hover:bg-muted hover:scale-[1.02]" href={task.video_url} download={`${task.id}.mp4`} target="_blank" rel="noreferrer"><Download className="h-3.5 w-3.5" />下载</a>
+              <a className="inline-flex h-8 items-center gap-1.5 rounded-md bg-muted px-3.5 text-xs transition-all duration-200 hover:bg-muted hover:scale-[1.02]" href={task.video_url} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5" />打开</a>
               <Button size="sm" variant="secondary" onClick={() => onCopy(task.video_url)} className="transition-all duration-200 hover:scale-[1.02]"><Copy className="h-4 w-4" />复制</Button>
             </>
           )}
@@ -644,21 +644,21 @@ function ImageGalleryStrip({
   onImageLoad: () => void;
 }) {
   if (tasks.length === 0) {
-    return <div className="grid h-full place-items-center text-xs text-[#666]">暂无历史作品</div>;
+    return <div className="grid h-full place-items-center text-xs text-muted-foreground">暂无历史作品</div>;
   }
   return (
     <div className="flex h-full gap-4">
       {tasks.map((task) => (
         <button
           key={task.id}
-          className={`group relative flex h-full w-36 shrink-0 overflow-hidden rounded-xl border transition-all duration-200 ${selectedId === task.id ? "border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-white/10 hover:border-white/30 hover:scale-[1.02]"}`}
+          className={`group relative flex h-full w-36 shrink-0 overflow-hidden rounded-xl border transition-all duration-200 ${selectedId === task.id ? "border-primary shadow-lg shadow-primary/20" : "border-border hover:border-border hover:scale-[1.02]"}`}
           onClick={() => onSelect(task.id)}
           onDoubleClick={() => onOpenDetail(task.id, 0)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="h-full w-full object-cover" src={task.image_urls[0]} alt={task.prompt} onLoad={onImageLoad} />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2.5">
-            <div className="line-clamp-2 text-left text-[10px] text-white/90">{task.prompt}</div>
+            <div className="line-clamp-2 text-left text-[10px] text-foreground/90">{task.prompt}</div>
           </div>
         </button>
       ))}
@@ -677,7 +677,7 @@ function VideoGalleryStrip({
   onSelect: (taskId: string) => void;
 }) {
   if (tasks.length === 0) {
-    return <div className="grid h-full place-items-center text-xs text-[#666]">暂无历史作品</div>;
+    return <div className="grid h-full place-items-center text-xs text-muted-foreground">暂无历史作品</div>;
   }
   return (
     <div className="flex h-full gap-4">
@@ -689,25 +689,25 @@ function VideoGalleryStrip({
         return (
           <button
             key={task.id}
-            className={`group relative flex h-full w-48 shrink-0 overflow-hidden rounded-xl border transition-all duration-200 ${selectedId === task.id ? "border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-white/10 hover:border-white/30 hover:scale-[1.02]"
+            className={`group relative flex h-full w-48 shrink-0 overflow-hidden rounded-xl border transition-all duration-200 ${selectedId === task.id ? "border-primary shadow-lg shadow-primary/20" : "border-border hover:border-border hover:scale-[1.02]"
               }`}
             onClick={() => onSelect(task.id)}
           >
             {/* 状态图标 */}
             <div className="absolute left-2 top-2 z-10 flex items-center gap-1.5">
               {isDone && (
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/80 text-white">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/80 text-primary-foreground">
                   <Check className="h-4 w-4" />
                 </div>
               )}
               {isRunning && (
-                <div className="flex h-6 items-center justify-center gap-2 rounded-full bg-blue-500/80 px-2.5 text-white">
+                <div className="flex h-6 items-center justify-center gap-2 rounded-full bg-info/80 px-2.5 text-info-foreground">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   {task.progress > 0 && <span className="text-xs">{task.progress}%</span>}
                 </div>
               )}
               {isFailed && (
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 text-white">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive/80 text-destructive-foreground">
                   <X className="h-4 w-4" />
                 </div>
               )}
@@ -716,28 +716,28 @@ function VideoGalleryStrip({
             {task.video_url ? (
               <video className="h-full w-full object-cover" src={task.video_url} preload="metadata" />
             ) : (
-              <div className="grid h-full w-full place-items-center bg-[#2a2a2a]">
-                <div className="text-center text-xs text-[#888]">
+              <div className="grid h-full w-full place-items-center bg-secondary">
+                <div className="text-center text-xs text-muted-foreground">
                   {isRunning ? (
                     <>
-                      <Loader2 className="mx-auto h-8 w-8 animate-spin text-emerald-400" />
+                      <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                       {task.progress > 0 && (
                         <div className="mt-2 w-32">
-                          <div className="h-1.5 rounded-full bg-white/10">
-                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${task.progress}%` }} />
+                          <div className="h-1.5 rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-primary" style={{ width: `${task.progress}%` }} />
                           </div>
                         </div>
                       )}
                     </>
                   ) : (
-                    <div className="text-red-300">生成失败</div>
+                    <div className="text-destructive">生成失败</div>
                   )}
                   <div className="mt-2">{statusText(task.status)}</div>
                 </div>
               </div>
             )}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2.5">
-              <div className="line-clamp-2 text-left text-[10px] text-white/90">{task.prompt}</div>
+              <div className="line-clamp-2 text-left text-[10px] text-foreground/90">{task.prompt}</div>
             </div>
           </button>
         );

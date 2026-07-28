@@ -111,23 +111,23 @@ export function AIDiffView({ originalText, newText, onAccept, onReject }: AIDiff
 
       {/* 浮动 diff 面板（可拖拽） */}
       <div
-        className="absolute w-[min(768px,calc(100vw-32px)] bg-[#1f1f1f] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+        className="absolute w-[min(768px,calc(100vw-32px)] bg-muted border border-border rounded-xl shadow-2xl overflow-hidden"
         style={{ left: position.x, top: position.y }}
       >
         {/* 标题栏 —— 拖拽手柄 */}
         <div
-          className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-[#252525] cursor-move select-none"
+          className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-secondary cursor-move select-none"
           onMouseDown={onDragStart}
         >
           <div className="flex items-center gap-2">
-            <GripHorizontal className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-200">AI 修改对比</span>
-            <span className="text-xs text-gray-500">请确认是否接受修改</span>
+            <GripHorizontal className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">AI 修改对比</span>
+            <span className="text-xs text-muted-foreground">请确认是否接受修改</span>
           </div>
           <button
             type="button"
             onClick={onReject}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label="关闭"
           >
             <X className="h-4 w-4" />
@@ -139,7 +139,7 @@ export function AIDiffView({ originalText, newText, onAccept, onReject }: AIDiff
           {diff.map((op, idx) => {
             if (op.type === 'same') {
               return (
-                <span key={idx} className="text-gray-300">
+                <span key={idx} className="text-muted-foreground">
                   {op.text}
                 </span>
               )
@@ -148,7 +148,7 @@ export function AIDiffView({ originalText, newText, onAccept, onReject }: AIDiff
               return (
                 <span
                   key={idx}
-                  className="bg-red-500/20 text-red-400 line-through rounded px-0.5"
+                  className="bg-destructive/20 text-destructive line-through rounded px-0.5"
                 >
                   {op.text}
                 </span>
@@ -157,7 +157,7 @@ export function AIDiffView({ originalText, newText, onAccept, onReject }: AIDiff
             return (
               <span
                 key={idx}
-                className="bg-green-500/20 text-green-400 rounded px-0.5"
+                className="bg-success/20 text-success rounded px-0.5"
               >
                 {op.text}
               </span>
@@ -166,7 +166,7 @@ export function AIDiffView({ originalText, newText, onAccept, onReject }: AIDiff
         </div>
 
         {/* 操作按钮 */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-white/10 bg-[#252525]">
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border bg-secondary">
           <Button variant="ghost" size="sm" onClick={onReject}>
             <X className="h-4 w-4" />
             拒绝

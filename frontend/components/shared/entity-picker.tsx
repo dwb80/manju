@@ -87,14 +87,14 @@ export function EntityPicker<T extends { id: string; name?: string; title?: stri
 
   return (
     <div className={className}>
-      <label className="mb-1 block text-xs text-[#888]">
-        {label} {required && <span className="text-red-400">*</span>}
+      <label className="mb-1 block text-xs text-muted-foreground">
+        {label} {required && <span className="text-destructive">*</span>}
       </label>
       <select
         name={name}
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
+        className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
         disabled={isLoading}
       >
         {allowEmpty && <option value="">{emptyLabel}</option>}

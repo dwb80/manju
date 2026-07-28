@@ -85,36 +85,36 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
       // 默认错误UI
       return (
-        <div className="min-h-screen bg-[#181818] flex items-center justify-center px-4">
+        <div className="min-h-screen bg-card flex items-center justify-center px-4">
           <div className="max-w-md w-full">
             {/* 错误图标 */}
             <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
-                <AlertTriangle className="h-10 w-10 text-red-400" />
+              <div className="w-20 h-20 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center">
+                <AlertTriangle className="h-10 w-10 text-destructive" />
               </div>
             </div>
 
             {/* 错误标题 */}
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 页面加载失败
               </h1>
-              <p className="text-sm text-[#888]">
+              <p className="text-sm text-muted-foreground">
                 应用遇到了一个意外错误，请刷新页面重试
               </p>
             </div>
 
             {/* 错误详情（开发环境） */}
             {process.env.NODE_ENV === "development" && this.state.error && (
-              <div className="mb-6 p-4 rounded-lg bg-[#1a1a1a] border border-white/10">
-                <div className="text-xs text-[#888] mb-2 font-medium">
+              <div className="mb-6 p-4 rounded-lg bg-card border border-border">
+                <div className="text-xs text-muted-foreground mb-2 font-medium">
                   错误详情：
                 </div>
-                <pre className="text-xs text-red-400 overflow-auto">
+                <pre className="text-xs text-destructive overflow-auto">
                   {this.state.error.toString()}
                 </pre>
                 {this.state.errorInfo && (
-                  <pre className="text-xs text-[#666] mt-2 overflow-auto">
+                  <pre className="text-xs text-muted-foreground mt-2 overflow-auto">
                     {this.state.errorInfo.componentStack}
                   </pre>
                 )}
@@ -140,7 +140,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
             {/* 帮助提示 */}
             <div className="mt-6 text-center">
-              <p className="text-xs text-[#666]">
+              <p className="text-xs text-muted-foreground">
                 如果问题持续存在，请联系技术支持
               </p>
             </div>
@@ -159,13 +159,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 export function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] px-4">
-      <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-4">
-        <AlertTriangle className="h-8 w-8 text-red-400" />
+      <div className="w-16 h-16 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center mb-4">
+        <AlertTriangle className="h-8 w-8 text-destructive" />
       </div>
-      <h3 className="text-lg font-semibold text-white mb-2">
+      <h3 className="text-lg font-semibold text-foreground mb-2">
         组件加载失败
       </h3>
-      <p className="text-sm text-[#888] mb-4 text-center max-w-md">
+      <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
         {error.message || "组件渲染过程中发生错误"}
       </p>
       <Button

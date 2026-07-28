@@ -273,7 +273,7 @@ export default function DataCenterPage() {
   }[timeRange]
 
   return (
-    <main className="min-h-screen bg-[#181818] text-[#ececec]">
+    <main className="min-h-screen bg-card text-foreground/90">
       {/* === 统一页面头 === */}
       <StandalonePageHeader
         title="数据中心"
@@ -287,7 +287,7 @@ export default function DataCenterPage() {
             </div>
             <button
               onClick={handleRefresh}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#888] transition-colors hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="刷新数据"
               disabled={loading}
             >
@@ -355,7 +355,7 @@ export default function DataCenterPage() {
         <ProjectOverviewSection />
       </section>
 
-      <footer className="border-t border-white/10 px-6 py-4 text-xs text-[#666]">
+      <footer className="border-t border-border px-6 py-4 text-xs text-muted-foreground">
         <div className="flex items-center justify-between">
           <div>数据来源：真实API接口</div>
           <div suppressHydrationWarning>

@@ -113,11 +113,11 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
 
   // 阶段颜色映射
   const stageColors = {
-    script: "text-blue-400",
-    storyboard: "text-purple-400",
-    image: "text-pink-400",
-    video: "text-cyan-400",
-    review: "text-emerald-400",
+    script: "text-info",
+    storyboard: "text-chart-1",
+    image: "text-chart-4",
+    video: "text-chart-2",
+    review: "text-primary",
   };
 
   /**
@@ -134,28 +134,28 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
   ) => {
     const Icon = icon;
     return (
-      <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4 transition-all hover:border-white/20">
+      <div className="rounded-lg border border-border bg-card p-4 transition-all hover:border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={cn("rounded-lg p-2", bgColor)}>
               <Icon className={cn("h-5 w-5", color)} />
             </div>
             <div>
-              <div className="text-xs text-[#888]">{title}</div>
+              <div className="text-xs text-muted-foreground">{title}</div>
               <div className="flex items-baseline gap-1">
-                <span className="text-xl font-bold text-white">{value}</span>
-                <span className="text-xs text-[#666]">{unit}</span>
+                <span className="text-xl font-bold text-foreground">{value}</span>
+                <span className="text-xs text-muted-foreground">{unit}</span>
               </div>
             </div>
           </div>
           {trend !== undefined && (
             <div className="flex items-center gap-1">
               {trend > 0 ? (
-                <TrendingUp className="h-3 w-3 text-emerald-400" />
+                <TrendingUp className="h-3 w-3 text-primary" />
               ) : (
-                <TrendingDown className="h-3 w-3 text-red-400" />
+                <TrendingDown className="h-3 w-3 text-destructive" />
               )}
-              <span className={cn("text-xs", trend > 0 ? "text-emerald-400" : "text-red-400")}>
+              <span className={cn("text-xs", trend > 0 ? "text-primary" : "text-destructive")}>
                 {Math.abs(trend).toFixed(1)}%
               </span>
             </div>
@@ -175,14 +175,14 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-white">效率趋势(最近14天)</h3>
+          <h3 className="text-sm font-medium text-foreground">效率趋势(最近14天)</h3>
           <div className="flex items-center gap-1 text-xs">
             {efficiencyChange > 0 ? (
-              <TrendingUp className="h-3 w-3 text-emerald-400" />
+              <TrendingUp className="h-3 w-3 text-primary" />
             ) : (
-              <TrendingDown className="h-3 w-3 text-red-400" />
+              <TrendingDown className="h-3 w-3 text-destructive" />
             )}
-            <span className={efficiencyChange > 0 ? "text-emerald-400" : "text-red-400"}>
+            <span className={efficiencyChange > 0 ? "text-primary" : "text-destructive"}>
               {Math.abs(efficiencyChange).toFixed(1)}%
             </span>
           </div>
@@ -191,7 +191,7 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
         {/* 折线图 */}
         <div className="relative h-[200px]">
           {/* Y轴刻度 */}
-          <div className="absolute left-0 top-0 flex h-full flex-col justify-between text-xs text-[#666]">
+          <div className="absolute left-0 top-0 flex h-full flex-col justify-between text-xs text-muted-foreground">
             <span>100%</span>
             <span>50%</span>
             <span>0%</span>
@@ -208,7 +208,7 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
                   y1={100 - y}
                   x2="100"
                   y2={100 - y}
-                  stroke="rgba(255,255,255,0.05)"
+                  stroke="hsl(var(--foreground) / 0.05)"
                   strokeWidth="0.5"
                 />
               ))}
@@ -232,9 +232,9 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
               {/* 渐变定义 */}
               <defs>
                 <linearGradient id="efficiencyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="50%" stopColor="#8b5cf6" />
-                  <stop offset="100%" stopColor="#06b6d4" />
+                  <stop offset="0%" stopColor="hsl(var(--info))" />
+                  <stop offset="50%" stopColor="hsl(var(--chart-1))" />
+                  <stop offset="100%" stopColor="hsl(var(--chart-2))" />
                 </linearGradient>
               </defs>
 
@@ -248,7 +248,7 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
                     cx={x}
                     cy={y}
                     r="1.5"
-                    fill="#3b82f6"
+                    fill="hsl(var(--info))"
                     className="transition-all hover:r-2.5"
                   />
                 );
@@ -258,7 +258,7 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
         </div>
 
         {/* X轴日期标签 */}
-        <div className="ml-10 flex justify-between text-xs text-[#666]">
+        <div className="ml-10 flex justify-between text-xs text-muted-foreground">
           <span>{recentTrend[0]?.date}</span>
           <span>{recentTrend[Math.floor(recentTrend.length / 2)]?.date}</span>
           <span>{recentTrend[recentTrend.length - 1]?.date}</span>
@@ -273,7 +273,7 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
   const renderStageComparison = () => {
     return (
       <div className="space-y-4">
-        <h3 className="text-sm font-medium text-white">各阶段效率对比</h3>
+        <h3 className="text-sm font-medium text-foreground">各阶段效率对比</h3>
         <div className="space-y-3">
           {data.stages.map((stage) => {
             const Icon = stageIcons[stage.stage];
@@ -281,14 +281,14 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
             return (
               <div
                 key={stage.stage}
-                className="rounded-lg border border-white/10 bg-[#1a1a1a] p-3 transition-all hover:border-white/20"
+                className="rounded-lg border border-border bg-card p-3 transition-all hover:border-border"
               >
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Icon className={cn("h-4 w-4", colorClass)} />
-                    <span className="text-sm font-medium text-white">{stage.stageName}</span>
+                    <span className="text-sm font-medium text-foreground">{stage.stageName}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-[#888]">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>效率: {stage.efficiency}%</span>
                     <span>成功率: {stage.successRate}%</span>
                     <span>任务数: {stage.taskCount}</span>
@@ -296,15 +296,15 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
                 </div>
 
                 {/* 效率进度条 */}
-                <div className="h-2 overflow-hidden rounded-full bg-[#202020]">
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
                     className={cn(
                       "h-full rounded-full bg-gradient-to-r",
                       stage.efficiency >= 80
-                        ? "from-emerald-500 to-emerald-400"
+                        ? "from-primary to-primary"
                         : stage.efficiency >= 60
-                          ? "from-yellow-500 to-yellow-400"
-                          : "from-red-500 to-red-400"
+                          ? "from-chart-5 to-chart-5"
+                          : "from-destructive to-destructive"
                     )}
                     style={{ width: `${stage.efficiency}%` }}
                   />
@@ -324,19 +324,19 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-yellow-400" />
-          <h3 className="text-sm font-medium text-white">瓶颈分析</h3>
+          <AlertTriangle className="h-4 w-4 text-chart-5" />
+          <h3 className="text-sm font-medium text-foreground">瓶颈分析</h3>
         </div>
         <div className="space-y-2">
           {data.bottlenecks.map((bottleneck, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3"
+              className="flex items-start gap-3 rounded-lg border border-chart-5/20 bg-chart-5/5 p-3"
             >
-              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-yellow-500/20">
-                <span className="text-xs font-medium text-yellow-400">{index + 1}</span>
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-chart-5/20">
+                <span className="text-xs font-medium text-chart-5">{index + 1}</span>
               </div>
-              <p className="text-xs text-[#aaa]">{bottleneck}</p>
+              <p className="text-xs text-muted-foreground">{bottleneck}</p>
             </div>
           ))}
         </div>
@@ -351,17 +351,17 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Zap className="h-4 w-4 text-blue-400" />
-          <h3 className="text-sm font-medium text-white">优化建议</h3>
+          <Zap className="h-4 w-4 text-info" />
+          <h3 className="text-sm font-medium text-foreground">优化建议</h3>
         </div>
         <div className="space-y-2">
           {data.suggestions.map((suggestion, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 rounded-lg border border-white/5 bg-[#1a1a1a] p-3 transition-all hover:border-white/10"
+              className="flex items-start gap-3 rounded-lg border border-border/50 bg-card p-3 transition-all hover:border-border"
             >
-              <CheckCircle className="h-4 w-4 flex-shrink-0 text-emerald-400" />
-              <p className="text-xs text-[#aaa]">{suggestion}</p>
+              <CheckCircle className="h-4 w-4 flex-shrink-0 text-primary" />
+              <p className="text-xs text-muted-foreground">{suggestion}</p>
             </div>
           ))}
         </div>
@@ -372,7 +372,7 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
   return (
     <div className="space-y-6">
       {/* 顶部标签切换 */}
-      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#202020] p-1">
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-muted p-1">
         {(["overview", "stages", "trend"] as const).map((view) => (
           <button
             key={view}
@@ -380,8 +380,8 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
             className={cn(
               "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all",
               activeView === view
-                ? "bg-white/10 text-white"
-                : "text-[#888] hover:text-white hover:bg-white/5"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             )}
           >
             {view === "overview" && "概览"}
@@ -401,24 +401,24 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
               data.avgCompletionTime,
               "分钟",
               Clock,
-              "text-blue-400",
-              "bg-blue-500/10"
+              "text-info",
+              "bg-info/10"
             )}
             {renderMetricCard(
               "成功率",
               data.successRate,
               "%",
               CheckCircle,
-              "text-emerald-400",
-              "bg-emerald-500/10"
+              "text-primary",
+              "bg-primary/10"
             )}
             {renderMetricCard(
               "任务吞吐量",
               data.throughput,
               "任务/天",
               Activity,
-              "text-purple-400",
-              "bg-purple-500/10"
+              "text-chart-1",
+              "bg-chart-1/10"
             )}
           </div>
 
@@ -432,7 +432,7 @@ export function ProductionEfficiency({ data, onViewDetails }: ProductionEfficien
           {onViewDetails && (
             <button
               onClick={onViewDetails}
-              className="w-full rounded-lg border border-white/10 bg-[#202020] px-4 py-3 text-sm font-medium text-white transition-all hover:border-white/20 hover:bg-[#1a1a1a]"
+              className="w-full rounded-lg border border-border bg-muted px-4 py-3 text-sm font-medium text-foreground transition-all hover:border-border hover:bg-card"
             >
               查看详细效率报告 →
             </button>

@@ -48,10 +48,10 @@ const STATUS_LABELS: Record<ConsistencyImageStatus, string> = {
 };
 
 const STATUS_TONE: Record<ConsistencyImageStatus, { bg: string; border: string; text: string }> = {
-  pending: { bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.10)", text: "rgba(255,255,255,0.5)" },
-  generating: { bg: "rgba(34,211,238,0.15)", border: "rgba(34,211,238,0.40)", text: "rgb(165,243,252)" },
-  success: { bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.40)", text: "rgb(167,243,208)" },
-  failed: { bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.40)", text: "rgb(252,165,165)" },
+  pending: { bg: "hsl(var(--foreground) / 0.05)", border: "hsl(var(--foreground) / 0.10)", text: "hsl(var(--foreground) / 0.5)" },
+  generating: { bg: "hsl(var(--chart-2) / 0.15)", border: "hsl(var(--chart-2) / 0.40)", text: "hsl(var(--chart-2))" },
+  success: { bg: "hsl(var(--primary) / 0.15)", border: "hsl(var(--primary) / 0.40)", text: "hsl(var(--success))" },
+  failed: { bg: "hsl(var(--destructive) / 0.15)", border: "hsl(var(--destructive) / 0.40)", text: "hsl(var(--destructive))" },
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -60,8 +60,8 @@ const buttonStyle: React.CSSProperties = {
   gap: "6px",
   padding: "6px 14px",
   borderRadius: "6px",
-  border: "1px solid rgba(255,255,255,0.15)",
-  background: "rgba(255,255,255,0.05)",
+  border: "1px solid hsl(var(--foreground) / 0.15)",
+  background: "hsl(var(--foreground) / 0.05)",
   color: "white",
   fontSize: "13px",
   cursor: "pointer",
@@ -70,7 +70,7 @@ const buttonStyle: React.CSSProperties = {
 
 const buttonPrimaryStyle: React.CSSProperties = {
   ...buttonStyle,
-  background: "linear-gradient(135deg, rgb(34,197,94) 0%, rgb(16,185,129) 100%)",
+  background: "linear-gradient(135deg, hsl(var(--success)) 0%, hsl(var(--primary)) 100%)",
   border: "none",
   color: "white",
 };
@@ -180,7 +180,7 @@ export function ConsistencyPackPanel({ entityType, entityId, entityName }: Consi
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 12, color: "rgba(255,255,255,0.7)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 12, color: "hsl(var(--foreground) / 0.7)" }}>
         <Loader2 size={20} className="animate-spin" />
         <span>正在加载一致性包…</span>
       </div>
@@ -190,8 +190,8 @@ export function ConsistencyPackPanel({ entityType, entityId, entityName }: Consi
   if (error && !snapshot) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 12 }}>
-        <AlertTriangle size={32} color="rgb(248,113,113)" />
-        <p style={{ color: "rgba(255,255,255,0.8)" }}>{error}</p>
+        <AlertTriangle size={32} color="hsl(var(--destructive))" />
+        <p style={{ color: "hsl(var(--foreground) / 0.8)" }}>{error}</p>
         <button type="button" style={buttonStyle} onClick={() => refresh()}>
           <RefreshCw size={14} /> 重试
         </button>
@@ -205,10 +205,10 @@ export function ConsistencyPackPanel({ entityType, entityId, entityName }: Consi
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 500, color: "white", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
-            <Sparkles size={20} color="rgb(252,211,77)" />
+            <Sparkles size={20} color="hsl(var(--warning))" />
             一致性包 · {entityName ?? entityId}
           </h2>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>
+          <p style={{ fontSize: 13, color: "hsl(var(--foreground) / 0.5)", marginTop: 4 }}>
             4 标准参考图 {entityType === "character" ? "+ 6 表情 + 3 角度" : "+ 3 角度"} = {total} 张图
           </p>
         </div>
@@ -232,25 +232,25 @@ export function ConsistencyPackPanel({ entityType, entityId, entityName }: Consi
 
       {/* 进度条 */}
       {snapshot?.pack && (
-        <div style={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.05)", padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 8 }}>
+        <div style={{ borderRadius: 8, border: "1px solid hsl(var(--foreground) / 0.10)", background: "hsl(var(--foreground) / 0.05)", padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: "hsl(var(--foreground) / 0.7)", marginBottom: 8 }}>
             <span>
-              packId: <span style={{ fontFamily: "monospace", color: "rgba(255,255,255,0.4)" }}>{snapshot.pack.id}</span>
+              packId: <span style={{ fontFamily: "monospace", color: "hsl(var(--foreground) / 0.4)" }}>{snapshot.pack.id}</span>
             </span>
             <span>
               v{snapshot.pack.version} · 完成 {completed}/{total} · 失败 {failed}
               {isWorking && (
-                <span style={{ marginLeft: 8, display: "inline-flex", alignItems: "center", gap: 4, color: "rgb(165,243,252)" }}>
+                <span style={{ marginLeft: 8, display: "inline-flex", alignItems: "center", gap: 4, color: "hsl(var(--chart-2))" }}>
                   <Loader2 size={12} className="animate-spin" /> 生成中
                 </span>
               )}
             </span>
           </div>
-          <div style={{ height: 8, width: "100%", background: "rgba(255,255,255,0.10)", borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ height: 8, width: "100%", background: "hsl(var(--foreground) / 0.10)", borderRadius: 4, overflow: "hidden" }}>
             <div
               style={{
                 height: "100%",
-                background: "linear-gradient(to right, rgb(34,211,238) 0%, rgb(16,185,129) 100%)",
+                background: "linear-gradient(to right, hsl(var(--chart-2)) 0%, hsl(var(--primary)) 100%)",
                 width: `${progressPct}%`,
                 transition: "width 0.3s",
               }}
@@ -261,7 +261,7 @@ export function ConsistencyPackPanel({ entityType, entityId, entityName }: Consi
 
       {/* 13 / 7 图网格 */}
       {!snapshot?.pack ? (
-        <div style={{ borderRadius: 8, border: "1px dashed rgba(255,255,255,0.15)", padding: 40, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
+        <div style={{ borderRadius: 8, border: "1px dashed hsl(var(--foreground) / 0.15)", padding: 40, textAlign: "center", color: "hsl(var(--foreground) / 0.5)" }}>
           <ImageIcon size={40} style={{ margin: "0 auto 12px", opacity: 0.5 }} />
           <p>尚未生成一致性包，点击「启动生成」开始 {total} 张图的串行生成。</p>
         </div>
@@ -295,15 +295,15 @@ export function ConsistencyPackPanel({ entityType, entityId, entityName }: Consi
             maxWidth: 400,
             padding: 12,
             borderRadius: 8,
-            border: `1px solid ${toast.type === "success" ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.4)"}`,
-            background: toast.type === "success" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+            border: `1px solid ${toast.type === "success" ? "hsl(var(--primary) / 0.4)" : "hsl(var(--destructive) / 0.4)"}`,
+            background: toast.type === "success" ? "hsl(var(--primary) / 0.15)" : "hsl(var(--destructive) / 0.15)",
             color: "white",
             fontSize: 13,
             boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
           }}
         >
           <div style={{ fontWeight: 600 }}>{toast.title}</div>
-          <div style={{ marginTop: 4, color: "rgba(255,255,255,0.7)" }}>{toast.description}</div>
+          <div style={{ marginTop: 4, color: "hsl(var(--foreground) / 0.7)" }}>{toast.description}</div>
         </div>
       )}
     </div>
@@ -327,8 +327,8 @@ function ConsistencyImageCard({ type, image, regenerating, onRegenerate }: Consi
     <div
       style={{
         borderRadius: 8,
-        border: "1px solid rgba(255,255,255,0.10)",
-        background: "rgba(255,255,255,0.05)",
+        border: "1px solid hsl(var(--foreground) / 0.10)",
+        background: "hsl(var(--foreground) / 0.05)",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -348,11 +348,11 @@ function ConsistencyImageCard({ type, image, regenerating, onRegenerate }: Consi
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image.url} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : status === "generating" || regenerating ? (
-          <Loader2 size={32} color="rgb(165,243,252)" className="animate-spin" />
+          <Loader2 size={32} color="hsl(var(--chart-2))" className="animate-spin" />
         ) : status === "failed" ? (
-          <AlertTriangle size={32} color="rgb(248,113,113)" />
+          <AlertTriangle size={32} color="hsl(var(--destructive))" />
         ) : (
-          <Clock size={32} color="rgba(255,255,255,0.3)" />
+          <Clock size={32} color="hsl(var(--foreground) / 0.3)" />
         )}
         {image?.url && (
           <a
@@ -365,7 +365,7 @@ function ConsistencyImageCard({ type, image, regenerating, onRegenerate }: Consi
               right: 8,
               fontSize: 10,
               background: "rgba(0,0,0,0.6)",
-              color: "rgba(255,255,255,0.8)",
+              color: "hsl(var(--foreground) / 0.8)",
               padding: "2px 6px",
               borderRadius: 4,
               textDecoration: "none",
@@ -377,7 +377,7 @@ function ConsistencyImageCard({ type, image, regenerating, onRegenerate }: Consi
       </div>
       <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.9)" }}>{label}</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: "hsl(var(--foreground) / 0.9)" }}>{label}</span>
           <span
             style={{
               fontSize: 10,
@@ -395,7 +395,7 @@ function ConsistencyImageCard({ type, image, regenerating, onRegenerate }: Consi
           <p
             style={{
               fontSize: 10,
-              color: "rgba(252,165,165,0.8)",
+              color: "hsl(var(--destructive) / 0.8)",
               margin: 0,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -408,7 +408,7 @@ function ConsistencyImageCard({ type, image, regenerating, onRegenerate }: Consi
             {image.error_message}
           </p>
         )}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 10, color: "hsl(var(--foreground) / 0.4)" }}>
           <span style={{ fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={image?.id ?? "-"}>
             {image ? image.id.slice(0, 12) + "…" : "—"}
           </span>
@@ -418,7 +418,7 @@ function ConsistencyImageCard({ type, image, regenerating, onRegenerate }: Consi
             onClick={onRegenerate}
             style={{
               fontSize: 10,
-              color: regenerating ? "rgba(165,243,252,0.6)" : "rgb(165,243,252)",
+              color: regenerating ? "hsl(var(--chart-2) / 0.6)" : "hsl(var(--chart-2))",
               background: "none",
               border: "none",
               cursor: !image || regenerating ? "not-allowed" : "pointer",

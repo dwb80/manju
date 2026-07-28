@@ -161,7 +161,7 @@ function SettingsContent() {
     : "";
 
   return (
-    <main className="min-h-screen bg-[#181818] text-[#ececec]">
+    <main className="min-h-screen bg-card text-foreground/90">
       <StandalonePageHeader
         title="系统管理"
         description="个人偏好与 API Key 管理"
@@ -171,7 +171,7 @@ function SettingsContent() {
             <button
               type="button"
               onClick={handleReset}
-              className="inline-flex h-7 items-center gap-1 rounded-md border border-white/10 bg-[#1a1a1a] px-2 text-xs text-[#aaa] hover:text-white"
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs text-muted-foreground hover:text-foreground"
             >
               <RotateCcw className="h-3 w-3" />
               重置
@@ -180,7 +180,7 @@ function SettingsContent() {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex h-7 items-center gap-1 rounded-md bg-emerald-500 px-2 text-xs text-white hover:bg-emerald-400 disabled:opacity-50"
+              className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               <Save className="h-3 w-3" />
               {saving ? "保存中..." : "保存设置"}
@@ -197,43 +197,43 @@ function SettingsContent() {
         )}
 
         {/* === 个人信息 === */}
-        <section className="rounded-lg border border-white/10 bg-[#1a1a1a] p-5">
+        <section className="rounded-lg border border-border bg-card p-5">
           <div className="mb-4 flex items-center gap-2">
-            <User className="h-4 w-4 text-emerald-400" />
-            <h2 className="text-sm font-medium text-white">个人信息</h2>
+            <User className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-medium text-foreground">个人信息</h2>
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-[#888]">用户名</label>
+              <label className="mb-1 block text-xs text-muted-foreground">用户名</label>
               <input
                 value={settings.userName ?? ""}
                 onChange={(e) => update("userName", e.target.value)}
                 placeholder="您的显示名"
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-[#888]">邮箱</label>
+              <label className="mb-1 block text-xs text-muted-foreground">邮箱</label>
               <input
                 type="email"
                 value={settings.userEmail ?? ""}
                 onChange={(e) => update("userEmail", e.target.value)}
                 placeholder="your.email@example.com"
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
               />
             </div>
           </div>
         </section>
 
         {/* === API Key === */}
-        <section className="rounded-lg border border-white/10 bg-[#1a1a1a] p-5">
+        <section className="rounded-lg border border-border bg-card p-5">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Key className="h-4 w-4 text-amber-400" />
-              <h2 className="text-sm font-medium text-white">API Key 管理</h2>
+              <Key className="h-4 w-4 text-warning" />
+              <h2 className="text-sm font-medium text-foreground">API Key 管理</h2>
             </div>
-            <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
+            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
               <CheckCircle2 className="mr-1 inline h-3 w-3" />
               {settings.apiKeyConfigured ? "已配置（不回显）" : "未配置"}
             </span>
@@ -246,11 +246,11 @@ function SettingsContent() {
           <div className="mt-4 space-y-3">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs text-[#888]">API 提供方</label>
+                <label className="mb-1 block text-xs text-muted-foreground">API 提供方</label>
                 <select
                   value={settings.apiProvider ?? "agnes"}
                   onChange={(e) => update("apiProvider", e.target.value as Settings["apiProvider"])}
-                  className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
                 >
                   <option value="agnes">Agnes AI（默认）</option>
                   <option value="openai">OpenAI</option>
@@ -259,7 +259,7 @@ function SettingsContent() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs text-[#888]">API Base URL</label>
+                <label className="mb-1 block text-xs text-muted-foreground">API Base URL</label>
                 <input
                   value={settings.apiBaseUrl ?? ""}
                   onChange={(e) => update("apiBaseUrl", e.target.value)}
@@ -270,13 +270,13 @@ function SettingsContent() {
                       ? "https://api.anthropic.com/v1"
                       : "https://apihub.agnes-ai.com/v1"
                   }
-                  className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs text-[#888]">API Key</label>
+              <label className="mb-1 block text-xs text-muted-foreground">API Key</label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <input
@@ -287,12 +287,12 @@ function SettingsContent() {
                       update("clearApiKey", false);
                     }}
                     placeholder="sk-..."
-                    className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 pr-10 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 pr-10 text-sm text-foreground focus:border-primary/50 focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[#888] hover:text-white"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     aria-label={showApiKey ? "隐藏" : "显示"}
                   >
                     {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -302,7 +302,7 @@ function SettingsContent() {
                   type="button"
                   onClick={handleCopyApiKey}
                   disabled={!settings.apiKey}
-                  className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-[#0f0f0f] px-3 text-xs text-[#aaa] hover:text-white disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-3 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
                 >
                   <Copy className="h-3 w-3" />
                   复制
@@ -311,15 +311,15 @@ function SettingsContent() {
                   type="button"
                   onClick={handleClearApiKey}
                   disabled={!settings.apiKey && !settings.apiKeyConfigured}
-                  className="inline-flex items-center gap-1 rounded-md border border-red-500/30 bg-red-500/5 px-3 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded-md border border-destructive/30 bg-destructive/5 px-3 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-40"
                 >
                   <Trash2 className="h-3 w-3" />
                   清除
                 </button>
               </div>
               {settings.apiKey && !showApiKey && (
-                <p className="mt-1 text-[10px] text-[#666]">
-                  当前值：<span className="font-mono text-[#888]">{maskedApiKey}</span>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  当前值：<span className="font-mono text-muted-foreground">{maskedApiKey}</span>
                 </p>
               )}
             </div>
@@ -327,19 +327,19 @@ function SettingsContent() {
         </section>
 
         {/* === 偏好设置 === */}
-        <section className="rounded-lg border border-white/10 bg-[#1a1a1a] p-5">
+        <section className="rounded-lg border border-border bg-card p-5">
           <div className="mb-4 flex items-center gap-2">
-            <SettingsIcon className="h-4 w-4 text-blue-400" />
-            <h2 className="text-sm font-medium text-white">偏好设置</h2>
+            <SettingsIcon className="h-4 w-4 text-info" />
+            <h2 className="text-sm font-medium text-foreground">偏好设置</h2>
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-[#888]">主题</label>
+              <label className="mb-1 block text-xs text-muted-foreground">主题</label>
               <select
                 value={settings.theme ?? "dark"}
                 onChange={(e) => update("theme", e.target.value as Settings["theme"])}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
               >
                 <option value="dark">深色</option>
                 <option value="light">浅色</option>
@@ -348,11 +348,11 @@ function SettingsContent() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs text-[#888]">语言</label>
+              <label className="mb-1 block text-xs text-muted-foreground">语言</label>
               <select
                 value={settings.language ?? "zh-CN"}
                 onChange={(e) => update("language", e.target.value as Settings["language"])}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
               >
                 <option value="zh-CN">简体中文</option>
                 <option value="en-US">English</option>
@@ -360,11 +360,11 @@ function SettingsContent() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs text-[#888]">字号</label>
+              <label className="mb-1 block text-xs text-muted-foreground">字号</label>
               <select
                 value={settings.fontSize ?? "medium"}
                 onChange={(e) => update("fontSize", e.target.value as Settings["fontSize"])}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
               >
                 <option value="small">小</option>
                 <option value="medium">中</option>
@@ -373,21 +373,21 @@ function SettingsContent() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs text-[#888]">默认对话模型</label>
+              <label className="mb-1 block text-xs text-muted-foreground">默认对话模型</label>
               <input
                 value={settings.defaultChatModel ?? ""}
                 onChange={(e) => update("defaultChatModel", e.target.value)}
                 placeholder="例如 gpt-4 / claude-3-opus"
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs text-[#888]">默认图片尺寸</label>
+              <label className="mb-1 block text-xs text-muted-foreground">默认图片尺寸</label>
               <select
                 value={settings.defaultImageSize ?? "1024x1024"}
                 onChange={(e) => update("defaultImageSize", e.target.value)}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
               >
                 <option value="1024x1024">1024 × 1024</option>
                 <option value="1024x768">1024 × 768</option>
@@ -398,11 +398,11 @@ function SettingsContent() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs text-[#888]">默认视频比例</label>
+              <label className="mb-1 block text-xs text-muted-foreground">默认视频比例</label>
               <select
                 value={settings.defaultVideoRatio ?? "16:9"}
                 onChange={(e) => update("defaultVideoRatio", e.target.value)}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
               >
                 <option value="16:9">16:9 横屏</option>
                 <option value="9:16">9:16 竖屏</option>
@@ -412,10 +412,10 @@ function SettingsContent() {
           </div>
         </section>
 
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-[#888]">
+        <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-amber-400" />
-            <span className="text-amber-200">提示</span>
+            <AlertCircle className="h-4 w-4 text-warning" />
+            <span className="text-warning">提示</span>
           </div>
           <p className="mt-2 leading-relaxed">
             偏好设置在保存后会在下次启动项目时生效。
@@ -425,7 +425,7 @@ function SettingsContent() {
 
         {/* === spec 4.4 系统管理 4 折叠面板（敏感词/平台模板/审计/项目权限） === */}
         <div className="space-y-3">
-          <h2 className="px-1 text-xs font-medium uppercase tracking-wider text-[#888]">spec 4.4 · 系统管理面板</h2>
+          <h2 className="px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">spec 4.4 · 系统管理面板</h2>
           <AdminPanels />
         </div>
       </div>

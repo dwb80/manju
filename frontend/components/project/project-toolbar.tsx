@@ -43,15 +43,15 @@ export function ProjectToolbar({
 }: ProjectToolbarProps) {
     return (
         <div className="space-y-3">
-            <div className="grid grid-cols-[1fr_170px_170px_auto] gap-3 rounded-2xl border border-white/10 bg-[#202020] p-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+            <div className="grid grid-cols-[1fr_170px_170px_auto] gap-3 rounded-2xl border border-border bg-muted p-3 max-lg:grid-cols-2 max-md:grid-cols-1">
                 <input
-                    className="h-11 rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500"
+                    className="h-11 rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
                     value={workbenchSearch}
                     placeholder="搜索当前页内容"
                     onChange={(event) => onSearchChange(event.target.value)}
                 />
                 <select
-                    className="h-11 rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500"
+                    className="h-11 rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
                     value={workbenchStatusFilter}
                     disabled={currentWorkbenchStatusOptions.length === 0}
                     onChange={(event) => onStatusFilterChange(event.target.value)}
@@ -62,7 +62,7 @@ export function ProjectToolbar({
                     ))}
                 </select>
                 <select
-                    className="h-11 rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500"
+                    className="h-11 rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
                     value={workbenchOwnerFilter}
                     onChange={(event) => onOwnerFilterChange(event.target.value)}
                 >

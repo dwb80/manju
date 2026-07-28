@@ -66,6 +66,7 @@ export async function appendPropImageHistory(
     view_type: input.view_type ?? null,
     is_applied: false,
     applied_at: "",
+    is_primary: 0,
     created_at: nowIso(),
   };
   await ctx.propImageHistory.insert(record);

@@ -1,7 +1,9 @@
 # 文档索引
 
-> **更新时间**: 2026-07-23
-> **说明**: 本文档说明 `docs` 目录下每个文档的用途和推荐阅读顺序。
+> 本文档说明 `docs` 目录下每个文档的用途和推荐阅读顺序。
+>
+> **领域归属**：[DDD 索引](ddd/README.md) + [上下文映射](ddd/context-map.md)
+> **DDD 治理**：所有项目文档的领域归属、跨上下文引用、术语使用按 [DDD 治理规范](ddd/governance.md) 执行。
 
 ---
 
@@ -11,82 +13,110 @@
 
 按以下顺序阅读，快速了解项目全貌：
 
-1. **[product-design-spec.md](product-design-spec.md)** —— 产品顶层设计（愿景、角色、流程、数据模型、AI体系、信息架构、NFR）
-2. **[functional-specification.md](functional-specification.md)** —— 当前版本可验证的功能、状态、边界、异常与验收基线
+1. **[product-design-spec.md](product-design-spec.md)** —— 产品顶层设计（愿景、角色、流程、数据模型、AI体系、信息架构、NFR、优先级分级体系）
+2. **[ddd/README.md](ddd/README.md)** —— DDD 文档索引（[context-map.md](ddd/context-map.md) + [glossary.md](ddd/glossary.md) + [module-map.md](ddd/module-map.md)）
 3. **[feature-status.md](feature-status.md)** —— 当前真实能力、产品边界和对外承诺口径
-4. **[production-hardening-and-gray-release-2026-07-18.md](production-hardening-and-gray-release-2026-07-18.md)** —— 认证、权限、备份、Provider 质量和灰度操作手册
-5. **[requirements-and-acceptance.md](requirements-and-acceptance.md)** —— 功能需求、验收标准、API规范、数据字典
-6. **[architecture-and-development.md](architecture-and-development.md)** —— 技术架构、项目结构、存储方案、开发指南
-7. **[module-relationships.md](module-relationships.md)** —— 模块间关系（剧本↔分镜↔资产↔模型）
+4. **[requirements-and-acceptance.md](requirements-and-acceptance.md)** —— 功能需求、验收标准、API规范、数据字典
+5. **[architecture-and-development.md](architecture-and-development.md)** —— 技术架构、项目结构、存储方案、开发指南
+6. **[development-standards.md](development-standards.md)** —— Definition of Done、事件可靠性、迁移、测试和交付门禁
 
 ### 按角色阅读
 
 **产品经理 / 项目经理**：
-- `product-design-spec.md`（了解产品全貌）
-- `requirements-and-acceptance.md`（了解功能需求和验收标准）
+- `product-design-spec.md`（产品全貌 + 优先级体系）
+- `ddd/glossary.md`（统一语言）+ `ddd/module-map.md`（模块-上下文映射）+ `ddd/iteration-priority.md`（迭代节奏）
+- `requirements-and-acceptance.md`（功能需求和验收标准）
 
 **开发人员**：
-- `architecture-and-development.md`（了解技术架构和项目结构）
-- `module-relationships.md`（了解模块间依赖关系）
-- `requirements-and-acceptance.md`（了解API规范）
+- `ddd/context-map.md`（上下文边界）+ `ddd/glossary.md`（统一语言）+ 你负责的 `ddd/contexts/0N-*.md`（聚合、事件、状态机）
+- `architecture-and-development.md`（技术架构 + 存储方案）
+- `requirements-and-acceptance.md`（API规范）
+- `api.md`（实际接口说明）
+- 各模块指南（见下方清单）
 
 **测试人员**：
-- `requirements-and-acceptance.md`（了解验收标准和测试要点）
+- `requirements-and-acceptance.md`（验收标准和测试要点）
+- `feature-status.md`（功能实现状态）
 
 **运维人员**：
-- `architecture-and-development.md`（了解存储方案和部署）
-- `product-design-spec.md`（了解NFR中的监控运维需求）
+- `architecture-and-development.md`（存储方案和部署）
+- `security/`（合规清单、事件响应、SBOM）
+- `release/`（发布验收、回滚方案）
 
 ---
 
 ## 文档清单
 
-### 核心文档（合并后）
+### 领域设计
 
-| 文档 | 说明 | 来源 |
-|------|------|------|
-| **[product-design-spec.md](product-design-spec.md)** | 产品设计规格总纲。包含产品愿景、用户角色、业务流程、数据模型、AI模型体系、信息架构、非功能性需求。 | 合并 7 个文档 |
-| **[requirements-and-acceptance.md](requirements-and-acceptance.md)** | 需求规格与验收标准。包含功能需求（按业务阶段）、验收标准、前端验收标准、API接口规范摘要、数据字典摘要。 | 合并 5 个文档 |
-| **[architecture-and-development.md](architecture-and-development.md)** | 架构设计与开发指南。包含MVP架构、技术栈、项目结构、存储方案、开发排错指南。 | 合并 4 个文档 |
-| **[module-relationships.md](module-relationships.md)** | 模块关系说明。包含剧本与分镜、剧本与资产、剧本与模型中心的关系，以及生产-筛选-入库-使用流程。 | 合并 3 个文档 |
-
-### 诊断与评审文档
+DDD 文档已按职责拆分为索引 + 治理规范 + 基础规范 + 9 个上下文规格文件。所有跨文档引用、术语使用、上下文归属按 [DDD 治理规范](ddd/governance.md) 执行。
 
 | 文档 | 说明 |
 |------|------|
-| **[factories-assets-and-image-views.md](factories-assets-and-image-views.md)** | 三个工厂（角色 / 场景 / 道具）资产图片多视图契约基线。**改造的单一真相源**——DB schema / 后端 API / 前端 service / 组件 / 字段 / 状态机任何修改先改本文档。 |
-| **[ai-image-config.md](ai-image-config.md)** | AI 图片生成参数单一真相源（`frontend/lib/image-config.ts` 的同步文档）。 |
-| **[ux-report/factories-list-edit-ai-review-2026-07-24.md](ux-report/factories-list-edit-ai-review-2026-07-24.md)** | 三个工厂"列表 / 编辑 / AI 生图"旧版差异分析与修复方案（评审日：2026-07-24）。 |
-| **[ux-report/frontend-ux-review-2026-07-23.md](ux-report/frontend-ux-review-2026-07-23.md)** | 前端整体 UX 评审（2026-07-23）。 |
-| **[ux-report/script-center-ux-review-2026-07-24.md](ux-report/script-center-ux-review-2026-07-24.md)** | 剧本中心 UX 评审（2026-07-24）。 |
+| **[ddd/README.md](ddd/README.md)** | DDD 文档索引与读者指引。 |
+| **[ddd/governance.md](ddd/governance.md)** | DDD 治理规范。文档结构、跨文档引用矩阵、统一语言使用规则、变更管理流程。 |
+| **[ddd/domain-requirements-spec.md](ddd/domain-requirements-spec.md)** | DDD 领域需求规格概述（文档体系入口）。具体内容见基础规范 + 9 份上下文规格。 |
+| **[ddd/glossary.md](ddd/glossary.md)** | 统一语言术语表（业务概念 + 状态术语 + 禁止别名）。 |
+| **[ddd/context-map.md](ddd/context-map.md)** | 限界上下文映射。9 个上下文关系图、关系矩阵、共享内核。 |
+| **[ddd/contracts.md](ddd/contracts.md)** | 跨上下文协作契约。事件链路、消费者注册表、防腐层、CQRS 投影。 |
+| **[ddd/module-map.md](ddd/module-map.md)** | 模块-上下文映射表。23 个页面到上下文和聚合根的对应关系。 |
+| **[ddd/iteration-priority.md](ddd/iteration-priority.md)** | 聚合实现优先级与建议迭代节奏。 |
+| **[ddd/infrastructure.md](ddd/infrastructure.md)** | 公共领域基础设施。共享内核接口定义、公共错误码。 |
+| **[ddd/dependency-rules.md](ddd/dependency-rules.md)** | 依赖方向约束。分层依赖图、跨聚合引用规则。 |
+| **[ddd/traceability-matrix.md](ddd/traceability-matrix.md)** | 用户故事到聚合、命令、事件、API、Schema 和验收证据的追踪矩阵。 |
+| **[ddd/remediation-report-2026-07-28.md](ddd/remediation-report-2026-07-28.md)** | 本轮 DDD 文档整改结果与剩余代码核验项。 |
+| **[ddd/contexts/0N-*.md](ddd/contexts/)** | 9 个限界上下文的完整规格（聚合、命令、状态机、不变量、事件、读模型）。 |
 
-### 迭代计划
+**核心 DDD 子文件**（按编号）：
+- §3.1 [项目管控](ddd/contexts/01-project-management.md)｜§3.2 [剧本创作](ddd/contexts/02-script-creation.md)｜§3.3 [分镜导演](ddd/contexts/03-storyboard-direction.md)｜§3.4 [资产库](ddd/contexts/04-asset-library.md)｜§3.5 [AI 任务调度](ddd/contexts/05-ai-task-orchestration.md)｜§3.6 [审核质量](ddd/contexts/06-review-quality.md)｜§3.7 [发布交付](ddd/contexts/07-publish-delivery.md)｜§3.8 [智能助手](ddd/contexts/08-ai-assistant.md)｜§3.9 [后期制作](ddd/contexts/09-post-production.md)
+
+### 核心文档
+
+| 文档 | 说明 | DDD 归属 |
+|------|------|---------|
+| **[product-design-spec.md](product-design-spec.md)** | 产品设计规格总纲。产品愿景、用户角色、业务流程、数据模型、AI模型体系、信息架构、NFR、功能优先级分级体系（P0/P1/P2定义+评分公式+调整原则）。 | 项目级（[§1 上下文映射](ddd/context-map.md)） |
+| **[requirements-and-acceptance.md](requirements-and-acceptance.md)** | 需求规格与验收标准。功能需求、验收标准、API接口规范摘要、数据字典摘要。 | [模块-上下文映射表](ddd/module-map.md) + 9 个上下文 |
+| **[architecture-and-development.md](architecture-and-development.md)** | 架构设计与开发指南。MVP架构、技术栈、项目结构、存储方案、开发排错指南。 | [上下文映射](ddd/context-map.md) + [公共领域基础设施](ddd/infrastructure.md) + [依赖方向约束](ddd/dependency-rules.md) |
+
+### 状态与风险管理
+
+| 文档 | 说明 | DDD 归属 |
+|------|------|---------|
+| **[feature-status.md](feature-status.md)** | 功能状态基线。可发布能力、已知边界、工厂模块校准。 | [模块-上下文映射表](ddd/module-map.md) + [迭代优先级](ddd/iteration-priority.md) |
+| **[risk-management-plan.md](risk-management-plan.md)** | 风险预案。技术/业务/数据/合规/成本/性能风险矩阵。 | [上下文映射](ddd/context-map.md) + [跨上下文协作契约](ddd/contracts.md) |
+
+### 模块开发指南
+
+| 文档 | 说明 | DDD 归属 |
+|------|------|---------|
+| **[script-center-guide.md](script-center-guide.md)** | 剧本中心完整指南（需求+技术设计+数据库+UI）。 | §3.2 [剧本创作上下文](ddd/contexts/02-script-creation.md) |
+| **[model-center-guide.md](model-center-guide.md)** | 模型中心独立指南。 | §3.5 [AI 任务调度](ddd/contexts/05-ai-task-orchestration.md)（含 Dataset / PromptTemplate） |
+| **[factories-assets-and-image-views.md](factories-assets-and-image-views.md)** | 三工厂（角色/场景/道具）资产图片多视图契约基线。 | §3.4 [资产库上下文](ddd/contexts/04-asset-library.md) |
+| **[ai-image-config.md](ai-image-config.md)** | AI 图片生成参数单一真相源。 | §3.5 [AI 任务调度](ddd/contexts/05-ai-task-orchestration.md) |
+| **[asset-library.md](asset-library.md)** | 资产库使用说明。 | §3.4 [资产库上下文](ddd/contexts/04-asset-library.md) |
+
+### 技术参考
+
+| 文档 | 说明 | DDD 归属 |
+|------|------|---------|
+| **[api.md](api.md)** | 实际 API 接口说明。 | [跨上下文协作契约](ddd/contracts.md) + 9 个上下文 |
+| **[sqlite-plan.md](sqlite-plan.md)** | SQLite 存储方案。 | [依赖方向约束](ddd/dependency-rules.md) + 9 个上下文 |
+
+### 安全与发布
 
 | 文档 | 说明 |
 |------|------|
-| **[V2.1 DDD 三聚合加固迭代计划](iterations/v2.1-ddd-three-aggregates-iteration-plan.md)** | PipelineRun、Shot、Review 三条并行任务线的职责、文件所有权、事件契约、集成顺序和验收标准。 |
+| **[security/compliance-checklist.md](security/compliance-checklist.md)** | 合规清单（等保2.0 / SOC 2 / GDPR）。 |
+| **[security/incident-response.md](security/incident-response.md)** | 安全事件响应预案。 |
+| **[security/sbom.md](security/sbom.md)** | 软件物料清单（SBOM）说明。 |
+| **[release/v2-rollback.md](release/v2-rollback.md)** | 升级与回滚方案。 |
 
+### 根目录文档
 
-### 独立保留文档
-
-| 文档 | 说明 | 保留原因 |
-|------|------|----------|
-| **[script-center-guide.md](script-center-guide.md)** | 剧本中心完整指南（需求规格+技术设计+数据库设计+UI设计）。 | 内容最完整，5076行，作为剧本中心的主要参考文档 |
-| **[api.md](api.md)** | 实际 API 接口说明（与 api-specification 不同，这是实际实现的）。 | 记录实际代码中的API实现 |
-| **[model-center-guide.md](model-center-guide.md)** | 模型中心独立指南。 | 模型中心模块独立参考 |
-| **[asset-library.md](asset-library.md)** | 资产库独立设计。 | 资产中心模块独立参考 |
-| **[sqlite-plan.md](sqlite-plan.md)** | 数据库方案独立文档。 | SQLite 存储方案详细设计 |
-| **[risk-management-plan.md](risk-management-plan.md)** | 持续更新的风险管理。 | 项目风险持续跟踪 |
-| **[priority-classification.md](priority-classification.md)** | 需求优先级分类。 | 需求管理参考 |
-| **[remaining-modules-evaluation.md](remaining-modules-evaluation.md)** | 待实现模块评估。 | 后续开发规划参考 |
-
-### 归档文档（已移入 archive/）
-
-以下文档已移入 `archive/` 目录，内容已过时或属于临时工作产物：
-
-| 文档 | 归档原因 |
-|------|----------|
-
+| 文档 | 说明 |
+|------|------|
+| **[DESIGN.md](../DESIGN.md)** | UI 设计系统（设计方向、产品人格、颜色、排版、组件规范）。 |
+| **[CHANGELOG.md](../CHANGELOG.md)** | 变更日志。 |
 
 ---
 
@@ -94,8 +124,7 @@
 
 ### 更新规则
 
-1. **核心文档**（合并后的 4 个文档）需要保持最新，代码变更时同步更新
-2. **独立保留文档**各自维护，由对应模块负责人更新
-3. **归档文档**不再更新，仅作为历史参考
-
-### 合并记录
+1. **领域设计**（DDD 规格文档）是聚合、事件、状态机的权威来源，代码变更时同步更新。DDD 文档已按职责拆分到 `ddd/` 目录下的多个文件，更新时请遵循 [DDD 治理规范](ddd/governance.md) 第 5 节"变更管理"。
+2. **核心文档**需要保持最新，代码变更时同步更新
+3. **模块指南**各自维护，由对应模块负责人更新
+4. 术语以 [DDD 统一语言术语表](ddd/glossary.md) 为准，文档和代码必须严格使用

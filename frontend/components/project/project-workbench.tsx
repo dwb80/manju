@@ -30,14 +30,14 @@ export function WorkbenchPager({ total, page, pageSize, label, onPageChange }: W
   const end = Math.min(total, safePage * pageSize);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#202020] px-4 py-3 text-sm text-[#d8d8d8]">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted px-4 py-3 text-sm text-foreground/80">
       <div className="font-medium">
         {label}: 共 {total} 条
-        {total > 0 && <span className="ml-2 text-[#bfbfbf]">当前 {start}-{end}</span>}
+        {total > 0 && <span className="ml-2 text-foreground/75">当前 {start}-{end}</span>}
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" variant="secondary" disabled={safePage <= 1} onClick={() => onPageChange(safePage - 1)}>上一页</Button>
-        <span className="min-w-16 text-center font-semibold text-[#eeeeee]">{safePage} / {pageCount}</span>
+        <span className="min-w-16 text-center font-semibold text-foreground/90">{safePage} / {pageCount}</span>
         <Button size="sm" variant="secondary" disabled={safePage >= pageCount} onClick={() => onPageChange(safePage + 1)}>下一页</Button>
       </div>
     </div>
@@ -56,7 +56,7 @@ export function ManagementTable({ columns, children }: ManagementTableProps) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border bg-card">
       <Table className="min-w-[860px] text-left text-sm">
-        <TableHeader className="border-b border-border bg-white/[0.04] text-[#d8d8d8]">
+        <TableHeader className="border-b border-border bg-muted/50 text-foreground/80">
           <TableRow>
             {columns.map((column) => (
               <TableHead key={column} className="px-4 py-3 font-semibold">{column}</TableHead>
@@ -82,7 +82,7 @@ type PortraitImageLinkProps = {
 export function PortraitImageLink({ href, src, alt, onLoad }: PortraitImageLinkProps) {
   return (
     <a
-      className="mx-auto block aspect-[9/16] max-h-[72vh] overflow-hidden bg-[#171717]"
+      className="mx-auto block aspect-[9/16] max-h-[72vh] overflow-hidden bg-card"
       style={{ width: "min(100%, calc(72vh * 9 / 16))" }}
       href={href}
       target="_blank"

@@ -16,18 +16,18 @@ export interface RecentGenerationsProps {
 const assetTypeConfig: Record<"character" | "video" | "voiceover", { icon: typeof Image; color: string; bgColor: string }> = {
   character: {
     icon: Image,
-    color: "text-pink-400",
-    bgColor: "bg-pink-500/20",
+    color: "text-chart-4",
+    bgColor: "bg-chart-4/20",
   },
   video: {
     icon: Video,
-    color: "text-purple-400",
-    bgColor: "bg-purple-500/20",
+    color: "text-chart-1",
+    bgColor: "bg-chart-1/20",
   },
   voiceover: {
     icon: Mic,
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-500/20",
+    color: "text-chart-2",
+    bgColor: "bg-chart-2/20",
   },
 };
 
@@ -35,12 +35,12 @@ const assetTypeConfig: Record<"character" | "video" | "voiceover", { icon: typeo
 const assetStatusConfig: Record<"success" | "failed", { icon: typeof CheckCircle2; color: string; text: string }> = {
   success: {
     icon: CheckCircle2,
-    color: "text-emerald-400",
+    color: "text-primary",
     text: "已完成",
   },
   failed: {
     icon: AlertCircle,
-    color: "text-red-400",
+    color: "text-destructive",
     text: "失败",
   },
 };
@@ -77,11 +77,11 @@ const GenerationItem = memo(function GenerationItem({
 
   return (
     <div
-      className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-3 transition-all hover:border-white/10 hover:bg-white/10"
+      className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/50 bg-muted/50 p-3 transition-all hover:border-border hover:bg-muted"
       onClick={onClick}
     >
       {/* 缩略图或类型图标 */}
-      <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-[#1a1a1a]">
+      <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-card">
         <div className={`flex h-full w-full items-center justify-center ${typeConfig.bgColor}`}>
           <TypeIcon className={`h-5 w-5 ${typeConfig.color}`} />
         </div>
@@ -91,9 +91,9 @@ const GenerationItem = memo(function GenerationItem({
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
           <TypeIcon className={`h-3.5 w-3.5 ${typeConfig.color}`} />
-          <span className="truncate text-sm font-medium text-white">{item.title}</span>
+          <span className="truncate text-sm font-medium text-foreground">{item.title}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-[#666]">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <StatusIcon className={`h-3 w-3 ${statusConfig.color}`} />
           <span className={statusConfig.color}>{statusConfig.text}</span>
           <span>·</span>
@@ -117,16 +117,16 @@ export const RecentGenerations = memo(function RecentGenerations({
   onItemClick,
 }: RecentGenerationsProps) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#252525] p-6">
+    <div className="rounded-xl border border-border bg-secondary p-6">
       {/* 标题 */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500/20 to-purple-500/20">
-            <Image className="h-5 w-5 text-pink-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-chart-4/20 to-chart-1/20">
+            <Image className="h-5 w-5 text-chart-4" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">最近生成</h2>
-            <p className="text-sm text-[#888]">最新生成的资产</p>
+            <h2 className="text-lg font-bold text-foreground">最近生成</h2>
+            <p className="text-sm text-muted-foreground">最新生成的资产</p>
           </div>
         </div>
       </div>
@@ -145,8 +145,8 @@ export const RecentGenerations = memo(function RecentGenerations({
       {/* 空状态 */}
       {items.length === 0 && (
         <div className="flex h-40 flex-col items-center justify-center">
-          <Image className="mb-2 h-12 w-12 text-[#333]" />
-          <p className="text-sm text-[#666]">暂无生成记录</p>
+          <Image className="mb-2 h-12 w-12 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">暂无生成记录</p>
         </div>
       )}
     </div>

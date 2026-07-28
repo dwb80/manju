@@ -103,15 +103,15 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
   ) => {
     const Icon = icon;
     return (
-      <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4 transition-all hover:border-white/20">
+      <div className="rounded-lg border border-border bg-card p-4 transition-all hover:border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={cn("rounded-lg p-2", bgColor)}>
               <Icon className={cn("h-5 w-5", color)} />
             </div>
             <div>
-              <div className="text-xs text-[#888]">{title}</div>
-              <div className="text-xl font-bold text-white">${cost.toFixed(2)}</div>
+              <div className="text-xs text-muted-foreground">{title}</div>
+              <div className="text-xl font-bold text-foreground">${cost.toFixed(2)}</div>
             </div>
           </div>
         </div>
@@ -127,14 +127,14 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-white">成本趋势(过去7天)</h3>
+          <h3 className="text-sm font-medium text-foreground">成本趋势(过去7天)</h3>
           <div className="flex items-center gap-1 text-xs">
             {costChange > 0 ? (
-              <TrendingUp className="h-3 w-3 text-red-400" />
+              <TrendingUp className="h-3 w-3 text-destructive" />
             ) : (
-              <TrendingDown className="h-3 w-3 text-green-400" />
+              <TrendingDown className="h-3 w-3 text-success" />
             )}
-            <span className={costChange > 0 ? "text-red-400" : "text-green-400"}>
+            <span className={costChange > 0 ? "text-destructive" : "text-success"}>
               {Math.abs(costChange).toFixed(1)}%
             </span>
           </div>
@@ -147,12 +147,12 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
                 <div className="relative w-full">
                   <Tip label={`$${point.totalCost.toFixed(2)}`} side="top">
                     <div
-                      className="w-full rounded-t-md bg-gradient-to-t from-blue-500/80 to-blue-400/80 transition-all hover:from-blue-500 hover:to-blue-400"
+                      className="w-full rounded-t-md bg-gradient-to-t from-info/80 to-info/80 transition-all hover:from-info hover:to-info"
                       style={{ height: `${Math.max(heightPercent, 5)}%` }}
                     />
                   </Tip>
                 </div>
-                <div className="text-xs text-[#666]">{point.date}</div>
+                <div className="text-xs text-muted-foreground">{point.date}</div>
               </div>
             );
           })}
@@ -167,19 +167,19 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
   const renderDistributionChart = () => {
     return (
       <div className="space-y-4">
-        <h3 className="text-sm font-medium text-white">成本分布</h3>
+        <h3 className="text-sm font-medium text-foreground">成本分布</h3>
 
         {/* 分布条 */}
-        <div className="h-8 overflow-hidden rounded-lg bg-[#202020]">
+        <div className="h-8 overflow-hidden rounded-lg bg-muted">
           <div className="flex h-full">
             {imagePercent > 0 && (
               <Tip label={`图片: ${imagePercent.toFixed(1)}%`} side="top">
                 <div
-                  className="flex items-center justify-center bg-purple-500/80 transition-all hover:bg-purple-500"
+                  className="flex items-center justify-center bg-chart-1/80 transition-all hover:bg-chart-1"
                   style={{ width: `${imagePercent}%` }}
                 >
                   {imagePercent > 10 && (
-                    <span className="text-xs font-medium text-white">{imagePercent.toFixed(0)}%</span>
+                    <span className="text-xs font-medium text-foreground">{imagePercent.toFixed(0)}%</span>
                   )}
                 </div>
               </Tip>
@@ -187,11 +187,11 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
             {videoPercent > 0 && (
               <Tip label={`视频: ${videoPercent.toFixed(1)}%`} side="top">
                 <div
-                  className="flex items-center justify-center bg-cyan-500/80 transition-all hover:bg-cyan-500"
+                  className="flex items-center justify-center bg-chart-2/80 transition-all hover:bg-chart-2"
                   style={{ width: `${videoPercent}%` }}
                 >
                   {videoPercent > 10 && (
-                    <span className="text-xs font-medium text-white">{videoPercent.toFixed(0)}%</span>
+                    <span className="text-xs font-medium text-foreground">{videoPercent.toFixed(0)}%</span>
                   )}
                 </div>
               </Tip>
@@ -199,11 +199,11 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
             {chatPercent > 0 && (
               <Tip label={`聊天: ${chatPercent.toFixed(1)}%`} side="top">
                 <div
-                  className="flex items-center justify-center bg-blue-500/80 transition-all hover:bg-blue-500"
+                  className="flex items-center justify-center bg-info/80 transition-all hover:bg-info"
                   style={{ width: `${chatPercent}%` }}
                 >
                   {chatPercent > 10 && (
-                    <span className="text-xs font-medium text-white">{chatPercent.toFixed(0)}%</span>
+                    <span className="text-xs font-medium text-foreground">{chatPercent.toFixed(0)}%</span>
                   )}
                 </div>
               </Tip>
@@ -213,26 +213,26 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
 
         {/* 图例 */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-lg bg-[#1a1a1a] p-3">
+          <div className="rounded-lg bg-card p-3">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded bg-purple-500" />
-              <span className="text-xs text-[#888]">图片生成</span>
+              <div className="h-3 w-3 rounded bg-chart-1" />
+              <span className="text-xs text-muted-foreground">图片生成</span>
             </div>
-            <div className="mt-1 text-lg font-bold text-white">${data.imageCost.toFixed(2)}</div>
+            <div className="mt-1 text-lg font-bold text-foreground">${data.imageCost.toFixed(2)}</div>
           </div>
-          <div className="rounded-lg bg-[#1a1a1a] p-3">
+          <div className="rounded-lg bg-card p-3">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded bg-cyan-500" />
-              <span className="text-xs text-[#888]">视频生成</span>
+              <div className="h-3 w-3 rounded bg-chart-2" />
+              <span className="text-xs text-muted-foreground">视频生成</span>
             </div>
-            <div className="mt-1 text-lg font-bold text-white">${data.videoCost.toFixed(2)}</div>
+            <div className="mt-1 text-lg font-bold text-foreground">${data.videoCost.toFixed(2)}</div>
           </div>
-          <div className="rounded-lg bg-[#1a1a1a] p-3">
+          <div className="rounded-lg bg-card p-3">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded bg-blue-500" />
-              <span className="text-xs text-[#888]">聊天</span>
+              <div className="h-3 w-3 rounded bg-info" />
+              <span className="text-xs text-muted-foreground">聊天</span>
             </div>
-            <div className="mt-1 text-lg font-bold text-white">${data.chatCost.toFixed(2)}</div>
+            <div className="mt-1 text-lg font-bold text-foreground">${data.chatCost.toFixed(2)}</div>
           </div>
         </div>
       </div>
@@ -245,23 +245,23 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
   const renderBudgetProgress = () => {
     const isOverBudget = data.totalCost > data.budget;
     const progressColor = isOverBudget
-      ? "from-red-500 to-red-400"
+      ? "from-destructive to-destructive"
       : budgetUsagePercent > 80
-        ? "from-yellow-500 to-yellow-400"
-        : "from-emerald-500 to-emerald-400";
+        ? "from-chart-5 to-chart-5"
+        : "from-primary to-primary";
 
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-white">预算消耗</h3>
+          <h3 className="text-sm font-medium text-foreground">预算消耗</h3>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[#888]">
+            <span className="text-xs text-muted-foreground">
               ${data.totalCost.toFixed(2)} / ${data.budget.toFixed(2)}
             </span>
-            {isOverBudget && <AlertCircle className="h-4 w-4 text-red-400" />}
+            {isOverBudget && <AlertCircle className="h-4 w-4 text-destructive" />}
           </div>
         </div>
-        <div className="h-3 overflow-hidden rounded-full bg-[#202020]">
+        <div className="h-3 overflow-hidden rounded-full bg-muted">
           <div
             className={cn(
               "h-full rounded-full bg-gradient-to-r transition-all",
@@ -271,12 +271,12 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
           />
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-[#666]">
+          <span className="text-muted-foreground">
             {isOverBudget
               ? "已超出预算"
               : `剩余 $${(data.budget - data.totalCost).toFixed(2)}`}
           </span>
-          <span className={isOverBudget ? "text-red-400" : "text-[#888]"}>
+          <span className={isOverBudget ? "text-destructive" : "text-muted-foreground"}>
             {budgetUsagePercent.toFixed(1)}%
           </span>
         </div>
@@ -290,15 +290,15 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
   const renderSuggestions = () => {
     return (
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-white">优化建议</h3>
+        <h3 className="text-sm font-medium text-foreground">优化建议</h3>
         <div className="space-y-2">
           {data.suggestions.map((suggestion, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 rounded-lg border border-white/5 bg-[#1a1a1a] p-3 transition-all hover:border-white/10"
+              className="flex items-start gap-3 rounded-lg border border-border/50 bg-card p-3 transition-all hover:border-border"
             >
-              <Info className="h-4 w-4 flex-shrink-0 text-blue-400" />
-              <p className="text-xs text-[#aaa]">{suggestion}</p>
+              <Info className="h-4 w-4 flex-shrink-0 text-info" />
+              <p className="text-xs text-muted-foreground">{suggestion}</p>
             </div>
           ))}
         </div>
@@ -309,7 +309,7 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
   return (
     <div className="space-y-6">
       {/* 顶部标签切换 */}
-      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#202020] p-1">
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-muted p-1">
         {(["overview", "distribution", "trend"] as const).map((tab) => (
           <button
             key={tab}
@@ -317,8 +317,8 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
             className={cn(
               "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all",
               activeTab === tab
-                ? "bg-white/10 text-white"
-                : "text-[#888] hover:text-white hover:bg-white/5"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             )}
           >
             {tab === "overview" && "概览"}
@@ -333,10 +333,10 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
         <div className="space-y-6">
           {/* 成本统计卡片 */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {renderCostCard("总成本", data.totalCost, DollarSign, "text-emerald-400", "bg-emerald-500/10")}
-            {renderCostCard("图片生成", data.imageCost, Image, "text-purple-400", "bg-purple-500/10")}
-            {renderCostCard("视频生成", data.videoCost, Video, "text-cyan-400", "bg-cyan-500/10")}
-            {renderCostCard("聊天", data.chatCost, MessageSquare, "text-blue-400", "bg-blue-500/10")}
+            {renderCostCard("总成本", data.totalCost, DollarSign, "text-primary", "bg-primary/10")}
+            {renderCostCard("图片生成", data.imageCost, Image, "text-chart-1", "bg-chart-1/10")}
+            {renderCostCard("视频生成", data.videoCost, Video, "text-chart-2", "bg-chart-2/10")}
+            {renderCostCard("聊天", data.chatCost, MessageSquare, "text-info", "bg-info/10")}
           </div>
 
           {/* 预算进度 */}
@@ -349,7 +349,7 @@ export function AICostStats({ data, onViewDetails }: AICostStatsProps) {
           {onViewDetails && (
             <button
               onClick={onViewDetails}
-              className="w-full rounded-lg border border-white/10 bg-[#202020] px-4 py-3 text-sm font-medium text-white transition-all hover:border-white/20 hover:bg-[#1a1a1a]"
+              className="w-full rounded-lg border border-border bg-muted px-4 py-3 text-sm font-medium text-foreground transition-all hover:border-border hover:bg-card"
             >
               查看详细成本报告 →
             </button>

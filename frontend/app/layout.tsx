@@ -16,12 +16,12 @@ import { HelpCenterHost } from "@/components/common/help-center";
  * - skip-to-content：无障碍跳转链接
  * - ErrorBoundary：捕获子组件渲染错误并显示降级 UI
  * - LayoutShell：渲染侧边栏 + 顶部导航栏 + 命令面板，根据 pathname 切换
- *   独占式编辑页（剧本/角色/道具编辑）只保留顶部导航
+ *   独占式编辑页（剧本/角色/场景/道具编辑）只保留顶部导航
  * - ToastContainer：全局消息提示
  * - ThemeProvider：应用主题（light / dark / system）
  * - ConfirmDialogHost：统一确认弹窗
- * - OnboardingHost：首次进入应用时自动弹出新手引导
- * - HelpCenterHost：右下角浮动帮助按钮 + 首次自动弹出
+ * - OnboardingHost：按需打开新手引导，不阻断首屏任务
+ * - HelpCenterHost：右下角浮动帮助按钮，按需打开
  */
 export const metadata: Metadata = {
   title: "AI 漫剧工业化生产平台",

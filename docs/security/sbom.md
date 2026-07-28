@@ -1,7 +1,8 @@
 # SEC-SUP-02 软件物料清单（SBOM）实施文档
 
-> 章节：§8.13 SEC 供应链 / SOP-02 SBOM 生成  
-> 状态：✅ P2 完成（2026-07-23 W16 实施）  
+> **领域归属**：项目级（跨上下文安全规范）
+
+> 章节：§8.13 SEC 供应链 / SOP-02 SBOM 生成
 > 配套：`.github/workflows/sbom.yml` + `scripts/generate-sbom.mjs` + `artifacts/sbom/*.cdx.json`
 
 ## 1. 目标
@@ -34,7 +35,7 @@
 ├── scripts/
 │   └── generate-sbom.mjs              # 本地/CI 通用生成脚本
 ├── .github/workflows/
-│   └── sbom.yml                       # 自动化工作流
+│   └── sbom.yml                       # 自动化流水线
 ├── artifacts/sbom/                    # 产物（CI 上传 90 天）
 │   ├── backend-sbom.cdx.json
 │   └── frontend-sbom.cdx.json

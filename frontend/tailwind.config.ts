@@ -13,6 +13,10 @@ const config: Config = {
     },
     extend: {
       colors: {
+        app: "var(--bg-app)",
+        sidebar: "var(--bg-sidebar)",
+        topbar: "var(--bg-topbar)",
+        elevated: "var(--bg-elevated)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -46,11 +50,59 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
+        "chart-1": "hsl(var(--chart-1))",
+        "chart-2": "hsl(var(--chart-2))",
+        "chart-3": "hsl(var(--chart-3))",
+        "chart-4": "hsl(var(--chart-4))",
+        "chart-5": "hsl(var(--chart-5))",
+        "chart-6": "hsl(var(--chart-6))",
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        sm: "6px",
+        md: "8px",
+        lg: "12px",
+        xl: "12px",
+        "2xl": "16px",
+        "3xl": "20px",
+      },
+      fontSize: {
+        "page-title": ["18px", { lineHeight: "1.4", fontWeight: "600" }],
+        "card-title": ["13px", { lineHeight: "1.5", fontWeight: "500" }],
+        body: ["13px", { lineHeight: "1.5" }],
+        caption: ["12px", { lineHeight: "1.5" }],
+        micro: ["11px", { lineHeight: "1.4" }],
+        "stat-value": ["24px", { lineHeight: "1.25", fontWeight: "600" }],
+      },
+      fontFamily: {
+        sans: [
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Noto Sans SC",
+          "PingFang SC",
+          "Microsoft YaHei",
+          "sans-serif",
+        ],
+        mono: [
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          "monospace",
+        ],
       },
       keyframes: {
         "accordion-down": {

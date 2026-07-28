@@ -75,10 +75,10 @@ const TYPE_LABELS: Record<string, string> = {
 
 /** 时段 → 图标 + 标签 */
 const TIME_OF_DAY_META: Record<string, { label: string; icon: typeof Sun; color: string }> = {
-  day: { label: '日', icon: Sun, color: 'text-amber-400' },
-  night: { label: '夜', icon: Moon, color: 'text-indigo-300' },
-  dawn: { label: '晨', icon: Sun, color: 'text-orange-300' },
-  dusk: { label: '黄昏', icon: Sun, color: 'text-rose-300' },
+  day: { label: '日', icon: Sun, color: 'text-warning' },
+  night: { label: '夜', icon: Moon, color: 'text-chart-6' },
+  dawn: { label: '晨', icon: Sun, color: 'text-chart-3' },
+  dusk: { label: '黄昏', icon: Sun, color: 'text-chart-4' },
 }
 
 /**
@@ -156,14 +156,14 @@ export function ScenePanel({
   }
 
   return (
-    <div className="scene-panel bg-[#1a1a1a] h-full overflow-y-auto">
+    <div className="scene-panel bg-card h-full overflow-y-auto">
       {/* 标题和搜索 */}
-      <div className="p-3 border-b border-white/10 sticky top-0 bg-[#1a1a1a] z-10">
+      <div className="p-3 border-b border-border sticky top-0 bg-card z-10">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-white flex items-center gap-1.5">
-            <span className="text-emerald-400">●</span>
+          <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            <span className="text-primary">●</span>
             场景资产
-            <span className="text-[10px] text-[#666]">· {scenes.length} · 来自剧本中心</span>
+            <span className="text-[10px] text-muted-foreground">· {scenes.length} · 来自剧本中心</span>
           </h3>
           <Button
             variant="ghost"
@@ -177,7 +177,7 @@ export function ScenePanel({
           </Button>
         </div>
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-[#888]" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
           <Input
             placeholder="搜索场景名 / 地点 / 标签..."
             value={searchQuery}
@@ -190,7 +190,7 @@ export function ScenePanel({
       {/* 场景列表 */}
       <div className="p-2">
         {filteredScenes.length === 0 ? (
-          <div className="text-center py-8 text-[#666] text-sm">
+          <div className="text-center py-8 text-muted-foreground text-sm">
             {searchQuery ? '未找到匹配的场景' : '暂无场景资产'}
             {!searchQuery && (
               <Button
@@ -212,12 +212,12 @@ export function ScenePanel({
               return (
                 <div
                   key={scene.id}
-                  className="group relative p-2 rounded bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 cursor-pointer"
+                  className="group relative p-2 rounded bg-muted/50 hover:bg-muted transition-colors border border-transparent hover:border-border cursor-pointer"
                   onClick={() => onSelectScene(scene)}
                 >
                   {/* 缩略图（16:9 横幅）—— 仅在有图时渲染；无图时改为紧凑元信息行 */}
                   {scene.image || scene.thumbnail ? (
-                    <div className="relative w-full aspect-video rounded overflow-hidden mb-2 bg-[#232326]">
+                    <div className="relative w-full aspect-video rounded overflow-hidden mb-2 bg-secondary">
                       <img
                         src={scene.image || scene.thumbnail}
                         alt={scene.name}
@@ -225,7 +225,7 @@ export function ScenePanel({
                       />
                       {/* 右上角：场景类型徽章 */}
                       {scene.type && TYPE_LABELS[scene.type] && (
-                        <span className="absolute top-1 right-1 text-[9px] px-1.5 py-0.5 rounded bg-black/60 text-emerald-300 backdrop-blur-sm">
+                        <span className="absolute top-1 right-1 text-[9px] px-1.5 py-0.5 rounded bg-black/60 text-primary backdrop-blur-sm">
                           {TYPE_LABELS[scene.type]}
                         </span>
                       )}
@@ -240,7 +240,7 @@ export function ScenePanel({
                           </span>
                         )}
                         {scene.weather && (
-                          <span className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded bg-black/60 text-sky-300 backdrop-blur-sm">
+                          <span className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded bg-black/60 text-ring backdrop-blur-sm">
                             <Cloud className="h-2.5 w-2.5" />
                             {scene.weather}
                           </span>
@@ -249,11 +249,11 @@ export function ScenePanel({
                     </div>
                   ) : (
                     /* 无图时：紧凑行（不占 16:9 高度） */
-                    <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-[#666]">
-                      <Film className="h-3 w-3 text-emerald-400/40 flex-shrink-0" />
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-muted-foreground">
+                      <Film className="h-3 w-3 text-primary/40 flex-shrink-0" />
                       <span>暂无场景图</span>
                       {scene.type && TYPE_LABELS[scene.type] && (
-                        <span className="px-1.5 py-0.5 rounded bg-white/5 text-emerald-300">
+                        <span className="px-1.5 py-0.5 rounded bg-muted/50 text-primary">
                           {TYPE_LABELS[scene.type]}
                         </span>
                       )}
@@ -264,7 +264,7 @@ export function ScenePanel({
                         </span>
                       )}
                       {scene.weather && (
-                        <span className="flex items-center gap-0.5 text-sky-300/80">
+                        <span className="flex items-center gap-0.5 text-ring/80">
                           <Cloud className="h-2.5 w-2.5" />
                           {scene.weather}
                         </span>
@@ -274,23 +274,23 @@ export function ScenePanel({
 
                   {/* 标题行 */}
                   <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3 w-3 text-emerald-400 flex-shrink-0" />
-                    <span className="font-medium text-white text-sm truncate flex-1">
+                    <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
+                    <span className="font-medium text-foreground text-sm truncate flex-1">
                       {scene.name || scene.location || '未命名场景'}
                     </span>
                   </div>
 
                   {/* 光照 */}
                   {scene.lighting && (
-                    <div className="text-[10px] text-[#888] mt-0.5 truncate">
-                      <span className="text-amber-400/80">光照:</span> {scene.lighting}
+                    <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                      <span className="text-warning/80">光照:</span> {scene.lighting}
                     </div>
                   )}
 
                   {/* 描述（最多 12 字 + ...） */}
                   {scene.description && (
                     <div
-                      className="text-xs text-[#888] truncate mt-1"
+                      className="text-xs text-muted-foreground truncate mt-1"
                       title={scene.description}
                     >
                       {truncateDesc(scene.description)}
@@ -303,32 +303,32 @@ export function ScenePanel({
                       {scene.tags.slice(0, 3).map((tag, i) => (
                         <span
                           key={i}
-                          className="text-[9px] px-1 py-0.5 rounded bg-white/5 text-[#999]"
+                          className="text-[9px] px-1 py-0.5 rounded bg-muted/50 text-muted-foreground"
                         >
                           {tag}
                         </span>
                       ))}
                       {scene.tags.length > 3 && (
-                        <span className="text-[9px] text-[#666]">+{scene.tags.length - 3}</span>
+                        <span className="text-[9px] text-muted-foreground">+{scene.tags.length - 3}</span>
                       )}
                     </div>
                   )}
 
                   {/* 工厂元数据：引用次数 + 版本号 */}
-                  <div className="flex items-center gap-2 mt-1 text-[9px] text-[#666]">
+                  <div className="flex items-center gap-2 mt-1 text-[9px] text-muted-foreground">
                     {scene.usage_count != null && (
-                      <span className="text-purple-400/80">引用 {scene.usage_count} 次</span>
+                      <span className="text-chart-1/80">引用 {scene.usage_count} 次</span>
                     )}
                     {scene.version != null && (
-                      <span className="px-1 rounded bg-white/5">v{scene.version}</span>
+                      <span className="px-1 rounded bg-muted/50">v{scene.version}</span>
                     )}
                     {scene.assetId && (
-                      <span className="text-emerald-400/70">● 工厂同步</span>
+                      <span className="text-primary/70">● 工厂同步</span>
                     )}
                   </div>
 
                   {/* 操作按钮（悬浮显示） */}
-                  <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-[#1a1a1a]/80 backdrop-blur-sm rounded px-0.5">
+                  <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-card/80 backdrop-blur-sm rounded px-0.5">
                     {onViewSceneDetail && (
                       <Button
                         variant="ghost"
@@ -341,7 +341,7 @@ export function ScenePanel({
                         title="查看详情（可编辑，保存到剧本中心）"
                         disabled={detailLoading}
                       >
-                        <Eye className="h-3 w-3 text-emerald-400" />
+                        <Eye className="h-3 w-3 text-primary" />
                       </Button>
                     )}
                     <Button
@@ -354,7 +354,7 @@ export function ScenePanel({
                       className="h-6 w-6 p-0"
                       title="从剧本移除（不会删除工厂资产）"
                     >
-                      <Trash2 className="h-3 w-3 text-red-400" />
+                      <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>
                   </div>
                 </div>

@@ -27,7 +27,7 @@ const backLinkStyle: React.CSSProperties = {
   borderRadius: 6,
   background: "transparent",
   color: "white",
-  border: "1px solid rgba(255,255,255,0.15)",
+  border: "1px solid hsl(var(--foreground) / 0.15)",
   cursor: "pointer",
   fontSize: 13,
 };
@@ -37,24 +37,24 @@ export default function PipelineRunNodesPage({ params }: PageProps) {
   const { runId } = use(params);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "white", padding: "24px 32px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg-app)", color: "var(--text-primary)", padding: "24px 32px" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button type="button" style={backLinkStyle} aria-label="返回流水线入口" onClick={() => router.push("/pipeline")}>
             <ArrowLeft size={14} />
             流水线
           </button>
-          <span style={{ color: "rgba(255,255,255,0.3)" }}>/</span>
+          <span style={{ color: "hsl(var(--foreground) / 0.3)" }}>/</span>
           <span style={{ fontSize: 13, color: "white", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <Workflow size={14} color="rgb(96,165,250)" />
+            <Workflow size={14} color="hsl(var(--info))" />
             Run: {runId}
           </span>
         </div>
 
         <div
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.10)",
+            background: "hsl(var(--foreground) / 0.04)",
+            border: "1px solid hsl(var(--foreground) / 0.10)",
             borderRadius: 12,
             padding: 20,
           }}

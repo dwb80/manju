@@ -300,7 +300,7 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
   }
 
   const btnClass =
-    'text-xs px-2 py-1 rounded text-gray-200 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap'
+    'text-xs px-2 py-1 rounded text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap'
 
   return (
     <>
@@ -313,7 +313,7 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
           return from !== to && !e.isActive('codeBlock')
         }}
       >
-        <div className="bg-[#252525] border border-white/10 rounded-lg shadow-xl p-1 flex flex-col gap-1">
+        <div className="bg-secondary border border-border rounded-lg shadow-xl p-1 flex flex-col gap-1">
           {/* 第1行：AI优化 | AI扩写 | AI缩写 */}
           <div className="flex gap-1">
             <button

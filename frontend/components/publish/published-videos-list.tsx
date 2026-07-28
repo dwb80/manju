@@ -265,7 +265,7 @@ export function PublishedVideosList({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {/* 搜索框 */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#888]" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="搜索成片名称或项目..."
@@ -273,7 +273,7 @@ export function PublishedVideosList({
             onChange={(e) =>
               setFilter((prev) => ({ ...prev, searchKeyword: e.target.value }))
             }
-            className="w-full rounded-lg border border-white/10 bg-[#1a1a1a] py-2 pl-10 pr-4 text-sm text-white placeholder-[#666] focus:border-white/20 focus:outline-none"
+            className="w-full rounded-lg border border-border bg-card py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none"
           />
         </div>
 
@@ -314,12 +314,12 @@ export function PublishedVideosList({
           />
 
           {/* 视图切换 */}
-          <div className="flex rounded-lg border border-white/10 bg-[#1a1a1a] p-1">
+          <div className="flex rounded-lg border border-border bg-card p-1">
             <button
               onClick={() => setViewMode("table")}
               className={`rounded px-3 py-1 text-sm ${viewMode === "table"
-                ? "bg-white/10 text-white"
-                : "text-[#888] hover:text-white"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               表格
@@ -327,8 +327,8 @@ export function PublishedVideosList({
             <button
               onClick={() => setViewMode("card")}
               className={`rounded px-3 py-1 text-sm ${viewMode === "card"
-                ? "bg-white/10 text-white"
-                : "text-[#888] hover:text-white"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               卡片
@@ -338,16 +338,16 @@ export function PublishedVideosList({
       </div>
 
       {/* 统计信息 */}
-      <div className="flex items-center gap-4 text-sm text-[#888]">
+      <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <span>
-          共 <span className="font-medium text-white">{filteredVideos.length}</span> 个成片
+          共 <span className="font-medium text-foreground">{filteredVideos.length}</span> 个成片
         </span>
         <span>|</span>
         <span>
-          已发布 <span className="font-medium text-emerald-400">{videos.filter(v => v.publishStatus === "published").length}</span> 个
+          已发布 <span className="font-medium text-primary">{videos.filter(v => v.publishStatus === "published").length}</span> 个
         </span>
         <span>
-          待发布 <span className="font-medium text-orange-400">{videos.filter(v => v.publishStatus === "pending").length}</span> 个
+          待发布 <span className="font-medium text-chart-3">{videos.filter(v => v.publishStatus === "pending").length}</span> 个
         </span>
       </div>
 
@@ -372,8 +372,8 @@ export function PublishedVideosList({
                 <TableRow key={video.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-500/10">
-                        <Video className="h-4 w-4 text-blue-400" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded bg-info/10">
+                        <Video className="h-4 w-4 text-info" />
                       </div>
                       <span className="font-medium text-foreground">{video.name}</span>
                     </div>
@@ -443,7 +443,7 @@ export function PublishedVideosList({
                           onClick={() => onPackageVideo(video)}
                           title="一键打包"
                           aria-label="一键打包"
-                          className="text-amber-400 hover:text-amber-300"
+                          className="text-warning hover:text-warning"
                         >
                           <Package className="h-4 w-4" />
                         </Button>
@@ -461,7 +461,7 @@ export function PublishedVideosList({
                               size="icon"
                               title="标记发布"
                               aria-label="标记发布"
-                              className="text-blue-400 hover:text-blue-300"
+                              className="text-info hover:text-info"
                             >
                               <Upload className="h-4 w-4" />
                             </Button>
@@ -471,7 +471,7 @@ export function PublishedVideosList({
                               <button
                                 key={platform}
                                 onClick={() => handlePlatformSelect(video, platform)}
-                                className="w-full rounded px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-white/10"
+                                className="w-full rounded px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
                               >
                                 {getPlatformName(platform)}
                               </button>
@@ -487,9 +487,9 @@ export function PublishedVideosList({
           </Table>
           {filteredVideos.length === 0 && (
             <div className="py-12 text-center">
-              <Video className="mx-auto h-12 w-12 text-[#666]" />
-              <p className="mt-4 text-[#888]">暂无成片</p>
-              <p className="mt-1 text-sm text-[#666]">完成的视频将在这里显示</p>
+              <Video className="mx-auto h-12 w-12 text-muted-foreground" />
+              <p className="mt-4 text-muted-foreground">暂无成片</p>
+              <p className="mt-1 text-sm text-muted-foreground">完成的视频将在这里显示</p>
             </div>
           )}
         </div>
@@ -501,10 +501,10 @@ export function PublishedVideosList({
           {filteredVideos.map((video) => (
             <div
               key={video.id}
-              className="group rounded-xl border border-white/10 bg-[#1a1a1a] overflow-hidden transition-colors hover:border-white/20"
+              className="group rounded-xl border border-border bg-card overflow-hidden transition-colors hover:border-border"
             >
               {/* 缩略图区域 */}
-              <div className="relative aspect-video bg-[#202020]">
+              <div className="relative aspect-video bg-muted">
                 {video.thumbnailUrl ? (
                   <img
                     src={video.thumbnailUrl}
@@ -513,7 +513,7 @@ export function PublishedVideosList({
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center">
-                    <Video className="h-12 w-12 text-[#666]" />
+                    <Video className="h-12 w-12 text-muted-foreground" />
                   </div>
                 )}
                 {/* 播放按钮 */}
@@ -521,20 +521,20 @@ export function PublishedVideosList({
                   onClick={() => onPreviewVideo?.(video)}
                   className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100"
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-                    <Play className="h-7 w-7 text-white" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted backdrop-blur-sm">
+                    <Play className="h-7 w-7 text-foreground" />
                   </div>
                 </button>
                 {/* 时长标签 */}
-                <div className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm">
+                <div className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-1 text-xs text-foreground backdrop-blur-sm">
                   {formatDuration(video.duration)}
                 </div>
                 {/* 状态标签 */}
                 <div className="absolute top-2 left-2">
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium backdrop-blur-sm ${video.publishStatus === "published"
-                      ? "bg-emerald-500/80 text-white"
-                      : "bg-orange-500/80 text-white"
+                      ? "bg-primary/80 text-primary-foreground"
+                      : "bg-chart-3/80 text-foreground"
                       }`}
                   >
                     {video.publishStatus === "published" ? "已发布" : "待发布"}
@@ -544,13 +544,13 @@ export function PublishedVideosList({
 
               {/* 信息区域 */}
               <div className="p-4">
-                <h4 className="font-medium text-white line-clamp-1">{video.name}</h4>
-                <p className="mt-1 text-sm text-[#888] line-clamp-1">{video.projectName}</p>
+                <h4 className="font-medium text-foreground line-clamp-1">{video.name}</h4>
+                <p className="mt-1 text-sm text-muted-foreground line-clamp-1">{video.projectName}</p>
 
-                <div className="mt-3 flex items-center justify-between text-xs text-[#666]">
+                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                   <span>{formatDate(video.createdAt)}</span>
                   {video.publishedPlatform && (
-                    <span className="rounded bg-white/5 px-2 py-0.5 text-[#888]">
+                    <span className="rounded bg-muted/50 px-2 py-0.5 text-muted-foreground">
                       {getPlatformName(video.publishedPlatform)}
                     </span>
                   )}
@@ -560,13 +560,13 @@ export function PublishedVideosList({
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => onPreviewVideo?.(video)}
-                    className="flex-1 rounded border border-white/10 bg-[#202020] px-3 py-1.5 text-xs text-white transition-colors hover:border-white/20"
+                    className="flex-1 rounded border border-border bg-muted px-3 py-1.5 text-xs text-foreground transition-colors hover:border-border"
                   >
                     预览
                   </button>
                   <button
                     onClick={() => onDownloadVideo?.(video)}
-                    className="flex-1 rounded border border-white/10 bg-[#202020] px-3 py-1.5 text-xs text-white transition-colors hover:border-white/20"
+                    className="flex-1 rounded border border-border bg-muted px-3 py-1.5 text-xs text-foreground transition-colors hover:border-border"
                   >
                     下载
                   </button>
@@ -577,17 +577,17 @@ export function PublishedVideosList({
                           showPlatformSelector === video.id ? null : video.id
                         )
                       }
-                      className="rounded bg-blue-500/10 px-3 py-1.5 text-xs text-blue-400 transition-colors hover:bg-blue-500/20"
+                      className="rounded bg-info/10 px-3 py-1.5 text-xs text-info transition-colors hover:bg-info/20"
                     >
                       发布
                     </button>
                     {showPlatformSelector === video.id && (
-                      <div className="absolute bottom-full right-0 z-10 mb-1 w-40 rounded-lg border border-white/10 bg-[#1a1a1a] p-2 shadow-lg">
+                      <div className="absolute bottom-full right-0 z-10 mb-1 w-40 rounded-lg border border-border bg-card p-2 shadow-lg">
                         {platformOptions.map((platform) => (
                           <button
                             key={platform}
                             onClick={() => handlePlatformSelect(video, platform)}
-                            className="w-full rounded px-3 py-2 text-left text-sm text-white transition-colors hover:bg-white/5"
+                            className="w-full rounded px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/50"
                           >
                             {getPlatformName(platform)}
                           </button>
@@ -601,9 +601,9 @@ export function PublishedVideosList({
           ))}
           {filteredVideos.length === 0 && (
             <div className="col-span-full py-12 text-center">
-              <Video className="mx-auto h-12 w-12 text-[#666]" />
-              <p className="mt-4 text-[#888]">暂无成片</p>
-              <p className="mt-1 text-sm text-[#666]">完成的视频将在这里显示</p>
+              <Video className="mx-auto h-12 w-12 text-muted-foreground" />
+              <p className="mt-4 text-muted-foreground">暂无成片</p>
+              <p className="mt-1 text-sm text-muted-foreground">完成的视频将在这里显示</p>
             </div>
           )}
         </div>

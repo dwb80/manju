@@ -240,7 +240,7 @@ async function cropReferenceImageToPortrait(file: Pick<UploadedFile, "name" | "u
   canvas.height = 1920;
   const context = canvas.getContext("2d");
   if (!context) throw new Error("浏览器不支持图片裁切");
-  context.fillStyle = "#000";
+  context.fillStyle = getComputedStyle(document.body).backgroundColor;
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(image, cropX, cropY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
   const blob = await new Promise<Blob>((resolve, reject) => {
@@ -298,7 +298,7 @@ interface PortraitImageLinkProps {
 function PortraitImageLink({ href, src, alt, onLoad }: PortraitImageLinkProps) {
   return (
     <a
-      className="mx-auto block aspect-[9/16] max-h-[72vh] overflow-hidden bg-[#171717]"
+      className="mx-auto block aspect-[9/16] max-h-[72vh] overflow-hidden bg-card"
       style={{ width: "min(100%, calc(72vh * 9 / 16))" }}
       href={href}
       target="_blank"
@@ -1133,8 +1133,8 @@ export default function Home() {
   })();
 
   return (
-    <main className="grid h-screen grid-cols-[260px_1fr] overflow-hidden bg-[#212121] text-[#ececec] max-md:grid-cols-1">
-      <aside className="flex min-h-0 flex-col border-r border-white/10 bg-[#171717] p-3 max-md:hidden">
+    <main className="grid h-screen grid-cols-[260px_1fr] overflow-hidden bg-muted text-foreground/90 max-md:grid-cols-1">
+      <aside className="flex min-h-0 flex-col border-r border-border bg-card p-3 max-md:hidden">
         <div className="mb-3 flex items-center justify-between">
           <div className="text-sm font-semibold">Agnes AI Studio</div>
           <Button aria-label="新建会话" size="icon" variant="ghost" onClick={async () => {
@@ -1147,24 +1147,24 @@ export default function Home() {
         </div>
         <div className="relative mb-3">
           <button
-            className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-[#202020] px-3 py-2 text-left text-sm hover:bg-white/5"
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-left text-sm hover:bg-muted/50"
             onClick={() => setProjectMenuOpen((open) => !open)}
           >
             <span className="flex min-w-0 items-center gap-2">
-              <Folder className="h-4 w-4 shrink-0 text-[#b4b4b4]" />
+              <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="truncate">{projectScopeLabel}</span>
             </span>
-            <MoreHorizontal className="h-4 w-4 text-[#b4b4b4]" />
+            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
           </button>
           {projectMenuOpen && (
-            <div className="absolute left-0 right-0 top-11 z-50 rounded-xl border border-white/10 bg-[#2f2f2f] p-1 text-sm shadow-2xl">
+            <div className="absolute left-0 right-0 top-11 z-50 rounded-xl border border-border bg-secondary p-1 text-sm shadow-2xl">
               {[
                 { id: "all", name: "全部项目" },
                 { id: "", name: "不使用项目" },
               ].map((item) => (
                 <button
                   key={item.name}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"
                   onClick={() => {
                     setProjectScope(item.id);
                     setProjectMenuOpen(false);
@@ -1175,11 +1175,11 @@ export default function Home() {
                   {projectScope === item.id && <Check className="h-4 w-4" />}
                 </button>
               ))}
-              <div className="my-1 h-px bg-white/10" />
+              <div className="my-1 h-px bg-muted" />
               {projects.map((project) => (
                 <button
                   key={project.id}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"
                   onClick={() => {
                     setProjectScope(project.id);
                     setProjectMenuOpen(false);
@@ -1188,32 +1188,32 @@ export default function Home() {
                 >
                   <span className="min-w-0">
                     <span className="block truncate">{project.name}</span>
-                    {project.storage_path && <span className="block truncate text-[11px] text-[#b4b4b4]">{project.storage_path}</span>}
+                    {project.storage_path && <span className="block truncate text-[11px] text-muted-foreground">{project.storage_path}</span>}
                   </span>
                   {projectScope === project.id && <Check className="h-4 w-4" />}
                 </button>
               ))}
-              <div className="my-1 h-px bg-white/10" />
+              <div className="my-1 h-px bg-muted" />
               <div className="relative">
                 <button
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"
                   onClick={() => setProjectCreateMenuOpen((open) => !open)}
                 >
                   <span className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />新建项目
                   </span>
-                  <span className="text-[#b4b4b4]">›</span>
+                  <span className="text-muted-foreground">›</span>
                 </button>
                 {projectCreateMenuOpen && (
-                  <div className="absolute bottom-0 left-full z-50 ml-2 w-52 rounded-xl border border-white/10 bg-[#2f2f2f] p-1 shadow-2xl">
+                  <div className="absolute bottom-0 left-full z-50 ml-2 w-52 rounded-xl border border-border bg-secondary p-1 shadow-2xl">
                     <button
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"
                       onClick={() => void createProjectItem("managed")}
                     >
                       <Plus className="h-4 w-4" />新建空白项目
                     </button>
                     <button
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"
                       onClick={() => void createProjectItem("existing")}
                     >
                       <Folder className="h-4 w-4" />使用现有文件夹
@@ -1227,13 +1227,13 @@ export default function Home() {
         <div className="min-h-0 flex-1 space-y-4 overflow-auto">
           {conversationGroups.map((group) => (
             <div key={group.id || "unassigned"} className="space-y-1">
-              <div className="group/project relative flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-[#b4b4b4] hover:bg-white/5">
+              <div className="group/project relative flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/50">
                 <Folder className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{projectById.get(group.id)?.is_pinned ? "★ " : ""}{group.name}</span>
                 {group.id && projectById.has(group.id) && (
                   <button
                     aria-label="打开项目操作菜单"
-                    className={`ml-auto grid h-6 w-6 shrink-0 place-items-center rounded-md hover:bg-white/10 hover:text-white ${projectActionMenuId === group.id ? "opacity-100" : "opacity-0 group-hover/project:opacity-100"}`}
+                    className={`ml-auto grid h-6 w-6 shrink-0 place-items-center rounded-md hover:bg-muted hover:text-foreground ${projectActionMenuId === group.id ? "opacity-100" : "opacity-0 group-hover/project:opacity-100"}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       setConversationMenuId("");
@@ -1244,41 +1244,41 @@ export default function Home() {
                   </button>
                 )}
                 {group.id && projectActionMenuId === group.id && projectById.get(group.id) && (
-                  <div className="absolute right-1 top-8 z-50 w-48 rounded-xl border border-white/10 bg-[#2f2f2f] p-1 text-sm text-[#ececec] shadow-2xl">
-                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10" onClick={() => void createConversationInProject(projectById.get(group.id) as Project)}>
+                  <div className="absolute right-1 top-8 z-50 w-48 rounded-xl border border-border bg-secondary p-1 text-sm text-foreground/90 shadow-2xl">
+                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => void createConversationInProject(projectById.get(group.id) as Project)}>
                       <Plus className="h-4 w-4" />创建新会话
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10" onClick={() => void togglePinProject(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => void togglePinProject(projectById.get(group.id) as Project)}>
                       <Pin className="h-4 w-4" />{projectById.get(group.id)?.is_pinned ? "取消置顶项目" : "置顶项目"}
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10" onClick={() => void openProjectFolder(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => void openProjectFolder(projectById.get(group.id) as Project)}>
                       <FolderOpen className="h-4 w-4" />在资源管理器中打开
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10" onClick={() => void renameProject(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => void renameProject(projectById.get(group.id) as Project)}>
                       <Pencil className="h-4 w-4" />重命名项目
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10" onClick={() => void archiveProject(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => void archiveProject(projectById.get(group.id) as Project)}>
                       <Archive className="h-4 w-4" />归档对话
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-red-300 hover:bg-red-500/10" onClick={() => void removeProject(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-destructive hover:bg-destructive/10" onClick={() => void removeProject(projectById.get(group.id) as Project)}>
                       <X className="h-4 w-4" />移除
                     </button>
                   </div>
                 )}
               </div>
               {group.items.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-[#777]">暂无会话</div>
+                <div className="px-3 py-2 text-xs text-muted-foreground">暂无会话</div>
               ) : group.items.map((conversation) => (
                 <div key={conversation.id} className="group relative">
                   <button
-                    className={`w-full truncate rounded-lg py-2 pl-3 pr-10 text-left text-sm transition-colors ${mode !== "favorites" && conversation.id === conversationId ? "bg-white/10" : "hover:bg-white/5"}`}
+                    className={`w-full truncate rounded-lg py-2 pl-3 pr-10 text-left text-sm transition-colors ${mode !== "favorites" && conversation.id === conversationId ? "bg-muted" : "hover:bg-muted/50"}`}
                     onClick={() => void selectConversation(conversation.id)}
                   >
                     {conversation.is_pinned ? "★ " : ""}{conversation.title}
                   </button>
                   <button
                     aria-label="打开会话操作菜单"
-                    className={`absolute right-1 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-[#b4b4b4] hover:bg-white/10 hover:text-white ${conversationMenuId === conversation.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                    className={`absolute right-1 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground ${conversationMenuId === conversation.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       setConversationMenuId((current) => current === conversation.id ? "" : conversation.id);
@@ -1287,20 +1287,20 @@ export default function Home() {
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
                   {conversationMenuId === conversation.id && (
-                    <div className="absolute right-1 top-9 z-50 w-36 rounded-xl border border-white/10 bg-[#2f2f2f] p-1 text-sm shadow-2xl">
-                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10" onClick={() => void togglePinConversation(conversation)}>
+                    <div className="absolute right-1 top-9 z-50 w-36 rounded-xl border border-border bg-secondary p-1 text-sm shadow-2xl">
+                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => void togglePinConversation(conversation)}>
                         <Pin className="h-4 w-4" />{conversation.is_pinned ? "取消置顶" : "置顶"}
                       </button>
-                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10" onClick={() => void shareConversation(conversation)}>
+                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => void shareConversation(conversation)}>
                         <Share2 className="h-4 w-4" />分享
                       </button>
-                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10" onClick={() => void renameConversation(conversation)}>
+                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={() => void renameConversation(conversation)}>
                         <Pencil className="h-4 w-4" />重命名
                       </button>
-                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10" onClick={reportConversation}>
+                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted" onClick={reportConversation}>
                         <AlertTriangle className="h-4 w-4" />举报
                       </button>
-                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-red-300 hover:bg-red-500/10" onClick={() => void deleteConversationItem(conversation)}>
+                      <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-destructive hover:bg-destructive/10" onClick={() => void deleteConversationItem(conversation)}>
                         <Trash2 className="h-4 w-4" />删除
                       </button>
                     </div>
@@ -1310,9 +1310,9 @@ export default function Home() {
             </div>
           ))}
         </div>
-        <div className="mt-3 border-t border-white/10 pt-3">
+        <div className="mt-3 border-t border-border pt-3">
           <button
-            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${mode === "favorites" ? "bg-white/10" : "hover:bg-white/5"}`}
+            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${mode === "favorites" ? "bg-muted" : "hover:bg-muted/50"}`}
             onClick={() => {
               setAttachments([]);
               setNotice("");
@@ -1326,17 +1326,17 @@ export default function Home() {
       </aside>
 
       <section className={`relative grid h-screen min-w-0 ${mode === "favorites" ? "grid-rows-[56px_1fr]" : "grid-rows-[56px_1fr_auto]"} overflow-hidden`}>
-        <header className="flex items-center justify-between border-b border-white/10 px-4">
+        <header className="flex items-center justify-between border-b border-border px-4">
           <div className="text-sm font-medium">
             {mode === "chat" && "Agnes 2.0 Flash"}
             {mode === "image" && "图片生成"}
             {mode === "video" && "视频生成"}
             {mode === "favorites" && "收藏"}
           </div>
-          <div className="text-xs text-[#b4b4b4]">{notice}</div>
+          <div className="text-xs text-muted-foreground">{notice}</div>
         </header>
         {notice && (
-          <div className="pointer-events-none fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-[#303030] px-4 py-2 text-sm text-white shadow-2xl">
+          <div className="pointer-events-none fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-full border border-border bg-secondary px-4 py-2 text-sm text-foreground shadow-2xl">
             {notice}
           </div>
         )}
@@ -1347,14 +1347,14 @@ export default function Home() {
               <div className="grid min-h-[42vh] place-items-center text-center">
                 <div>
                   <div className="mb-3 text-3xl font-semibold">今天想创作什么？</div>
-                  <div className="text-sm text-[#b4b4b4]">聊天、生成图片、生成视频，都从下面的输入框开始。</div>
+                  <div className="text-sm text-muted-foreground">聊天、生成图片、生成视频，都从下面的输入框开始。</div>
                 </div>
               </div>
             )}
 
             {mode === "chat" && messages.map((message, index) => (
               <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`${message.role === "user" ? "max-w-[78%] rounded-3xl bg-[#2f2f2f] px-5 py-3" : "w-full max-w-full px-1"} whitespace-pre-wrap text-[15px] leading-7`}>
+                <div className={`${message.role === "user" ? "max-w-[78%] rounded-3xl bg-secondary px-5 py-3" : "w-full max-w-full px-1"} whitespace-pre-wrap text-[15px] leading-7`}>
                   {messageAttachments(message).length > 0 && (
                     <div className="mb-3 grid grid-cols-2 gap-2">
                       {messageAttachments(message).map((attachment) => (
@@ -1375,17 +1375,17 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-xl font-semibold">收藏</div>
-                    <div className="text-sm text-[#b4b4b4]">已收藏的图片和视频会显示在这里。</div>
+                    <div className="text-sm text-muted-foreground">已收藏的图片和视频会显示在这里。</div>
                   </div>
                   <Button size="sm" variant="ghost" onClick={() => void loadFavorites()}><RefreshCw className="h-4 w-4" />刷新</Button>
                 </div>
 
                 {favorites.length === 0 ? (
-                  <Card className="border-white/10 bg-[#2a2a2a] p-6 text-sm text-[#b4b4b4]">还没有收藏内容。可以在图片或视频作品下点击收藏。</Card>
+                  <Card className="border-border bg-secondary p-6 text-sm text-muted-foreground">还没有收藏内容。可以在图片或视频作品下点击收藏。</Card>
                 ) : (
                   <div className="flex flex-col gap-3">
                     {favorites.map((item) => (
-                      <Card key={item.favorite.id} className="overflow-hidden border-white/10 bg-[#2a2a2a]">
+                      <Card key={item.favorite.id} className="overflow-hidden border-border bg-secondary">
                         {item.image && (
                           <div className="space-y-3">
                             {item.image.image_urls.map((url, index) => (
@@ -1409,13 +1409,13 @@ export default function Home() {
                           <div className="space-y-3 p-3">
                             <div className="flex justify-between gap-3 text-sm">
                               <span>{item.video.prompt}</span>
-                              <span className="shrink-0 text-[#b4b4b4]">{statusText(item.video.status)}</span>
+                              <span className="shrink-0 text-muted-foreground">{statusText(item.video.status)}</span>
                             </div>
                             {item.video.video_url && <video className="w-full rounded-lg" src={item.video.video_url} controls preload="metadata" />}
                             <div className="flex flex-wrap gap-2">
-                              {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm" href={`/videos/${item.video.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" />查看</a>}
-                              {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm" href={item.video.video_url} download={`${item.video.id}.mp4`} target="_blank"><Download className="h-4 w-4" />下载</a>}
-                              {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm" href={item.video.video_url} target="_blank"><ExternalLink className="h-4 w-4" />打开</a>}
+                              {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm" href={`/videos/${item.video.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" />查看</a>}
+                              {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm" href={item.video.video_url} download={`${item.video.id}.mp4`} target="_blank"><Download className="h-4 w-4" />下载</a>}
+                              {item.video.video_url && <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm" href={item.video.video_url} target="_blank"><ExternalLink className="h-4 w-4" />打开</a>}
                               {item.video.video_url && <Button size="sm" variant="secondary" onClick={() => void copy(item.video!.video_url)}><Copy className="h-4 w-4" />复制</Button>}
                               <Button size="sm" variant="destructive" onClick={() => void removeFavorite(item.favorite.id)}><Trash2 className="h-4 w-4" />取消收藏</Button>
                             </div>
@@ -1423,7 +1423,7 @@ export default function Home() {
                         )}
 
                         {!item.image && !item.video && (
-                          <div className="flex items-center justify-between gap-3 p-4 text-sm text-[#b4b4b4]">
+                          <div className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
                             <span>收藏的内容已不存在或暂不支持展示：{item.favorite.type} / {item.favorite.ref_id}</span>
                             <Button size="sm" variant="destructive" onClick={() => void removeFavorite(item.favorite.id)}><Trash2 className="h-4 w-4" />取消收藏</Button>
                           </div>
@@ -1440,17 +1440,17 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-xl font-semibold">图片作品</div>
-                    <div className="text-sm text-[#b4b4b4]">图片结果只显示在此页面，不再混入聊天会话。</div>
+                    <div className="text-sm text-muted-foreground">图片结果只显示在此页面，不再混入聊天会话。</div>
                   </div>
                   <Button size="sm" variant="ghost" onClick={() => void loadImages()}><RefreshCw className="h-4 w-4" />刷新</Button>
                 </div>
 
                 {visibleImages.length === 0 && currentImageRequests.length === 0 ? (
-                  <Card className="border-white/10 bg-[#2a2a2a] p-6 text-sm text-[#b4b4b4]">还没有图片。请在底部输入框描述图片，上传参考图后点击发送。</Card>
+                  <Card className="border-border bg-secondary p-6 text-sm text-muted-foreground">还没有图片。请在底部输入框描述图片，上传参考图后点击发送。</Card>
                 ) : (
                   <div className="flex flex-col gap-3">
                     {visibleImagesChronological.flatMap((task) => task.image_urls.map((url, index) => (
-                      <Card key={`${task.id}-${url}`} className="overflow-hidden border-white/10 bg-[#2a2a2a]">
+                      <Card key={`${task.id}-${url}`} className="overflow-hidden border-border bg-secondary">
                         <PortraitImageLink href={`/images/${task.id}?index=${index}`} src={url} alt={task.prompt} onLoad={scrollToLatest} />
                         <div className="space-y-2 p-3">
                           <div className="line-clamp-2 text-sm">{task.prompt}</div>
@@ -1470,9 +1470,9 @@ export default function Home() {
                 )}
 
                 {currentImageRequests.map((request) => (
-                  <Card key={request.id} className="space-y-3 border-white/10 bg-[#2a2a2a] p-3">
+                  <Card key={request.id} className="space-y-3 border-border bg-secondary p-3">
                     <div className="flex justify-end">
-                      <div className="max-w-[86%] rounded-3xl bg-[#2f2f2f] px-4 py-3 text-sm leading-6">
+                      <div className="max-w-[86%] rounded-3xl bg-secondary px-4 py-3 text-sm leading-6">
                         <div className="whitespace-pre-wrap">{request.prompt}</div>
                         {request.attachments.length > 0 && (
                           <div className="mt-3 grid grid-cols-4 gap-2 max-sm:grid-cols-3">
@@ -1488,19 +1488,19 @@ export default function Home() {
                     </div>
 
                     {request.status === "generating" && (
-                      <div className="flex items-center gap-2 px-1 text-sm text-[#b4b4b4]">
+                      <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />正在生成图片...
                       </div>
                     )}
 
                     {request.status === "failed" && (
-                      <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-200">{request.error}</div>
+                      <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{request.error}</div>
                     )}
 
                     {request.task && (
                       <div className="flex flex-col gap-3">
                         {request.task.image_urls.map((url, index) => (
-                          <Card key={`${request.task?.id}-${url}`} className="overflow-hidden border-white/10 bg-[#202020]">
+                          <Card key={`${request.task?.id}-${url}`} className="overflow-hidden border-border bg-muted">
                             <PortraitImageLink href={`/images/${request.task?.id}?index=${index}`} src={url} alt={request.prompt} onLoad={scrollToLatest} />
                             <div className="flex flex-wrap gap-2 p-3">
                               <Button size="sm" variant="secondary" onClick={() => openImageDetail(request.task!.id, index)}><Eye className="h-4 w-4" />查看</Button>
@@ -1524,25 +1524,25 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-xl font-semibold">视频任务</div>
-                    <div className="text-sm text-[#b4b4b4]">视频生成、播放和下载都在此页面管理。</div>
+                    <div className="text-sm text-muted-foreground">视频生成、播放和下载都在此页面管理。</div>
                   </div>
                   <Button size="sm" variant="ghost" onClick={() => void loadVideos()}><RefreshCw className="h-4 w-4" />刷新</Button>
                 </div>
                 {videos.length === 0 ? (
-                  <Card className="border-white/10 bg-[#2a2a2a] p-6 text-sm text-[#b4b4b4]">还没有视频任务。请在底部输入框描述视频，必要时上传一张参考图。</Card>
+                  <Card className="border-border bg-secondary p-6 text-sm text-muted-foreground">还没有视频任务。请在底部输入框描述视频，必要时上传一张参考图。</Card>
                 ) : (
                   videos.map((video) => (
-                    <Card key={video.id} className="space-y-3 border-white/10 bg-[#2a2a2a] p-3">
+                    <Card key={video.id} className="space-y-3 border-border bg-secondary p-3">
                       <div className="flex justify-between gap-3 text-sm">
                         <span>{video.prompt}</span>
-                        <span className="shrink-0 text-[#b4b4b4]">{statusText(video.status)}</span>
+                        <span className="shrink-0 text-muted-foreground">{statusText(video.status)}</span>
                       </div>
                       {video.video_url && <video className="w-full rounded-lg" src={video.video_url} controls preload="metadata" />}
                       {video.video_url && (
                         <div className="flex flex-wrap gap-2">
-                          <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm" href={`/videos/${video.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" />查看</a>
-                          <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm" href={video.video_url} download={`${video.id}.mp4`} target="_blank"><Download className="h-4 w-4" />下载</a>
-                          <a className="inline-flex h-8 items-center gap-1 rounded-md bg-white/10 px-3 text-sm" href={video.video_url} target="_blank"><ExternalLink className="h-4 w-4" />打开</a>
+                          <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm" href={`/videos/${video.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" />查看</a>
+                          <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm" href={video.video_url} download={`${video.id}.mp4`} target="_blank"><Download className="h-4 w-4" />下载</a>
+                          <a className="inline-flex h-8 items-center gap-1 rounded-md bg-muted px-3 text-sm" href={video.video_url} target="_blank"><ExternalLink className="h-4 w-4" />打开</a>
                           <Button size="sm" variant="secondary" onClick={() => void copy(video.video_url)}><Copy className="h-4 w-4" />复制</Button>
                           <Button size="sm" variant="secondary" onClick={() => void favorite("video", video.id)}><Star className="h-4 w-4" />收藏</Button>
                           <Button size="sm" variant="destructive" onClick={async () => { await api(`/api/videos/${video.id}`, { method: "DELETE" }); await loadVideos(); }}><Trash2 className="h-4 w-4" /></Button>
@@ -1556,9 +1556,9 @@ export default function Home() {
           </div>
         </div>
 
-        {mode !== "favorites" && <footer className="bg-[#212121] px-6 pb-3 pt-[10px]">
+        {mode !== "favorites" && <footer className="bg-muted px-6 pb-3 pt-[10px]">
           <div
-            className="pointer-events-auto mx-auto flex max-h-[42vh] w-full max-w-[768px] flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#2f2f2f] p-3 shadow-2xl"
+            className="pointer-events-auto mx-auto flex max-h-[42vh] w-full max-w-[768px] flex-col overflow-hidden rounded-[28px] border border-border bg-secondary p-3 shadow-2xl"
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => {
               event.preventDefault();
@@ -1567,16 +1567,16 @@ export default function Home() {
           >
             <div className="mb-2 flex max-h-28 flex-wrap gap-2 overflow-y-auto pr-1">
               {attachments.map((attachment) => (
-                <div key={attachment.id} className="flex max-w-[230px] items-center gap-2 rounded-2xl bg-[#404040] p-1 pr-2">
+                <div key={attachment.id} className="flex max-w-[230px] items-center gap-2 rounded-2xl bg-secondary p-1 pr-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className="h-10 w-10 cursor-zoom-in rounded-xl object-cover" src={attachment.previewUrl} alt={attachment.name} onClick={() => attachment.url && window.open(attachment.url, "_blank", "noopener,noreferrer")} />
                   <div className="min-w-0">
                     <div className="truncate text-xs">{attachment.name}</div>
-                    <div className={`text-[11px] ${attachment.status === "failed" ? "text-red-300" : "text-[#b4b4b4]"}`}>
+                    <div className={`text-[11px] ${attachment.status === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
                       {attachment.status === "uploading" ? "上传中..." : attachment.status === "failed" ? "上传失败" : formatBytes(attachment.size)}
                     </div>
                   </div>
-                  <button aria-label={`移除附件 ${attachment.name}`} className="rounded-full p-1 hover:bg-white/10" onClick={() => {
+                  <button aria-label={`移除附件 ${attachment.name}`} className="rounded-full p-1 hover:bg-muted" onClick={() => {
                     if (attachment.previewUrl.startsWith("blob:")) URL.revokeObjectURL(attachment.previewUrl);
                     setAttachments((items) => items.filter((item) => item.id !== attachment.id));
                   }}>
@@ -1597,10 +1597,10 @@ export default function Home() {
                 }
               }}
             />
-            <div className="flex min-h-5 items-center justify-between gap-3 px-2 text-[11px] text-[#9b9b9b]" aria-live="polite">
+            <div className="flex min-h-5 items-center justify-between gap-3 px-2 text-[11px] text-muted-foreground" aria-live="polite">
               <span className="flex min-w-0 items-center gap-1.5">
                 {draftStatus === "saving" && <Loader2 className="h-3 w-3 shrink-0 animate-spin" />}
-                {(draftStatus === "saved" || draftStatus === "restored") && <Check className="h-3 w-3 shrink-0 text-emerald-400" />}
+                {(draftStatus === "saved" || draftStatus === "restored") && <Check className="h-3 w-3 shrink-0 text-primary" />}
                 <span className="truncate">
                   {draftStatus === "saving" && "正在保存草稿…"}
                   {draftStatus === "saved" && "草稿已保存到本机"}
@@ -1611,7 +1611,7 @@ export default function Home() {
               {prompt.trim() && (
                 <button
                   type="button"
-                  className="shrink-0 rounded px-1.5 py-0.5 text-[#b4b4b4] transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500"
+                  className="shrink-0 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                   onClick={clearCurrentDraft}
                   aria-label="清空当前草稿"
                 >

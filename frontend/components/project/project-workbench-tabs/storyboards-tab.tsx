@@ -41,11 +41,11 @@ export function StoryboardsTab(props: Pick<
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-white/10 bg-[#202020] p-3">
+      <div className="rounded-lg border border-border bg-muted p-3">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold">分镜中心</div>
-            <div className="text-xs text-[#b4b4b4]">每条分镜绑定底图、视频、角色、场景和提示词。</div>
+            <div className="text-xs text-muted-foreground">每条分镜绑定底图、视频、角色、场景和提示词。</div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" onClick={downloadStoryboardCsv}><Download className="h-4 w-4" />导出分镜表</Button>
@@ -59,33 +59,33 @@ export function StoryboardsTab(props: Pick<
             </Button>
           </div>
         </div>
-        <div className="mb-3 rounded-lg border border-white/10 bg-[#2a2a2a] p-3">
+        <div className="mb-3 rounded-lg border border-border bg-secondary p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="text-xs font-medium text-white">剧本自动拆分镜</div>
+            <div className="text-xs font-medium text-foreground">剧本自动拆分镜</div>
             <Button size="sm" variant="secondary" onClick={() => void breakdownScriptToStoryboards()}>生成分镜</Button>
           </div>
           <textarea
-            className="min-h-24 w-full resize-none rounded-lg border border-white/10 bg-[#202020] px-3 py-2 text-xs text-white outline-none focus:border-emerald-500"
+            className="min-h-24 w-full resize-none rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground outline-none focus:border-primary"
             value={scriptDraft}
             placeholder="粘贴剧本文本，系统会自动拆场景、生成分镜和提示词，并尝试绑定已有角色/场景资产"
             onChange={(event) => setScriptDraft(event.target.value)}
           />
         </div>
         <div className="grid grid-cols-6 gap-2 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" type="number" min={1} value={storyboardDraft.episode} placeholder="集数" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, episode: Number(event.target.value) }))} />
-          <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.scene} placeholder="场次" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, scene: event.target.value }))} />
-          <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.shot} placeholder="镜号" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, shot: event.target.value }))} />
-          <select className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.status} onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, status: event.target.value as ProjectStoryboardStatus }))}>
+          <input className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" type="number" min={1} value={storyboardDraft.episode} placeholder="集数" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, episode: Number(event.target.value) }))} />
+          <input className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.scene} placeholder="场次" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, scene: event.target.value }))} />
+          <input className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.shot} placeholder="镜号" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, shot: event.target.value }))} />
+          <select className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.status} onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, status: event.target.value as ProjectStoryboardStatus }))}>
             {storyboardStatuses.map((status) => <option key={status.key} value={status.key}>{status.label}</option>)}
           </select>
-          <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.title} placeholder="分镜标题" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, title: event.target.value }))} />
-          <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" type="number" min={1} value={storyboardDraft.duration} placeholder="时长" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, duration: Number(event.target.value) }))} />
+          <input className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.title} placeholder="分镜标题" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, title: event.target.value }))} />
+          <input className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" type="number" min={1} value={storyboardDraft.duration} placeholder="时长" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, duration: Number(event.target.value) }))} />
         </div>
         <div className="mt-2 grid grid-cols-4 gap-2 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.characters} placeholder="角色，逗号分隔" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, characters: event.target.value }))} />
-          <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.location} placeholder="场景" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, location: event.target.value }))} />
-          <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.shot_size} placeholder="景别" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, shot_size: event.target.value }))} />
-          <input className="h-9 rounded-lg border border-white/10 bg-[#2f2f2f] px-3 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.camera_move} placeholder="镜头运动" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, camera_move: event.target.value }))} />
+          <input className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.characters} placeholder="角色，逗号分隔" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, characters: event.target.value }))} />
+          <input className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.location} placeholder="场景" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, location: event.target.value }))} />
+          <input className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.shot_size} placeholder="景别" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, shot_size: event.target.value }))} />
+          <input className="h-9 rounded-lg border border-border bg-secondary px-3 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.camera_move} placeholder="镜头运动" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, camera_move: event.target.value }))} />
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2 max-md:grid-cols-1">
           <ShadcnSelect
@@ -109,15 +109,15 @@ export function StoryboardsTab(props: Pick<
             className="h-9 text-xs"
           />
         </div>
-        <textarea className="mt-2 min-h-16 w-full resize-none rounded-lg border border-white/10 bg-[#2f2f2f] px-3 py-2 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.description} placeholder="画面描述" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, description: event.target.value }))} />
-        <textarea className="mt-2 min-h-16 w-full resize-none rounded-lg border border-white/10 bg-[#2f2f2f] px-3 py-2 text-xs text-white outline-none focus:border-emerald-500" value={storyboardDraft.prompt} placeholder="生成提示词" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, prompt: event.target.value }))} />
+        <textarea className="mt-2 min-h-16 w-full resize-none rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.description} placeholder="画面描述" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, description: event.target.value }))} />
+        <textarea className="mt-2 min-h-16 w-full resize-none rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-foreground outline-none focus:border-primary" value={storyboardDraft.prompt} placeholder="生成提示词" onChange={(event) => setStoryboardDraft((draft) => ({ ...draft, prompt: event.target.value }))} />
       </div>
 
       {filteredProjectStoryboards.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-[#202020] px-3 py-2">
-          <label className="flex items-center gap-2 text-xs text-[#d8d8d8]">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted px-3 py-2">
+          <label className="flex items-center gap-2 text-xs text-foreground/80">
             <input
-              className="h-4 w-4 accent-emerald-500"
+              className="h-4 w-4 accent-primary"
               type="checkbox"
               checked={filteredProjectStoryboards.every((item) => selectedStoryboardIds.includes(item.id))}
               onChange={(event) => setSelectedStoryboardIds(event.target.checked ? filteredProjectStoryboards.map((item) => item.id) : [])}
@@ -138,30 +138,30 @@ export function StoryboardsTab(props: Pick<
             <EmptyStoryboards onCreateStoryboard={() => void createProjectStoryboardItem()} />
           ) : (
             <div className="px-5 py-10 text-center">
-              <div className="text-base font-semibold text-white">没有匹配的分镜</div>
-              <div className="mt-2 text-sm text-[#bdbdbd]">调整搜索或状态筛选后再试。</div>
+              <div className="text-base font-semibold text-foreground">没有匹配的分镜</div>
+              <div className="mt-2 text-sm text-muted-foreground">调整搜索或状态筛选后再试。</div>
             </div>
           )
         ) : (
           pagedProjectStoryboards.map((storyboard) => (
-            <div key={storyboard.id} className="group relative rounded-lg border border-white/10 bg-[#202020] p-4 transition-all duration-200 hover:bg-white/5 hover:border-white/20">
+            <div key={storyboard.id} className="group relative rounded-lg border border-border bg-muted p-4 transition-all duration-200 hover:bg-muted/50 hover:border-border">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <input
                       aria-label={`选择分镜 ${storyboard.title}`}
-                      className="h-4 w-4 accent-emerald-500"
+                      className="h-4 w-4 accent-primary"
                       type="checkbox"
                       checked={selectedStoryboardIds.includes(storyboard.id)}
                       onChange={() => toggleStoryboardSelection(storyboard.id)}
                     />
-                    <span className="rounded-md bg-white/10 px-2 py-1 text-xs">第{storyboard.episode}集</span>
-                    <span className="rounded-md bg-white/10 px-2 py-1 text-xs">{storyboard.scene}-{storyboard.shot}</span>
-                    <span className="rounded-md bg-white/10 px-2 py-1">{storyboardStatusText(storyboard.status)}</span>
+                    <span className="rounded-md bg-muted px-2 py-1 text-xs">第{storyboard.episode}集</span>
+                    <span className="rounded-md bg-muted px-2 py-1 text-xs">{storyboard.scene}-{storyboard.shot}</span>
+                    <span className="rounded-md bg-muted px-2 py-1">{storyboardStatusText(storyboard.status)}</span>
                   </div>
-                  <div className="mt-2 font-medium text-white">{storyboard.title}</div>
-                  <div className="mt-1 line-clamp-2 text-xs text-[#b4b4b4]">{storyboard.description || storyboard.prompt}</div>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-[#b4b4b4]">
+                  <div className="mt-2 font-medium text-foreground">{storyboard.title}</div>
+                  <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{storyboard.description || storyboard.prompt}</div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     {storyboard.characters.length > 0 && <span>角色：{storyboard.characters.join(" / ")}</span>}
                     {storyboard.location && <span>场景：{storyboard.location}</span>}
                     {storyboard.shot_size && <span>景别：{storyboard.shot_size}</span>}
@@ -171,11 +171,11 @@ export function StoryboardsTab(props: Pick<
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     {(storyboard.character_asset_ids ?? []).map((assetId) => {
                       const asset = characterAssets.find((item) => item.id === assetId);
-                      return asset ? <span key={asset.id} className="rounded-md bg-emerald-500/10 px-2 py-1 text-emerald-200">角色卡：{asset.name}</span> : null;
+                      return asset ? <span key={asset.id} className="rounded-md bg-primary/10 px-2 py-1 text-primary">角色卡：{asset.name}</span> : null;
                     })}
                     {storyboard.scene_asset_id && (() => {
                       const asset = sceneAssets.find((item) => item.id === storyboard.scene_asset_id);
-                      return asset ? <span className="rounded-md bg-sky-500/10 px-2 py-1 text-sky-200">场景卡：{asset.name}</span> : null;
+                      return asset ? <span className="rounded-md bg-ring/10 px-2 py-1 text-ring">场景卡：{asset.name}</span> : null;
                     })()}
                   </div>
                 </div>
@@ -201,24 +201,24 @@ export function StoryboardsTab(props: Pick<
                   </Button>
                 </div>
               </div>
-              <div className="mt-3 rounded-lg border border-white/10 bg-[#2b2b2b] p-2">
-                <div className="mb-2 text-xs font-medium text-white">审核意见</div>
+              <div className="mt-3 rounded-lg border border-border bg-secondary p-2">
+                <div className="mb-2 text-xs font-medium text-foreground">审核意见</div>
                 <div className="space-y-1">
                   {projectReviews.filter((review) => review.target_type === "storyboard" && review.target_id === storyboard.id).map((review) => (
-                    <div key={review.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#202020] px-2 py-1 text-xs text-[#d8d8d8]">
-                      <span className={review.status === "open" ? "text-yellow-200" : review.status === "resolved" ? "text-emerald-200" : "text-red-200"}>{review.status === "open" ? "待处理" : review.status === "resolved" ? "已解决" : "已驳回"}</span>
+                    <div key={review.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted px-2 py-1 text-xs text-foreground/80">
+                      <span className={review.status === "open" ? "text-chart-5" : review.status === "resolved" ? "text-primary" : "text-destructive"}>{review.status === "open" ? "待处理" : review.status === "resolved" ? "已解决" : "已驳回"}</span>
                       <span className="min-w-0 flex-1 truncate">{review.comment}</span>
-                      <button className="text-emerald-200 hover:text-white" onClick={() => void updateProjectReviewItem(review, { status: "resolved" })}>通过</button>
-                      <button className="text-red-200 hover:text-white" onClick={() => void deleteProjectReviewItem(review)}>删除</button>
+                      <button className="text-primary hover:text-foreground" onClick={() => void updateProjectReviewItem(review, { status: "resolved" })}>通过</button>
+                      <button className="text-destructive hover:text-foreground" onClick={() => void deleteProjectReviewItem(review)}>删除</button>
                     </div>
                   ))}
                   {projectReviews.filter((review) => review.target_type === "storyboard" && review.target_id === storyboard.id).length === 0 && (
-                    <div className="text-xs text-[#777]">暂无审核意见</div>
+                    <div className="text-xs text-muted-foreground">暂无审核意见</div>
                   )}
                 </div>
                 <div className="mt-2 flex gap-2">
                   <input
-                    className="h-8 min-w-0 flex-1 rounded-md border border-white/10 bg-[#202020] px-2 text-xs text-white outline-none focus:border-emerald-500"
+                    className="h-8 min-w-0 flex-1 rounded-md border border-border bg-muted px-2 text-xs text-foreground outline-none focus:border-primary"
                     value={reviewDrafts[storyboard.id] ?? ""}
                     placeholder="输入返工点、通过意见或剪辑备注"
                     onChange={(event) => setReviewDrafts((drafts) => ({ ...drafts, [storyboard.id]: event.target.value }))}

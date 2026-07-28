@@ -19,32 +19,32 @@ const quickActions = [
     title: "创建新项目",
     description: "从模板或空白画布快速立项",
     href: "/projects",
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
+    color: "text-primary",
+    bg: "bg-primary/10",
   },
   {
     icon: MessageSquare,
     title: "写剧本",
     description: "AI 拆解、生成剧集大纲与对白",
     href: "/scripts",
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
+    color: "text-info",
+    bg: "bg-info/10",
   },
   {
     icon: Lightbulb,
     title: "生成分镜",
     description: "剧本自动拆分镜头并推荐景别/运镜",
     href: "/storyboards",
-    color: "text-purple-400",
-    bg: "bg-purple-500/10",
+    color: "text-chart-1",
+    bg: "bg-chart-1/10",
   },
   {
     icon: Bot,
     title: "AI 任务队列",
     description: "查看生图/生视频任务进度与失败诊断",
     href: "/ai-tasks",
-    color: "text-amber-400",
-    bg: "bg-amber-500/10",
+    color: "text-warning",
+    bg: "bg-warning/10",
   },
 ];
 
@@ -57,14 +57,14 @@ export default function AssistantPage() {
       />
 
       {/* 欢迎语 */}
-      <Card className="border-white/10 bg-[#1f1f1f] p-6">
+      <Card className="border-border bg-muted p-6">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
-            <Sparkles className="h-5 w-5 text-emerald-400" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20">
+            <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-white">你好，导演</h2>
-            <p className="mt-1 text-sm text-neutral-400">
+            <h2 className="text-base font-semibold text-foreground">你好，导演</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               今天需要帮你什么？从下方选择一个快捷操作开始，或前往对话面板与 AI 协同创作。
             </p>
           </div>
@@ -73,7 +73,7 @@ export default function AssistantPage() {
 
       {/* 快捷操作 */}
       <div>
-        <h3 className="mb-3 text-sm font-medium text-neutral-400">快捷操作</h3>
+        <h3 className="mb-3 text-sm font-medium text-muted-foreground">快捷操作</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {quickActions.map((action) => {
             const Icon = action.icon;
@@ -83,16 +83,16 @@ export default function AssistantPage() {
                 href={action.href}
                 className="group block"
               >
-                <Card className="flex items-start gap-4 border-white/10 bg-[#1a1a1a] p-5 transition-colors hover:border-white/20 hover:bg-[#222]">
+                <Card className="flex items-start gap-4 border-border bg-card p-5 transition-colors hover:border-border hover:bg-muted">
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${action.bg}`}>
                     <Icon className={`h-5 w-5 ${action.color}`} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-sm font-semibold text-white">{action.title}</h4>
-                      <ArrowRight className="h-4 w-4 text-neutral-500 transition-transform group-hover:translate-x-1 group-hover:text-white" />
+                      <h4 className="text-sm font-semibold text-foreground">{action.title}</h4>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
                     </div>
-                    <p className="mt-1 text-xs text-neutral-400">{action.description}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{action.description}</p>
                   </div>
                 </Card>
               </Link>
@@ -102,15 +102,15 @@ export default function AssistantPage() {
       </div>
 
       {/* 对话占位 */}
-      <Card className="border-dashed border-white/10 bg-[#161616] p-6">
+      <Card className="border-dashed border-border bg-card p-6">
         <div className="mb-3 flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-neutral-500" />
-          <h3 className="text-sm font-medium text-neutral-300">AI 对话（即将上线）</h3>
+          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-muted-foreground">AI 对话（即将上线）</h3>
         </div>
-        <p className="text-xs leading-relaxed text-neutral-500">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           即将接入流式对话与多模态输入，支持剧本分析、角色/场景生成、镜头建议、成本预估等能力。
-          当前可先通过 <Link className="text-emerald-400 underline" href="/scripts">剧本中心</Link>、
-          <Link className="ml-1 text-emerald-400 underline" href="/characters">角色工厂</Link>
+          当前可先通过 <Link className="text-primary underline" href="/scripts">剧本中心</Link>、
+          <Link className="ml-1 text-primary underline" href="/characters">角色工厂</Link>
           等模块使用具体 AI 功能。
         </p>
       </Card>

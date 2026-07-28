@@ -58,10 +58,10 @@ export function BatchChangeTypeMenu({
                 key={opt.value}
                 type="button"
                 onClick={() => onSelect(opt.value)}
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs text-white hover:bg-white/10"
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs text-foreground hover:bg-muted"
               >
                 {isCurrent ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <Check className="h-3.5 w-3.5 text-primary" />
                 ) : (
                   <span className="h-3.5 w-3.5" />
                 )}

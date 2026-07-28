@@ -326,7 +326,7 @@ export default function PublishCenterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#181818] text-[#ececec]">
+    <main className="min-h-screen bg-card text-foreground/90">
       {/* === 统一页面头 === */}
       <StandalonePageHeader
         title="发布准备中心"
@@ -340,7 +340,7 @@ export default function PublishCenterPage() {
             </div>
             <button
               onClick={handleRefresh}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#888] transition-colors hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="刷新数据"
               disabled={loading}
             >
@@ -402,7 +402,7 @@ export default function PublishCenterPage() {
           onDownloadVideo={handleDownloadVideo}
           onPackageVideo={handlePackageVideo}
         />
-        <div id="publish-plan-manager" className="mt-8 scroll-mt-6 rounded-xl border border-white/10 bg-[#171717] p-6">
+        <div id="publish-plan-manager" className="mt-8 scroll-mt-6 rounded-xl border border-border bg-card p-6">
           <PublishPlanManager
             plans={plans}
             availableVideos={recentVideos.filter((video) => video.publishStatus !== "published")}
@@ -414,7 +414,7 @@ export default function PublishCenterPage() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 px-6 py-4 text-xs text-[#666]">
+      <footer className="border-t border-border px-6 py-4 text-xs text-muted-foreground">
         <div className="flex items-center justify-between">
           <div>数据来源：真实API接口</div>
           <div suppressHydrationWarning>

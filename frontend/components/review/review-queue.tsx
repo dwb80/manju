@@ -174,20 +174,20 @@ export function ReviewQueue({
     storyboard: {
       label: "分镜",
       icon: Film,
-      color: "text-purple-400",
-      bgColor: "bg-purple-500/20",
+      color: "text-chart-1",
+      bgColor: "bg-chart-1/20",
     },
     asset: {
       label: "资产",
       icon: Image,
-      color: "text-amber-400",
-      bgColor: "bg-amber-500/20",
+      color: "text-warning",
+      bgColor: "bg-warning/20",
     },
     script: {
       label: "剧本",
       icon: FileText,
-      color: "text-cyan-400",
-      bgColor: "bg-cyan-500/20",
+      color: "text-chart-2",
+      bgColor: "bg-chart-2/20",
     },
   };
 
@@ -196,23 +196,23 @@ export function ReviewQueue({
     high: {
       label: "高",
       icon: ArrowUp,
-      color: "text-red-400",
-      bgColor: "bg-red-500/20",
-      borderColor: "border-red-500/30",
+      color: "text-destructive",
+      bgColor: "bg-destructive/20",
+      borderColor: "border-destructive/30",
     },
     medium: {
       label: "中",
       icon: ArrowUp,
-      color: "text-orange-400",
-      bgColor: "bg-orange-500/20",
-      borderColor: "border-orange-500/30",
+      color: "text-chart-3",
+      bgColor: "bg-chart-3/20",
+      borderColor: "border-chart-3/30",
     },
     low: {
       label: "低",
       icon: ArrowDown,
-      color: "text-blue-400",
-      bgColor: "bg-blue-500/20",
-      borderColor: "border-blue-500/30",
+      color: "text-info",
+      bgColor: "bg-info/20",
+      borderColor: "border-info/30",
     },
   };
 
@@ -221,16 +221,16 @@ export function ReviewQueue({
     pending: {
       label: "待审核",
       icon: Clock,
-      color: "text-yellow-400",
-      bgColor: "bg-yellow-500/20",
-      borderColor: "border-yellow-500/30",
+      color: "text-chart-5",
+      bgColor: "bg-chart-5/20",
+      borderColor: "border-chart-5/30",
     },
     in_review: {
       label: "审核中",
       icon: AlertTriangle,
-      color: "text-cyan-400",
-      bgColor: "bg-cyan-500/20",
-      borderColor: "border-cyan-500/30",
+      color: "text-chart-2",
+      bgColor: "bg-chart-2/20",
+      borderColor: "border-chart-2/30",
     },
   };
 
@@ -382,20 +382,20 @@ export function ReviewQueue({
         {/* 统计信息骨架 */}
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-white/5" />
+            <div key={i} className="h-24 animate-pulse rounded-xl bg-muted/50" />
           ))}
         </div>
 
         {/* 排序和筛选骨架 */}
         <div className="flex gap-3">
-          <div className="h-10 w-40 animate-pulse rounded-lg bg-white/5" />
-          <div className="h-10 w-40 animate-pulse rounded-lg bg-white/5" />
+          <div className="h-10 w-40 animate-pulse rounded-lg bg-muted/50" />
+          <div className="h-10 w-40 animate-pulse rounded-lg bg-muted/50" />
         </div>
 
         {/* 审核列表骨架 */}
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-20 animate-pulse rounded-lg bg-white/5" />
+            <div key={i} className="h-20 animate-pulse rounded-lg bg-muted/50" />
           ))}
         </div>
       </div>
@@ -407,12 +407,12 @@ export function ReviewQueue({
       {/* 标题区域 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-cyan-500/20">
-            <CheckCircle2 className="h-5 w-5 text-purple-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-chart-1/20 to-chart-2/20">
+            <CheckCircle2 className="h-5 w-5 text-chart-1" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">待审核队列</h2>
-            <p className="text-sm text-[#888]">
+            <h2 className="text-lg font-bold text-foreground">待审核队列</h2>
+            <p className="text-sm text-muted-foreground">
               {projectId ? "项目审核" : "跨项目审核"} · 共 {pendingReviews.length} 项待审核
             </p>
           </div>
@@ -423,7 +423,7 @@ export function ReviewQueue({
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             {isRefreshing ? "刷新中..." : "刷新"}
@@ -434,40 +434,40 @@ export function ReviewQueue({
       {/* 统计信息卡片 */}
       <div className="grid grid-cols-3 gap-4">
         {/* 待审核总数 */}
-        <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-500/10 to-purple-500/5 p-4">
+        <div className="rounded-xl border border-border bg-gradient-to-br from-chart-1/10 to-chart-1/5 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/20">
-              <FileText className="h-5 w-5 text-purple-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-1/20">
+              <FileText className="h-5 w-5 text-chart-1" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{statistics.total}</div>
-              <div className="text-xs text-[#888]">待审核总数</div>
+              <div className="text-2xl font-bold text-foreground">{statistics.total}</div>
+              <div className="text-xs text-muted-foreground">待审核总数</div>
             </div>
           </div>
         </div>
 
         {/* 高优先级数量 */}
-        <div className="rounded-xl border border-white/10 bg-gradient-to-br from-red-500/10 to-red-500/5 p-4">
+        <div className="rounded-xl border border-border bg-gradient-to-br from-destructive/10 to-destructive/5 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/20">
-              <AlertTriangle className="h-5 w-5 text-red-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/20">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{statistics.highPriority}</div>
-              <div className="text-xs text-[#888]">高优先级</div>
+              <div className="text-2xl font-bold text-foreground">{statistics.highPriority}</div>
+              <div className="text-xs text-muted-foreground">高优先级</div>
             </div>
           </div>
         </div>
 
         {/* 今日新增 */}
-        <div className="rounded-xl border border-white/10 bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 p-4">
+        <div className="rounded-xl border border-border bg-gradient-to-br from-chart-2/10 to-chart-2/5 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-500/20">
-              <Calendar className="h-5 w-5 text-cyan-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-2/20">
+              <Calendar className="h-5 w-5 text-chart-2" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{statistics.todayCount}</div>
-              <div className="text-xs text-[#888]">今日新增</div>
+              <div className="text-2xl font-bold text-foreground">{statistics.todayCount}</div>
+              <div className="text-xs text-muted-foreground">今日新增</div>
             </div>
           </div>
         </div>
@@ -475,16 +475,16 @@ export function ReviewQueue({
 
       {/* 排序和筛选工具栏 */}
       <div className="flex items-center gap-3">
-        <Filter className="h-4 w-4 text-[#888]" />
-        <span className="text-sm text-[#888]">排序：</span>
+        <Filter className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">排序：</span>
 
         {/* 优先级排序 */}
         <button
           onClick={() => setSortBy("priority")}
           className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
             sortBy === "priority"
-              ? "border-purple-500/50 bg-purple-500/20 text-purple-400"
-              : "border-white/10 bg-white/5 text-[#888] hover:bg-white/10 hover:text-white"
+              ? "border-chart-1/50 bg-chart-1/20 text-chart-1"
+              : "border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
           按优先级
@@ -502,8 +502,8 @@ export function ReviewQueue({
           }}
           className={`flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
             sortBy === "time"
-              ? "border-cyan-500/50 bg-cyan-500/20 text-cyan-400"
-              : "border-white/10 bg-white/5 text-[#888] hover:bg-white/10 hover:text-white"
+              ? "border-chart-2/50 bg-chart-2/20 text-chart-2"
+              : "border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
           按提交时间
@@ -514,10 +514,10 @@ export function ReviewQueue({
       {/* 审核列表 */}
       <div className="space-y-2">
         {sortedReviews.length === 0 ? (
-          <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-white/10 bg-[#181818] text-center">
-            <CheckCircle2 className="mb-3 h-12 w-12 text-[#333]" />
-            <p className="text-sm text-[#666]">暂无待审核项</p>
-            <p className="mt-1 text-xs text-[#444]">所有审核已完成</p>
+          <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-border bg-card text-center">
+            <CheckCircle2 className="mb-3 h-12 w-12 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">暂无待审核项</p>
+            <p className="mt-1 text-xs text-muted-foreground">所有审核已完成</p>
           </div>
         ) : (
           sortedReviews.map((review) => {
@@ -532,7 +532,7 @@ export function ReviewQueue({
             return (
               <div
                 key={review.id}
-                className="overflow-hidden rounded-xl border border-white/10 bg-[#181818] transition-all hover:border-white/20"
+                className="overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-border"
               >
                 {/* 审核项主内容 */}
                 <div
@@ -547,12 +547,12 @@ export function ReviewQueue({
                   {/* 中间：审核信息 */}
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-white">{review.targetName}</span>
+                      <span className="font-medium text-foreground">{review.targetName}</span>
                       <span className={`rounded px-1.5 py-0.5 text-xs ${typeConfig.bgColor} ${typeConfig.color}`}>
                         {typeConfig.label}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-[#888]">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       {review.submitter && (
                         <div className="flex items-center gap-1">
                           <User className="h-3 w-3" />
@@ -565,7 +565,7 @@ export function ReviewQueue({
                       </div>
                       {!projectId && (
                         <div className="flex items-center gap-1">
-                          <span className="text-[#666]">项目:</span>
+                          <span className="text-muted-foreground">项目:</span>
                           <span>{review.projectName}</span>
                         </div>
                       )}
@@ -592,20 +592,20 @@ export function ReviewQueue({
 
                     {/* 展开/收起图标 */}
                     {isExpanded ? (
-                      <ChevronUp className="h-5 w-5 text-[#888]" />
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
                     ) : (
-                      <ChevronDown className="h-5 w-5 text-[#888]" />
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
                     )}
                   </div>
                 </div>
 
                 {/* 展开的详情区域 */}
                 {isExpanded && (
-                  <div className="border-t border-white/10 bg-white/[0.02] p-4">
+                  <div className="border-t border-border bg-muted/30 p-4">
                     {/* 缩略图和描述 */}
                     <div className="mb-4 flex gap-4">
                       {review.thumbnailUrl && (
-                        <div className="h-32 w-32 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                        <div className="h-32 w-32 flex-shrink-0 overflow-hidden rounded-lg border border-border bg-muted/50">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={review.thumbnailUrl}
@@ -615,28 +615,28 @@ export function ReviewQueue({
                         </div>
                       )}
                       <div className="flex-1 space-y-2">
-                        <h4 className="text-xs font-semibold text-[#888]">审核详情</h4>
+                        <h4 className="text-xs font-semibold text-muted-foreground">审核详情</h4>
                         {review.description && (
-                          <p className="text-sm text-white">{review.description}</p>
+                          <p className="text-sm text-foreground">{review.description}</p>
                         )}
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <span className="text-[#666]">审核对象类型：</span>
-                            <span className="text-white">{typeConfig.label}</span>
+                            <span className="text-muted-foreground">审核对象类型：</span>
+                            <span className="text-foreground">{typeConfig.label}</span>
                           </div>
                           <div>
-                            <span className="text-[#666]">审核对象ID：</span>
-                            <span className="font-mono text-white">{review.targetId}</span>
+                            <span className="text-muted-foreground">审核对象ID：</span>
+                            <span className="font-mono text-foreground">{review.targetId}</span>
                           </div>
                           {review.submitter && (
                             <div>
-                              <span className="text-[#666]">提交人：</span>
-                              <span className="text-white">{review.submitter}</span>
+                              <span className="text-muted-foreground">提交人：</span>
+                              <span className="text-foreground">{review.submitter}</span>
                             </div>
                           )}
                           <div>
-                            <span className="text-[#666]">提交时间：</span>
-                            <span className="text-white">
+                            <span className="text-muted-foreground">提交时间：</span>
+                            <span className="text-foreground">
                               {new Date(review.submittedAt).toLocaleString("zh-CN")}
                             </span>
                           </div>
@@ -646,13 +646,13 @@ export function ReviewQueue({
 
                     {/* 审核意见输入 */}
                     <div className="mb-4">
-                      <label className="mb-2 block text-xs font-semibold text-[#888]">审核意见</label>
+                      <label className="mb-2 block text-xs font-semibold text-muted-foreground">审核意见</label>
                       <textarea
                         value={reviewComments[review.id] || ""}
                         onChange={(e) => updateComment(review.id, e.target.value)}
                         placeholder="请输入审核意见（可选）..."
                         rows={3}
-                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-[#666] focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                        className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-chart-1/50 focus:outline-none focus:ring-1 focus:ring-chart-1/50"
                       />
                     </div>
 
@@ -663,7 +663,7 @@ export function ReviewQueue({
                           e.stopPropagation();
                           handleRequestChanges(review.id);
                         }}
-                        className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-sm font-medium text-orange-400 transition-colors hover:bg-orange-500/20"
+                        className="flex items-center gap-2 rounded-lg border border-chart-3/30 bg-chart-3/10 px-4 py-2 text-sm font-medium text-chart-3 transition-colors hover:bg-chart-3/20"
                       >
                         <AlertTriangle className="h-4 w-4" />
                         需修改
@@ -673,7 +673,7 @@ export function ReviewQueue({
                           e.stopPropagation();
                           handleReject(review.id);
                         }}
-                        className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20"
+                        className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20"
                       >
                         <XCircle className="h-4 w-4" />
                         驳回
@@ -683,7 +683,7 @@ export function ReviewQueue({
                           e.stopPropagation();
                           handleApprove(review.id);
                         }}
-                        className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20"
+                        className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
                       >
                         <CheckCircle2 className="h-4 w-4" />
                         通过
@@ -699,7 +699,7 @@ export function ReviewQueue({
 
       {/* 底部统计 */}
       {sortedReviews.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs text-[#888]">
+        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 px-4 py-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
             <span>显示 {sortedReviews.length} 个待审核项</span>
             <div className="flex items-center gap-3">

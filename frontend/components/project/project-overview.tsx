@@ -33,15 +33,15 @@ export function ProjectOverview({ projects, onOpenProject, onCreateConversation,
     .slice(0, 5);
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-[#181818] p-8">
+    <div className="flex h-full flex-col overflow-y-auto bg-card p-8">
       <div className="mx-auto w-full max-w-5xl space-y-8">
         {/* 欢迎区域 */}
         <div className="text-center">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 text-emerald-400">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary">
             <Film className="h-8 w-8" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-white">欢迎来到 Agnes AI Studio</h1>
-          <p className="mt-2 text-sm text-[#a0a0a0]">AI漫剧创作项目管理系统 · 从剧本到交付的全流程管理</p>
+          <h1 className="mt-4 text-2xl font-bold text-foreground">欢迎来到 Agnes AI Studio</h1>
+          <p className="mt-2 text-sm text-muted-foreground">AI漫剧创作项目管理系统 · 从剧本到交付的全流程管理</p>
         </div>
 
         {/* 快捷操作面板 */}
@@ -70,8 +70,8 @@ export function ProjectOverview({ projects, onOpenProject, onCreateConversation,
         </div>
 
         {/* 工作流程入口 */}
-        <div className="rounded-2xl border border-white/10 bg-[#202020] p-6">
-          <h2 className="mb-4 text-base font-semibold text-white">工作流程</h2>
+        <div className="rounded-2xl border border-border bg-muted p-6">
+          <h2 className="mb-4 text-base font-semibold text-foreground">工作流程</h2>
           <div className="flex items-center justify-between gap-2">
             <WorkflowStage number={1} label="剧本" icon={<FileText className="h-4 w-4" />} />
             <WorkflowConnector />
@@ -86,22 +86,22 @@ export function ProjectOverview({ projects, onOpenProject, onCreateConversation,
         </div>
 
         {/* 最近项目卡片 */}
-        <div className="rounded-2xl border border-white/10 bg-[#202020] p-6">
+        <div className="rounded-2xl border border-border bg-muted p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-white">最近项目</h2>
+            <h2 className="text-base font-semibold text-foreground">最近项目</h2>
             {projects.length > 0 && (
-              <button className="text-xs text-[#a0a0a0] transition-colors hover:text-white" onClick={onCreateConversation}>
+              <button className="text-xs text-muted-foreground transition-colors hover:text-foreground" onClick={onCreateConversation}>
                 查看全部
               </button>
             )}
           </div>
           {projects.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/10 bg-[#181818] p-8 text-center">
-              <div className="mx-auto mb-3 h-12 w-12 rounded-xl bg-[#2a2a2a] flex items-center justify-center">
-                <FolderOpen className="h-6 w-6 text-[#666]" />
+            <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
+              <div className="mx-auto mb-3 h-12 w-12 rounded-xl bg-secondary flex items-center justify-center">
+                <FolderOpen className="h-6 w-6 text-muted-foreground" />
               </div>
-              <div className="text-sm text-[#888]">还没有项目</div>
-              <button className="mt-3 text-sm text-emerald-400 transition-colors hover:text-emerald-300" onClick={onCreateConversation}>
+              <div className="text-sm text-muted-foreground">还没有项目</div>
+              <button className="mt-3 text-sm text-primary transition-colors hover:text-primary" onClick={onCreateConversation}>
                 创建第一个项目
               </button>
             </div>
@@ -110,7 +110,7 @@ export function ProjectOverview({ projects, onOpenProject, onCreateConversation,
               {/* 置顶项目 */}
               {pinnedProjects.length > 0 && (
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-[#777]">置顶</div>
+                  <div className="text-xs font-medium text-muted-foreground">置顶</div>
                   {pinnedProjects.map((project) => (
                     <ProjectCard key={project.id} project={project} onClick={() => onOpenProject(project.id)} />
                   ))}
@@ -119,7 +119,7 @@ export function ProjectOverview({ projects, onOpenProject, onCreateConversation,
               {/* 最近项目 */}
               {recentProjects.length > 0 && (
                 <div className="space-y-2">
-                  {pinnedProjects.length > 0 && <div className="mt-4 text-xs font-medium text-[#777]">最近访问</div>}
+                  {pinnedProjects.length > 0 && <div className="mt-4 text-xs font-medium text-muted-foreground">最近访问</div>}
                   {recentProjects.map((project) => (
                     <ProjectCard key={project.id} project={project} onClick={() => onOpenProject(project.id)} />
                   ))}
@@ -148,19 +148,19 @@ function QuickActionCard({
   color: "emerald" | "blue" | "purple";
 }) {
   const colorClasses = {
-    emerald: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
-    blue: "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20",
-    purple: "bg-purple-500/10 text-purple-400 hover:bg-purple-500/20",
+    emerald: "bg-primary/10 text-primary hover:bg-primary/20",
+    blue: "bg-info/10 text-info hover:bg-info/20",
+    purple: "bg-chart-1/10 text-chart-1 hover:bg-chart-1/20",
   };
 
   return (
     <button
-      className={`group rounded-xl border border-white/10 bg-[#202020] p-5 text-left transition-all duration-200 hover:scale-[1.02] hover:border-white/20 ${colorClasses[color]}`}
+      className={`group rounded-xl border border-border bg-muted p-5 text-left transition-all duration-200 hover:scale-[1.02] hover:border-border ${colorClasses[color]}`}
       onClick={onClick}
     >
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white/5">{icon}</div>
-      <div className="text-sm font-semibold text-white">{title}</div>
-      <div className="mt-1 text-xs text-[#888]">{description}</div>
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-muted/50">{icon}</div>
+      <div className="text-sm font-semibold text-foreground">{title}</div>
+      <div className="mt-1 text-xs text-muted-foreground">{description}</div>
     </button>
   );
 }
@@ -170,12 +170,12 @@ function WorkflowStage({ number, label, icon, color = "default" }: { number: num
   return (
     <div className="flex flex-col items-center gap-2">
       <div
-        className={`flex h-12 w-12 items-center justify-center rounded-xl border ${color === "emerald" ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-white/10 bg-[#2a2a2a] text-[#a0a0a0]"
+        className={`flex h-12 w-12 items-center justify-center rounded-xl border ${color === "emerald" ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-secondary text-muted-foreground"
           }`}
       >
         {icon || <span className="text-sm font-semibold">{number}</span>}
       </div>
-      <div className={`text-xs font-medium ${color === "emerald" ? "text-emerald-400" : "text-[#a0a0a0]"}`}>{label}</div>
+      <div className={`text-xs font-medium ${color === "emerald" ? "text-primary" : "text-muted-foreground"}`}>{label}</div>
     </div>
   );
 }
@@ -188,36 +188,36 @@ function WorkflowConnector() {
 /** 项目卡片。 */
 function ProjectCard({ project, onClick }: { project: Project; onClick: () => void }) {
   const statusColors: Record<string, string> = {
-    策划中: "bg-yellow-500/10 text-yellow-400",
-    剧本中: "bg-blue-500/10 text-blue-400",
-    分镜中: "bg-purple-500/10 text-purple-400",
-    出图中: "bg-orange-500/10 text-orange-400",
-    视频中: "bg-pink-500/10 text-pink-400",
-    剪辑中: "bg-cyan-500/10 text-cyan-400",
-    已完成: "bg-emerald-500/10 text-emerald-400",
+    策划中: "bg-chart-5/10 text-chart-5",
+    剧本中: "bg-info/10 text-info",
+    分镜中: "bg-chart-1/10 text-chart-1",
+    出图中: "bg-chart-3/10 text-chart-3",
+    视频中: "bg-chart-4/10 text-chart-4",
+    剪辑中: "bg-chart-2/10 text-chart-2",
+    已完成: "bg-primary/10 text-primary",
   };
 
-  const statusColor = statusColors[project.status] || "bg-white/10 text-white";
+  const statusColor = statusColors[project.status] || "bg-muted text-foreground";
 
   return (
     <button
-      className="group w-full rounded-lg border border-white/10 bg-[#2a2a2a] p-4 text-left transition-all duration-200 hover:border-white/20 hover:bg-[#303030]"
+      className="group w-full rounded-lg border border-border bg-secondary p-4 text-left transition-all duration-200 hover:border-border hover:bg-secondary"
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <div className="truncate text-sm font-semibold text-white">{project.name}</div>
-            {project.is_pinned && <span className="shrink-0 text-[10px] text-yellow-400">📌</span>}
+            <div className="truncate text-sm font-semibold text-foreground">{project.name}</div>
+            {project.is_pinned && <span className="shrink-0 text-[10px] text-chart-5">📌</span>}
           </div>
-          <div className="mt-1 flex items-center gap-3 text-xs text-[#888]">
+          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
             <span className={`rounded-md px-2 py-0.5 ${statusColor}`}>{project.status || "策划中"}</span>
             {project.category && <span>{project.category}</span>}
             {project.episode_count > 0 && <span>{project.episode_count} 集</span>}
           </div>
-          {project.description && <div className="mt-2 line-clamp-1 text-xs text-[#777]">{project.description}</div>}
+          {project.description && <div className="mt-2 line-clamp-1 text-xs text-muted-foreground">{project.description}</div>}
         </div>
-        <div className="text-xs text-[#666]">{formatRelativeTime(project.updated_at)}</div>
+        <div className="text-xs text-muted-foreground">{formatRelativeTime(project.updated_at)}</div>
       </div>
     </button>
   );

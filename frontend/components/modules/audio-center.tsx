@@ -119,7 +119,7 @@ function AssociateStoryboardDialog({
       <DialogContent className="border-border">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <LinkIcon className="h-4 w-4 text-emerald-400" />
+            <LinkIcon className="h-4 w-4 text-primary" />
             关联分镜 · {audio.name}
           </DialogTitle>
           <DialogDescription>将这条音频绑定到指定分镜，或解除关联</DialogDescription>
@@ -207,7 +207,7 @@ function TimelineDialog({
       <DialogContent className="border-border">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-orange-400" />
+            <Clock className="h-4 w-4 text-chart-3" />
             时间轴编辑 · {audio.name}
           </DialogTitle>
           <DialogDescription>设置音频在时间轴上的起始和结束位置（秒），用于与视频对齐</DialogDescription>
@@ -225,7 +225,7 @@ function TimelineDialog({
               placeholder="例如: 0.0"
               className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/40"
             />
-            <p className="text-[10px] text-[#666] mt-1">留空表示不设置起始时间</p>
+            <p className="text-[10px] text-muted-foreground mt-1">留空表示不设置起始时间</p>
           </div>
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">结束时间（秒）</label>
@@ -238,10 +238,10 @@ function TimelineDialog({
               placeholder="例如: 5.5"
               className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/40"
             />
-            <p className="text-[10px] text-[#666] mt-1">留空表示不设置结束时间</p>
+            <p className="text-[10px] text-muted-foreground mt-1">留空表示不设置结束时间</p>
           </div>
-          <div className="rounded-md bg-orange-500/5 border border-orange-500/20 px-3 py-2">
-            <p className="text-xs text-orange-300/80">
+          <div className="rounded-md bg-chart-3/5 border border-chart-3/20 px-3 py-2">
+            <p className="text-xs text-chart-3/80">
               提示：设置时间轴后，音频将在视频编辑时自动对齐到指定位置。
             </p>
           </div>
@@ -336,7 +336,7 @@ function TTSDialog({
       <DialogContent className="border-border">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Mic className="h-4 w-4 text-emerald-400" />
+            <Mic className="h-4 w-4 text-primary" />
             AI 配音 · {audio.name}
           </DialogTitle>
           <DialogDescription>输入配音文本并选择角色与语速，生成新的音频文件</DialogDescription>
@@ -369,7 +369,7 @@ function TTSDialog({
 
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">
-              语速：<span className="text-emerald-300">{speed.toFixed(1)}x</span>
+              语速：<span className="text-primary">{speed.toFixed(1)}x</span>
             </label>
             <input
               type="range"
@@ -423,14 +423,14 @@ function AudioCard({
   onTimelineClick: (a: AudioItem) => void;
 }) {
   const type = (a.type ?? "voiceover") as AudioType;
-  const color = AUDIO_TYPE_COLORS[type] ?? "bg-gray-500/20 text-gray-400";
+  const color = AUDIO_TYPE_COLORS[type] ?? "bg-muted/20 text-muted-foreground";
   const label = AUDIO_TYPE_LABELS[type] ?? type;
   const display = getEntityLabel(a, "未命名音频");
   return (
     <div
-      className={`group relative rounded-lg border bg-[#202020] p-3 transition-colors ${actions.selected
-        ? "border-emerald-500 ring-1 ring-emerald-500/40"
-        : "border-white/10 hover:border-emerald-500/50"
+      className={`group relative rounded-lg border bg-muted p-3 transition-colors ${actions.selected
+        ? "border-primary ring-1 ring-primary/40"
+        : "border-border hover:border-primary/50"
         }`}
     >
       <div className="flex items-center gap-3">
@@ -441,40 +441,40 @@ function AudioCard({
             actions.onToggleSelect();
           }}
           className={`grid h-5 w-5 shrink-0 place-items-center rounded border transition-opacity ${actions.selected
-            ? "border-emerald-500 bg-emerald-500 opacity-100"
-            : "border-white/40 bg-black/30 opacity-0 group-hover:opacity-100 hover:border-emerald-400"
+            ? "border-primary bg-primary opacity-100"
+            : "border-border bg-black/30 opacity-0 group-hover:opacity-100 hover:border-primary"
             }`}
           aria-label={actions.selected ? "取消选择" : "选择"}
         >
-          {actions.selected && <CheckSquare className="h-3 w-3 text-white" />}
+          {actions.selected && <CheckSquare className="h-3 w-3 text-foreground" />}
         </button>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-          <Music className="h-5 w-5 text-emerald-400" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Music className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h3 className="font-medium text-white text-sm truncate">{display}</h3>
+            <h3 className="font-medium text-foreground text-sm truncate">{display}</h3>
             <span className={`px-2 py-0.5 rounded text-xs ${color}`}>{label}</span>
-            <span className="text-emerald-300/90 bg-emerald-500/10 px-1.5 py-0.5 rounded text-xs">
+            <span className="text-primary/90 bg-primary/10 px-1.5 py-0.5 rounded text-xs">
               第 {a.episode ?? 1} 集
             </span>
-            <span className="text-xs text-[#888]">时长: {formatDuration(a.duration ?? 0)}</span>
-            {a.speaker && <span className="text-xs text-[#888]">说话人: {a.speaker}</span>}
-            {a.format && <span className="text-xs text-[#888]">格式: {a.format}</span>}
+            <span className="text-xs text-muted-foreground">时长: {formatDuration(a.duration ?? 0)}</span>
+            {a.speaker && <span className="text-xs text-muted-foreground">说话人: {a.speaker}</span>}
+            {a.format && <span className="text-xs text-muted-foreground">格式: {a.format}</span>}
             {a.storyboard_id && (
-              <span className="inline-flex items-center gap-1 text-xs text-blue-300/90 bg-blue-500/10 px-1.5 py-0.5 rounded" title="已关联分镜">
+              <span className="inline-flex items-center gap-1 text-xs text-info/90 bg-info/10 px-1.5 py-0.5 rounded" title="已关联分镜">
                 <Film className="h-3 w-3" />
                 已关联分镜
               </span>
             )}
             {a.shot_id && (
-              <span className="inline-flex items-center gap-1 text-xs text-purple-300/90 bg-purple-500/10 px-1.5 py-0.5 rounded" title="已关联镜头">
+              <span className="inline-flex items-center gap-1 text-xs text-chart-1/90 bg-chart-1/10 px-1.5 py-0.5 rounded" title="已关联镜头">
                 <Film className="h-3 w-3" />
                 已关联镜头
               </span>
             )}
             {(a.start_time !== undefined || a.end_time !== undefined) && (
-              <span className="text-xs text-orange-300/90 bg-orange-500/10 px-1.5 py-0.5 rounded">
+              <span className="text-xs text-chart-3/90 bg-chart-3/10 px-1.5 py-0.5 rounded">
                 {formatTime(a.start_time ?? 0)} - {formatTime(a.end_time ?? (a.duration ?? 0))}
               </span>
             )}
@@ -487,7 +487,7 @@ function AudioCard({
               preload="metadata"
             />
           ) : (
-            <div className="text-[10px] text-[#666] mt-1">尚未生成音频文件</div>
+            <div className="text-[10px] text-muted-foreground mt-1">尚未生成音频文件</div>
           )}
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -496,7 +496,7 @@ function AudioCard({
             size="sm"
             onClick={() => onTTSClick(a)}
             title="AI 配音"
-            className="text-emerald-300"
+            className="text-primary"
           >
             <Mic className="h-4 w-4" />
           </Button>
@@ -505,7 +505,7 @@ function AudioCard({
             size="sm"
             onClick={() => onTimelineClick(a)}
             title="编辑时间轴"
-            className="text-orange-300"
+            className="text-chart-3"
           >
             <Clock className="h-4 w-4" />
           </Button>
@@ -514,14 +514,14 @@ function AudioCard({
             size="sm"
             onClick={() => onAssociateClick(a)}
             title="关联分镜"
-            className="text-blue-300"
+            className="text-info"
           >
             <LinkIcon className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={actions.onEdit}>
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={actions.onDelete} className="text-red-400">
+          <Button variant="ghost" size="sm" onClick={actions.onDelete} className="text-destructive">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>

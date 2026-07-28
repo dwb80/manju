@@ -26,14 +26,14 @@ export function Avatar({ src, name, size = 40, className = "" }: AvatarProps) {
 
   // 基于 name 哈希生成颜色
   const colors = [
-    "bg-emerald-500/20 text-emerald-400",
-    "bg-blue-500/20 text-blue-400",
-    "bg-purple-500/20 text-purple-400",
-    "bg-orange-500/20 text-orange-400",
-    "bg-pink-500/20 text-pink-400",
-    "bg-cyan-500/20 text-cyan-400",
-    "bg-yellow-500/20 text-yellow-400",
-    "bg-red-500/20 text-red-400",
+    "bg-primary/20 text-primary",
+    "bg-info/20 text-info",
+    "bg-chart-1/20 text-chart-1",
+    "bg-chart-3/20 text-chart-3",
+    "bg-chart-4/20 text-chart-4",
+    "bg-chart-2/20 text-chart-2",
+    "bg-chart-5/20 text-chart-5",
+    "bg-destructive/20 text-destructive",
   ];
 
   let hash = 0;
@@ -51,7 +51,7 @@ export function Avatar({ src, name, size = 40, className = "" }: AvatarProps) {
   if (src) {
     return (
       <div
-        className={`overflow-hidden rounded-full bg-[#1a1a1a] flex-shrink-0 ${className}`}
+        className={`overflow-hidden rounded-full bg-card flex-shrink-0 ${className}`}
         style={dimensionStyle}
       >
         <img

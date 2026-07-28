@@ -256,7 +256,7 @@ export default function ModelsPage() {
   const videoModels = models.filter((m) => m.type === "video");
 
   return (
-    <main className="min-h-screen bg-[#181818] text-[#ececec]">
+    <main className="min-h-screen bg-card text-foreground/90">
       {/* === 统一页面头 === */}
       <StandalonePageHeader
         title="模型中心"
@@ -342,7 +342,7 @@ export default function ModelsPage() {
       />
 
       {/* 页面底部信息 */}
-      <footer className="border-t border-white/10 px-6 py-4 text-xs text-[#666]">
+      <footer className="border-t border-border px-6 py-4 text-xs text-muted-foreground">
         <div className="flex items-center justify-between">
           <div>数据来源：后端API接口 /api/models</div>
           <div>加载状态：{isLoading ? "加载中" : "已就绪"}</div>

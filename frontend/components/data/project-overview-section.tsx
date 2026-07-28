@@ -15,11 +15,11 @@ type Overview = {
 function MetricGroup({ title, value }: { title: string; value: Record<string, unknown> | null }) {
   const entries = Object.entries(value ?? {}).filter(([key]) => key !== "project_id").slice(0, 4);
   return (
-    <article className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-      <h3 className="text-sm font-medium text-white">{title}</h3>
+    <article className="rounded-xl border border-border bg-muted/40 p-4">
+      <h3 className="text-sm font-medium text-foreground">{title}</h3>
       {entries.length ? <dl className="mt-3 grid grid-cols-2 gap-3">{entries.map(([key, item]) => (
-        <div key={key}><dt className="truncate text-xs text-neutral-500">{key}</dt><dd className="mt-1 text-sm text-neutral-200">{String(item ?? "-")}</dd></div>
-      ))}</dl> : <p className="mt-3 text-xs text-neutral-500">当前项目暂无数据</p>}
+        <div key={key}><dt className="truncate text-xs text-muted-foreground">{key}</dt><dd className="mt-1 text-sm text-foreground">{String(item ?? "-")}</dd></div>
+      ))}</dl> : <p className="mt-3 text-xs text-muted-foreground">当前项目暂无数据</p>}
     </article>
   );
 }
@@ -36,7 +36,7 @@ export function ProjectOverviewSection() {
       .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : "加载失败"); });
     return () => { active = false; };
   }, [projectId]);
-  if (!projectId) return <div className="rounded-xl border border-dashed border-white/10 p-5 text-sm text-neutral-500">选择项目后查看项目成本、质量与产能。</div>;
-  if (error) return <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-300">项目概览加载失败：{error}</div>;
+  if (!projectId) return <div className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">选择项目后查看项目成本、质量与产能。</div>;
+  if (error) return <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">项目概览加载失败：{error}</div>;
   return <div className="grid gap-4 md:grid-cols-3"><MetricGroup title="项目成本" value={overview?.costs ?? null} /><MetricGroup title="质量表现" value={overview?.quality ?? null} /><MetricGroup title="生产产能" value={overview?.capacity ?? null} /></div>;
 }

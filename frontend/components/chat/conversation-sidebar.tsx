@@ -112,74 +112,74 @@ export function ConversationSidebar({
   const router = useRouter();
 
   return (
-    <aside className="agnes-sidebar flex min-h-0 flex-col border-r border-white/10 p-4 max-md:hidden w-[280px]">
+    <aside className="agnes-sidebar flex min-h-0 flex-col border-r border-border p-4 max-md:hidden w-[280px]">
       <div className="mb-4 flex items-center justify-between">
         <div className="text-sm font-semibold">Agnes AI Studio</div>
-        <Button aria-label="新建会话" size="icon" variant="ghost" onClick={onCreateConversation} className="transition-all duration-200 hover:scale-105 hover:bg-white/10">
+        <Button aria-label="新建会话" size="icon" variant="ghost" onClick={onCreateConversation} className="transition-all duration-200 hover:scale-105 hover:bg-muted">
           <Plus className="h-4 w-4" />
         </Button>
       </div>
       <div className="relative mb-4">
         <button
-          className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-[#202020] px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-white/5 hover:border-white/20"
+          className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-muted/50 hover:border-border"
           onClick={onToggleProjectMenu}
         >
           <span className="flex min-w-0 items-center gap-2">
-            <Folder className="h-4 w-4 shrink-0 text-[#d8d8d8]" />
+            <Folder className="h-4 w-4 shrink-0 text-foreground/80" />
             <span className="truncate">{projectScopeLabel}</span>
           </span>
-          <MoreHorizontal className="h-4 w-4 text-[#d8d8d8]" />
+          <MoreHorizontal className="h-4 w-4 text-foreground/80" />
         </button>
         {projectMenuOpen && (
-          <div className="absolute left-0 right-0 top-12 z-50 rounded-xl border border-white/10 bg-[#2f2f2f] p-2 text-sm shadow-lg transition-all duration-200">
+          <div className="absolute left-0 right-0 top-12 z-50 rounded-xl border border-border bg-secondary p-2 text-sm shadow-lg transition-all duration-200">
             {[
               { id: "all", name: "全部项目" },
               { id: "", name: "不使用项目" },
             ].map((item) => (
               <button
                 key={item.name}
-                className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10"
+                className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted"
                 onClick={() => onSelectScope(item.id)}
               >
                 <span className="truncate">{item.name}</span>
-                {projectScope === item.id && <Check className="h-4 w-4 text-emerald-400" />}
+                {projectScope === item.id && <Check className="h-4 w-4 text-primary" />}
               </button>
             ))}
-            <div className="my-1.5 h-px bg-white/10" />
+            <div className="my-1.5 h-px bg-muted" />
             {projects.map((project) => (
               <button
                 key={project.id}
-                className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10"
+                className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted"
                 onClick={() => onSelectProject(project)}
               >
                 <span className="min-w-0">
                   <span className="block truncate">{project.name}</span>
-                  {project.storage_path && <span className="block truncate text-[11px] font-medium text-[#d0d0d0]">{project.storage_path}</span>}
+                  {project.storage_path && <span className="block truncate text-[11px] font-medium text-foreground/80">{project.storage_path}</span>}
                 </span>
-                {projectScope === project.id && <Check className="h-4 w-4 text-emerald-400" />}
+                {projectScope === project.id && <Check className="h-4 w-4 text-primary" />}
               </button>
             ))}
-            <div className="my-1.5 h-px bg-white/10" />
+            <div className="my-1.5 h-px bg-muted" />
             <div className="relative">
               <button
-                className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10"
+                className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted"
                 onClick={onToggleProjectCreateMenu}
               >
                 <span className="flex items-center gap-2">
                   <Plus className="h-4 w-4" />新建项目
                 </span>
-                <span className="text-[#d8d8d8]">›</span>
+                <span className="text-foreground/80">›</span>
               </button>
               {projectCreateMenuOpen && (
-                <div className="absolute bottom-0 left-full z-50 ml-2 w-56 rounded-xl border border-white/10 bg-[#2f2f2f] p-2 shadow-lg transition-all duration-200">
+                <div className="absolute bottom-0 left-full z-50 ml-2 w-56 rounded-xl border border-border bg-secondary p-2 shadow-lg transition-all duration-200">
                   <button
-                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10"
+                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted"
                     onClick={() => onCreateProject("managed")}
                   >
                     <Plus className="h-4 w-4" />新建空白项目
                   </button>
                   <button
-                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10"
+                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted"
                     onClick={() => onCreateProject("existing")}
                   >
                     <Folder className="h-4 w-4" />使用现有文件夹
@@ -194,13 +194,13 @@ export function ConversationSidebar({
         <div className="space-y-4 pr-1">
           {conversationGroups.map((group) => (
             <div key={group.id || "unassigned"} className="space-y-2">
-              <div className="group/project relative flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-[#dddddd] transition-all duration-200 hover:bg-white/5">
+              <div className="group/project relative flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-foreground/80 transition-all duration-200 hover:bg-muted/50">
                 <Folder className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{projectById.get(group.id)?.is_pinned ? "★ " : ""}{group.name}</span>
                 {group.id && projectById.has(group.id) && (
                   <button
                     aria-label="打开项目操作菜单"
-                    className={`ml-auto grid h-6 w-6 shrink-0 place-items-center rounded-md transition-all duration-200 hover:bg-white/10 hover:text-white ${projectActionMenuId === group.id ? "opacity-100" : "opacity-0 group-hover/project:opacity-100"}`}
+                    className={`ml-auto grid h-6 w-6 shrink-0 place-items-center rounded-md transition-all duration-200 hover:bg-muted hover:text-foreground ${projectActionMenuId === group.id ? "opacity-100" : "opacity-0 group-hover/project:opacity-100"}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       onToggleProjectActionMenu(group.id);
@@ -210,41 +210,41 @@ export function ConversationSidebar({
                   </button>
                 )}
                 {group.id && projectActionMenuId === group.id && projectById.get(group.id) && (
-                  <div className="absolute right-1 top-9 z-50 w-52 rounded-xl border border-white/10 bg-[#2f2f2f] p-2 text-sm text-[#ececec] shadow-lg transition-all duration-200">
-                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10" onClick={() => onCreateConversationInProject(projectById.get(group.id) as Project)}>
+                  <div className="absolute right-1 top-9 z-50 w-52 rounded-xl border border-border bg-secondary p-2 text-sm text-foreground/90 shadow-lg transition-all duration-200">
+                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted" onClick={() => onCreateConversationInProject(projectById.get(group.id) as Project)}>
                       <Plus className="h-4 w-4" />创建新会话
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10" onClick={() => onTogglePinProject(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted" onClick={() => onTogglePinProject(projectById.get(group.id) as Project)}>
                       <Pin className="h-4 w-4" />{projectById.get(group.id)?.is_pinned ? "取消置顶项目" : "置顶项目"}
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10" onClick={() => onOpenProjectFolder(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted" onClick={() => onOpenProjectFolder(projectById.get(group.id) as Project)}>
                       <FolderOpen className="h-4 w-4" />在资源管理器中打开
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10" onClick={() => onRenameProject(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted" onClick={() => onRenameProject(projectById.get(group.id) as Project)}>
                       <Pencil className="h-4 w-4" />重命名项目
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10" onClick={() => onArchiveProject(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted" onClick={() => onArchiveProject(projectById.get(group.id) as Project)}>
                       <Archive className="h-4 w-4" />归档对话
                     </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-red-300 transition-all duration-200 hover:bg-red-500/10" onClick={() => onRemoveProject(projectById.get(group.id) as Project)}>
+                    <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-destructive transition-all duration-200 hover:bg-destructive/10" onClick={() => onRemoveProject(projectById.get(group.id) as Project)}>
                       <X className="h-4 w-4" />移除
                     </button>
                   </div>
                 )}
               </div>
               {group.items.length === 0 ? (
-                <div className="px-4 py-2.5 text-xs text-[#777]">暂无会话</div>
+                <div className="px-4 py-2.5 text-xs text-muted-foreground">暂无会话</div>
               ) : group.items.map((conversation) => (
                 <div key={conversation.id} className="group relative">
                   <button
-                    className={`w-full truncate rounded-lg py-2.5 pl-4 pr-10 text-left text-sm transition-all duration-200 ${mode !== "favorites" && conversation.id === conversationId ? "bg-white/10" : "hover:bg-white/5"}`}
+                    className={`w-full truncate rounded-lg py-2.5 pl-4 pr-10 text-left text-sm transition-all duration-200 ${mode !== "favorites" && conversation.id === conversationId ? "bg-muted" : "hover:bg-muted/50"}`}
                     onClick={() => onSelectConversation(conversation)}
                   >
                     {conversation.is_pinned ? "★ " : ""}{conversation.title}
                   </button>
                   <button
                     aria-label="打开会话操作菜单"
-                    className={`absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-[#d8d8d8] transition-all duration-200 hover:bg-white/10 hover:text-white ${conversationMenuId === conversation.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                    className={`absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-foreground/80 transition-all duration-200 hover:bg-muted hover:text-foreground ${conversationMenuId === conversation.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       onToggleConversationMenu(conversation.id);
@@ -253,17 +253,17 @@ export function ConversationSidebar({
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
                   {conversationMenuId === conversation.id && (
-                    <div className="absolute right-2 top-10 z-50 w-40 rounded-xl border border-white/10 bg-[#2f2f2f] p-2 text-sm shadow-lg transition-all duration-200">
-                      <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10" onClick={() => onTogglePinConversation(conversation)}>
+                    <div className="absolute right-2 top-10 z-50 w-40 rounded-xl border border-border bg-secondary p-2 text-sm shadow-lg transition-all duration-200">
+                      <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted" onClick={() => onTogglePinConversation(conversation)}>
                         <Pin className="h-4 w-4" />{conversation.is_pinned ? "取消置顶" : "置顶"}
                       </button>
-                      <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10" onClick={() => onShareConversation(conversation)}>
+                      <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted" onClick={() => onShareConversation(conversation)}>
                         <Share2 className="h-4 w-4" />分享
                       </button>
-                      <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/10" onClick={() => onRenameConversation(conversation)}>
+                      <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all duration-200 hover:bg-muted" onClick={() => onRenameConversation(conversation)}>
                         <Pencil className="h-4 w-4" />重命名
                       </button>
-                      <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-red-300 transition-all duration-200 hover:bg-red-500/10" onClick={() => onDeleteConversation(conversation)}>
+                      <button className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-destructive transition-all duration-200 hover:bg-destructive/10" onClick={() => onDeleteConversation(conversation)}>
                         <Trash2 className="h-4 w-4" />删除
                       </button>
                     </div>
@@ -275,59 +275,59 @@ export function ConversationSidebar({
         </div>
 
         {/* 管理中心区域 - 提供系统管理相关功能入口 */}
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <div className="mb-2 px-3 text-xs font-medium text-[#999]">管理中心</div>
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="mb-2 px-3 text-xs font-medium text-muted-foreground">管理中心</div>
           <div className="space-y-1">
             {/* AI任务队列入口 */}
             <button
-              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-white/5"
+              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-muted/50"
               onClick={() => router.push('/ai-tasks')}
             >
-              <ListTodo className="h-4 w-4 shrink-0 text-[#d8d8d8]" />
+              <ListTodo className="h-4 w-4 shrink-0 text-foreground/80" />
               <span>AI任务队列</span>
             </button>
 
             {/* 数据中心入口 */}
             <button
-              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-white/5"
+              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-muted/50"
               onClick={() => router.push('/data')}
             >
-              <Database className="h-4 w-4 shrink-0 text-[#d8d8d8]" />
+              <Database className="h-4 w-4 shrink-0 text-foreground/80" />
               <span>数据中心</span>
             </button>
 
             {/* 模型中心入口 */}
             <button
-              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-white/5"
+              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-muted/50"
               onClick={() => router.push('/models')}
             >
-              <Box className="h-4 w-4 shrink-0 text-[#d8d8d8]" />
+              <Box className="h-4 w-4 shrink-0 text-foreground/80" />
               <span>模型中心</span>
             </button>
 
             {/* 发布中心入口 */}
             <button
-              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-white/5"
+              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 hover:bg-muted/50"
               onClick={() => router.push('/publish')}
             >
-              <Rocket className="h-4 w-4 shrink-0 text-[#d8d8d8]" />
+              <Rocket className="h-4 w-4 shrink-0 text-foreground/80" />
               <span>发布准备</span>
             </button>
           </div>
         </div>
 
         {/* 底部功能区域 */}
-        <div className="mt-4 border-t border-white/10 pt-4">
+        <div className="mt-4 border-t border-border pt-4">
           {selectedProject && (
             <button
-              className={`mb-2 flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 ${mode === "project" ? "bg-white/10" : "hover:bg-white/5"}`}
+              className={`mb-2 flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 ${mode === "project" ? "bg-muted" : "hover:bg-muted/50"}`}
               onClick={() => onOpenProjectWorkbench("overview", selectedProject)}
             >
               <FolderOpen className="h-4 w-4" />项目工作台
             </button>
           )}
           <button
-            className={`flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 ${mode === "favorites" ? "bg-white/10" : "hover:bg-white/5"}`}
+            className={`flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm transition-all duration-200 ${mode === "favorites" ? "bg-muted" : "hover:bg-muted/50"}`}
             onClick={onOpenFavorites}
           >
             <Star className="h-4 w-4" />收藏

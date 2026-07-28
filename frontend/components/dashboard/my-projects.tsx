@@ -26,13 +26,13 @@ export interface MyProjectsProps {
 const getAIStatusColor = (status: ProjectProgress["aiStatus"]) => {
   switch (status) {
     case "generating":
-      return "text-blue-400";
+      return "text-info";
     case "reviewing":
-      return "text-amber-400";
+      return "text-warning";
     case "failed":
-      return "text-red-400";
+      return "text-destructive";
     default:
-      return "text-[#666]";
+      return "text-muted-foreground";
   }
 };
 
@@ -59,11 +59,11 @@ const getAIStatusIcon = (status: ProjectProgress["aiStatus"]) => {
  */
 export const MyProjects = memo(function MyProjects({ projects, onOpenProject }: MyProjectsProps) {
   return (
-    <div className="mb-6 rounded-xl border border-white/10 bg-[#1a1a1a]">
+    <div className="mb-6 rounded-xl border border-border bg-card">
       {/* 头部 */}
-      <div className="flex items-center justify-between border-b border-white/10 p-4">
-        <h3 className="text-lg font-semibold text-white">我的项目</h3>
-        <span className="text-sm text-[#888]">{projects.length} 个项目</span>
+      <div className="flex items-center justify-between border-b border-border p-4">
+        <h3 className="text-lg font-semibold text-foreground">我的项目</h3>
+        <span className="text-sm text-muted-foreground">{projects.length} 个项目</span>
       </div>
 
       {/* 项目列表 */}
@@ -74,16 +74,16 @@ export const MyProjects = memo(function MyProjects({ projects, onOpenProject }: 
             <button
               key={project.id}
               onClick={() => onOpenProject?.(project.id)}
-              className="group rounded-xl border border-white/10 bg-[#252525] p-4 text-left transition-all hover:border-emerald-500/50 hover:bg-emerald-500/5"
+              className="group rounded-xl border border-border bg-secondary p-4 text-left transition-all hover:border-primary/50 hover:bg-primary/5"
             >
               {/* 项目封面和名称 */}
               <div className="mb-3 flex items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20">
-                  <FolderKanban className="h-6 w-6 text-emerald-400" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/20">
+                  <FolderKanban className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="truncate font-medium text-white">{project.name}</div>
-                  <div className="text-xs text-[#888]">
+                  <div className="truncate font-medium text-foreground">{project.name}</div>
+                  <div className="text-xs text-muted-foreground">
                     第{project.currentEpisode}集 · Scene{project.currentScene} · Shot{project.currentShot}
                   </div>
                 </div>
@@ -92,12 +92,12 @@ export const MyProjects = memo(function MyProjects({ projects, onOpenProject }: 
               {/* 进度条 */}
               <div className="mb-3">
                 <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-[#888]">{project.currentStage}</span>
-                  <span className="text-emerald-400">{project.totalProgress}%</span>
+                  <span className="text-muted-foreground">{project.currentStage}</span>
+                  <span className="text-primary">{project.totalProgress}%</span>
                 </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-emerald-500 transition-all"
+                    className="h-full bg-primary transition-all"
                     style={{ width: `${project.totalProgress}%` }}
                   />
                 </div>

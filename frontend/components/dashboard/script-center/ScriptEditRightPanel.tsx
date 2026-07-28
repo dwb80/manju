@@ -54,7 +54,7 @@ const CommentSystemLazy = lazy(() =>
 
 /** 单面板加载占位符（避免大块白屏） */
 const PanelFallback = () => (
-  <div className="p-4 text-center text-xs text-gray-500">
+  <div className="p-4 text-center text-xs text-muted-foreground">
     <div className="animate-pulse">面板加载中...</div>
   </div>
 )
@@ -309,14 +309,14 @@ export function ScriptEditRightPanel(props: ScriptEditRightPanelProps) {
   // 当前 Tab 的内容（按 PANEL_REGISTRY 渲染，默认 fallback）
   const renderTabContent = (tab: RightPanelTab): React.ReactNode => {
     const renderer = PANEL_REGISTRY[tab]
-    if (!renderer) return <div className="p-4 text-[#888]">未知面板</div>
+    if (!renderer) return <div className="p-4 text-muted-foreground">未知面板</div>
     return renderer(props)
   }
 
   return (
-    <div className="w-80 flex-shrink-0 bg-[#1a1a1a] border-l border-white/10 flex flex-col overflow-hidden">
+    <div className="w-80 flex-shrink-0 bg-card border-l border-border flex flex-col overflow-hidden">
       {/* === Tab 切换栏（5 个：角色/场景/道具/AI/评论） === */}
-      <div className="flex border-b border-white/10 bg-[#1a1a1a]" role="tablist">
+      <div className="flex border-b border-border bg-card" role="tablist">
         {RIGHT_PANEL_TABS.map((tab) => {
           const cfg = RIGHT_PANEL_TAB_CONFIG[tab]
           const isActive = activeTab === tab
@@ -342,15 +342,15 @@ export function ScriptEditRightPanel(props: ScriptEditRightPanelProps) {
        * 全部新标签页打开（window.open '_blank'），不打断当前编辑会话
        * 颜色与对应 Tab 一致：角色=蓝 / 场景=绿 / 道具=黄
        */}
-      <div className="grid grid-cols-3 border-b border-white/10 bg-[#232326]">
+      <div className="grid grid-cols-3 border-b border-border bg-secondary">
         {FACTORY_SHORTCUTS.map((entry, idx) => (
           <button
             key={entry.key}
             type="button"
             onClick={() => openFactory(entry.label, entry.url)}
             className={
-              'flex items-center justify-center gap-1 h-8 text-[10px] hover:bg-white/5 transition-colors' +
-              (idx > 0 ? ' border-l border-white/10' : '')
+              'flex items-center justify-center gap-1 h-8 text-[10px] hover:bg-muted/50 transition-colors' +
+              (idx > 0 ? ' border-l border-border' : '')
             }
             style={{ color: entry.color }}
             aria-label={`在浏览器新标签页打开${entry.label}`}

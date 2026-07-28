@@ -12,11 +12,11 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
         "file:border-0 file:bg-transparent file:text-sm file:font-medium",
         // 占位符对比度提升：/70（深色主题下仍清晰可读，但不抢主）
         "placeholder:text-muted-foreground/70",
-        // 聚焦色与必填绿色解耦：sky-400（蓝色）作为通用焦点指示
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40 focus-visible:border-sky-400",
+        // 聚焦色与必填绿色解耦：ring（蓝色）作为通用焦点指示
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring",
         "disabled:cursor-not-allowed disabled:opacity-50",
         // 错误态（aria-invalid）：红色 border + ring
-        "aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-500/20",
+        "aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/20",
         className
       )}
       {...props}

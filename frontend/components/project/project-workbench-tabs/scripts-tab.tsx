@@ -25,42 +25,42 @@ interface ScriptsTabProps {
 export function ScriptsTab(props: ScriptsTabProps) {
     return (
         <div className="space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-[#202020]">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+            <div className="rounded-2xl border border-border bg-muted">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
                     <div>
-                        <div className="text-base font-semibold text-white">剧本列表</div>
-                        <div className="mt-1 text-sm text-[#bdbdbd]">按剧集管理剧本文档，后续可直接拆分镜和导出交付。</div>
+                        <div className="text-base font-semibold text-foreground">剧本列表</div>
+                        <div className="mt-1 text-sm text-muted-foreground">按剧集管理剧本文档，后续可直接拆分镜和导出交付。</div>
                     </div>
                     <Button size="sm" variant="secondary" onClick={() => props.downloadProjectExport("scripts.txt")}><Download className="h-4 w-4" />导出剧本</Button>
                 </div>
                 {props.filteredProjectScripts.length === 0 ? (
                     props.projectScripts.length === 0 ? (
                         <div className="px-5 py-10 text-center">
-                            <div className="text-base font-semibold text-white">还没有剧本</div>
-                            <div className="mt-2 text-sm text-[#bdbdbd]">先在下方新增第一集剧本，保存后即可生成分镜。</div>
+                            <div className="text-base font-semibold text-foreground">还没有剧本</div>
+                            <div className="mt-2 text-sm text-muted-foreground">先在下方新增第一集剧本，保存后即可生成分镜。</div>
                         </div>
                     ) : (
                         <div className="px-5 py-10 text-center">
-                            <div className="text-base font-semibold text-white">没有匹配的剧本</div>
-                            <div className="mt-2 text-sm text-[#bdbdbd]">调整搜索、状态或负责人筛选后再试。</div>
+                            <div className="text-base font-semibold text-foreground">没有匹配的剧本</div>
+                            <div className="mt-2 text-sm text-muted-foreground">调整搜索、状态或负责人筛选后再试。</div>
                         </div>
                     )
                 ) : (
                     <ProjectManagementTable columns={["集数", "标题", "状态", "内容摘要", "备注", "操作"]}>
                         {props.pagedProjectScripts.map((script) => (
-                            <tr key={script.id} className="align-top transition-colors hover:bg-white/[0.03]">
-                                <td className="whitespace-nowrap px-4 py-4 font-semibold text-white">第{script.episode}集</td>
+                            <tr key={script.id} className="align-top transition-colors hover:bg-muted/40">
+                                <td className="whitespace-nowrap px-4 py-4 font-semibold text-foreground">第{script.episode}集</td>
                                 <td className="px-4 py-4">
-                                    <div className="max-w-[220px] truncate font-semibold text-white">{script.title || "未命名剧本"}</div>
+                                    <div className="max-w-[220px] truncate font-semibold text-foreground">{script.title || "未命名剧本"}</div>
                                 </td>
                                 <td className="px-4 py-4">
-                                    <span className="inline-flex rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-[#dcdcdc]">{props.scriptStatusText(script.status)}</span>
+                                    <span className="inline-flex rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground/80">{props.scriptStatusText(script.status)}</span>
                                 </td>
                                 <td className="px-4 py-4">
-                                    <div className="line-clamp-2 max-w-[360px] whitespace-pre-wrap text-[#cfcfcf]">{script.content || "暂无正文"}</div>
+                                    <div className="line-clamp-2 max-w-[360px] whitespace-pre-wrap text-foreground/80">{script.content || "暂无正文"}</div>
                                 </td>
                                 <td className="px-4 py-4">
-                                    <div className="line-clamp-2 max-w-[180px] whitespace-pre-wrap text-[#bdbdbd]">{script.notes || "无"}</div>
+                                    <div className="line-clamp-2 max-w-[180px] whitespace-pre-wrap text-muted-foreground">{script.notes || "无"}</div>
                                 </td>
                                 <td className="px-4 py-4">
                                     <div className="flex flex-wrap gap-2">
@@ -74,21 +74,21 @@ export function ScriptsTab(props: ScriptsTabProps) {
                     </ProjectManagementTable>
                 )}
             </div>
-            <div className="rounded-2xl border border-white/10 bg-[#202020] p-5">
+            <div className="rounded-2xl border border-border bg-muted p-5">
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <div className="text-base font-semibold text-white">{props.editingScriptId ? "编辑剧本" : "新增剧本"}</div>
-                        <div className="mt-1 text-sm text-[#bdbdbd]">填写剧集、状态、标题和正文，保存后会出现在上方列表。</div>
+                        <div className="text-base font-semibold text-foreground">{props.editingScriptId ? "编辑剧本" : "新增剧本"}</div>
+                        <div className="mt-1 text-sm text-muted-foreground">填写剧集、状态、标题和正文，保存后会出现在上方列表。</div>
                     </div>
                     {props.editingScriptId && <Button size="sm" variant="secondary" onClick={props.resetProjectScriptForm}>取消编辑</Button>}
                 </div>
                 <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-x-4 gap-y-3 max-md:grid-cols-1">
                     <label className="contents">
-                        <span className="pt-3 text-right text-sm font-medium text-[#d8d8d8] max-md:pt-0 max-md:text-left">剧集</span>
-                        <input className="h-11 rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" type="number" min={1} value={props.scriptForm.episode} placeholder="第几集" onChange={(event) => props.setScriptForm((draft) => ({ ...draft, episode: Number(event.target.value) }))} />
+                        <span className="pt-3 text-right text-sm font-medium text-foreground/80 max-md:pt-0 max-md:text-left">剧集</span>
+                        <input className="h-11 rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary" type="number" min={1} value={props.scriptForm.episode} placeholder="第几集" onChange={(event) => props.setScriptForm((draft) => ({ ...draft, episode: Number(event.target.value) }))} />
                     </label>
                     <label className="contents">
-                        <span className="pt-3 text-right text-sm font-medium text-[#d8d8d8] max-md:pt-0 max-md:text-left">状态</span>
+                        <span className="pt-3 text-right text-sm font-medium text-foreground/80 max-md:pt-0 max-md:text-left">状态</span>
                         <ShadcnSelect
                             options={[
                                 { value: "draft", label: "草稿" },
@@ -102,16 +102,16 @@ export function ScriptsTab(props: ScriptsTabProps) {
                         />
                     </label>
                     <label className="contents">
-                        <span className="pt-3 text-right text-sm font-medium text-[#d8d8d8] max-md:pt-0 max-md:text-left">标题</span>
-                        <input className="h-11 rounded-xl border border-white/10 bg-[#2f2f2f] px-3 text-sm text-white outline-none transition-colors focus:border-emerald-500" value={props.scriptForm.title} placeholder="例如：第一集 归来" onChange={(event) => props.setScriptForm((draft) => ({ ...draft, title: event.target.value }))} />
+                        <span className="pt-3 text-right text-sm font-medium text-foreground/80 max-md:pt-0 max-md:text-left">标题</span>
+                        <input className="h-11 rounded-xl border border-border bg-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary" value={props.scriptForm.title} placeholder="例如：第一集 归来" onChange={(event) => props.setScriptForm((draft) => ({ ...draft, title: event.target.value }))} />
                     </label>
                     <label className="contents">
-                        <span className="pt-3 text-right text-sm font-medium text-[#d8d8d8] max-md:pt-0 max-md:text-left">正文</span>
-                        <textarea className="min-h-48 w-full resize-y rounded-xl border border-white/10 bg-[#2f2f2f] px-3 py-3 text-sm leading-6 text-white outline-none transition-colors focus:border-emerald-500" value={props.scriptForm.content} placeholder="粘贴或编写剧本文本" onChange={(event) => props.setScriptForm((draft) => ({ ...draft, content: event.target.value }))} />
+                        <span className="pt-3 text-right text-sm font-medium text-foreground/80 max-md:pt-0 max-md:text-left">正文</span>
+                        <textarea className="min-h-48 w-full resize-y rounded-xl border border-border bg-secondary px-3 py-3 text-sm leading-6 text-foreground outline-none transition-colors focus:border-primary" value={props.scriptForm.content} placeholder="粘贴或编写剧本文本" onChange={(event) => props.setScriptForm((draft) => ({ ...draft, content: event.target.value }))} />
                     </label>
                     <label className="contents">
-                        <span className="pt-3 text-right text-sm font-medium text-[#d8d8d8] max-md:pt-0 max-md:text-left">备注</span>
-                        <textarea className="min-h-20 w-full resize-y rounded-xl border border-white/10 bg-[#2f2f2f] px-3 py-3 text-sm leading-6 text-white outline-none transition-colors focus:border-emerald-500" value={props.scriptForm.notes} placeholder="制作备注、改稿要求、交付说明" onChange={(event) => props.setScriptForm((draft) => ({ ...draft, notes: event.target.value }))} />
+                        <span className="pt-3 text-right text-sm font-medium text-foreground/80 max-md:pt-0 max-md:text-left">备注</span>
+                        <textarea className="min-h-20 w-full resize-y rounded-xl border border-border bg-secondary px-3 py-3 text-sm leading-6 text-foreground outline-none transition-colors focus:border-primary" value={props.scriptForm.notes} placeholder="制作备注、改稿要求、交付说明" onChange={(event) => props.setScriptForm((draft) => ({ ...draft, notes: event.target.value }))} />
                     </label>
                 </div>
                 <div className="mt-5 flex justify-end">

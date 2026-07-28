@@ -178,14 +178,14 @@ export function CharacterPanel({
   }
 
   return (
-    <div className="character-panel bg-[#1a1a1a] h-full overflow-y-auto">
+    <div className="character-panel bg-card h-full overflow-y-auto">
       {/* 标题和搜索 */}
-      <div className="p-3 border-b border-white/10 sticky top-0 bg-[#1a1a1a] z-10">
+      <div className="p-3 border-b border-border sticky top-0 bg-card z-10">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-white flex items-center gap-1.5">
-            <span className="text-cyan-400">●</span>
+          <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            <span className="text-chart-2">●</span>
             角色资产
-            <span className="text-[10px] text-[#666]">· {characters.length} · 来自剧本中心</span>
+            <span className="text-[10px] text-muted-foreground">· {characters.length} · 来自剧本中心</span>
           </h3>
           <Button
             variant="ghost"
@@ -199,7 +199,7 @@ export function CharacterPanel({
           </Button>
         </div>
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-[#888]" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
           <Input
             placeholder="搜索角色名 / 身份 / 标签..."
             value={searchQuery}
@@ -212,7 +212,7 @@ export function CharacterPanel({
       {/* 角色列表 */}
       <div className="p-2">
         {filteredCharacters.length === 0 ? (
-          <div className="text-center py-8 text-[#666] text-sm">
+          <div className="text-center py-8 text-muted-foreground text-sm">
             {searchQuery ? '未找到匹配的角色' : '暂无角色资产'}
             {!searchQuery && (
               <Button
@@ -242,11 +242,11 @@ export function CharacterPanel({
               return (
               <div
                 key={character.id}
-                className="group relative flex items-start gap-3 p-2 rounded bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10"
+                className="group relative flex items-start gap-3 p-2 rounded bg-muted/50 hover:bg-muted transition-colors border border-transparent hover:border-border"
               >
                 {/* 缩略图（点击打开详情）—— 3:4 立幅 */}
                 <div
-                  className="w-12 h-16 rounded flex items-center justify-center text-white font-medium cursor-pointer flex-shrink-0 overflow-hidden"
+                  className="w-12 h-16 rounded flex items-center justify-center text-foreground font-medium cursor-pointer flex-shrink-0 overflow-hidden"
                   style={{ backgroundColor: character.color }}
                   onClick={() => handleViewDetail(character)}
                   title="点击查看角色详情"
@@ -268,13 +268,13 @@ export function CharacterPanel({
                   onClick={() => onSelectCharacter(character)}
                 >
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-medium text-white text-sm truncate">
+                    <span className="font-medium text-foreground text-sm truncate">
                       {character.name || '未命名'}
                     </span>
                     {/* 搜索匹配方式指示器（仅搜索时显示） */}
                     {matchKind === 'name' && (
                       <span
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/20"
                         title="按名称匹配"
                       >
                         名称
@@ -282,7 +282,7 @@ export function CharacterPanel({
                     )}
                     {matchKind === 'desc' && (
                       <span
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20"
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/20"
                         title="按身份/描述/标签匹配"
                       >
                         描述
@@ -290,13 +290,13 @@ export function CharacterPanel({
                     )}
                     {/* 身份徽章 */}
                     {character.identity && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-chart-2/15 text-chart-2 border border-chart-2/20">
                         {character.identity}
                       </span>
                     )}
                     {/* 角色类别 */}
                     {character.role && ROLE_LABELS[character.role] && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/20">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-chart-1/15 text-chart-1 border border-chart-1/20">
                         {ROLE_LABELS[character.role]}
                       </span>
                     )}
@@ -306,8 +306,8 @@ export function CharacterPanel({
                         className={
                           'text-[9px] px-1 py-0.5 rounded ' +
                           (character.confidence === 'confirmed'
-                            ? 'bg-emerald-500/15 text-emerald-400'
-                            : 'bg-amber-500/15 text-amber-400')
+                            ? 'bg-primary/15 text-primary'
+                            : 'bg-warning/15 text-warning')
                         }
                         title="AI 推断可信度"
                       >
@@ -318,27 +318,27 @@ export function CharacterPanel({
 
                   {/* 基础属性行：性别 / 年龄 / 气质 */}
                   {(character.gender || character.age != null || character.temperament) && (
-                    <div className="text-[10px] text-[#888] mt-1 flex items-center gap-2 flex-wrap">
+                    <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                       {character.gender && GENDER_LABELS[character.gender] && (
                         <span>{GENDER_LABELS[character.gender]}</span>
                       )}
                       {character.age != null && <span>{character.age}岁</span>}
                       {character.temperament && (
-                        <span className="text-[#aaa]">· {character.temperament}</span>
+                        <span className="text-muted-foreground">· {character.temperament}</span>
                       )}
                     </div>
                   )}
 
                   {/* 服装信息 */}
                   {character.costume_name && (
-                    <div className="text-[10px] text-[#888] mt-0.5 truncate">
-                      <span className="text-amber-400/80">服装:</span>{' '}
+                    <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                      <span className="text-warning/80">服装:</span>{' '}
                       {character.costume_color && (
                         <span
                           className="inline-block w-2 h-2 rounded-sm mr-1 align-middle"
                           style={{
                             backgroundColor: character.costume_color,
-                            border: '1px solid rgba(255,255,255,0.2)',
+                            border: '1px solid hsl(var(--foreground) / 0.2)',
                           }}
                         />
                       )}
@@ -350,7 +350,7 @@ export function CharacterPanel({
                   {/* 描述（最多 12 字 + ...） */}
                   {character.description && (
                     <div
-                      className="text-xs text-[#888] truncate mt-1"
+                      className="text-xs text-muted-foreground truncate mt-1"
                       title={character.description}
                     >
                       {truncateDesc(character.description)}
@@ -363,33 +363,33 @@ export function CharacterPanel({
                       {character.tags.slice(0, 3).map((tag, i) => (
                         <span
                           key={i}
-                          className="text-[9px] px-1 py-0.5 rounded bg-white/5 text-[#999]"
+                          className="text-[9px] px-1 py-0.5 rounded bg-muted/50 text-muted-foreground"
                         >
                           {tag}
                         </span>
                       ))}
                       {character.tags.length > 3 && (
-                        <span className="text-[9px] text-[#666]">+{character.tags.length - 3}</span>
+                        <span className="text-[9px] text-muted-foreground">+{character.tags.length - 3}</span>
                       )}
                     </div>
                   )}
 
                   {/* 工厂元数据：引用次数 + 版本号 */}
-                  <div className="flex items-center gap-2 mt-1 text-[9px] text-[#666]">
+                  <div className="flex items-center gap-2 mt-1 text-[9px] text-muted-foreground">
                     {character.usage_count != null && (
-                      <span className="text-purple-400/80">引用 {character.usage_count} 次</span>
+                      <span className="text-chart-1/80">引用 {character.usage_count} 次</span>
                     )}
                     {character.version != null && (
-                      <span className="px-1 rounded bg-white/5">v{character.version}</span>
+                      <span className="px-1 rounded bg-muted/50">v{character.version}</span>
                     )}
                     {character.assetId && (
-                      <span className="text-emerald-400/70">● 工厂同步</span>
+                      <span className="text-primary/70">● 工厂同步</span>
                     )}
                   </div>
                 </div>
 
                 {/* 操作按钮（悬浮显示） */}
-                <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-[#1a1a1a]/80 backdrop-blur-sm rounded px-0.5">
+                <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-card/80 backdrop-blur-sm rounded px-0.5">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -398,7 +398,7 @@ export function CharacterPanel({
                     title="查看 AI 解析详情"
                     aria-label="查看详情"
                   >
-                    <Eye className="h-3 w-3 text-cyan-400" />
+                    <Eye className="h-3 w-3 text-chart-2" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -407,7 +407,7 @@ export function CharacterPanel({
                     className="h-6 w-6 p-0"
                     title="从剧本移除（不会删除工厂资产）"
                   >
-                    <Trash2 className="h-3 w-3 text-red-400" />
+                    <Trash2 className="h-3 w-3 text-destructive" />
                   </Button>
                 </div>
               </div>
@@ -451,7 +451,7 @@ export function CharacterPanel({
 
       {/* 详情上下文加载提示 */}
       {detailLoading && detailCharacter && (
-        <div className="fixed top-4 right-4 z-[60] px-3 py-2 bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 text-xs rounded">
+        <div className="fixed top-4 right-4 z-[60] px-3 py-2 bg-chart-2/20 border border-chart-2/40 text-chart-2 text-xs rounded">
           正在加载 AI 解析上下文…
         </div>
       )}

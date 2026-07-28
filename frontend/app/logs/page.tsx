@@ -111,7 +111,7 @@ function LogsContent() {
             type="button"
             onClick={() => void fetchLogs()}
             disabled={loading}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-border bg-muted hover:bg-muted text-muted-foreground disabled:opacity-50"
           >
             <RefreshCcw className="w-3.5 h-3.5" />
             {loading ? "加载中..." : "刷新"}
@@ -126,33 +126,33 @@ function LogsContent() {
           </Alert>
         )}
 
-        <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 flex flex-wrap items-center gap-3">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <label className="text-xs text-slate-400 flex items-center gap-2">
+        <div className="rounded-lg border border-border bg-muted/40 p-4 flex flex-wrap items-center gap-3">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <label className="text-xs text-muted-foreground flex items-center gap-2">
             entity_type:
             <select
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
-              className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
+              className="bg-muted border border-border rounded px-2 py-1 text-xs text-muted-foreground"
             >
               {ENTITY_TYPES.map((t) => (
                 <option key={t} value={t}>{t || "(全部)"}</option>
               ))}
             </select>
           </label>
-          <label className="text-xs text-slate-400 flex items-center gap-2">
+          <label className="text-xs text-muted-foreground flex items-center gap-2">
             action:
             <select
               value={action}
               onChange={(e) => setAction(e.target.value)}
-              className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
+              className="bg-muted border border-border rounded px-2 py-1 text-xs text-muted-foreground"
             >
               {ACTIONS.map((a) => (
                 <option key={a} value={a}>{a || "(全部)"}</option>
               ))}
             </select>
           </label>
-          <div className="text-xs text-slate-500 ml-auto">
+          <div className="text-xs text-muted-foreground ml-auto">
             共 {items.length} 条 · {Object.keys(summary).length} 种 action
           </div>
         </div>
@@ -162,7 +162,7 @@ function LogsContent() {
             {Object.entries(summary).map(([k, v]) => (
               <span
                 key={k}
-                className="px-2 py-1 rounded bg-slate-800 text-slate-200 border border-slate-700"
+                className="px-2 py-1 rounded bg-muted text-muted-foreground border border-border"
               >
                 {k} × {v}
               </span>
@@ -170,9 +170,9 @@ function LogsContent() {
           </div>
         )}
 
-        <div className="rounded-lg border border-slate-800 overflow-hidden">
+        <div className="rounded-lg border border-border overflow-hidden">
           <table className="w-full text-xs">
-            <thead className="bg-slate-900 text-slate-400">
+            <thead className="bg-muted text-muted-foreground">
               <tr>
                 <th className="text-left px-3 py-2 font-medium">时间</th>
                 <th className="text-left px-3 py-2 font-medium">entity</th>
@@ -184,31 +184,31 @@ function LogsContent() {
                 <th className="text-left px-3 py-2 font-medium">payload</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-border">
               {items.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
                     暂无审计日志
                   </td>
                 </tr>
               )}
               {items.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-900/40">
-                  <td className="px-3 py-2 text-slate-400 whitespace-nowrap">
+                <tr key={item.id} className="hover:bg-muted/40">
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
                     {formatTime(item.created_at)}
                   </td>
-                  <td className="px-3 py-2 text-slate-200">
+                  <td className="px-3 py-2 text-muted-foreground">
                     <div>{item.entity_type}</div>
-                    <div className="text-slate-500 text-[10px]">{item.entity_id}</div>
+                    <div className="text-muted-foreground text-[10px]">{item.entity_id}</div>
                   </td>
-                  <td className="px-3 py-2 text-slate-200">{item.action}</td>
-                  <td className="px-3 py-2 text-slate-300">{item.event}</td>
-                  <td className="px-3 py-2 text-slate-400">{item.project_id || "-"}</td>
-                  <td className="px-3 py-2 text-slate-500 font-mono text-[10px]">
+                  <td className="px-3 py-2 text-muted-foreground">{item.action}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{item.event}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{item.project_id || "-"}</td>
+                  <td className="px-3 py-2 text-muted-foreground font-mono text-[10px]">
                     {item.trace_id ? item.trace_id.slice(0, 12) : "-"}
                   </td>
-                  <td className="px-3 py-2 text-slate-400">{item.operator}</td>
-                  <td className="px-3 py-2 text-slate-400 max-w-md">
+                  <td className="px-3 py-2 text-muted-foreground">{item.operator}</td>
+                  <td className="px-3 py-2 text-muted-foreground max-w-md">
                     <pre className="whitespace-pre-wrap break-words text-[10px] leading-tight">
                       {prettyPayload(item.payload)}
                     </pre>

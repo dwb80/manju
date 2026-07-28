@@ -69,15 +69,15 @@ export function CharacterDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
-        className="bg-[#1a1a1a] border border-white/10 rounded-lg shadow-2xl max-w-2xl w-[90vw] max-h-[85vh] overflow-y-auto p-6"
+        className="bg-card border border-border rounded-lg shadow-2xl max-w-2xl w-[90vw] max-h-[85vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-white">角色详情：{character.name}</h2>
+          <h2 className="text-lg font-medium text-foreground">角色详情：{character.name}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-white/60 hover:text-white"
+            className="text-foreground/60 hover:text-foreground"
             aria-label="关闭"
           >
             <X className="h-5 w-5" />
@@ -89,7 +89,7 @@ export function CharacterDetailModal({
             <img
               src={character.image}
               alt={character.name}
-              className="w-full h-64 object-cover rounded border border-white/10"
+              className="w-full h-64 object-cover rounded border border-border"
             />
           </div>
         )}
@@ -97,38 +97,38 @@ export function CharacterDetailModal({
         <dl className="grid grid-cols-2 gap-3 text-sm">
           {character.role && (
             <div>
-              <dt className="text-white/50 text-xs">角色定位</dt>
-              <dd className="text-white/90">{character.role}</dd>
+              <dt className="text-foreground/50 text-xs">角色定位</dt>
+              <dd className="text-foreground/90">{character.role}</dd>
             </div>
           )}
           {character.gender && (
             <div>
-              <dt className="text-white/50 text-xs">性别</dt>
-              <dd className="text-white/90">{character.gender}</dd>
+              <dt className="text-foreground/50 text-xs">性别</dt>
+              <dd className="text-foreground/90">{character.gender}</dd>
             </div>
           )}
           {typeof character.age === "number" && character.age > 0 && (
             <div>
-              <dt className="text-white/50 text-xs">年龄</dt>
-              <dd className="text-white/90">{character.age}</dd>
+              <dt className="text-foreground/50 text-xs">年龄</dt>
+              <dd className="text-foreground/90">{character.age}</dd>
             </div>
           )}
           {character.description && (
             <div className="col-span-2">
-              <dt className="text-white/50 text-xs">描述</dt>
-              <dd className="text-white/90 whitespace-pre-wrap">{character.description}</dd>
+              <dt className="text-foreground/50 text-xs">描述</dt>
+              <dd className="text-foreground/90 whitespace-pre-wrap">{character.description}</dd>
             </div>
           )}
           {character.personality && (
             <div className="col-span-2">
-              <dt className="text-white/50 text-xs">性格</dt>
-              <dd className="text-white/90 whitespace-pre-wrap">{character.personality}</dd>
+              <dt className="text-foreground/50 text-xs">性格</dt>
+              <dd className="text-foreground/90 whitespace-pre-wrap">{character.personality}</dd>
             </div>
           )}
           {character.appearance && (
             <div className="col-span-2">
-              <dt className="text-white/50 text-xs">外貌</dt>
-              <dd className="text-white/90 whitespace-pre-wrap">{character.appearance}</dd>
+              <dt className="text-foreground/50 text-xs">外貌</dt>
+              <dd className="text-foreground/90 whitespace-pre-wrap">{character.appearance}</dd>
             </div>
           )}
         </dl>

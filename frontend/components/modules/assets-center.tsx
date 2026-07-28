@@ -286,8 +286,8 @@ function AssetRow({
     <TableRow>
       <TableCell>
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-white/5">
-            <Download className="h-4 w-4 text-emerald-400" />
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-muted/50">
+            <Download className="h-4 w-4 text-primary" />
           </div>
           <div>
             <div className="font-medium text-foreground">{asset.name}</div>
@@ -315,7 +315,7 @@ function AssetRow({
             <Pencil className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={onDelete} title="删除" aria-label="删除">
-            <Trash2 className="h-4 w-4 text-red-400" />
+            <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
       </TableCell>

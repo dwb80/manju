@@ -82,7 +82,7 @@ export function DraggableModal({
       aria-label={title}
     >
       <div
-        className="absolute bg-[#1a1a1a] rounded-lg border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+        className="absolute bg-card rounded-lg border border-border shadow-2xl overflow-hidden flex flex-col"
         style={{
           left: position.x,
           top: position.y,
@@ -92,19 +92,19 @@ export function DraggableModal({
       >
         {/* 标题栏 —— 拖拽手柄 */}
         <div
-          className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-[#252525] cursor-move select-none"
+          className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-secondary cursor-move select-none"
           onMouseDown={onDragStart}
         >
           <div className="flex items-center gap-2">
-            <GripHorizontal className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-200">{title}</span>
+            <GripHorizontal className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">{title}</span>
           </div>
           <div className="flex items-center gap-2">
             {headerExtra}
             <button
               type="button"
               onClick={handleClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
               aria-label={`关闭${title}`}
             >
               <X className="h-4 w-4" />
@@ -117,7 +117,7 @@ export function DraggableModal({
 
         {/* 底部固定操作区（不随内容滚动，确保关键按钮始终可达） */}
         {footer && (
-          <div className="flex-shrink-0 border-t border-white/10 bg-[#1a1a1a]">
+          <div className="flex-shrink-0 border-t border-border bg-card">
             {footer}
           </div>
         )}

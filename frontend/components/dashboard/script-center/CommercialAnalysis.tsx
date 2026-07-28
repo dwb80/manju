@@ -231,16 +231,16 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
 
   if (loading) {
     return (
-      <div className="commercial-analysis bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden p-8">
-        <div className="text-center text-[#666]">加载商业分析数据...</div>
+      <div className="commercial-analysis bg-card rounded-lg border border-border overflow-hidden p-8">
+        <div className="text-center text-muted-foreground">加载商业分析数据...</div>
       </div>
     )
   }
 
   if (!analysis) {
     return (
-      <div className="commercial-analysis bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden p-8">
-        <div className="text-center text-[#666]">
+      <div className="commercial-analysis bg-card rounded-lg border border-border overflow-hidden p-8">
+        <div className="text-center text-muted-foreground">
           暂无商业分析数据
           <Button onClick={runAnalysis} className="mt-4">
             生成分析
@@ -251,12 +251,12 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
   }
 
   return (
-    <div className="commercial-analysis bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden">
+    <div className="commercial-analysis bg-card rounded-lg border border-border overflow-hidden">
       {/* 标题 */}
-      <div className="p-3 border-b border-white/10 flex items-center justify-between">
+      <div className="p-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-[#888]" />
-          <h3 className="text-sm font-medium text-white">商业分析</h3>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-foreground">商业分析</h3>
         </div>
         <Button
           variant="ghost"
@@ -281,12 +281,12 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
         >
           <div className="space-y-3">
             <div>
-              <div className="text-xs text-[#888] mb-1">主要受众</div>
+              <div className="text-xs text-muted-foreground mb-1">主要受众</div>
               <div className="flex flex-wrap gap-2">
                 {analysis.audience.primaryAudience.map((aud, i) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400"
+                    className="text-xs px-2 py-1 rounded bg-info/20 text-info"
                   >
                     {aud}
                   </span>
@@ -295,35 +295,35 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
             </div>
 
             <div>
-              <div className="text-xs text-[#888] mb-1">年龄段分布</div>
+              <div className="text-xs text-muted-foreground mb-1">年龄段分布</div>
               <div className="space-y-1">
                 {analysis.audience.ageGroups.map((group) => (
                   <div key={group.range} className="flex items-center gap-2">
-                    <span className="text-xs text-white w-16">{group.range}</span>
-                    <div className="flex-1 h-2 bg-white/5 rounded overflow-hidden">
+                    <span className="text-xs text-foreground w-16">{group.range}</span>
+                    <div className="flex-1 h-2 bg-muted/50 rounded overflow-hidden">
                       <div
-                        className="h-full bg-emerald-500"
+                        className="h-full bg-primary"
                         style={{ width: `${group.percentage}%` }}
                       />
                     </div>
-                    <span className="text-xs text-[#888] w-8">{group.percentage}%</span>
+                    <span className="text-xs text-muted-foreground w-8">{group.percentage}%</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-[#888] mb-1">性别分布</div>
+              <div className="text-xs text-muted-foreground mb-1">性别分布</div>
               <div className="flex gap-2">
-                <div className="flex-1 p-2 bg-white/5 rounded">
-                  <div className="text-xs text-[#888]">男性</div>
-                  <div className="text-lg font-bold text-white">
+                <div className="flex-1 p-2 bg-muted/50 rounded">
+                  <div className="text-xs text-muted-foreground">男性</div>
+                  <div className="text-lg font-bold text-foreground">
                     {analysis.audience.genderDistribution.male}%
                   </div>
                 </div>
-                <div className="flex-1 p-2 bg-white/5 rounded">
-                  <div className="text-xs text-[#888]">女性</div>
-                  <div className="text-lg font-bold text-white">
+                <div className="flex-1 p-2 bg-muted/50 rounded">
+                  <div className="text-xs text-muted-foreground">女性</div>
+                  <div className="text-lg font-bold text-foreground">
                     {analysis.audience.genderDistribution.female}%
                   </div>
                 </div>
@@ -331,12 +331,12 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
             </div>
 
             <div>
-              <div className="text-xs text-[#888] mb-1">兴趣标签</div>
+              <div className="text-xs text-muted-foreground mb-1">兴趣标签</div>
               <div className="flex flex-wrap gap-1">
                 {analysis.audience.interests.map((interest, i) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-0.5 rounded bg-white/10 text-[#888]"
+                    className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground"
                   >
                     {interest}
                   </span>
@@ -355,25 +355,25 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
         >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-2 bg-white/5 rounded">
-                <div className="text-xs text-[#888]">市场规模</div>
-                <div className="text-lg font-bold text-white">{analysis.market.marketSize}</div>
+              <div className="p-2 bg-muted/50 rounded">
+                <div className="text-xs text-muted-foreground">市场规模</div>
+                <div className="text-lg font-bold text-foreground">{analysis.market.marketSize}</div>
               </div>
-              <div className="p-2 bg-white/5 rounded">
-                <div className="text-xs text-[#888]">增长率</div>
-                <div className="text-lg font-bold text-emerald-400">{analysis.market.growthRate}</div>
+              <div className="p-2 bg-muted/50 rounded">
+                <div className="text-xs text-muted-foreground">增长率</div>
+                <div className="text-lg font-bold text-primary">{analysis.market.growthRate}</div>
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-[#888] mb-1">竞争程度</div>
+              <div className="text-xs text-muted-foreground mb-1">竞争程度</div>
               <div
                 className={`inline-block px-2 py-1 rounded text-xs ${
                   analysis.market.competitionLevel === 'high'
-                    ? 'bg-red-500/20 text-red-400'
+                    ? 'bg-destructive/20 text-destructive'
                     : analysis.market.competitionLevel === 'medium'
-                    ? 'bg-yellow-500/20 text-yellow-400'
-                    : 'bg-emerald-500/20 text-emerald-400'
+                    ? 'bg-chart-5/20 text-chart-5'
+                    : 'bg-primary/20 text-primary'
                 }`}
               >
                 {analysis.market.competitionLevel === 'high'
@@ -385,15 +385,15 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
             </div>
 
             <div>
-              <div className="text-xs text-[#888] mb-1">同类作品</div>
+              <div className="text-xs text-muted-foreground mb-1">同类作品</div>
               <div className="space-y-1">
                 {analysis.market.similarWorks.map((work, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between p-2 bg-white/5 rounded"
+                    className="flex items-center justify-between p-2 bg-muted/50 rounded"
                   >
-                    <span className="text-sm text-white">{work.title}</span>
-                    <span className="text-xs text-[#888]">
+                    <span className="text-sm text-foreground">{work.title}</span>
+                    <span className="text-xs text-muted-foreground">
                       {work.year} | 评分 {work.rating}
                     </span>
                   </div>
@@ -403,16 +403,16 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <div className="text-xs text-emerald-400 mb-1">机会</div>
-                <ul className="text-xs text-white space-y-1">
+                <div className="text-xs text-primary mb-1">机会</div>
+                <ul className="text-xs text-foreground space-y-1">
                   {analysis.market.opportunities.map((opp, i) => (
                     <li key={i}>• {opp}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <div className="text-xs text-red-400 mb-1">威胁</div>
-                <ul className="text-xs text-white space-y-1">
+                <div className="text-xs text-destructive mb-1">威胁</div>
+                <ul className="text-xs text-foreground space-y-1">
                   {analysis.market.threats.map((threat, i) => (
                     <li key={i}>• {threat}</li>
                   ))}
@@ -431,74 +431,74 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
         >
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
-              <div className="p-2 bg-red-500/10 rounded border border-red-500/20">
-                <div className="text-xs text-[#888] mb-1">保守预估</div>
-                <div className="text-lg font-bold text-white">
+              <div className="p-2 bg-destructive/10 rounded border border-destructive/20">
+                <div className="text-xs text-muted-foreground mb-1">保守预估</div>
+                <div className="text-lg font-bold text-foreground">
                   {formatCurrency(analysis.revenue.conservative)}
                 </div>
               </div>
-              <div className="p-2 bg-yellow-500/10 rounded border border-yellow-500/20">
-                <div className="text-xs text-[#888] mb-1">中等预估</div>
-                <div className="text-lg font-bold text-white">
+              <div className="p-2 bg-chart-5/10 rounded border border-chart-5/20">
+                <div className="text-xs text-muted-foreground mb-1">中等预估</div>
+                <div className="text-lg font-bold text-foreground">
                   {formatCurrency(analysis.revenue.moderate)}
                 </div>
               </div>
-              <div className="p-2 bg-emerald-500/10 rounded border border-emerald-500/20">
-                <div className="text-xs text-[#888] mb-1">乐观预估</div>
-                <div className="text-lg font-bold text-white">
+              <div className="p-2 bg-primary/10 rounded border border-primary/20">
+                <div className="text-xs text-muted-foreground mb-1">乐观预估</div>
+                <div className="text-lg font-bold text-foreground">
                   {formatCurrency(analysis.revenue.optimistic)}
                 </div>
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-[#888] mb-1">收入来源分布</div>
+              <div className="text-xs text-muted-foreground mb-1">收入来源分布</div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white w-20">票房收入</span>
-                  <div className="flex-1 h-2 bg-white/5 rounded overflow-hidden">
+                  <span className="text-xs text-foreground w-20">票房收入</span>
+                  <div className="flex-1 h-2 bg-muted/50 rounded overflow-hidden">
                     <div
-                      className="h-full bg-blue-500"
+                      className="h-full bg-info"
                       style={{ width: `${analysis.revenue.breakdown.boxOffice}%` }}
                     />
                   </div>
-                  <span className="text-xs text-[#888] w-8">
+                  <span className="text-xs text-muted-foreground w-8">
                     {analysis.revenue.breakdown.boxOffice}%
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white w-20">流媒体</span>
-                  <div className="flex-1 h-2 bg-white/5 rounded overflow-hidden">
+                  <span className="text-xs text-foreground w-20">流媒体</span>
+                  <div className="flex-1 h-2 bg-muted/50 rounded overflow-hidden">
                     <div
-                      className="h-full bg-purple-500"
+                      className="h-full bg-chart-1"
                       style={{ width: `${analysis.revenue.breakdown.streaming}%` }}
                     />
                   </div>
-                  <span className="text-xs text-[#888] w-8">
+                  <span className="text-xs text-muted-foreground w-8">
                     {analysis.revenue.breakdown.streaming}%
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white w-20">衍生品</span>
-                  <div className="flex-1 h-2 bg-white/5 rounded overflow-hidden">
+                  <span className="text-xs text-foreground w-20">衍生品</span>
+                  <div className="flex-1 h-2 bg-muted/50 rounded overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500"
+                      className="h-full bg-primary"
                       style={{ width: `${analysis.revenue.breakdown.merchandise}%` }}
                     />
                   </div>
-                  <span className="text-xs text-[#888] w-8">
+                  <span className="text-xs text-muted-foreground w-8">
                     {analysis.revenue.breakdown.merchandise}%
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white w-20">授权收入</span>
-                  <div className="flex-1 h-2 bg-white/5 rounded overflow-hidden">
+                  <span className="text-xs text-foreground w-20">授权收入</span>
+                  <div className="flex-1 h-2 bg-muted/50 rounded overflow-hidden">
                     <div
-                      className="h-full bg-yellow-500"
+                      className="h-full bg-chart-5"
                       style={{ width: `${analysis.revenue.breakdown.licensing}%` }}
                     />
                   </div>
-                  <span className="text-xs text-[#888] w-8">
+                  <span className="text-xs text-muted-foreground w-8">
                     {analysis.revenue.breakdown.licensing}%
                   </span>
                 </div>
@@ -515,12 +515,12 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
           onToggle={() => toggleSection('ipValue')}
         >
           <div className="space-y-3">
-            <div className="flex items-center justify-center p-4 bg-white/5 rounded">
+            <div className="flex items-center justify-center p-4 bg-muted/50 rounded">
               <div className="text-center">
-                <div className="text-3xl font-bold text-white mb-1">
+                <div className="text-3xl font-bold text-foreground mb-1">
                   {analysis.ipValue.overallScore}
                 </div>
-                <div className="text-xs text-[#888]">综合评分</div>
+                <div className="text-xs text-muted-foreground">综合评分</div>
               </div>
             </div>
 
@@ -533,16 +533,16 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <div className="text-xs text-emerald-400 mb-1">优势</div>
-                <ul className="text-xs text-white space-y-1">
+                <div className="text-xs text-primary mb-1">优势</div>
+                <ul className="text-xs text-foreground space-y-1">
                   {analysis.ipValue.strengths.map((s, i) => (
                     <li key={i}>• {s}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <div className="text-xs text-red-400 mb-1">劣势</div>
-                <ul className="text-xs text-white space-y-1">
+                <div className="text-xs text-destructive mb-1">劣势</div>
+                <ul className="text-xs text-foreground space-y-1">
                   {analysis.ipValue.weaknesses.map((w, i) => (
                     <li key={i}>• {w}</li>
                   ))}
@@ -561,32 +561,32 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
         >
           <div className="space-y-2">
             {analysis.channels.map((channel, i) => (
-              <div key={i} className="p-3 bg-white/5 rounded border border-white/10">
+              <div key={i} className="p-3 bg-muted/50 rounded border border-border">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-white">{channel.name}</span>
+                  <span className="text-sm font-medium text-foreground">{channel.name}</span>
                   <div className="flex items-center gap-1">
-                    <div className="text-xs text-[#888]">适合度</div>
-                    <div className="text-sm font-bold text-white">{channel.suitability}%</div>
+                    <div className="text-xs text-muted-foreground">适合度</div>
+                    <div className="text-sm font-bold text-foreground">{channel.suitability}%</div>
                   </div>
                 </div>
-                <div className="mb-2 h-1.5 bg-white/5 rounded overflow-hidden">
+                <div className="mb-2 h-1.5 bg-muted/50 rounded overflow-hidden">
                   <div
-                    className="h-full bg-emerald-500"
+                    className="h-full bg-primary"
                     style={{ width: `${channel.suitability}%` }}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <div className="text-emerald-400 mb-1">优势</div>
-                    <ul className="text-white space-y-0.5">
+                    <div className="text-primary mb-1">优势</div>
+                    <ul className="text-foreground space-y-0.5">
                       {channel.pros.map((pro, j) => (
                         <li key={j}>• {pro}</li>
                       ))}
                     </ul>
                   </div>
                   <div>
-                    <div className="text-red-400 mb-1">劣势</div>
-                    <ul className="text-white space-y-0.5">
+                    <div className="text-destructive mb-1">劣势</div>
+                    <ul className="text-foreground space-y-0.5">
                       {channel.cons.map((con, j) => (
                         <li key={j}>• {con}</li>
                       ))}
@@ -607,12 +607,12 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
         >
           <div className="space-y-3">
             <div>
-              <div className="text-xs text-[#888] mb-1">目标平台</div>
+              <div className="text-xs text-muted-foreground mb-1">目标平台</div>
               <div className="flex flex-wrap gap-1">
                 {analysis.marketing.targetPlatforms.map((platform, i) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400"
+                    className="text-xs px-2 py-1 rounded bg-info/20 text-info"
                   >
                     {platform}
                   </span>
@@ -621,12 +621,12 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
             </div>
 
             <div>
-              <div className="text-xs text-[#888] mb-1">核心卖点</div>
+              <div className="text-xs text-muted-foreground mb-1">核心卖点</div>
               <div className="flex flex-wrap gap-1">
                 {analysis.marketing.keySellingPoints.map((point, i) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400"
+                    className="text-xs px-2 py-1 rounded bg-primary/20 text-primary"
                   >
                     {point}
                   </span>
@@ -635,24 +635,24 @@ export function CommercialAnalysis({ scriptId }: CommercialAnalysisProps) {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-2 bg-white/5 rounded">
-                <div className="text-xs text-[#888]">推荐预算</div>
-                <div className="text-sm font-medium text-white">
+              <div className="p-2 bg-muted/50 rounded">
+                <div className="text-xs text-muted-foreground">推荐预算</div>
+                <div className="text-sm font-medium text-foreground">
                   {analysis.marketing.recommendedBudget}
                 </div>
               </div>
-              <div className="p-2 bg-white/5 rounded">
-                <div className="text-xs text-[#888]">营销周期</div>
-                <div className="text-sm font-medium text-white">{analysis.marketing.timeline}</div>
+              <div className="p-2 bg-muted/50 rounded">
+                <div className="text-xs text-muted-foreground">营销周期</div>
+                <div className="text-sm font-medium text-foreground">{analysis.marketing.timeline}</div>
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-[#888] mb-1">营销策略</div>
-              <ul className="text-xs text-white space-y-1">
+              <div className="text-xs text-muted-foreground mb-1">营销策略</div>
+              <ul className="text-xs text-foreground space-y-1">
                 {analysis.marketing.tactics.map((tactic, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="text-emerald-400">✓</span>
+                    <span className="text-primary">✓</span>
                     <span>{tactic}</span>
                   </li>
                 ))}
@@ -681,17 +681,17 @@ function Section({
   return (
     <div>
       <div
-        className="flex items-center justify-between p-3 hover:bg-white/5 cursor-pointer transition-colors"
+        className="flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer transition-colors"
         onClick={onToggle}
       >
         <div className="flex items-center gap-2">
-          <span className="text-[#888]">{icon}</span>
-          <span className="text-sm font-medium text-white">{title}</span>
+          <span className="text-muted-foreground">{icon}</span>
+          <span className="text-sm font-medium text-foreground">{title}</span>
         </div>
         {expanded ? (
-          <ChevronDown className="h-4 w-4 text-[#888]" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
         ) : (
-          <ChevronRight className="h-4 w-4 text-[#888]" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         )}
       </div>
       {expanded && <div className="px-3 pb-3">{children}</div>}
@@ -703,12 +703,12 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
   return (
     <div>
       <div className="flex items-center justify-between text-xs mb-1">
-        <span className="text-white">{label}</span>
-        <span className="text-[#888]">{score}/100</span>
+        <span className="text-foreground">{label}</span>
+        <span className="text-muted-foreground">{score}/100</span>
       </div>
-      <div className="h-1.5 bg-white/5 rounded overflow-hidden">
+      <div className="h-1.5 bg-muted/50 rounded overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
+          className="h-full bg-gradient-to-r from-info to-primary"
           style={{ width: `${score}%` }}
         />
       </div>

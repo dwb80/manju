@@ -44,6 +44,8 @@ export interface CharacterImageHistory {
   is_applied: boolean;
   /** 最后一次被设为角色资产的时间（ISO）。未应用则为空字符串。 */
   applied_at: string;
+  /** 是否为该角色的主图（1=主图, 0=非主图）。同一角色下至多一条为 1，由事务保证唯一性。 */
+  is_primary: number;
   created_at: string;
 }
 
@@ -68,6 +70,8 @@ export interface PropImageHistory {
   view_type?: string | null;
   is_applied: boolean;
   applied_at: string;
+  /** 是否为该道具的主图（1=主图, 0=非主图）。同一道具下至多一条为 1。 */
+  is_primary: number;
   created_at: string;
 }
 
@@ -92,5 +96,7 @@ export interface SceneImageHistory {
   view_type?: string | null;
   is_applied: boolean;
   applied_at: string;
+  /** 是否为该场景的主图（1=主图, 0=非主图）。同一场景下至多一条为 1。 */
+  is_primary: number;
   created_at: string;
 }

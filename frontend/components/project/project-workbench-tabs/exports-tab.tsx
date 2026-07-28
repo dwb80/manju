@@ -22,9 +22,9 @@ export function ExportsTab(props: ExportsTabProps) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-white/10 bg-[#202020] p-3">
+      <div className="rounded-lg border border-border bg-muted p-3">
         <div className="text-sm font-semibold">交付中心</div>
-        <div className="mt-1 text-xs text-[#b4b4b4]">集中导出剧本文档、分镜表、剪辑清单和项目素材清单。</div>
+        <div className="mt-1 text-xs text-muted-foreground">集中导出剧本文档、分镜表、剪辑清单和项目素材清单。</div>
       </div>
       <div className="grid grid-cols-4 gap-2 text-sm max-lg:grid-cols-2 max-md:grid-cols-1">
         {[
@@ -33,32 +33,32 @@ export function ExportsTab(props: ExportsTabProps) {
           ["剪辑", projectClips.length],
           ["资产", projectAssets.length],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-lg border border-white/10 bg-[#202020] px-3 py-2">
-            <div className="text-xs text-[#b4b4b4]">{label}</div>
+          <div key={label} className="rounded-lg border border-border bg-muted px-3 py-2">
+            <div className="text-xs text-muted-foreground">{label}</div>
             <div className="mt-1 text-lg font-semibold">{value}</div>
           </div>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-        <button className="rounded-lg border border-white/10 bg-[#202020] p-4 text-left hover:bg-white/5" onClick={() => downloadProjectExport("scripts.txt")}>
+        <button className="rounded-lg border border-border bg-muted p-4 text-left hover:bg-muted/50" onClick={() => downloadProjectExport("scripts.txt")}>
           <div className="flex items-center gap-2 text-sm font-semibold"><Download className="h-4 w-4" />剧本文档 TXT</div>
-          <div className="mt-1 text-xs text-[#b4b4b4]">按集数合并导出已保存剧本。</div>
+          <div className="mt-1 text-xs text-muted-foreground">按集数合并导出已保存剧本。</div>
         </button>
-        <button className="rounded-lg border border-white/10 bg-[#202020] p-4 text-left hover:bg-white/5" onClick={downloadStoryboardCsv}>
+        <button className="rounded-lg border border-border bg-muted p-4 text-left hover:bg-muted/50" onClick={downloadStoryboardCsv}>
           <div className="flex items-center gap-2 text-sm font-semibold"><Download className="h-4 w-4" />分镜表 CSV</div>
-          <div className="mt-1 text-xs text-[#b4b4b4]">导出全部分镜到 Excel / Numbers。</div>
+          <div className="mt-1 text-xs text-muted-foreground">导出全部分镜到 Excel / Numbers。</div>
         </button>
-        <button className="rounded-lg border border-white/10 bg-[#202020] p-4 text-left hover:bg-white/5" onClick={() => downloadProjectExport("edit-list.csv")}>
+        <button className="rounded-lg border border-border bg-muted p-4 text-left hover:bg-muted/50" onClick={() => downloadProjectExport("edit-list.csv")}>
           <div className="flex items-center gap-2 text-sm font-semibold"><Download className="h-4 w-4" />剪辑清单 CSV</div>
-          <div className="mt-1 text-xs text-[#b4b4b4]">导出分镜-视频-剪辑的入点出点表。</div>
+          <div className="mt-1 text-xs text-muted-foreground">导出分镜-视频-剪辑的入点出点表。</div>
         </button>
-        <button className="rounded-lg border border-white/10 bg-[#202020] p-4 text-left hover:bg-white/5" onClick={() => downloadProjectExport("manifest.json")}>
+        <button className="rounded-lg border border-border bg-muted p-4 text-left hover:bg-muted/50" onClick={() => downloadProjectExport("manifest.json")}>
           <div className="flex items-center gap-2 text-sm font-semibold"><Download className="h-4 w-4" />素材清单 JSON</div>
-          <div className="mt-1 text-xs text-[#b4b4b4]">用于跨平台同步的完整 manifest。</div>
+          <div className="mt-1 text-xs text-muted-foreground">用于跨平台同步的完整 manifest。</div>
         </button>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-[#202020] p-3">
-        <div className="text-xs text-[#b4b4b4]">辅助操作</div>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted p-3">
+        <div className="text-xs text-muted-foreground">辅助操作</div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" onClick={() => void generateProjectPackageIndex()}>
             生成项目包索引

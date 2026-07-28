@@ -72,18 +72,18 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
 
   if (loading) {
     return (
-      <div className="script-analysis bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden p-8">
-        <div className="text-center text-[#666]">加载中...</div>
+      <div className="script-analysis bg-card rounded-lg border border-border overflow-hidden p-8">
+        <div className="text-center text-muted-foreground">加载中...</div>
       </div>
     )
   }
 
   return (
-    <div className="script-analysis bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden">
+    <div className="script-analysis bg-card rounded-lg border border-border overflow-hidden">
       {/* 标题 */}
-      <div className="p-3 border-b border-white/10 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-white flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-[#888]" />
+      <div className="p-3 border-b border-border flex items-center justify-between">
+        <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
           剧本分析
         </h3>
         <Button
@@ -102,27 +102,27 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
         {/* 基础统计 */}
         {statistics && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-white/5 rounded-lg p-3">
-              <div className="text-xs text-[#888] mb-1">总字数</div>
-              <div className="text-lg font-bold text-white">
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="text-xs text-muted-foreground mb-1">总字数</div>
+              <div className="text-lg font-bold text-foreground">
                 {statistics.totalWords.toLocaleString()}
               </div>
             </div>
-            <div className="bg-white/5 rounded-lg p-3">
-              <div className="text-xs text-[#888] mb-1">场景数</div>
-              <div className="text-lg font-bold text-white">
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="text-xs text-muted-foreground mb-1">场景数</div>
+              <div className="text-lg font-bold text-foreground">
                 {statistics.totalScenes}
               </div>
             </div>
-            <div className="bg-white/5 rounded-lg p-3">
-              <div className="text-xs text-[#888] mb-1">角色数</div>
-              <div className="text-lg font-bold text-white">
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="text-xs text-muted-foreground mb-1">角色数</div>
+              <div className="text-lg font-bold text-foreground">
                 {statistics.totalCharacters}
               </div>
             </div>
-            <div className="bg-white/5 rounded-lg p-3">
-              <div className="text-xs text-[#888] mb-1">对白数</div>
-              <div className="text-lg font-bold text-white">
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="text-xs text-muted-foreground mb-1">对白数</div>
+              <div className="text-lg font-bold text-foreground">
                 {statistics.totalDialogues}
               </div>
             </div>
@@ -131,15 +131,15 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
 
         {/* AI评分 */}
         {assessment && (
-          <div className="border border-white/10 rounded-lg p-3">
+          <div className="border border-border rounded-lg p-3">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-purple-400" />
-                <span className="text-sm font-medium text-white">AI评分</span>
+                <Sparkles className="h-4 w-4 text-chart-1" />
+                <span className="text-sm font-medium text-foreground">AI评分</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#888]">综合得分</span>
-                <span className="text-lg font-bold text-purple-400">
+                <span className="text-xs text-muted-foreground">综合得分</span>
+                <span className="text-lg font-bold text-chart-1">
                   {assessment.overall.toFixed(1)}
                 </span>
               </div>
@@ -148,21 +148,21 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
             {/* 维度评分 */}
             <div className="space-y-2">
               {assessment.dimensions.map((dimension: any, index: number) => (
-                <div key={index} className="bg-white/5 rounded p-2">
+                <div key={index} className="bg-muted/50 rounded p-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-white">{dimension.name}</span>
+                    <span className="text-xs text-foreground">{dimension.name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#888]">
+                      <span className="text-xs text-muted-foreground">
                         权重: {(dimension.weight * 100).toFixed(0)}%
                       </span>
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-sm font-bold text-foreground">
                         {dimension.score.toFixed(1)}
                       </span>
                     </div>
                   </div>
-                  <div className="w-full bg-white/10 rounded-full h-1.5">
+                  <div className="w-full bg-muted rounded-full h-1.5">
                     <div
-                      className="bg-purple-400 h-1.5 rounded-full"
+                      className="bg-chart-1 h-1.5 rounded-full"
                       style={{ width: `${dimension.score * 10}%` }}
                     />
                   </div>
@@ -171,9 +171,9 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
                       {dimension.suggestions.map((suggestion: string, sIndex: number) => (
                         <div
                           key={sIndex}
-                          className="text-xs text-[#888] flex items-start gap-1"
+                          className="text-xs text-muted-foreground flex items-start gap-1"
                         >
-                          <AlertTriangle className="h-3 w-3 text-yellow-400 flex-shrink-0 mt-0.5" />
+                          <AlertTriangle className="h-3 w-3 text-chart-5 flex-shrink-0 mt-0.5" />
                           {suggestion}
                         </div>
                       ))}
@@ -185,9 +185,9 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
 
             {/* 总结 */}
             {assessment.summary && (
-              <div className="mt-3 p-2 bg-purple-500/10 rounded border border-purple-500/20">
-                <div className="text-xs text-purple-400 mb-1">分析总结</div>
-                <div className="text-sm text-white">{assessment.summary}</div>
+              <div className="mt-3 p-2 bg-chart-1/10 rounded border border-chart-1/20">
+                <div className="text-xs text-chart-1 mb-1">分析总结</div>
+                <div className="text-sm text-foreground">{assessment.summary}</div>
               </div>
             )}
           </div>
@@ -195,27 +195,27 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
 
         {/* 角色出场频率 */}
         {statistics?.characterFrequency && (
-          <div className="border border-white/10 rounded-lg p-3">
+          <div className="border border-border rounded-lg p-3">
             <div className="flex items-center gap-2 mb-3">
-              <PieChart className="h-4 w-4 text-blue-400" />
-              <span className="text-sm font-medium text-white">角色出场频率</span>
+              <PieChart className="h-4 w-4 text-info" />
+              <span className="text-sm font-medium text-foreground">角色出场频率</span>
             </div>
             <div className="space-y-2">
               {statistics.characterFrequency
                 .slice(0, 5)
                 .map((char: any, index: number) => (
                   <div key={index} className="flex items-center justify-between">
-                    <span className="text-xs text-white">{char.name}</span>
+                    <span className="text-xs text-foreground">{char.name}</span>
                     <div className="flex items-center gap-2">
-                      <div className="w-32 bg-white/10 rounded-full h-2">
+                      <div className="w-32 bg-muted rounded-full h-2">
                         <div
-                          className="bg-blue-400 h-2 rounded-full"
+                          className="bg-info h-2 rounded-full"
                           style={{
                             width: `${(char.count / statistics.characterFrequency[0].count) * 100}%`,
                           }}
                         />
                       </div>
-                      <span className="text-xs text-[#888]">{char.count}</span>
+                      <span className="text-xs text-muted-foreground">{char.count}</span>
                     </div>
                   </div>
                 ))}
@@ -225,25 +225,25 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
 
         {/* 场景分布 */}
         {statistics?.sceneDistribution && (
-          <div className="border border-white/10 rounded-lg p-3">
+          <div className="border border-border rounded-lg p-3">
             <div className="flex items-center gap-2 mb-3">
-              <LineChart className="h-4 w-4 text-emerald-400" />
-              <span className="text-sm font-medium text-white">场景分布</span>
+              <LineChart className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">场景分布</span>
             </div>
             <div className="space-y-2">
               {statistics.sceneDistribution.slice(0, 5).map((scene: any, index: number) => (
                 <div key={index} className="flex items-center justify-between">
-                  <span className="text-xs text-white">{scene.location}</span>
+                  <span className="text-xs text-foreground">{scene.location}</span>
                   <div className="flex items-center gap-2">
-                    <div className="w-32 bg-white/10 rounded-full h-2">
+                    <div className="w-32 bg-muted rounded-full h-2">
                       <div
-                        className="bg-emerald-400 h-2 rounded-full"
+                        className="bg-primary h-2 rounded-full"
                         style={{
                           width: `${(scene.count / statistics.sceneDistribution[0].count) * 100}%`,
                         }}
                       />
                     </div>
-                    <span className="text-xs text-[#888]">{scene.count}</span>
+                    <span className="text-xs text-muted-foreground">{scene.count}</span>
                   </div>
                 </div>
               ))}
@@ -253,10 +253,10 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
 
         {/* 节奏曲线 */}
         {statistics?.pacingData && (
-          <div className="border border-white/10 rounded-lg p-3">
+          <div className="border border-border rounded-lg p-3">
             <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="h-4 w-4 text-orange-400" />
-              <span className="text-sm font-medium text-white">节奏曲线</span>
+              <TrendingUp className="h-4 w-4 text-chart-3" />
+              <span className="text-sm font-medium text-foreground">节奏曲线</span>
             </div>
             <div className="relative h-16">
               {/* 简化的节奏曲线显示 */}
@@ -266,14 +266,14 @@ export function ScriptAnalysis({ scriptId }: ScriptAnalysisProps) {
                     .map((point: any, i: number) => `L ${(i / statistics.pacingData.length) * 100} ${60 - point.intensity * 6}`)
                     .join(' ')}`}
                   fill="none"
-                  stroke="#f97316"
+                  stroke="hsl(var(--chart-3))"
                   strokeWidth="2"
                 />
               </svg>
             </div>
             <div className="flex justify-between mt-2">
-              <span className="text-xs text-[#888]">开始</span>
-              <span className="text-xs text-[#888]">结尾</span>
+              <span className="text-xs text-muted-foreground">开始</span>
+              <span className="text-xs text-muted-foreground">结尾</span>
             </div>
           </div>
         )}

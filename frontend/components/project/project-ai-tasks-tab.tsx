@@ -183,30 +183,30 @@ export function ProjectAITasksTab({
     queued: {
       label: "队列中",
       icon: Clock,
-      textColor: "text-gray-400",
-      bgColor: "bg-gray-500/20",
-      borderColor: "border-gray-500/30",
+      textColor: "text-muted-foreground",
+      bgColor: "bg-muted/20",
+      borderColor: "border-border/30",
     },
     in_progress: {
       label: "执行中",
       icon: Loader2,
-      textColor: "text-cyan-400",
-      bgColor: "bg-cyan-500/20",
-      borderColor: "border-cyan-500/30",
+      textColor: "text-chart-2",
+      bgColor: "bg-chart-2/20",
+      borderColor: "border-chart-2/30",
     },
     completed: {
       label: "已完成",
       icon: CheckCircle2,
-      textColor: "text-emerald-400",
-      bgColor: "bg-emerald-500/20",
-      borderColor: "border-emerald-500/30",
+      textColor: "text-primary",
+      bgColor: "bg-primary/20",
+      borderColor: "border-primary/30",
     },
     failed: {
       label: "失败",
       icon: XCircleIcon,
-      textColor: "text-red-400",
-      bgColor: "bg-red-500/20",
-      borderColor: "border-red-500/30",
+      textColor: "text-destructive",
+      bgColor: "bg-destructive/20",
+      borderColor: "border-destructive/30",
     },
   };
 
@@ -215,12 +215,12 @@ export function ProjectAITasksTab({
     image: {
       label: "图片",
       icon: Image,
-      color: "text-purple-400",
+      color: "text-chart-1",
     },
     video: {
       label: "视频",
       icon: Video,
-      color: "text-amber-400",
+      color: "text-warning",
     },
   };
 
@@ -404,33 +404,33 @@ export function ProjectAITasksTab({
       {/* 标题和刷新控制 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-purple-500/20">
-            <AlertCircle className="h-5 w-5 text-cyan-400" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-chart-2/20 to-chart-1/20">
+            <AlertCircle className="h-5 w-5 text-chart-2" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-white">AI生成任务</h3>
-            <p className="text-xs text-[#888]">共 {tasks.length} 个任务</p>
+            <h3 className="text-base font-semibold text-foreground">AI生成任务</h3>
+            <p className="text-xs text-muted-foreground">共 {tasks.length} 个任务</p>
           </div>
         </div>
 
         {/* 刷新控制 */}
         <div className="flex items-center gap-2">
           {/* 自动刷新开关 */}
-          <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs">
+          <label className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs">
             <input
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+              className="h-3.5 w-3.5 rounded border-border bg-muted text-chart-2 focus:ring-chart-2 focus:ring-offset-0"
             />
-            <span className="text-[#888]">自动刷新</span>
+            <span className="text-muted-foreground">自动刷新</span>
           </label>
 
           {/* 手动刷新按钮 */}
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground transition-all hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             {isRefreshing ? "刷新中..." : "刷新"}
@@ -441,21 +441,21 @@ export function ProjectAITasksTab({
       {/* 状态统计 */}
       <div className="grid grid-cols-5 gap-2">
         {[
-          { key: "total", label: "全部", count: taskStats.total, color: "text-white" },
-          { key: "queued", label: "队列中", count: taskStats.queued, color: "text-gray-400" },
-          { key: "in_progress", label: "执行中", count: taskStats.in_progress, color: "text-cyan-400" },
-          { key: "completed", label: "已完成", count: taskStats.completed, color: "text-emerald-400" },
-          { key: "failed", label: "失败", count: taskStats.failed, color: "text-red-400" },
+          { key: "total", label: "全部", count: taskStats.total, color: "text-foreground" },
+          { key: "queued", label: "队列中", count: taskStats.queued, color: "text-muted-foreground" },
+          { key: "in_progress", label: "执行中", count: taskStats.in_progress, color: "text-chart-2" },
+          { key: "completed", label: "已完成", count: taskStats.completed, color: "text-primary" },
+          { key: "failed", label: "失败", count: taskStats.failed, color: "text-destructive" },
         ].map((stat) => (
           <button
             key={stat.key}
             onClick={() => setFilters({ ...filters, status: stat.key === "total" ? "" : (stat.key as AITaskStatus) })}
-            className={`rounded-lg border border-white/10 bg-white/5 px-3 py-2 transition-colors hover:bg-white/10 ${
-              (stat.key === "total" && !filters.status) || filters.status === stat.key ? "bg-white/10" : ""
+            className={`rounded-lg border border-border bg-muted/50 px-3 py-2 transition-colors hover:bg-muted ${
+              (stat.key === "total" && !filters.status) || filters.status === stat.key ? "bg-muted" : ""
             }`}
           >
             <div className={`text-lg font-bold ${stat.color}`}>{stat.count}</div>
-            <div className="text-xs text-[#888]">{stat.label}</div>
+            <div className="text-xs text-muted-foreground">{stat.label}</div>
           </button>
         ))}
       </div>
@@ -464,13 +464,13 @@ export function ProjectAITasksTab({
       <div className="flex flex-wrap items-center gap-2">
         {/* 搜索框 */}
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="搜索任务ID、Prompt..."
             value={filters.searchQuery}
             onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-            className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-white placeholder-[#666] focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+            className="w-full rounded-lg border border-border bg-muted/50 py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-chart-2/50 focus:outline-none focus:ring-1 focus:ring-chart-2/50"
           />
         </div>
 
@@ -478,7 +478,7 @@ export function ProjectAITasksTab({
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value as FilterState["type"] })}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+          className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:border-chart-2/50 focus:outline-none focus:ring-1 focus:ring-chart-2/50"
         >
           <option value="">全部类型</option>
           <option value="image">图片任务</option>
@@ -489,7 +489,7 @@ export function ProjectAITasksTab({
         {(filters.searchQuery || filters.type || filters.status) && (
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-[#888] transition-colors hover:text-white"
+            className="flex items-center gap-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             <XCircle className="h-3.5 w-3.5" />
             清除筛选
@@ -498,9 +498,9 @@ export function ProjectAITasksTab({
       </div>
 
       {/* 任务列表表格 */}
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-[#181818]">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         {/* 表格头部 */}
-        <div className="grid grid-cols-[60px_1fr_100px_120px_120px_80px] gap-3 border-b border-white/10 bg-white/5 px-4 py-2.5 text-xs font-medium text-[#888]">
+        <div className="grid grid-cols-[60px_1fr_100px_120px_120px_80px] gap-3 border-b border-border bg-muted/50 px-4 py-2.5 text-xs font-medium text-muted-foreground">
           <div>类型</div>
           <div>Prompt描述</div>
           <div>状态</div>
@@ -513,9 +513,9 @@ export function ProjectAITasksTab({
         <div className="divide-y divide-white/5">
           {paginatedTasks.length === 0 ? (
             <div className="flex h-48 flex-col items-center justify-center text-center">
-              <AlertCircle className="mb-3 h-10 w-10 text-[#333]" />
-              <p className="text-sm text-[#666]">暂无任务</p>
-              <p className="mt-1 text-xs text-[#444]">
+              <AlertCircle className="mb-3 h-10 w-10 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">暂无任务</p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {tasks.length === 0 ? "创建任务后将在此显示" : "没有符合筛选条件的任务"}
               </p>
             </div>
@@ -531,8 +531,8 @@ export function ProjectAITasksTab({
                 <div key={task.id}>
                   {/* 任务行 */}
                   <div
-                    className={`grid grid-cols-[60px_1fr_100px_120px_120px_80px] gap-3 px-4 py-3 transition-colors hover:bg-white/5 ${
-                      isExpanded ? "bg-white/5" : ""
+                    className={`grid grid-cols-[60px_1fr_100px_120px_120px_80px] gap-3 px-4 py-3 transition-colors hover:bg-muted/50 ${
+                      isExpanded ? "bg-muted/50" : ""
                     }`}
                   >
                     {/* 任务类型 */}
@@ -543,7 +543,7 @@ export function ProjectAITasksTab({
 
                     {/* Prompt描述 */}
                     <div className="flex items-center">
-                      <div className="flex-1 truncate text-sm text-white">
+                      <div className="flex-1 truncate text-sm text-foreground">
                         {task.prompt}
                       </div>
                     </div>
@@ -563,19 +563,19 @@ export function ProjectAITasksTab({
                     </div>
 
                     {/* 创建时间 */}
-                    <div className="flex items-center text-xs text-[#888]">
+                    <div className="flex items-center text-xs text-muted-foreground">
                       <Calendar className="mr-1 h-3 w-3" />
                       {formatTime(task.createdAt)}
                     </div>
 
                     {/* 耗时 */}
-                    <div className="flex items-center text-xs text-[#888]">
+                    <div className="flex items-center text-xs text-muted-foreground">
                       {task.duration ? (
                         <span>{formatDuration(task.duration)}</span>
                       ) : task.status === "in_progress" && task.progress ? (
-                        <span className="text-cyan-400">{task.progress}%</span>
+                        <span className="text-chart-2">{task.progress}%</span>
                       ) : (
-                        <span className="text-[#666]">--</span>
+                        <span className="text-muted-foreground">--</span>
                       )}
                     </div>
 
@@ -583,7 +583,7 @@ export function ProjectAITasksTab({
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => toggleTaskDetails(task.id)}
-                        className="rounded p-1 text-[#888] transition-colors hover:bg-white/10 hover:text-white"
+                        className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         title="查看详情"
                       >
                         {isExpanded ? (
@@ -597,42 +597,42 @@ export function ProjectAITasksTab({
 
                   {/* 任务详情展开区域 */}
                   {isExpanded && (
-                    <div className="border-t border-white/5 bg-white/[0.02] px-4 py-3">
+                    <div className="border-t border-border/50 bg-muted/30 px-4 py-3">
                       <div className="grid gap-3 md:grid-cols-2">
                         {/* 基本信息 */}
                         <div className="space-y-1.5">
-                          <h4 className="text-xs font-semibold text-[#888]">基本信息</h4>
+                          <h4 className="text-xs font-semibold text-muted-foreground">基本信息</h4>
                           <div className="space-y-1 text-xs">
                             <div className="flex gap-2">
-                              <span className="w-16 text-[#666]">任务ID:</span>
-                              <span className="font-mono text-white">{task.id}</span>
+                              <span className="w-16 text-muted-foreground">任务ID:</span>
+                              <span className="font-mono text-foreground">{task.id}</span>
                             </div>
                             <div className="flex gap-2">
-                              <span className="w-16 text-[#666]">任务类型:</span>
-                              <span className="text-white">{typeConfig.label}</span>
+                              <span className="w-16 text-muted-foreground">任务类型:</span>
+                              <span className="text-foreground">{typeConfig.label}</span>
                             </div>
                             <div className="flex gap-2">
-                              <span className="w-16 text-[#666]">状态:</span>
+                              <span className="w-16 text-muted-foreground">状态:</span>
                               <span className={statusConfig.textColor}>{statusConfig.label}</span>
                             </div>
                             <div className="flex gap-2">
-                              <span className="w-16 text-[#666]">创建时间:</span>
-                              <span className="text-white">
+                              <span className="w-16 text-muted-foreground">创建时间:</span>
+                              <span className="text-foreground">
                                 {new Date(task.createdAt).toLocaleString("zh-CN")}
                               </span>
                             </div>
                             {task.completedAt && (
                               <div className="flex gap-2">
-                                <span className="w-16 text-[#666]">完成时间:</span>
-                                <span className="text-white">
+                                <span className="w-16 text-muted-foreground">完成时间:</span>
+                                <span className="text-foreground">
                                   {new Date(task.completedAt).toLocaleString("zh-CN")}
                                 </span>
                               </div>
                             )}
                             {task.duration && (
                               <div className="flex gap-2">
-                                <span className="w-16 text-[#666]">耗时:</span>
-                                <span className="text-white">{formatDuration(task.duration)}</span>
+                                <span className="w-16 text-muted-foreground">耗时:</span>
+                                <span className="text-foreground">{formatDuration(task.duration)}</span>
                               </div>
                             )}
                           </div>
@@ -640,27 +640,27 @@ export function ProjectAITasksTab({
 
                         {/* 详细信息 */}
                         <div className="space-y-1.5">
-                          <h4 className="text-xs font-semibold text-[#888]">详细信息</h4>
+                          <h4 className="text-xs font-semibold text-muted-foreground">详细信息</h4>
                           <div className="space-y-1 text-xs">
                             {/* 错误信息 */}
                             {task.error && (
-                              <div className="rounded border border-red-500/30 bg-red-500/10 p-2">
-                                <div className="mb-1 text-xs font-medium text-red-400">错误信息</div>
-                                <div className="text-xs text-red-300">{task.error}</div>
+                              <div className="rounded border border-destructive/30 bg-destructive/10 p-2">
+                                <div className="mb-1 text-xs font-medium text-destructive">错误信息</div>
+                                <div className="text-xs text-destructive">{task.error}</div>
                               </div>
                             )}
 
                             {/* 进度信息 */}
                             {task.status === "in_progress" && task.progress !== undefined && (
-                              <div className="rounded border border-cyan-500/30 bg-cyan-500/10 p-2">
-                                <div className="mb-2 text-xs font-medium text-cyan-400">执行进度</div>
-                                <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                              <div className="rounded border border-chart-2/30 bg-chart-2/10 p-2">
+                                <div className="mb-2 text-xs font-medium text-chart-2">执行进度</div>
+                                <div className="h-2 overflow-hidden rounded-full bg-muted">
                                   <div
-                                    className="h-full rounded-full bg-cyan-500 transition-all"
+                                    className="h-full rounded-full bg-chart-2 transition-all"
                                     style={{ width: `${task.progress}%` }}
                                   />
                                 </div>
-                                <div className="mt-1 text-xs text-cyan-400">{task.progress}%</div>
+                                <div className="mt-1 text-xs text-chart-2">{task.progress}%</div>
                               </div>
                             )}
                           </div>
@@ -669,8 +669,8 @@ export function ProjectAITasksTab({
 
                       {/* 完整Prompt */}
                       <div className="mt-3">
-                        <h4 className="mb-1.5 text-xs font-semibold text-[#888]">Prompt</h4>
-                        <div className="rounded border border-white/10 bg-white/5 p-2.5 text-xs text-white">
+                        <h4 className="mb-1.5 text-xs font-semibold text-muted-foreground">Prompt</h4>
+                        <div className="rounded border border-border bg-muted/50 p-2.5 text-xs text-foreground">
                           {task.prompt}
                         </div>
                       </div>
@@ -678,7 +678,7 @@ export function ProjectAITasksTab({
                       {/* 生成的资源 */}
                       {task.resultUrls && task.resultUrls.length > 0 && (
                         <div className="mt-3">
-                          <h4 className="mb-1.5 text-xs font-semibold text-[#888]">生成的资源</h4>
+                          <h4 className="mb-1.5 text-xs font-semibold text-muted-foreground">生成的资源</h4>
                           <div className="flex flex-wrap gap-2">
                             {task.resultUrls.map((url, index) => (
                               <a
@@ -686,7 +686,7 @@ export function ProjectAITasksTab({
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-1 rounded border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-cyan-400 transition-colors hover:bg-white/10"
+                                className="flex items-center gap-1 rounded border border-border bg-muted/50 px-2.5 py-1 text-xs text-chart-2 transition-colors hover:bg-muted"
                               >
                                 <Eye className="h-3 w-3" />
                                 资源 {index + 1}
@@ -702,7 +702,7 @@ export function ProjectAITasksTab({
                           onCancelTask && (
                             <button
                               onClick={() => handleCancelTask(task.id)}
-                              className="flex items-center gap-1 rounded-lg bg-orange-500/20 px-3 py-1.5 text-xs font-medium text-orange-400 transition-colors hover:bg-orange-500/30"
+                              className="flex items-center gap-1 rounded-lg bg-chart-3/20 px-3 py-1.5 text-xs font-medium text-chart-3 transition-colors hover:bg-chart-3/30"
                             >
                               <XCircle className="h-3.5 w-3.5" />
                               取消任务
@@ -712,7 +712,7 @@ export function ProjectAITasksTab({
                         {task.status === "failed" && onRetryTask && (
                           <button
                             onClick={() => handleRetryTask(task.id)}
-                            className="flex items-center gap-1 rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/30"
+                            className="flex items-center gap-1 rounded-lg bg-info/20 px-3 py-1.5 text-xs font-medium text-info transition-colors hover:bg-info/30"
                           >
                             <RotateCcw className="h-3.5 w-3.5" />
                             重试任务
@@ -730,15 +730,15 @@ export function ProjectAITasksTab({
 
       {/* 分页控制 */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-2">
-          <div className="text-xs text-[#888]">
+        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 px-4 py-2">
+          <div className="text-xs text-muted-foreground">
             显示 {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredTasks.length)} / {filteredTasks.length} 个任务
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="rounded p-1.5 text-[#888] transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -748,8 +748,8 @@ export function ProjectAITasksTab({
                 onClick={() => handlePageChange(page)}
                 className={`min-w-[28px] rounded px-2 py-1 text-xs transition-colors ${
                   currentPage === page
-                    ? "bg-cyan-500/20 text-cyan-400"
-                    : "text-[#888] hover:bg-white/10 hover:text-white"
+                    ? "bg-chart-2/20 text-chart-2"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 {page}
@@ -758,7 +758,7 @@ export function ProjectAITasksTab({
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="rounded p-1.5 text-[#888] transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -768,7 +768,7 @@ export function ProjectAITasksTab({
 
       {/* 底部提示 */}
       {filteredTasks.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-[#888]">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
             {Object.entries(statusConfigs).map(([status, config]) => {
               const count = filteredTasks.filter((t) => t.status === status).length;
@@ -785,7 +785,7 @@ export function ProjectAITasksTab({
           <div className="flex items-center gap-2">
             {autoRefresh && (
               <div className="flex items-center gap-1">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                <div className="h-2 w-2 animate-pulse rounded-full bg-success" />
                 <span>自动刷新中</span>
               </div>
             )}

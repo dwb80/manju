@@ -67,15 +67,15 @@ export function SceneDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
-        className="bg-[#1a1a1a] border border-white/10 rounded-lg shadow-2xl max-w-2xl w-[90vw] max-h-[85vh] overflow-y-auto p-6"
+        className="bg-card border border-border rounded-lg shadow-2xl max-w-2xl w-[90vw] max-h-[85vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-white">场景详情：{scene.name}</h2>
+          <h2 className="text-lg font-medium text-foreground">场景详情：{scene.name}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-white/60 hover:text-white"
+            className="text-foreground/60 hover:text-foreground"
             aria-label="关闭"
           >
             <X className="h-5 w-5" />
@@ -86,27 +86,27 @@ export function SceneDetailModal({
             <img
               src={scene.image}
               alt={scene.name}
-              className="w-full h-64 object-cover rounded border border-white/10"
+              className="w-full h-64 object-cover rounded border border-border"
             />
           </div>
         )}
         <dl className="grid grid-cols-2 gap-3 text-sm">
           {scene.type && (
             <div>
-              <dt className="text-white/50 text-xs">类型</dt>
-              <dd className="text-white/90">{scene.type}</dd>
+              <dt className="text-foreground/50 text-xs">类型</dt>
+              <dd className="text-foreground/90">{scene.type}</dd>
             </div>
           )}
           {scene.location && (
             <div>
-              <dt className="text-white/50 text-xs">地点</dt>
-              <dd className="text-white/90">{scene.location}</dd>
+              <dt className="text-foreground/50 text-xs">地点</dt>
+              <dd className="text-foreground/90">{scene.location}</dd>
             </div>
           )}
           {scene.description && (
             <div className="col-span-2">
-              <dt className="text-white/50 text-xs">描述</dt>
-              <dd className="text-white/90 whitespace-pre-wrap">{scene.description}</dd>
+              <dt className="text-foreground/50 text-xs">描述</dt>
+              <dd className="text-foreground/90 whitespace-pre-wrap">{scene.description}</dd>
             </div>
           )}
         </dl>

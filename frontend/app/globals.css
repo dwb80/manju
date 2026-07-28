@@ -4,6 +4,24 @@
 
 @layer base {
   :root {
+    /* UI improvement spec: semantic surface tokens (light theme). */
+    --bg-app: #ffffff;
+    --bg-sidebar: #f5f5f5;
+    --bg-topbar: #ffffff;
+    --bg-card: #fcfcfc;
+    --bg-card-hover: #f5f5f5;
+    --bg-elevated: #eeeeee;
+    --bg-input: #ffffff;
+    --border-default: rgba(15, 23, 42, 0.12);
+    --border-hover: rgba(15, 23, 42, 0.22);
+    --border-active: rgba(16, 185, 129, 0.5);
+    --text-primary: #1b1e23;
+    --text-secondary: #5f6672;
+    --text-muted: #737b88;
+    --text-dim: #9aa1ac;
+    --accent-brand: #10b981;
+    --accent-brand-dim: rgba(16, 185, 129, 0.1);
+    --accent-brand-hover: #059669;
     --background: 0 0% 100%;
     --foreground: 220 13% 12%;
 
@@ -32,17 +50,49 @@
     --input: 220 13% 88%;
     --ring: 163 82% 35%;
 
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --chart-1: 262 83% 58%;
+    --chart-2: 187 85% 43%;
+    --chart-3: 25 95% 53%;
+    --chart-4: 330 81% 60%;
+    --chart-5: 47 96% 53%;
+    --chart-6: 243 75% 59%;
+
     --radius: 0.5rem;
   }
 
   .dark {
+    /* UI improvement spec: canonical dark surfaces. */
+    --bg-app: #0d0d0d;
+    --bg-sidebar: #141414;
+    --bg-topbar: #1a1a1a;
+    --bg-card: #202020;
+    --bg-card-hover: #252525;
+    --bg-elevated: #2a2a2a;
+    --bg-input: #1e1e1e;
+    --border-default: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.15);
+    --border-active: rgba(16, 185, 129, 0.5);
+    --text-primary: #f5f5f5;
+    --text-secondary: #a3a3a3;
+    --text-muted: #6b7280;
+    --text-dim: #4b5563;
+    --accent-brand: #10b981;
+    --accent-brand-dim: rgba(16, 185, 129, 0.1);
+    --accent-brand-hover: #059669;
     --background: 0 0% 5%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 9%;
+    --card: 0 0% 12.5%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 9%;
+    --popover: 0 0% 12.5%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 163 82% 35%;
@@ -51,18 +101,32 @@
     --secondary: 220 3% 15%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 220 3% 13%;
+    --muted: 0 0% 16.5%;
     --muted-foreground: 0 0% 64%;
 
-    --accent: 220 3% 18%;
+    --accent: 0 0% 16.5%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 5% 22%;
-    --input: 220 5% 22%;
-    --ring: 199 89% 48%;
+    --border: 0 0% 100% / 0.08;
+    --input: 0 0% 100% / 0.15;
+    --ring: 163 82% 35%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --chart-1: 263 70% 65%;
+    --chart-2: 187 85% 53%;
+    --chart-3: 25 95% 58%;
+    --chart-4: 330 81% 65%;
+    --chart-5: 47 96% 58%;
+    --chart-6: 243 75% 65%;
   }
 }
 
@@ -74,6 +138,8 @@ body {
   margin: 0;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 button, input, textarea, select {
@@ -82,9 +148,9 @@ button, input, textarea, select {
 
 /* V2 NF-F18/F19: consistent keyboard navigation and clearly visible focus. */
 :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
-  outline: 3px solid #38bdf8;
+  outline: 3px solid hsl(var(--primary));
   outline-offset: 3px;
-  box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.22);
+  box-shadow: 0 0 0 5px hsl(var(--primary) / 0.22);
 }
 
 .skip-to-content {
@@ -95,8 +161,8 @@ button, input, textarea, select {
   transform: translateY(-150%);
   padding: 10px 14px;
   border-radius: 6px;
-  background: #fff;
-  color: #111;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
   font-weight: 700;
 }
 .skip-to-content:focus { transform: translateY(0); }
@@ -115,8 +181,8 @@ button, input, textarea, select {
   top: 0;
   z-index: 9998;
   padding: 10px 16px;
-  background: #7f1d1d;
-  color: #fff;
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
   text-align: center;
   font-size: 14px;
 }
@@ -136,8 +202,8 @@ button, input, textarea, select {
     box-shadow: 0 0 0 0 transparent;
   }
   20%, 60% {
-    background-color: rgba(16, 185, 129, 0.18);
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25);
+    background-color: hsl(var(--primary) / 0.18);
+    box-shadow: 0 0 0 4px hsl(var(--primary) / 0.25);
   }
 }
 
@@ -149,7 +215,7 @@ button, input, textarea, select {
 
 /* ============ 智能助手聊天页 Markdown 样式 ============ */
 .chat-md {
-  color: #e5e7eb;
+  color: hsl(var(--foreground));
   font-size: 14px;
   line-height: 1.75;
   word-break: break-word;
@@ -161,7 +227,7 @@ button, input, textarea, select {
 .chat-md h2,
 .chat-md h3,
 .chat-md h4 {
-  color: #fff;
+  color: hsl(var(--foreground));
   font-weight: 600;
   line-height: 1.4;
   margin-top: 1rem;
@@ -169,27 +235,27 @@ button, input, textarea, select {
 .chat-md h1 { font-size: 1.25rem; }
 .chat-md h2 { font-size: 1.125rem; }
 .chat-md h3 { font-size: 1rem; }
-.chat-md h4 { font-size: 0.95rem; color: #d4d4d8; }
-.chat-md p { color: #d4d4d8; }
-.chat-md strong { color: #fff; font-weight: 600; }
-.chat-md em { color: #f3f4f6; font-style: italic; }
-.chat-md del { color: #9ca3af; }
+.chat-md h4 { font-size: 0.95rem; color: hsl(var(--muted-foreground)); }
+.chat-md p { color: hsl(var(--muted-foreground)); }
+.chat-md strong { color: hsl(var(--foreground)); font-weight: 600; }
+.chat-md em { color: hsl(var(--foreground)); font-style: italic; }
+.chat-md del { color: hsl(var(--muted-foreground)); }
 .chat-md a {
-  color: #34d399;
+  color: hsl(var(--primary));
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: color 150ms;
 }
-.chat-md a:hover { color: #6ee7b7; }
+.chat-md a:hover { color: hsl(var(--primary)); }
 .chat-md ul,
 .chat-md ol {
   padding-left: 1.25rem;
-  color: #d4d4d8;
+  color: hsl(var(--muted-foreground));
 }
 .chat-md ul { list-style: disc; }
 .chat-md ol { list-style: decimal; }
 .chat-md li + li { margin-top: 0.25rem; }
-.chat-md li::marker { color: #6b7280; }
+.chat-md li::marker { color: hsl(var(--muted-foreground)); }
 .chat-md-task {
   list-style: none;
   padding-left: 0;
@@ -207,45 +273,45 @@ button, input, textarea, select {
   width: 16px;
   height: 16px;
   margin-top: 4px;
-  border: 1px solid #4b5563;
+  border: 1px solid hsl(var(--border));
   border-radius: 4px;
   font-size: 11px;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
   flex-shrink: 0;
 }
 .chat-md-task li[data-checked="true"] .chat-md-task-box {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: #10b981;
+  background: hsl(var(--primary) / 0.2);
+  border-color: hsl(var(--primary));
 }
 .chat-md-task li[data-checked="true"] span:last-child {
-  color: #9ca3af;
+  color: hsl(var(--muted-foreground));
   text-decoration: line-through;
 }
 .chat-md blockquote {
-  border-left: 3px solid #10b981;
+  border-left: 3px solid hsl(var(--primary));
   padding: 0.25rem 0 0.25rem 0.85rem;
-  color: #d4d4d8;
-  background: rgba(16, 185, 129, 0.06);
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--primary) / 0.06);
   border-radius: 0 6px 6px 0;
 }
 .chat-md hr {
   border: none;
-  border-top: 1px solid #2f2f2f;
+  border-top: 1px solid hsl(var(--border));
   margin: 1rem 0;
 }
 .chat-md-code-inline {
-  background: #2a2a2a;
-  border: 1px solid #3f3f46;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
   border-radius: 4px;
   padding: 0.05rem 0.4rem;
   font-size: 0.875em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: #fcd34d;
+  color: hsl(var(--warning));
 }
 .chat-md-codeblock {
-  background: #0f0f0f;
-  border: 1px solid #2f2f2f;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   overflow: hidden;
   font-size: 13px;
@@ -256,14 +322,14 @@ button, input, textarea, select {
   align-items: center;
   justify-content: space-between;
   padding: 0.4rem 0.75rem;
-  background: #1a1a1a;
-  color: #9ca3af;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
   font-size: 11px;
-  border-bottom: 1px solid #2f2f2f;
+  border-bottom: 1px solid hsl(var(--border));
 }
 .chat-md-codeblock-head button {
   background: transparent;
-  color: #9ca3af;
+  color: hsl(var(--muted-foreground));
   font-size: 11px;
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
@@ -271,14 +337,14 @@ button, input, textarea, select {
   cursor: pointer;
 }
 .chat-md-codeblock-head button:hover {
-  background: #2a2a2a;
-  color: #fff;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
 }
 .chat-md-codeblock pre {
   margin: 0;
   padding: 0.75rem 0.9rem;
   overflow-x: auto;
-  color: #e5e7eb;
+  color: hsl(var(--foreground));
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   line-height: 1.6;
 }
@@ -295,9 +361,9 @@ button, input, textarea, select {
 }
 .chat-md-table-wrap {
   overflow-x: auto;
-  border: 1px solid #2f2f2f;
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
-  background: #18181b;
+  background: hsl(var(--card));
 }
 .chat-md-table-wrap table {
   width: 100%;
@@ -308,11 +374,11 @@ button, input, textarea, select {
 .chat-md-table-wrap td {
   padding: 0.5rem 0.75rem;
   text-align: left;
-  border-bottom: 1px solid #27272a;
+  border-bottom: 1px solid hsl(var(--border));
 }
 .chat-md-table-wrap th {
-  background: #1f1f23;
-  color: #fff;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
   font-weight: 600;
 }
 .chat-md-table-wrap tr:last-child td { border-bottom: none; }
@@ -328,7 +394,7 @@ button, input, textarea, select {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10b981;
+  background: hsl(var(--primary));
   margin: 0 2px;
   animation: chatTypingBounce 1.2s infinite;
 }
@@ -342,17 +408,17 @@ button, input, textarea, select {
 .chat-fade-in { animation: chatFadeIn 200ms ease-out; }
 
 @keyframes chatPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+  50% { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
 }
 .chat-pulse { animation: chatPulse 2s infinite; }
 
 /* ============ 表单设计 Token（Form v2） ============ */
-/* 必填圆点颜色：emerald-500（避开聚焦色 sky-400 与错误色 red-500）。 */
+/* 必填圆点颜色与聚焦色统一为 emerald 系，消除 sky-400 与品牌色的视觉分裂。 */
 :root {
   --form-required: 160 84% 39%;       /* emerald-500 */
   --form-required-ring: 160 84% 39%;  /* 同色，用于阴影光环 */
-  --form-focus: 199 89% 48%;          /* sky-400：聚焦态边框/ring（与必填解耦） */
+  --form-focus: 163 82% 35%;          /* emerald-500：聚焦态边框/ring（与品牌色一致） */
   --form-error: 0 84% 60%;            /* red-500：错误态 */
   --form-placeholder: 0 0% 46%;       /* 占位符（深色主题下提升对比度） */
   --form-disabled: 220 3% 25%;        /* 禁用态背景 */

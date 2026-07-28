@@ -53,9 +53,9 @@ const STATUS_LABEL: Record<TodoStatus, string> = {
 };
 
 const STATUS_COLOR: Record<TodoStatus, string> = {
-  pending: "bg-amber-500/20 text-amber-300",
-  doing: "bg-blue-500/20 text-blue-300",
-  done: "bg-emerald-500/20 text-emerald-300",
+  pending: "bg-warning/20 text-warning",
+  doing: "bg-info/20 text-info",
+  done: "bg-primary/20 text-primary",
 };
 
 const PRIORITY_LABEL: Record<TodoPriority, string> = {
@@ -65,9 +65,9 @@ const PRIORITY_LABEL: Record<TodoPriority, string> = {
 };
 
 const PRIORITY_COLOR: Record<TodoPriority, string> = {
-  low: "bg-gray-500/20 text-gray-300",
-  medium: "bg-blue-500/20 text-blue-300",
-  high: "bg-red-500/20 text-red-300",
+  low: "bg-muted/20 text-muted-foreground",
+  medium: "bg-info/20 text-info",
+  high: "bg-destructive/20 text-destructive",
 };
 
 export default function TodosPage() {
@@ -208,7 +208,7 @@ export default function TodosPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#181818] text-[#ececec]">
+    <main className="min-h-screen bg-card text-foreground/90">
       <StandalonePageHeader
         title="我的待办"
         description="跨项目汇总需要处理的事项，支持优先级、状态、关联资产跳转"
@@ -223,8 +223,8 @@ export default function TodosPage() {
               }}
               className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs transition-colors ${
                 showRecycle
-                  ? "border-amber-500/50 bg-amber-500/10 text-amber-300"
-                  : "border-white/10 bg-[#1a1a1a] text-[#aaa] hover:text-white"
+                  ? "border-warning/50 bg-warning/10 text-warning"
+                  : "border-border bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
               <RotateCcw className="h-3 w-3" />
@@ -236,7 +236,7 @@ export default function TodosPage() {
                 setEditing(null);
                 setShowForm(true);
               }}
-              className="inline-flex h-7 items-center gap-1 rounded-md bg-emerald-500 px-2 text-xs text-white hover:bg-emerald-400"
+              className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2 text-xs text-primary-foreground hover:bg-primary/90"
             >
               <Plus className="h-3 w-3" />
               新建待办
@@ -283,7 +283,7 @@ export default function TodosPage() {
 
       {!showRecycle && (
         <div className="px-6">
-          <div className="mb-3 inline-flex h-9 items-center rounded-md border border-white/10 bg-[#1a1a1a] p-0.5 text-xs">
+          <div className="mb-3 inline-flex h-9 items-center rounded-md border border-border bg-card p-0.5 text-xs">
             {(["all", "pending", "doing", "done"] as const).map((s) => (
               <button
                 key={s}
@@ -294,12 +294,12 @@ export default function TodosPage() {
                 }}
                 className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1 transition-colors ${
                   filter === s
-                    ? "bg-emerald-500/15 text-emerald-200"
-                    : "text-[#aaa] hover:text-white"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {s === "all" ? "全部" : STATUS_LABEL[s]}
-                <span className="text-[10px] text-[#666]">
+                <span className="text-[10px] text-muted-foreground">
                   （{s === "all" ? stats.total : stats[s]}）
                 </span>
               </button>
@@ -318,12 +318,12 @@ export default function TodosPage() {
         )}
 
         {visible.length === 0 ? (
-          <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-12 text-center">
-            <ListChecks className="mx-auto h-10 w-10 text-[#444]" />
-            <h3 className="mt-3 text-sm font-medium text-white">
+          <div className="rounded-lg border border-border bg-card p-12 text-center">
+            <ListChecks className="mx-auto h-10 w-10 text-muted-foreground" />
+            <h3 className="mt-3 text-sm font-medium text-foreground">
               {showRecycle ? "回收站为空" : filter === "all" ? "暂无待办" : `暂无「${STATUS_LABEL[filter as TodoStatus]}」的待办`}
             </h3>
-            <p className="mt-1 text-xs text-[#888]">
+            <p className="mt-1 text-xs text-muted-foreground">
               {showRecycle ? "已删除的待办会出现在这里" : "点击右上角「新建待办」开始记录"}
             </p>
           </div>
@@ -393,8 +393,8 @@ function TodoItem({
 }: TodoItemProps) {
   return (
     <div
-      className={`group flex items-center gap-3 rounded-lg border bg-[#1a1a1a] px-4 py-3 transition-colors ${
-        t.status === "done" ? "border-emerald-500/30 opacity-60" : "border-white/10 hover:border-emerald-500/30"
+      className={`group flex items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors ${
+        t.status === "done" ? "border-primary/30 opacity-60" : "border-border hover:border-primary/30"
       }`}
     >
       <button
@@ -402,19 +402,19 @@ function TodoItem({
         onClick={onToggle}
         className={`grid h-5 w-5 shrink-0 place-items-center rounded border transition-colors ${
           t.status === "done"
-            ? "border-emerald-500 bg-emerald-500"
-            : "border-white/40 hover:border-emerald-400"
+            ? "border-primary bg-primary"
+            : "border-border hover:border-primary"
         }`}
         aria-label={t.status === "done" ? "标记为未完成" : "标记为完成"}
       >
-        {t.status === "done" && <CheckCircle2 className="h-3 w-3 text-white" />}
+        {t.status === "done" && <CheckCircle2 className="h-3 w-3 text-foreground" />}
       </button>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
           <h3
             className={`text-sm font-medium ${
-              t.status === "done" ? "text-[#888] line-through" : "text-white"
+              t.status === "done" ? "text-muted-foreground line-through" : "text-foreground"
             }`}
           >
             {t.title}
@@ -427,7 +427,7 @@ function TodoItem({
             {PRIORITY_LABEL[t.priority]}
           </span>
           {t.due_date && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] text-[#888]">
+            <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
               <Calendar className="h-2.5 w-2.5" />
               {t.due_date}
             </span>
@@ -437,14 +437,14 @@ function TodoItem({
               href={t.link_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-emerald-300 hover:underline"
+              className="text-[10px] text-primary hover:underline"
             >
               {t.link_type ? `跳转 ${t.link_type}` : "跳转关联"}
             </a>
           )}
         </div>
         {t.description && (
-          <p className="text-xs text-[#888] line-clamp-1">{t.description}</p>
+          <p className="text-xs text-muted-foreground line-clamp-1">{t.description}</p>
         )}
       </div>
 
@@ -454,7 +454,7 @@ function TodoItem({
             <button
               type="button"
               onClick={onEdit}
-              className="grid h-7 w-7 place-items-center rounded text-[#888] hover:bg-white/5 hover:text-white"
+              className="grid h-7 w-7 place-items-center rounded text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               aria-label="编辑"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -462,7 +462,7 @@ function TodoItem({
             <button
               type="button"
               onClick={onDelete}
-              className="grid h-7 w-7 place-items-center rounded text-[#888] hover:bg-red-500/10 hover:text-red-300"
+              className="grid h-7 w-7 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               aria-label="删除"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -473,7 +473,7 @@ function TodoItem({
             <button
               type="button"
               onClick={onRestore}
-              className="grid h-7 w-7 place-items-center rounded text-[#888] hover:bg-emerald-500/10 hover:text-emerald-300"
+              className="grid h-7 w-7 place-items-center rounded text-muted-foreground hover:bg-primary/10 hover:text-primary"
               aria-label="恢复"
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -481,7 +481,7 @@ function TodoItem({
             <button
               type="button"
               onClick={onPermanentDelete}
-              className="grid h-7 w-7 place-items-center rounded text-[#888] hover:bg-red-500/10 hover:text-red-300"
+              className="grid h-7 w-7 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               aria-label="永久删除"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -544,47 +544,47 @@ function TodoFormDialog({ initial, onClose, onSave }: TodoFormDialogProps) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-lg overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a] shadow-2xl"
+        className="w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-          <h2 className="text-sm font-medium text-white">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
+          <h2 className="text-sm font-medium text-foreground">
             {initial ? "编辑待办" : "新建待办"}
           </h2>
-          <button type="button" onClick={onClose} className="text-[#888] hover:text-white" aria-label="关闭">
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground" aria-label="关闭">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="space-y-3 p-5">
           <div>
-            <label className="mb-1 block text-xs text-[#888]">标题</label>
+            <label className="mb-1 block text-xs text-muted-foreground">标题</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
               placeholder="例如：完成第 3 集分镜"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs text-[#888]">描述（可选）</label>
+            <label className="mb-1 block text-xs text-muted-foreground">描述（可选）</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
               placeholder="补充说明、拆解步骤..."
             />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-[#888]">状态</label>
+              <label className="mb-1 block text-xs text-muted-foreground">状态</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TodoStatus)}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-2 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground"
               >
                 <option value="pending">待处理</option>
                 <option value="doing">进行中</option>
@@ -592,11 +592,11 @@ function TodoFormDialog({ initial, onClose, onSave }: TodoFormDialogProps) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-[#888]">优先级</label>
+              <label className="mb-1 block text-xs text-muted-foreground">优先级</label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TodoPriority)}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-2 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground"
               >
                 <option value="low">低</option>
                 <option value="medium">中</option>
@@ -604,23 +604,23 @@ function TodoFormDialog({ initial, onClose, onSave }: TodoFormDialogProps) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-[#888]">截止日期</label>
+              <label className="mb-1 block text-xs text-muted-foreground">截止日期</label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-2 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-[#888]">关联类型</label>
+              <label className="mb-1 block text-xs text-muted-foreground">关联类型</label>
               <select
                 value={linkType}
                 onChange={(e) => setLinkType(e.target.value)}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-2 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground"
               >
                 <option value="">无</option>
                 <option value="project">项目</option>
@@ -632,32 +632,32 @@ function TodoFormDialog({ initial, onClose, onSave }: TodoFormDialogProps) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-[#888]">关联 ID</label>
+              <label className="mb-1 block text-xs text-muted-foreground">关联 ID</label>
               <input
                 value={linkId}
                 onChange={(e) => setLinkId(e.target.value)}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
                 placeholder="可选"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-[#888]">跳转 URL</label>
+              <label className="mb-1 block text-xs text-muted-foreground">跳转 URL</label>
               <input
                 value={linkUrl}
                 onChange={(e) => setLinkUrl(e.target.value)}
-                className="w-full rounded-md border border-white/10 bg-[#0f0f0f] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
                 placeholder="如 /scripts/xxx"
               />
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-white/10 px-5 py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="rounded-md px-3 py-1.5 text-sm text-[#888] hover:text-white"
+            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             取消
           </button>
@@ -665,7 +665,7 @@ function TodoFormDialog({ initial, onClose, onSave }: TodoFormDialogProps) {
             type="button"
             onClick={handleSubmit}
             disabled={busy}
-            className="inline-flex items-center gap-1 rounded-md bg-emerald-500 px-3 py-1.5 text-sm text-white hover:bg-emerald-400 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {initial ? "保存" : "添加"}
           </button>

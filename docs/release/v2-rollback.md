@@ -1,9 +1,11 @@
-# V2 升级与回滚方案
+# 升级与回滚方案
+
+> **领域归属**：项目级（跨上下文运维规范）
 
 ## 升级前
 
 1. 停止写流量并记录当前应用版本、Node/npm 版本及环境变量清单（不得把密钥写入报告）。
-2. 执行 `npm --prefix backend run ops:backup -- --database <sqlite.db> --output <backup.db>`；脚本会运行 `integrity_check`、checkpoint、`VACUUM INTO`，并复验备份。
+2. 执行 `npm --prefix backend run ops:backup -- --database <sqlite.db> --output <backup.db>`；脚本运行 `integrity_check`、checkpoint、`VACUUM INTO`，并复验备份。
 3. 将备份复制到与应用数据盘故障域不同的位置，并记录校验值。
 4. 在备份副本上运行目标版本，验证自动补列迁移和关键读写，再切换生产版本。
 
@@ -17,7 +19,7 @@
 ## 回滚步骤
 
 1. 立即停止写流量和后台 sweep/队列消费者，保留故障数据库及日志作为证据。
-2. 停止 V2 实例，部署上一稳定应用包；不要让旧版本直接打开已经迁移且仍在写入的数据库。
+2. 停止当前实例，部署上一稳定应用包；不要让旧版本直接打开已迁移且仍在写入的数据库。
 3. 将升级前验证通过的备份复制为新的运行数据库，保留原故障库，不做覆盖删除。
 4. 启动上一稳定版本，依次检查 `/api/health`、`/api/ready`、登录、项目读取与权限隔离。
 5. 恢复小比例流量，观察错误率、延迟和审计日志，确认稳定后再完全恢复。
@@ -25,4 +27,4 @@
 
 ## 回滚演练验收
 
-自动化测试 `backend/tests/sqlite-migration-backup.test.mjs` 已覆盖旧项目 schema 升级、记录保留、备份恢复和恢复库完整性。正式环境演练还需记录操作者、开始/结束时间、备份路径与校验值、恢复点目标和业务抽样结果。
+自动化测试 `backend/tests/sqlite-migration-backup.test.mjs` 覆盖旧项目 schema 升级、记录保留、备份恢复和恢复库完整性。正式环境演练需记录操作者、开始/结束时间、备份路径与校验值、恢复点目标和业务抽样结果。

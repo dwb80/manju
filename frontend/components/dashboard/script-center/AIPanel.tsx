@@ -188,17 +188,17 @@ export function AIPanel({
   const handleReject = () => setDiff(null)
 
   return (
-    <div className="ai-panel bg-[#1a1a1a] border-l border-white/10 h-full overflow-hidden flex flex-col relative">
+    <div className="ai-panel bg-card border-l border-border h-full overflow-hidden flex flex-col relative">
       {/* 标题 */}
-      <div className="p-3 border-b border-white/10">
-        <h3 className="text-sm font-medium text-white flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-emerald-400" />
+      <div className="p-3 border-b border-border">
+        <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
           AI 助手
         </h3>
       </div>
 
       {/* 标签页 */}
-      <div className="border-b border-white/10">
+      <div className="border-b border-border">
         <div className="flex gap-1 p-1">
           <Button
             variant={activeTab === 'assistant' ? 'secondary' : 'ghost'}
@@ -234,7 +234,7 @@ export function AIPanel({
       <div className="flex-1 overflow-y-auto p-3">
         {activeTab === 'assistant' && (
           <div className="space-y-3">
-            <div className="text-sm text-[#888]">
+            <div className="text-sm text-muted-foreground">
               AI助手可以帮助您：
               <ul className="mt-2 space-y-1 list-disc list-inside">
                 <li>生成剧本大纲</li>
@@ -318,12 +318,12 @@ export function AIPanel({
 
         {activeTab === 'optimize' && (
           <div className="space-y-3">
-            <div className="text-xs text-[#888] bg-white/5 rounded p-2">
+            <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
               {hasSelection
                 ? '✓ 已选中文字，将只优化选区内容'
                 : '未选中文本，将对整篇剧本优化（点击前请先在编辑器中选中目标段落）'}
             </div>
-            <div className="text-sm text-[#888]">选择优化目标：</div>
+            <div className="text-sm text-muted-foreground">选择优化目标：</div>
             <div className="grid gap-2">
               <Button
                 variant="ghost"
@@ -363,7 +363,7 @@ export function AIPanel({
               </Button>
             </div>
             {isLoading && (
-              <div className="text-xs text-emerald-400 flex items-center gap-2">
+              <div className="text-xs text-primary flex items-center gap-2">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 {currentAction}中...
               </div>
@@ -374,28 +374,28 @@ export function AIPanel({
 
       {/* 浮动 diff 面板（覆盖在面板上方） */}
       {diff && (
-        <div className="absolute inset-0 z-10 bg-[#1a1a1a] flex flex-col">
-          <div className="flex items-center justify-between p-3 border-b border-white/10">
-            <div className="text-sm font-medium text-white">AI 修改对比</div>
+        <div className="absolute inset-0 z-10 bg-card flex flex-col">
+          <div className="flex items-center justify-between p-3 border-b border-border">
+            <div className="text-sm font-medium text-foreground">AI 修改对比</div>
             <button
               type="button"
               onClick={handleReject}
-              className="text-gray-400 hover:text-white"
+              className="text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 text-xs leading-relaxed whitespace-pre-wrap break-words">
-            <div className="mb-2 text-[#888]">原文：</div>
-            <div className="bg-red-500/10 text-red-300 line-through rounded p-2 mb-3">
+            <div className="mb-2 text-muted-foreground">原文：</div>
+            <div className="bg-destructive/10 text-destructive line-through rounded p-2 mb-3">
               {diff.original}
             </div>
-            <div className="mb-2 text-[#888]">改写后：</div>
-            <div className="bg-green-500/10 text-green-300 rounded p-2">
+            <div className="mb-2 text-muted-foreground">改写后：</div>
+            <div className="bg-success/10 text-success rounded p-2">
               {diff.newText}
             </div>
           </div>
-          <div className="flex items-center justify-end gap-2 p-3 border-t border-white/10">
+          <div className="flex items-center justify-end gap-2 p-3 border-t border-border">
             <Button variant="ghost" size="sm" onClick={handleReject}>
               <X className="h-3 w-3 mr-1" />
               拒绝

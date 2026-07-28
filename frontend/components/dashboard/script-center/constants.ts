@@ -23,9 +23,9 @@ export const RIGHT_PANEL_TAB_CONFIG: Record<
   RightPanelTab,
   { label: string; shortcut?: string; color?: string }
 > = {
-  character: { label: '角色', shortcut: '1', color: '#38bdf8' },
-  scene: { label: '场景', shortcut: '2', color: '#4ade80' },
-  prop: { label: '道具', shortcut: '3', color: '#fbbf24' },
+  character: { label: '角色', shortcut: '1', color: 'hsl(var(--info))' },
+  scene: { label: '场景', shortcut: '2', color: 'hsl(var(--success))' },
+  prop: { label: '道具', shortcut: '3', color: 'hsl(var(--warning))' },
   ai: { label: 'AI', shortcut: '4' },
   comment: { label: '评论', shortcut: '5' },
 }
@@ -48,9 +48,9 @@ export const FACTORY_SHORTCUTS: Array<{
   url: string
   color: string
 }> = [
-  { key: 'character', label: '角色工厂', url: FACTORY_SHORTCUT_URLS.character, color: '#38bdf8' },
-  { key: 'scene', label: '场景工厂', url: FACTORY_SHORTCUT_URLS.scene, color: '#4ade80' },
-  { key: 'prop', label: '道具工厂', url: FACTORY_SHORTCUT_URLS.prop, color: '#fbbf24' },
+  { key: 'character', label: '角色工厂', url: FACTORY_SHORTCUT_URLS.character, color: 'hsl(var(--info))' },
+  { key: 'scene', label: '场景工厂', url: FACTORY_SHORTCUT_URLS.scene, color: 'hsl(var(--success))' },
+  { key: 'prop', label: '道具工厂', url: FACTORY_SHORTCUT_URLS.prop, color: 'hsl(var(--warning))' },
 ]
 
 /** 默认打开的 Tab */

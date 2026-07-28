@@ -265,33 +265,33 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
 
   if (loading) {
     return (
-      <div className="quick-fix bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden p-8">
-        <div className="text-center text-[#666]">加载问题列表...</div>
+      <div className="quick-fix bg-card rounded-lg border border-border overflow-hidden p-8">
+        <div className="text-center text-muted-foreground">加载问题列表...</div>
       </div>
     )
   }
 
   return (
-    <div className="quick-fix bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden">
+    <div className="quick-fix bg-card rounded-lg border border-border overflow-hidden">
       {/* 标题 */}
-      <div className="p-3 border-b border-white/10 flex items-center justify-between">
+      <div className="p-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Wrench className="h-4 w-4 text-[#888]" />
-          <h3 className="text-sm font-medium text-white">一键修复建议</h3>
+          <Wrench className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-foreground">一键修复建议</h3>
           {issues.length > 0 && (
             <div className="flex items-center gap-2 ml-2">
               {errorCount > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
+                <span className="text-xs px-2 py-0.5 rounded bg-destructive/20 text-destructive">
                   {errorCount} 错误
                 </span>
               )}
               {warningCount > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+                <span className="text-xs px-2 py-0.5 rounded bg-chart-5/20 text-chart-5">
                   {warningCount} 警告
                 </span>
               )}
               {infoCount > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                <span className="text-xs px-2 py-0.5 rounded bg-info/20 text-info">
                   {infoCount} 建议
                 </span>
               )}
@@ -328,13 +328,13 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
 
       {/* 批量修复工具栏 */}
       {batchFixMode && (
-        <div className="p-3 border-b border-white/10 bg-purple-500/10">
+        <div className="p-3 border-b border-border bg-chart-1/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="text-xs text-purple-400">
+              <div className="text-xs text-chart-1">
                 已选择 {selectedIssues.size} 个问题
               </div>
-              <div className="text-xs text-[#888]">
+              <div className="text-xs text-muted-foreground">
                 (可自动修复: {autoFixableCount} 个)
               </div>
             </div>
@@ -375,30 +375,30 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
       <div className="p-4">
         {issues.length === 0 ? (
           <div className="text-center py-8">
-            <CheckCircle className="h-12 w-12 text-emerald-400 mx-auto mb-2" />
-            <div className="text-sm text-white mb-1">未发现问题</div>
-            <div className="text-xs text-[#666]">剧本的自动检查已全部通过</div>
+            <CheckCircle className="h-12 w-12 text-primary mx-auto mb-2" />
+            <div className="text-sm text-foreground mb-1">未发现问题</div>
+            <div className="text-xs text-muted-foreground">剧本的自动检查已全部通过</div>
           </div>
         ) : (
           <div className="space-y-3">
             {Object.entries(groupedIssues).map(([type, typeIssues]) => (
-              <div key={type} className="border border-white/10 rounded-lg overflow-hidden">
+              <div key={type} className="border border-border rounded-lg overflow-hidden">
                 {/* 类型标题 */}
                 <div
-                  className="flex items-center justify-between p-3 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
+                  className="flex items-center justify-between p-3 bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
                   onClick={() => toggleType(type)}
                 >
                   <div className="flex items-center gap-2">
                     {getIssueTypeIcon(type)}
-                    <span className="text-sm font-medium text-white">
+                    <span className="text-sm font-medium text-foreground">
                       {getIssueTypeLabel(type)}
                     </span>
-                    <span className="text-xs text-[#888]">({typeIssues.length})</span>
+                    <span className="text-xs text-muted-foreground">({typeIssues.length})</span>
                   </div>
                   {expandedTypes.has(type) ? (
-                    <ChevronDown className="h-4 w-4 text-[#888]" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-[#888]" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
                 </div>
 
@@ -409,11 +409,11 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
                       <div
                         key={issue.id}
                         className={`p-3 ${issue.severity === 'error'
-                            ? 'bg-red-500/5'
+                            ? 'bg-destructive/5'
                             : issue.severity === 'warning'
-                              ? 'bg-yellow-500/5'
-                              : 'bg-blue-500/5'
-                          } ${selectedIssues.has(issue.id) ? 'ring-1 ring-purple-500' : ''}`}
+                              ? 'bg-chart-5/5'
+                              : 'bg-info/5'
+                          } ${selectedIssues.has(issue.id) ? 'ring-1 ring-chart-1' : ''}`}
                       >
                         <div className="flex items-start gap-2">
                           {batchFixMode && (
@@ -421,45 +421,45 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
                               type="checkbox"
                               checked={selectedIssues.has(issue.id)}
                               onChange={() => toggleIssueSelection(issue.id)}
-                              className="mt-1 w-4 h-4 rounded border-[#666] bg-transparent text-emerald-500 focus:ring-emerald-500 focus:ring-1 cursor-pointer"
+                              className="mt-1 w-4 h-4 rounded border-border bg-transparent text-primary focus:ring-primary focus:ring-1 cursor-pointer"
                               aria-label={`选择问题：${issue.message}`}
                             />
                           )}
                           <div className="flex-shrink-0 mt-0.5">
                             {issue.severity === 'error' ? (
-                              <AlertCircle className="h-4 w-4 text-red-400" />
+                              <AlertCircle className="h-4 w-4 text-destructive" />
                             ) : issue.severity === 'warning' ? (
-                              <AlertTriangle className="h-4 w-4 text-yellow-400" />
+                              <AlertTriangle className="h-4 w-4 text-chart-5" />
                             ) : (
-                              <AlertCircle className="h-4 w-4 text-blue-400" />
+                              <AlertCircle className="h-4 w-4 text-info" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm text-white mb-1">{issue.message}</div>
-                            <div className="text-xs text-[#888] mb-2">{issue.location}</div>
+                            <div className="text-sm text-foreground mb-1">{issue.message}</div>
+                            <div className="text-xs text-muted-foreground mb-2">{issue.location}</div>
 
                             {/* 原文和修复建议 */}
                             {issue.originalText && (
                               <div className="mb-2 space-y-1">
-                                <div className="text-xs text-[#888]">原文：</div>
-                                <div className="p-2 bg-white/5 rounded text-xs text-red-400 border-l-2 border-red-400">
+                                <div className="text-xs text-muted-foreground">原文：</div>
+                                <div className="p-2 bg-muted/50 rounded text-xs text-destructive border-l-2 border-destructive">
                                   {issue.originalText}
                                 </div>
                               </div>
                             )}
 
                             <div className="space-y-1">
-                              <div className="text-xs text-emerald-400">
+                              <div className="text-xs text-primary">
                                 {issue.autoFixAvailable ? '建议修复：' : '建议：'}
                               </div>
-                              <div className="p-2 bg-white/5 rounded text-xs text-emerald-400 border-l-2 border-emerald-400">
+                              <div className="p-2 bg-muted/50 rounded text-xs text-primary border-l-2 border-primary">
                                 {issue.suggestedFix}
                               </div>
                             </div>
 
                             {/* 自动修复标签 */}
                             {issue.autoFixAvailable && (
-                              <div className="inline-block mt-2 px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400">
+                              <div className="inline-block mt-2 px-2 py-0.5 rounded text-xs bg-primary/20 text-primary">
                                 可自动修复
                               </div>
                             )}
@@ -489,27 +489,27 @@ export function QuickFix({ scriptId, onApplyFix, onBatchFix }: QuickFixProps) {
       </div>
 
       {/* 统计信息 */}
-      <div className="p-3 border-t border-white/10 bg-white/5">
+      <div className="p-3 border-t border-border bg-muted/50">
         <div className="grid grid-cols-5 gap-2 text-center">
           <div>
-            <div className="text-xs text-[#888]">总问题</div>
-            <div className="text-sm font-bold text-white">{issues.length}</div>
+            <div className="text-xs text-muted-foreground">总问题</div>
+            <div className="text-sm font-bold text-foreground">{issues.length}</div>
           </div>
           <div>
-            <div className="text-xs text-[#888]">错误</div>
-            <div className="text-sm font-bold text-red-400">{errorCount}</div>
+            <div className="text-xs text-muted-foreground">错误</div>
+            <div className="text-sm font-bold text-destructive">{errorCount}</div>
           </div>
           <div>
-            <div className="text-xs text-[#888]">警告</div>
-            <div className="text-sm font-bold text-yellow-400">{warningCount}</div>
+            <div className="text-xs text-muted-foreground">警告</div>
+            <div className="text-sm font-bold text-chart-5">{warningCount}</div>
           </div>
           <div>
-            <div className="text-xs text-[#888]">建议</div>
-            <div className="text-sm font-bold text-blue-400">{infoCount}</div>
+            <div className="text-xs text-muted-foreground">建议</div>
+            <div className="text-sm font-bold text-info">{infoCount}</div>
           </div>
           <div>
-            <div className="text-xs text-[#888]">可自动修复</div>
-            <div className="text-sm font-bold text-emerald-400">{autoFixableCount}</div>
+            <div className="text-xs text-muted-foreground">可自动修复</div>
+            <div className="text-sm font-bold text-primary">{autoFixableCount}</div>
           </div>
         </div>
       </div>

@@ -12,9 +12,9 @@ const panels = [
 
 export function AdminPanels() {
   return <div className="grid gap-3 sm:grid-cols-2">{panels.map(({ title, description, href, icon: Icon }) => (
-    <Link key={title} href={href} className="rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-white/20 hover:bg-white/[0.06]">
-      <div className="flex items-center gap-2 text-sm font-medium text-white"><Icon className="h-4 w-4 text-emerald-400" />{title}</div>
-      <p className="mt-2 text-xs leading-5 text-neutral-500">{description}</p>
+    <Link key={title} href={href} className="rounded-xl border border-border bg-muted/40 p-4 transition hover:border-border hover:bg-muted/60">
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground"><Icon className="h-4 w-4 text-primary" />{title}</div>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">{description}</p>
     </Link>
   ))}</div>;
 }

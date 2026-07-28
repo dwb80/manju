@@ -156,11 +156,11 @@ export const ModelCenter = memo(function ModelCenter({
   const getTypeColor = (type: ModelType) => {
     switch (type) {
       case "chat":
-        return "text-blue-400";
+        return "text-info";
       case "image":
-        return "text-purple-400";
+        return "text-chart-1";
       case "video":
-        return "text-orange-400";
+        return "text-chart-3";
     }
   };
 
@@ -227,14 +227,14 @@ export const ModelCenter = memo(function ModelCenter({
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#1a1a1a]">
+    <div className="rounded-xl border border-border bg-card">
       {/* 头部
         * 评审优化：去掉 "模型中心" 重复标题（页面级 H1 已含相同文案）
         * 改为功能性副标题 "模型注册与配置"
         */}
-      <div className="border-b border-white/10 p-4">
+      <div className="border-b border-border p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white">模型注册与配置</h3>
+          <h3 className="text-lg font-semibold text-foreground">模型注册与配置</h3>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={onRefresh} className="gap-2" disabled={isLoading}>
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -259,13 +259,13 @@ export const ModelCenter = memo(function ModelCenter({
                 key={type}
                 onClick={() => setActiveTab(type)}
                 className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-all ${isActive
-                  ? "bg-emerald-500/20 text-emerald-400"
-                  : "text-[#888] hover:bg-white/5 hover:text-white"
+                  ? "bg-primary/20 text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                   }`}
               >
                 <Icon className="h-4 w-4" />
                 {getTypeLabel(type)}
-                <span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-xs">{tabCounts[type]}</span>
+                <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs">{tabCounts[type]}</span>
               </button>
             );
           })}
@@ -277,16 +277,16 @@ export const ModelCenter = memo(function ModelCenter({
           placeholder="搜索模型名称、描述或标签..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="mt-4 w-full rounded-lg border border-white/10 bg-[#252525] px-4 py-2 text-sm text-white placeholder-[#666] focus:border-emerald-500 focus:outline-none"
+          className="mt-4 w-full rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
         />
       </div>
 
       {/* 模型列表 */}
       <div className="divide-y divide-white/5">
         {isLoading && filteredModels.length === 0 ? (
-          <div className="p-8 text-center text-[#666]">加载中...</div>
+          <div className="p-8 text-center text-muted-foreground">加载中...</div>
         ) : filteredModels.length === 0 ? (
-          <div className="p-8 text-center text-[#666]">
+          <div className="p-8 text-center text-muted-foreground">
             暂无模型，点击右上角"添加模型"创建
           </div>
         ) : (
@@ -301,7 +301,7 @@ export const ModelCenter = memo(function ModelCenter({
                 <div className="flex items-start gap-4">
                   {/* 图标 */}
                   <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white/5 ${getTypeColor(model.type)}`}
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted/50 ${getTypeColor(model.type)}`}
                   >
                     <TypeIcon className="h-6 w-6" />
                   </div>
@@ -309,23 +309,23 @@ export const ModelCenter = memo(function ModelCenter({
                   {/* 基本信息 */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-white">{model.name}</span>
+                      <span className="font-medium text-foreground">{model.name}</span>
                       {model.isDefault && (
-                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-400">
+                        <span className="rounded bg-primary/20 px-2 py-0.5 text-xs text-primary">
                           默认
                         </span>
                       )}
                       {!model.is_enabled && (
-                        <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs text-red-400">
+                        <span className="rounded bg-destructive/20 px-2 py-0.5 text-xs text-destructive">
                           已禁用
                         </span>
                       )}
-                      <span className="rounded bg-white/10 px-2 py-0.5 text-xs text-[#888]">
+                      <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                         v{model.version}
                       </span>
-                      <span className="text-xs text-[#666]">{model.provider}</span>
+                      <span className="text-xs text-muted-foreground">{model.provider}</span>
                     </div>
-                    <div className="mt-1 text-sm text-[#888]">{model.description}</div>
+                    <div className="mt-1 text-sm text-muted-foreground">{model.description}</div>
                   </div>
 
                   {/* 操作按钮 */}
@@ -333,7 +333,7 @@ export const ModelCenter = memo(function ModelCenter({
                     {onViewDetail && (
                       <button
                         onClick={() => onViewDetail(model)}
-                        className="rounded p-2 text-[#888] hover:bg-white/10 hover:text-white"
+                        className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                         title="查看详情"
                       >
                         <Eye className="h-4 w-4" />
@@ -343,7 +343,7 @@ export const ModelCenter = memo(function ModelCenter({
                       <>
                         <button
                           onClick={() => onEdit(model)}
-                          className="rounded p-2 text-[#888] hover:bg-white/10 hover:text-white"
+                          className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                           title="编辑"
                         >
                           <Pencil className="h-4 w-4" />
@@ -351,7 +351,7 @@ export const ModelCenter = memo(function ModelCenter({
                         <Tip label={model.is_enabled ? "禁用" : "启用"}>
                           <button
                             onClick={() => onToggleEnabled(model.id, !model.is_enabled)}
-                            className={`rounded p-2 hover:bg-white/10 ${model.is_enabled ? "text-emerald-400 hover:text-emerald-300" : "text-[#666] hover:text-white"
+                            className={`rounded p-2 hover:bg-muted ${model.is_enabled ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-foreground"
                               }`}
                           >
                             <Power className="h-4 w-4" />
@@ -360,7 +360,7 @@ export const ModelCenter = memo(function ModelCenter({
                         <Tip label="删除">
                           <button
                             onClick={() => onDelete(model)}
-                            className="rounded p-2 text-[#888] hover:bg-red-500/10 hover:text-red-400"
+                            className="rounded p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -373,11 +373,11 @@ export const ModelCenter = memo(function ModelCenter({
                 {/* 第二行：能力标签 */}
                 {capLabels.length > 0 && (
                   <div className="mt-3 flex items-center gap-2 flex-wrap pl-16">
-                    <span className="text-xs text-[#666]">能力：</span>
+                    <span className="text-xs text-muted-foreground">能力：</span>
                     {capLabels.map((label) => (
                       <span
                         key={label}
-                        className="rounded bg-blue-500/10 px-2 py-0.5 text-xs text-blue-300"
+                        className="rounded bg-info/10 px-2 py-0.5 text-xs text-info"
                       >
                         {label}
                       </span>
@@ -388,12 +388,12 @@ export const ModelCenter = memo(function ModelCenter({
                 {/* 第三行：API配置 */}
                 {model.api_config?.endpoint && (
                   <div className="mt-2 flex items-center gap-2 flex-wrap pl-16">
-                    <span className="text-xs text-[#666]">API：</span>
-                    <span className="rounded bg-white/5 px-2 py-0.5 text-xs text-[#aaa] font-mono">
+                    <span className="text-xs text-muted-foreground">API：</span>
+                    <span className="rounded bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground font-mono">
                       {model.api_config.method} {model.api_config.endpoint}
                     </span>
                     {model.api_config.statusEndpoint && (
-                      <span className="rounded bg-orange-500/10 px-2 py-0.5 text-xs text-orange-300 font-mono">
+                      <span className="rounded bg-chart-3/10 px-2 py-0.5 text-xs text-chart-3 font-mono">
                         状态: {model.api_config.statusEndpoint}
                       </span>
                     )}
@@ -403,28 +403,28 @@ export const ModelCenter = memo(function ModelCenter({
                 {/* 第四行：性能 + 价格 + 统计 */}
                 <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 pl-16 text-xs">
                   {/* 性能 */}
-                  <div className="rounded bg-white/5 px-3 py-2">
-                    <div className="text-[#666] mb-1">性能</div>
-                    <div className="text-[#aaa]">
+                  <div className="rounded bg-muted/50 px-3 py-2">
+                    <div className="text-muted-foreground mb-1">性能</div>
+                    <div className="text-muted-foreground">
                       响应 {model.performance?.avgResponseTime ?? "-"}ms | 成功率{" "}
                       {model.performance?.successRate ?? "-"}% | 并发{" "}
                       {model.performance?.concurrency ?? "-"}
                     </div>
                   </div>
                   {/* 价格 */}
-                  <div className="rounded bg-white/5 px-3 py-2">
-                    <div className="text-[#666] mb-1">价格</div>
-                    <div className="text-[#aaa]">
+                  <div className="rounded bg-muted/50 px-3 py-2">
+                    <div className="text-muted-foreground mb-1">价格</div>
+                    <div className="text-muted-foreground">
                       标准：{priceText.standard}
                     </div>
-                    <div className="text-emerald-400">
+                    <div className="text-primary">
                       当前：{priceText.current}
                     </div>
                   </div>
                   {/* 统计 */}
-                  <div className="rounded bg-white/5 px-3 py-2">
-                    <div className="text-[#666] mb-1">统计</div>
-                    <div className="text-[#aaa]">
+                  <div className="rounded bg-muted/50 px-3 py-2">
+                    <div className="text-muted-foreground mb-1">统计</div>
+                    <div className="text-muted-foreground">
                       总调用 {model.usageStats?.totalCalls ?? 0} | 本周{" "}
                       {model.usageStats?.weeklyCalls ?? 0} | 本月{" "}
                       {model.usageStats?.monthlyCalls ?? 0}

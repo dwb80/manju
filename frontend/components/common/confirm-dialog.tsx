@@ -57,8 +57,8 @@ export function ConfirmDialog({
                         <div
                             className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
                                 variant === "destructive"
-                                    ? "bg-red-500/15 text-red-200"
-                                    : "bg-emerald-500/15 text-emerald-200"
+                                    ? "bg-destructive/15 text-destructive"
+                                    : "bg-primary/15 text-primary"
                             }`}
                         >
                             <AlertTriangle className="h-5 w-5" />

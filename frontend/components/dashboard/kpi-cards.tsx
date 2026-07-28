@@ -51,39 +51,39 @@ export interface KPICardsProps {
 /** 颜色配置 */
 const colorConfig = {
   emerald: {
-    text: "text-emerald-400",
-    bg: "bg-emerald-500/20",
-    border: "border-emerald-500/30",
+    text: "text-primary",
+    bg: "bg-primary/20",
+    border: "border-primary/30",
   },
   blue: {
-    text: "text-blue-400",
-    bg: "bg-blue-500/20",
-    border: "border-blue-500/30",
+    text: "text-info",
+    bg: "bg-info/20",
+    border: "border-info/30",
   },
   purple: {
-    text: "text-purple-400",
-    bg: "bg-purple-500/20",
-    border: "border-purple-500/30",
+    text: "text-chart-1",
+    bg: "bg-chart-1/20",
+    border: "border-chart-1/30",
   },
   orange: {
-    text: "text-orange-400",
-    bg: "bg-orange-500/20",
-    border: "border-orange-500/30",
+    text: "text-chart-3",
+    bg: "bg-chart-3/20",
+    border: "border-chart-3/30",
   },
   cyan: {
-    text: "text-cyan-400",
-    bg: "bg-cyan-500/20",
-    border: "border-cyan-500/30",
+    text: "text-chart-2",
+    bg: "bg-chart-2/20",
+    border: "border-chart-2/30",
   },
   pink: {
-    text: "text-pink-400",
-    bg: "bg-pink-500/20",
-    border: "border-pink-500/30",
+    text: "text-chart-4",
+    bg: "bg-chart-4/20",
+    border: "border-chart-4/30",
   },
   amber: {
-    text: "text-amber-400",
-    bg: "bg-amber-500/20",
-    border: "border-amber-500/30",
+    text: "text-warning",
+    bg: "bg-warning/20",
+    border: "border-warning/30",
   },
 };
 
@@ -104,10 +104,10 @@ const KPICard = memo(function KPICard({
   const colors = colorConfig[color];
 
   return (
-    <div className="flex flex-col rounded-xl border border-white/10 bg-[#252525] p-4 transition-all hover:border-white/20 hover:bg-[#2a2a2a]">
+    <div className="flex flex-col rounded-xl border border-border bg-secondary p-4 transition-all hover:border-border hover:bg-secondary">
       {/* 图标和标签 */}
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm text-[#888]">{label}</span>
+        <span className="text-sm text-muted-foreground">{label}</span>
         <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${colors.bg}`}>
           <Icon className={`h-5 w-5 ${colors.text}`} />
         </div>
@@ -121,10 +121,10 @@ const KPICard = memo(function KPICard({
         {trend && (
           <span
             className={`text-xs ${trend.direction === "up"
-              ? "text-emerald-400"
+              ? "text-primary"
               : trend.direction === "down"
-                ? "text-red-400"
-                : "text-[#888]"
+                ? "text-destructive"
+                : "text-muted-foreground"
               }`}
           >
             {trend.direction === "up" ? "↑" : trend.direction === "down" ? "↓" : "→"}{" "}

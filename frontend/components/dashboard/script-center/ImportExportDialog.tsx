@@ -162,10 +162,10 @@ export function ImportExportDialog({
 
   return (
     <div className="import-export-dialog fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-[#1a1a1a] rounded-lg border border-white/10 w-full max-w-lg p-4">
+      <div className="bg-card rounded-lg border border-border w-full max-w-lg p-4">
         {/* 标题 */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-white">
+          <h2 className="text-lg font-medium text-foreground">
             {mode === 'export' ? '导出剧本' : '导入剧本'}
           </h2>
           <Button
@@ -209,30 +209,30 @@ export function ImportExportDialog({
         {/* 导出选项 */}
         {mode === 'export' && (
           <div className="space-y-3">
-            <div className="text-sm text-[#888] mb-2">选择导出格式：</div>
+            <div className="text-sm text-muted-foreground mb-2">选择导出格式：</div>
             <div className="grid gap-2 max-h-[320px] overflow-y-auto pr-1">
               {exportFormats.map((item) => (
                 <button
                   key={item.format}
                   onClick={() => setSelectedFormat(item.format)}
                   className={`flex items-start gap-3 p-3 rounded border transition-colors text-left ${selectedFormat === item.format
-                    ? 'border-emerald-500 bg-emerald-500/10'
-                    : 'border-white/10 hover:bg-white/5'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:bg-muted/50'
                     }`}
                 >
-                  <div className="text-[#888] mt-0.5">{item.icon}</div>
+                  <div className="text-muted-foreground mt-0.5">{item.icon}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white">{item.label}</div>
-                    <div className="text-xs text-[#666] mt-0.5">{item.description}</div>
+                    <div className="text-sm font-medium text-foreground">{item.label}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{item.description}</div>
                   </div>
                   {selectedFormat === item.format && (
-                    <div className="text-emerald-400 text-xs">✓</div>
+                    <div className="text-primary text-xs">✓</div>
                   )}
                 </button>
               ))}
             </div>
             {errorMsg && (
-              <div className="text-xs text-red-400">{errorMsg}</div>
+              <div className="text-xs text-destructive">{errorMsg}</div>
             )}
             <Button
               onClick={handleExport}
@@ -247,21 +247,21 @@ export function ImportExportDialog({
         {/* 导入选项 */}
         {mode === 'import' && (
           <div className="space-y-3">
-            <div className="text-sm text-[#888] mb-2">
+            <div className="text-sm text-muted-foreground mb-2">
               选择要导入的文件：
             </div>
-            <div className="border border-white/10 rounded p-3">
+            <div className="border border-border rounded p-3">
               <input
                 type="file"
                 accept={acceptFormats}
                 onChange={handleFileChange}
-                className="w-full text-sm text-[#888]"
+                className="w-full text-sm text-muted-foreground"
               />
               {selectedFile && (
-                <div className="mt-2 text-sm text-white">
+                <div className="mt-2 text-sm text-foreground">
                   已选择: {selectedFile.name}
                   {detectedFormat && (
-                    <span className="text-[#888] ml-2">
+                    <span className="text-muted-foreground ml-2">
                       (格式: {detectedFormat.toUpperCase()})
                     </span>
                   )}
@@ -269,7 +269,7 @@ export function ImportExportDialog({
               )}
             </div>
 
-            <div className="text-sm text-[#888] mb-2">
+            <div className="text-sm text-muted-foreground mb-2">
               文件格式：
             </div>
             <div className="grid grid-cols-5 gap-1">
@@ -278,8 +278,8 @@ export function ImportExportDialog({
                   <button
                     onClick={() => setSelectedFormat(item.format)}
                     className={`w-full py-2 px-1 text-xs rounded border transition-colors ${selectedFormat === item.format
-                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-                      : 'border-white/10 text-[#888] hover:bg-white/5'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:bg-muted/50'
                       }`}
                   >
                     {item.format.toUpperCase()}
@@ -288,11 +288,11 @@ export function ImportExportDialog({
               ))}
             </div>
 
-            <div className="text-xs text-[#666]">
+            <div className="text-xs text-muted-foreground">
               支持格式: JSON / TXT / Markdown / HTML / Final Draft (.fdx)
             </div>
             {errorMsg && (
-              <div className="text-xs text-red-400">{errorMsg}</div>
+              <div className="text-xs text-destructive">{errorMsg}</div>
             )}
             <Button
               onClick={handleImport}

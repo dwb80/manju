@@ -62,19 +62,19 @@ export function AnalyzePreviewModal({ data, onApply, onCancel, applying }: Analy
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="w-[640px] max-h-[80vh] bg-[#1a1a1a] rounded-lg border border-white/10 shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-[640px] max-h-[80vh] bg-card rounded-lg border border-border shadow-2xl flex flex-col overflow-hidden">
         {/* 标题栏 */}
-        <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between">
-          <h3 className="text-base font-medium text-white flex items-center gap-2">
+        <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+          <h3 className="text-base font-medium text-foreground flex items-center gap-2">
             AI 分析结果
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary">
               AI
             </span>
           </h3>
           <button
             type="button"
             onClick={onCancel}
-            className="text-gray-400 hover:text-white"
+            className="text-muted-foreground hover:text-foreground"
             aria-label="关闭分析预览"
           >
             <X className="h-4 w-4" />
@@ -83,7 +83,7 @@ export function AnalyzePreviewModal({ data, onApply, onCancel, applying }: Analy
 
         {/* 警告提示（如有） */}
         {data.warnings && data.warnings.length > 0 && (
-          <div className="px-5 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-200 text-xs">
+          <div className="px-5 py-2 bg-warning/10 border-b border-warning/20 text-warning text-xs">
             {data.warnings.map((w, i) => (
               <div key={i}>• {w}</div>
             ))}
@@ -134,7 +134,7 @@ export function AnalyzePreviewModal({ data, onApply, onCancel, applying }: Analy
         </div>
 
         {/* 操作栏 */}
-        <div className="px-5 py-3 border-t border-white/10 flex items-center justify-end gap-2">
+        <div className="px-5 py-3 border-t border-border flex items-center justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onCancel}>
             取消
           </Button>
@@ -142,7 +142,7 @@ export function AnalyzePreviewModal({ data, onApply, onCancel, applying }: Analy
             size="sm"
             onClick={onApply}
             disabled={applying}
-            className="bg-emerald-500 hover:bg-emerald-600"
+            className="bg-primary hover:bg-primary/90"
           >
             <Check className="mr-1 h-3 w-3" />
             {applying ? '应用中…' : '应用结果'}
@@ -175,24 +175,24 @@ function ResultSection<T>({
 }: ResultSectionProps<T>) {
   return (
     <div>
-      <div className="text-emerald-400 font-medium mb-2">
+      <div className="text-primary font-medium mb-2">
         识别出 {count} 个{title}
       </div>
       {items.length > 0 ? (
-        <ul className="space-y-1 text-[#ccc]">
+        <ul className="space-y-1 text-foreground/80">
           {items.map((item, idx) => {
             const primary = renderPrimary(item)
             const secondary = renderSecondary?.(item)
             return (
-              <li key={idx} className="px-2 py-1 rounded bg-white/5">
-                <span className="text-white">{primary}</span>
-                {secondary && <span className="text-[#888] ml-2">- {secondary}</span>}
+              <li key={idx} className="px-2 py-1 rounded bg-muted/50">
+                <span className="text-foreground">{primary}</span>
+                {secondary && <span className="text-muted-foreground ml-2">- {secondary}</span>}
               </li>
             )
           })}
         </ul>
       ) : (
-        <div className="text-[#666]">{emptyText}</div>
+        <div className="text-muted-foreground">{emptyText}</div>
       )}
     </div>
   )

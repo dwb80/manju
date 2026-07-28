@@ -52,10 +52,10 @@ export function AspectRatioSelect({
         disabled={disabled}
         aria-label="选择图片比例"
         className={[
-          "h-10 w-full appearance-none rounded-md border border-white/10 bg-[#252525]",
-          "pl-3 pr-9 text-sm text-white outline-none transition-colors",
-          "focus:border-emerald-500",
-          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-white/30",
+          "h-10 w-full appearance-none rounded-md border border-border bg-secondary",
+          "pl-3 pr-9 text-sm text-foreground outline-none transition-colors",
+          "focus:border-primary",
+          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-border",
         ].join(" ")}
       >
         {list.map((option) => (
@@ -65,7 +65,7 @@ export function AspectRatioSelect({
             key={option.value}
             value={option.value}
             style={{ padding: "10px" }}
-            className="bg-[#1f1f1f] text-white py-2.5"
+            className="bg-muted text-foreground py-2.5"
           >
             {option.label} · {option.useCase}
           </option>
@@ -78,7 +78,7 @@ export function AspectRatioSelect({
         </span>
       )}
       <ChevronDown
-        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
         aria-hidden
       />
     </div>
@@ -94,7 +94,7 @@ export function AspectRatioSelect({
  * @returns {JSX.Element} 渲染的 React 元素
  * 
  * 16×16 的方形外框，内部按 w/h 比例填充的形状。
- * 选中态用 emerald-400；未选中用 white/80。
+ * 选中态用 primary；未选中用 white/80。
  * 不同比例的内部形状宽度（统一 12 高的容器下）：
  *  - 1:1  → 12×12 (正方)
  *  - 2:3  → 8×12  (竖长)
@@ -112,8 +112,8 @@ export function RatioIcon({
   selected?: boolean;
   size?: number;
 }) {
-  const fill = selected ? "bg-emerald-400" : "bg-white/80";
-  const border = selected ? "border-emerald-500/40" : "border-white/20";
+  const fill = selected ? "bg-primary" : "bg-secondary/80";
+  const border = selected ? "border-primary/40" : "border-border";
 
   // 容器 16 单位，内部按比例换算
   const dims: Record<ImageRatio, [number, number]> = {

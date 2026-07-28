@@ -31,8 +31,8 @@ interface ModuleToolbarProps {
  */
 export function ModuleToolbar({ left, right }: ModuleToolbarProps) {
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-      <div className="flex flex-col md:flex-row gap-3">
+    <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 md:flex-row">
         {left}
       </div>
       <div className="flex gap-2">
@@ -66,13 +66,13 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <div className={`relative ${className}`}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#888]" />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <input
         type="text"
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
-        className="w-full md:w-64 h-9 pl-10 pr-4 rounded-lg border border-white/10 bg-[#252525] text-sm text-white placeholder-[#888] focus:border-emerald-500/50 focus:outline-none"
+        className="w-full md:w-64 h-9 pl-10 pr-4 rounded-lg border border-border bg-secondary text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
         aria-label={placeholder}
       />
     </div>
@@ -107,7 +107,7 @@ export function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
-      className={`h-9 px-3 rounded-lg border border-white/10 bg-[#252525] text-sm text-white focus:border-emerald-500/50 focus:outline-none ${className}`}
+      className={`h-9 px-3 rounded-lg border border-border bg-secondary text-sm text-foreground focus:border-primary/50 focus:outline-none ${className}`}
       aria-label={placeholder}
     >
       <option value="">{placeholder}</option>
@@ -152,8 +152,8 @@ export function TagFilter({
           key={tag}
           onClick={() => toggleTag(tag)}
           className={`px-3 py-1 rounded-full text-xs transition-colors ${selectedTags.includes(tag)
-            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-            : 'bg-[#252525] text-[#888] border border-white/10 hover:border-white/20'
+            ? 'bg-primary/20 text-primary border border-primary/30'
+            : 'bg-secondary text-muted-foreground border border-border hover:border-border'
             }`}
         >
           {tag}

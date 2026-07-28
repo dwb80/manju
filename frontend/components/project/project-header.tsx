@@ -43,15 +43,15 @@ export function ProjectHeader({
     onSave,
 }: ProjectHeaderProps) {
     return (
-        <section className="rounded-[22px] border border-white/10 bg-[#202020] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+        <section className="rounded-[22px] border border-border bg-muted p-6 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
-                    <div className="mb-2 text-sm font-medium text-emerald-200/90">AI 漫剧制作中枢</div>
+                    <div className="mb-2 text-sm font-medium text-primary/90">AI 漫剧制作中枢</div>
                     <div className="flex flex-wrap items-center gap-3">
-                        <div className="truncate text-2xl font-semibold text-white">{selectedProject.name}</div>
-                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm text-emerald-100">{projectDraft.status ?? selectedProject.status ?? "策划中"}</span>
+                        <div className="truncate text-2xl font-semibold text-foreground">{selectedProject.name}</div>
+                        <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary">{projectDraft.status ?? selectedProject.status ?? "策划中"}</span>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-3 text-sm font-medium text-[#d6d6d6]">
+                    <div className="mt-3 flex flex-wrap gap-3 text-sm font-medium text-foreground/80">
                         <span>题材：{selectedProject.category || "未设置"}</span>
                         <span>负责人：{selectedProject.owner || "未分配"}</span>
                         <span>截止：{selectedProject.due_date || "未设置"}</span>
@@ -73,13 +73,13 @@ export function ProjectHeader({
                     ["待处理", `${openIssueCount + pendingReviewCount}`, `问题 ${openIssueCount} · 审核 ${pendingReviewCount} · 任务 ${projectTasks.length - completedTaskCount}`],
                     ["下一节点", nextMilestone?.title ?? "未设置", nextMilestone?.due_date || "暂无截止日期"],
                 ].map(([label, value, hint]) => (
-                    <div key={label} className="rounded-2xl border border-white/10 bg-[#2a2a2a] p-4">
-                        <div className="text-sm font-medium text-[#cfcfcf]">{label}</div>
-                        <div className="mt-1 truncate text-xl font-semibold text-white">{value}</div>
-                        <div className="mt-1 truncate text-sm text-[#bdbdbd]">{hint}</div>
+                    <div key={label} className="rounded-2xl border border-border bg-secondary p-4">
+                        <div className="text-sm font-medium text-foreground/80">{label}</div>
+                        <div className="mt-1 truncate text-xl font-semibold text-foreground">{value}</div>
+                        <div className="mt-1 truncate text-sm text-muted-foreground">{hint}</div>
                         {label === "制作进度" && (
-                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${productionProgress}%` }} />
+                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                                <div className="h-full rounded-full bg-primary" style={{ width: `${productionProgress}%` }} />
                             </div>
                         )}
                     </div>

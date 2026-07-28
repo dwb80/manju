@@ -252,6 +252,8 @@ export interface FactoryCRUDPageProps<TEntity extends FactoryEntity> {
   // ===== 加载 / 空态 =====
   /** 自定义加载中渲染。 */
   loadingView?: ReactNode;
+  /** 页面标题下方的共享上下文区，例如生产流水线。 */
+  headerContent?: ReactNode;
   /** 顶部"全选"区下方插入额外操作（可选）。 */
   extraToolbarContent?: ReactNode;
   /**

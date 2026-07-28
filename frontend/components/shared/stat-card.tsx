@@ -40,10 +40,10 @@ export function StatCard({
   color = 'emerald'
 }: StatCardProps) {
   const colorClasses = {
-    emerald: 'text-emerald-400',
-    blue: 'text-blue-400',
-    purple: 'text-purple-400',
-    orange: 'text-orange-400',
+    emerald: 'text-primary',
+    blue: 'text-info',
+    purple: 'text-chart-1',
+    orange: 'text-chart-3',
   };
 
   const trendIcons = {
@@ -55,9 +55,9 @@ export function StatCard({
   const TrendIcon = trend ? trendIcons[trend] : null;
 
   return (
-    <div className="flex flex-col p-4 rounded-lg bg-[#252525] border border-white/10">
+    <div className="flex flex-col p-4 rounded-lg bg-secondary border border-border">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-[#888]">{label}</span>
+        <span className="text-xs text-muted-foreground">{label}</span>
         {Icon && <Icon className={`h-4 w-4 ${colorClasses[color]}`} />}
       </div>
 
@@ -66,7 +66,7 @@ export function StatCard({
           {value}
         </span>
         {change && (
-          <div className="flex items-center gap-1 text-xs text-[#888]">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
             {TrendIcon && <TrendIcon className="h-3 w-3" />}
             <span>{change}</span>
           </div>

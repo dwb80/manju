@@ -150,36 +150,36 @@ const SCORE_LEVELS: ScoreLevelConfig[] = [
     level: 5,
     label: "优秀",
     description: "超出预期，质量卓越",
-    color: "text-emerald-400",
-    bgColor: "bg-emerald-500/20",
+    color: "text-primary",
+    bgColor: "bg-primary/20",
   },
   {
     level: 4,
     label: "良好",
     description: "达到预期，质量良好",
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-500/20",
+    color: "text-chart-2",
+    bgColor: "bg-chart-2/20",
   },
   {
     level: 3,
     label: "合格",
     description: "基本符合要求",
-    color: "text-yellow-400",
-    bgColor: "bg-yellow-500/20",
+    color: "text-chart-5",
+    bgColor: "bg-chart-5/20",
   },
   {
     level: 2,
     label: "需改进",
     description: "存在明显不足",
-    color: "text-orange-400",
-    bgColor: "bg-orange-500/20",
+    color: "text-chart-3",
+    bgColor: "bg-chart-3/20",
   },
   {
     level: 1,
     label: "不合格",
     description: "不符合要求",
-    color: "text-red-400",
-    bgColor: "bg-red-500/20",
+    color: "text-destructive",
+    bgColor: "bg-destructive/20",
   },
 ];
 
@@ -187,18 +187,18 @@ const SCORE_LEVELS: ScoreLevelConfig[] = [
 const TARGET_TYPE_CONFIGS: Record<ReviewTargetType, { label: string; color: string; bgColor: string }> = {
   storyboard: {
     label: "分镜",
-    color: "text-purple-400",
-    bgColor: "bg-purple-500/20",
+    color: "text-chart-1",
+    bgColor: "bg-chart-1/20",
   },
   asset: {
     label: "资产",
-    color: "text-amber-400",
-    bgColor: "bg-amber-500/20",
+    color: "text-warning",
+    bgColor: "bg-warning/20",
   },
   script: {
     label: "剧本",
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-500/20",
+    color: "text-chart-2",
+    bgColor: "bg-chart-2/20",
   },
 };
 
@@ -240,8 +240,8 @@ function StarRating({
           <Star
             className={`${sizeClasses[size]} ${
               star <= value
-                ? "fill-yellow-400 text-yellow-400"
-                : "fill-transparent text-gray-600 hover:text-yellow-400/50"
+                ? "fill-chart-5 text-chart-5"
+                : "fill-transparent text-muted-foreground hover:text-chart-5/50"
             } transition-colors`}
           />
         </button>
@@ -349,22 +349,22 @@ export function ReviewScoreCard({
   const overallLevelConfig = getScoreLevelConfig(overallScore);
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#181818] p-6">
+    <div className="rounded-xl border border-border bg-card p-6">
       {/* 标题区域 */}
       <div className="mb-6 flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/20">
-              <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-chart-5/20 to-chart-3/20">
+              <Star className="h-5 w-5 text-chart-5 fill-chart-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">审核质量评分</h2>
+              <h2 className="text-lg font-bold text-foreground">审核质量评分</h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className={`text-sm ${targetTypeConfig.color}`}>
                   {targetTypeConfig.label}
                 </span>
-                <span className="text-xs text-[#666]">·</span>
-                <span className="text-sm text-[#888]">{targetName}</span>
+                <span className="text-xs text-muted-foreground">·</span>
+                <span className="text-sm text-muted-foreground">{targetName}</span>
               </div>
             </div>
           </div>
@@ -372,26 +372,26 @@ export function ReviewScoreCard({
       </div>
 
       {/* 综合评分展示 */}
-      <div className="mb-6 rounded-lg border border-white/10 bg-gradient-to-br from-yellow-500/10 to-orange-500/5 p-6">
+      <div className="mb-6 rounded-lg border border-border bg-gradient-to-br from-chart-5/10 to-chart-3/5 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-[#888] mb-1">综合评分</div>
+            <div className="text-xs font-semibold text-muted-foreground mb-1">综合评分</div>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-white">{overallScore.toFixed(1)}</span>
-              <span className="text-lg text-[#666]">/ 5.0</span>
+              <span className="text-4xl font-bold text-foreground">{overallScore.toFixed(1)}</span>
+              <span className="text-lg text-muted-foreground">/ 5.0</span>
             </div>
             {overallLevelConfig && overallScore > 0 && (
               <div className="flex items-center gap-2 mt-2">
                 <span className={`text-sm font-medium ${overallLevelConfig.color}`}>
                   {overallLevelConfig.label}
                 </span>
-                <span className="text-xs text-[#666]">{overallLevelConfig.description}</span>
+                <span className="text-xs text-muted-foreground">{overallLevelConfig.description}</span>
               </div>
             )}
           </div>
           <div className="text-right">
             <StarRating value={Math.round(overallScore)} onChange={() => {}} disabled size="lg" />
-            <div className="text-xs text-[#666] mt-2">
+            <div className="text-xs text-muted-foreground mt-2">
               {Object.values(scores).filter((s) => s > 0).length} / 4 维度已评分
             </div>
           </div>
@@ -408,19 +408,19 @@ export function ReviewScoreCard({
           return (
             <div
               key={dimension.key}
-              className="rounded-lg border border-white/10 bg-white/[0.02] p-4 transition-all hover:border-white/20"
+              className="rounded-lg border border-border bg-muted/30 p-4 transition-all hover:border-border"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5">
-                    <Icon className="h-5 w-5 text-[#888]" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/50">
+                    <Icon className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-white">{dimension.label}</span>
-                      <span className="text-xs text-[#666]">权重 {dimension.weight}%</span>
+                      <span className="font-medium text-foreground">{dimension.label}</span>
+                      <span className="text-xs text-muted-foreground">权重 {dimension.weight}%</span>
                     </div>
-                    <p className="text-xs text-[#888] mt-0.5">{dimension.description}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{dimension.description}</p>
                   </div>
                 </div>
                 {currentScore > 0 && levelConfig && (
@@ -436,13 +436,13 @@ export function ReviewScoreCard({
                   disabled={disabled || loading}
                   size="md"
                 />
-                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                <div className="flex-1 h-2 bg-muted/50 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-yellow-500 to-orange-500 transition-all duration-300"
+                    className="h-full bg-gradient-to-r from-chart-5 to-chart-3 transition-all duration-300"
                     style={{ width: `${(currentScore / 5) * 100}%` }}
                   />
                 </div>
-                <span className="text-sm text-[#888] w-8 text-right">{currentScore}/5</span>
+                <span className="text-sm text-muted-foreground w-8 text-right">{currentScore}/5</span>
               </div>
             </div>
           );
@@ -450,10 +450,10 @@ export function ReviewScoreCard({
       </div>
 
       {/* 评分标准说明 */}
-      <div className="mb-6 rounded-lg border border-white/10 bg-white/[0.02] p-4">
+      <div className="mb-6 rounded-lg border border-border bg-muted/30 p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Award className="h-4 w-4 text-[#888]" />
-          <span className="text-xs font-semibold text-[#888]">评分标准</span>
+          <Award className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-semibold text-muted-foreground">评分标准</span>
         </div>
         <div className="grid grid-cols-5 gap-2">
           {SCORE_LEVELS.map((level) => (
@@ -462,7 +462,7 @@ export function ReviewScoreCard({
               className={`text-center p-2 rounded-lg ${level.bgColor} transition-all`}
             >
               <div className={`text-sm font-bold ${level.color}`}>{level.level}星</div>
-              <div className="text-xs text-[#888] mt-0.5">{level.label}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{level.label}</div>
             </div>
           ))}
         </div>
@@ -471,8 +471,8 @@ export function ReviewScoreCard({
       {/* 评语输入 */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <MessageSquare className="h-4 w-4 text-[#888]" />
-          <label className="text-xs font-semibold text-[#888]">评语（可选）</label>
+          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          <label className="text-xs font-semibold text-muted-foreground">评语（可选）</label>
         </div>
         <textarea
           value={comment}
@@ -480,20 +480,20 @@ export function ReviewScoreCard({
           placeholder="请输入审核评语，说明评分理由..."
           disabled={disabled || loading}
           rows={4}
-          className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-[#666] focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+          className="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-chart-1/50 focus:outline-none focus:ring-1 focus:ring-chart-1/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
         />
-        <div className="text-xs text-[#666] mt-1 text-right">{comment.length} / 500 字</div>
+        <div className="text-xs text-muted-foreground mt-1 text-right">{comment.length} / 500 字</div>
       </div>
 
       {/* 提交按钮 */}
       <div className="flex items-center justify-end gap-3">
-        <div className="text-xs text-[#666] mr-auto">
-          审核ID: <span className="font-mono text-[#888]">{reviewId}</span>
+        <div className="text-xs text-muted-foreground mr-auto">
+          审核ID: <span className="font-mono text-muted-foreground">{reviewId}</span>
         </div>
         <button
           onClick={handleSubmit}
           disabled={disabled || loading || isSubmitting || Object.values(scores).some((s) => s === 0)}
-          className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 px-6 py-2.5 text-sm font-medium text-yellow-400 transition-all hover:from-yellow-500/20 hover:to-orange-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg border border-chart-5/30 bg-gradient-to-r from-chart-5/10 to-chart-3/10 px-6 py-2.5 text-sm font-medium text-chart-5 transition-all hover:from-chart-5/20 hover:to-chart-3/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Star className="h-4 w-4" />
           {isSubmitting ? "提交中..." : "提交评分"}
@@ -503,8 +503,8 @@ export function ReviewScoreCard({
       {/* 加载状态遮罩 */}
       {loading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
-          <div className="flex items-center gap-2 text-white">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          <div className="flex items-center gap-2 text-foreground">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-transparent" />
             <span>加载中...</span>
           </div>
         </div>

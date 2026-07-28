@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/card";
  */
 export function ProjectListView() {
   return (
-    <Card className="border-white/10 bg-[#2a2a2a] p-6 text-sm text-[#dddddd]">
+    <Card className="border-border bg-secondary p-6 text-sm text-foreground/80">
       请先在左侧选择一个具体项目。
     </Card>
   );
