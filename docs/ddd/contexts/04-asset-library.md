@@ -241,96 +241,9 @@ Prop (Aggregate Root)
 
 ## 4. 历史模型：Audio（已废弃）
 
-> **迁移说明**：本节只用于旧 `Audio` 数据迁移，不再作为新功能领域契约。新音频资产、音轨、字幕和口型/渲染编排统一以[后期制作上下文](09-post-production.md)的 `AudioAsset` / `EditProject` / `RenderJob` 为准。新代码不得继续向本节定义的 Audio 聚合增加命令或状态。
+旧 `Audio` 不再是本上下文的聚合、命令、状态机或事件契约。所有新音频资产、音轨、字幕、口型与渲染编排统一归属[后期制作上下文](09-post-production.md)的 `AudioAsset` / `EditProject` / `RenderJob`。
 
-> 以下为历史 `Audio` 数据结构，仅用于迁移映射。其原有路由和绑定语义均已停止扩展；新实现必须转换为后期制作上下文的 `AudioAsset` 与 `AudioClip`。
-
-```
-Audio (Aggregate Root)
-├── id: string
-├── projectId: string
-├── name: string
-├── type: AudioType                  // voiceover | bgm | sfx
-├── description: string              // 备注 / 文本（AI 配音的原始台词）
-├── duration: number                 // 时长（秒）
-├── fileUrl: string                  // 音频文件 URL
-├── speaker: string                  // 发言人（兼容旧版纯文本）
-├── characterId: string | null       // 绑定角色 ID（仅持有 ID，配音关联角色）
-├── storyboardId: string | null      // 绑定分镜板 ID（仅持有 ID）
-├── shotId: string | null            // 绑定分镜 ID（仅持有 ID，更细粒度关联）
-├── startTime: number | null         // 时间轴起始时间（秒，用于与视频对齐）
-├── endTime: number | null           // 时间轴结束时间（秒）
-├── episode: number                  // 所属集数
-├── tags: string[]
-├── format: string                   // 音频格式
-├── size: number                     // 文件大小
-├── usageCount: number               // 被引用次数（缓存字段）
-├── version: number                  // 乐观锁
-├── createdAt: string
-├── updatedAt: string
-├── deletedAt: string | null         // 软删除
-├── lipSyncJobId: string | null      // 关联口型任务 ID（仅持有 ID，引用 AI 任务调度上下文）
-├── lipSyncStatus: string | null     // 口型状态：pending | running | success | failed | cancelled
-├── lipSyncVideoId: string | null    // 输出口型视频 ID
-├── lipSyncError: string | null      // 口型任务错误信息
-└── lipSyncCompletedAt: string | null  // 口型任务完成时间
-```
-
-### 4.1 生命周期
-
-音频资产无独立状态机字段，其生命周期通过 `deletedAt` 软删除标记管理：
-
-```
-创建（手动上传 / AI 生成回调）──▶ 活跃（可被分镜 / 时间线引用）──▶ 软删除（deletedAt 标记）
-```
-
-- **创建来源**：手动上传（用户在资产中心上传音频文件）或 AI 生成（AI 任务调度上下文 `AITaskCompleted` type=audio 事件驱动，由本上下文消费并创建 Audio 聚合）。
-- **活跃期**：音频可被分镜导演上下文的 Shot / Timeline 引用（通过 `storyboardId` / `shotId`），也可绑定角色（通过 `characterId`）用于配音关联。`usageCount` 缓存被引用次数。
-- **口型同步子流程**：`lipSyncStatus` 是口型同步 AI 任务的处理状态（pending → running → success / failed / cancelled），由 AI 任务调度上下文的口型任务回调驱动更新，不影响音频资产本身的可用性。
-
-### 4.2 命令
-
-| 命令 | 前置状态 | 产出事件 | 说明 |
-|------|---------|---------|------|
-| `CreateAudio` | 不存在 | `AudioCreated` | 创建音频资产（手动上传或 AI 生成回调） |
-| `UpdateAudio` | 活跃（deletedAt = null） | `AudioUpdated` | 编辑音频元数据（名称 / 备注 / 标签） |
-| `BindAudioToCharacter` | 活跃 | `AudioCharacterBound` | 绑定角色 ID（配音关联角色） |
-| `BindAudioToShot` | 活跃 | `AudioShotBound` | 绑定分镜 ID 并设置时间轴起止时间 |
-| `StartLipSync` | 活跃 | `LipSyncStarted` | 触发口型同步 AI 任务（委托 AI 任务调度上下文） |
-| `CompleteLipSync` | lipSyncStatus = running | `LipSyncCompleted` | 口型任务回调成功，写入 `lipSyncVideoId` |
-| `FailLipSync` | lipSyncStatus = running | `LipSyncFailed` | 口型任务回调失败，写入 `lipSyncError` |
-| `SoftDeleteAudio` | 活跃（usageCount = 0） | `AudioDeleted` | 软删除，写入 `deletedAt` |
-
-### 4.3 不变量
-
-- 被分镜引用的音频不可删除（`usageCount > 0` 时禁止 `SoftDeleteAudio`）。
-- `characterId` 引用的角色必须存在于同一 `projectId` 下（仅校验 ID 有效性，不持有角色对象）。
-- `storyboardId` / `shotId` 引用的分镜板 / 分镜必须属于同一 `projectId`（仅校验 ID 有效性）。
-- 口型同步状态机：`lipSyncStatus` 仅允许 `pending → running → success/failed/cancelled` 流转，不可回退。
-- 软删除统一使用 `deletedAt` 字段标记，与工厂实体（Character/Scene/Prop）、Dataset 等保持一致。
-- `version` 每次变更只递增一次（乐观锁）。
-
-### 4.4 领域事件
-
-| 事件 | Payload | 消费者 |
-|------|---------|-------|
-| `AudioCreated` | audioId, projectId, type, source（manual/ai） | 智能助手（更新音频列表） |
-| `AudioUpdated` | audioId, projectId | 智能助手 |
-| `AudioCharacterBound` | audioId, characterId | 分镜导演（配音关联提示） |
-| `AudioShotBound` | audioId, shotId, startTime, endTime | 分镜导演（时间线更新） |
-| `LipSyncStarted` | audioId, lipSyncJobId | AI 任务调度（创建口型任务） |
-| `LipSyncCompleted` | audioId, lipSyncVideoId | 分镜导演（口型视频可用） |
-| `LipSyncFailed` | audioId, lipSyncError | 通知（告警配音/剪辑责任人） |
-| `AudioDeleted` | audioId, projectId | 智能助手 |
-
-### 4.5 跨上下文关系
-
-| 关联上下文 | 关联方式 | 说明 |
-|-----------|---------|------|
-| AI 任务调度 | 事件消费（`AITaskCompleted` type=audio） | AI 生成的音频通过事件路由到本上下文创建 Audio 聚合 |
-| AI 任务调度 | ID 引用（`lipSyncJobId`） | 口型同步任务由 AI 任务调度上下文执行，本上下文仅持有任务 ID 并接收回调 |
-| 分镜导演 | ID 引用（`storyboardId` / `shotId`） | 音频绑定到分镜 / 时间线，仅持有 ID，不持有分镜对象 |
-| 资产库（内部） | ID 引用（`characterId`） | 配音音频关联角色工厂的角色，仅持有 ID |
+历史字段映射、文件核验、双读、切换与回滚只在[数据生命周期与迁移方案](../../product/data-lifecycle-and-migration.md)维护。代码中的旧 `Audio` 路由和仓储只能作为迁移兼容层，禁止新增能力；切换稳定后按 Contract 阶段删除。
 
 ---
 
@@ -341,4 +254,3 @@ Audio (Aggregate Root)
 | `ConsistencyPack` | `referenceImages: string[]`, `styleDescription: string`, `negativePrompts: string[]` | 角色一致性包，用于生成时约束 |
 | `CharacterImageRef` | `imageId: string`, `type: "main" \| "alternative"`, `sortOrder: number` | 角色立绘引用 |
 | `RightsMetadata` | `source`, `licenseType`, `owner`, `allowedUses`, `expiresAt`, `evidenceFileId` | 资产权利来源和使用范围；发布预检必须校验 |
-| `AudioType` | `voiceover` \| `bgm` \| `sfx` | 音频类型：配音 / 背景音乐 / 音效 |

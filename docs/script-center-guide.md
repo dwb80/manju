@@ -2748,7 +2748,7 @@ router.put('/api/script-documents/:id', async (req, res) => {
     });
   
   // 3. 立即返回成功
-  res.json({ code: 0, message: 'ok', data: updated });
+  res.status(200).json({ data: updated });
 });
 ```
 

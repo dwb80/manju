@@ -17,7 +17,11 @@
 | US-017 发布 | 发布交付 | FinalVideo/PublishPlan/PublishRecord | Precheck/Schedule/Execute | PublishPlanCompleted | 待核验 | 待核验 |
 | US-018-021 协作 | 智能助手/后期制作 | WorkItem/EditProject | Start/Complete/Close | WorkItemCompleted | 待核验 | 待核验 |
 | MANGA-001 项目表现规格 | 项目管控 | ProjectPresentationSpec | UpdateProjectPresentationSpec | ProjectPresentationSpecUpdated | 目标：projects presentation_spec/version | 待核验 |
-| MANGA-002～006 漫剧表现 | 分镜导演 | Shot/CompositionSpec/VisualLayer/TextOverlay/ComicEffectCue/MotionCue | UpdateComposition/Upsert*Cue | Shot*Updated | 目标：Shot 表现结构 + 版本化 API | 待核验 |
+| MANGA-002 图层化构图 | 分镜导演 | Shot/CompositionSpec/VisualLayer | UpdateComposition/UpsertVisualLayer/RemoveVisualLayer | ShotCompositionUpdated/VisualLayerUpserted/Removed | 目标：Shot 构图结构 + 版本化 API | 待核验 |
+| MANGA-003 对白气泡与旁白 | 分镜导演 | Shot/TextOverlay | UpsertTextOverlay/RemoveTextOverlay | TextOverlayUpserted/Removed | 目标：text_overlays + Script 行引用 | 待核验 |
+| MANGA-004 拟声词管理 | 分镜导演/资产库 | Shot/TextOverlay/AudioAsset | UpsertTextOverlay/BindAudioAsset | TextOverlayUpserted/AudioAssetBound | 目标：onomatopoeia 结构 + 音效版本引用 | 待核验 |
+| MANGA-005 漫画特效 | 分镜导演 | Shot/ComicEffectCue | UpsertComicEffectCue/RemoveComicEffectCue | ComicEffectCueUpserted/Removed | 目标：comic_effect_cues + 版本化 schema | 待核验 |
+| MANGA-006 有限动态编排 | 分镜导演/后期制作 | Shot/MotionCue/EditProject | UpsertMotionCue/RemoveMotionCue/RenderPreview | MotionCueUpserted/Removed | 目标：motion_cues + 统一预览/渲染参数 | 待核验 |
 | MANGA-007 一致性检查 | 审核质量 | QCReport/QualityRuleSet | GenerateQCReport/TimeoutQCReport | QCReportCompleted/TimedOut | 目标：quality_rule_sets/qc_reports | 待核验 |
 | MANGA-008 表现快照 | 分镜导演/审核质量 | PresentationSnapshot/Review | SubmitShotForReview | ShotPresentationFrozen/ReviewSubmitted | 目标：presentation_snapshots + snapshotHash | 待核验 |
 | US-022 用户管理 | 平台身份能力 | UserAccount/SystemRole | Create/Invite/Disable/RevokeSessions | UserCreated/UserDisabled/SessionsRevoked | 现有 auth/users 待契约核验 | 待核验 |

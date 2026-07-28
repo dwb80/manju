@@ -4,24 +4,36 @@ backend/.e2e-data/
 backend/data/
 backend/.env
 backend/.env.*
-backend/tests/*
-!backend/tests/ddd-*.test.mjs
 !backend/.env.example
+
 frontend/node_modules/
 frontend/.next/
 frontend/.next-e2e/
 frontend/.next-build/
+frontend/.e2e-data/
 frontend/playwright-report/
 frontend/test-results/
-frontend/tests/
+frontend/playwright.config.ts
 frontend/vitest.config.ts
 
+# 测试文件、测试用例及测试基础设施不入库
+backend/tests/
+backend/scripts/create-test-data.ts
+backend/scripts/create-module-test-data.ts
+backend/scripts/run-node-tests.mjs
+backend/test-analyze.ps1
+frontend/lib/mock-data/
+frontend/scripts/run-smoke-e2e.mjs
+frontend/scripts/start-e2e-frontend.mjs
+scripts/w5-*.mjs
+scripts/w5-*.ps1
+scripts/start-e2e-backend.mjs
+test-output.log
+test-analyze.mjs
 
 .playwright-browsers
 
 backend/tsc-errors.txt
-test-output.log
-test-analyze.mjs
 backend/build.log
 backend/logs.stderr.log
 backend/logs.stdout.log
@@ -31,7 +43,6 @@ backend/*.db-shm
 backend/*.db-wal
 backend/*.log
 backend/server.err
-backend/tests/.tmp-*/
 
 # SEC-SUP-02 SBOM 由 CI 生成（artifacts/sbom/）
 artifacts/

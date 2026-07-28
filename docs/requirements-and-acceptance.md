@@ -471,7 +471,7 @@
 
 **优先级**：P1
 
-**API 契约**：见 [§5.1.16 `POST /api/projects/{id}/audios`](#516-post-apiprojectsidaudios)。
+**API 契约**：见 [§5.1.16 `POST /api/projects/{id}/audio-assets`](#516-post-apiprojectsidaudio-assets)。
 
 ---
 
@@ -792,7 +792,7 @@
 │                                                                        │
 │  [US-004] AI 剧本分析                                                   │
 │    Script   ─ScriptAnalyzed─▶   资产库（创建角色/场景/道具草稿）            │
-│           ─ScriptAnalysisFailed─▶ 智能助手（告警）                       │
+│           ─ScriptAnalysisFailed─▶ 通知中心（告警）                       │
 │                                                                        │
 │  [US-005/006] 创建分镜                                                  │
 │    Storyboard ─ShotAdded─▶      资产库（usageCount +1）                  │
@@ -807,7 +807,7 @@
 │    AITask  ─AITaskCompleted(video)─▶  分镜导演（绑定视频候选）            │
 │    AITask  ─AITaskCompleted(image)─▶  资产库（绑定图片候选）              │
 │    AITask  ─AITaskCompleted(text)─▶   剧本创作（绑定 AI 辅助文本）        │
-│    AITask  ─AITaskFailed─▶  分镜导演（标记生成失败）+ 智能助手（告警）     │
+│    AITask  ─AITaskFailed─▶  分镜导演（标记生成失败）+ 通知中心（告警）     │
 │                                                                        │
 │  [US-010/012] 图片/视频审核                                               │
 │    Review  ─ReviewApproved─▶  分镜导演（Shot → approved）                │
@@ -818,7 +818,7 @@
 │                         ─▶  AI任务调度（Pipeline 节点 failed/路由）      │
 │                         ─▶  智能助手（新增返工工作项）                    │
 │    QCReport─QCReportCompleted─▶ 分镜导演（标记质检报告）                 │
-│           ─QCReportFailed─▶  智能助手（告警）                            │
+│           ─QCReportFailed─▶  通知中心（告警）                            │
 │                                                                        │
 │  [US-013/014/015] 后期制作                                                │
 │    Storyboard ─▶ EditProject（视频/音频/字幕多轨编辑）                    │
@@ -2042,7 +2042,9 @@
 
 ---
 
-#### 5.1.16 `POST /api/projects/{id}/audios`
+#### 5.1.16 `POST /api/projects/{id}/audio-assets`
+
+> 旧 `/api/projects/{id}/audios` 仅作为迁移兼容入口，必须转换到 `AudioAsset` 应用命令并在迁移稳定后删除；不得继续写旧 Audio 模型。
 
 **对应 US**：US-013
 

@@ -53,7 +53,7 @@
 | 文档 | 说明 |
 |------|------|
 | **[product/README.md](product/README.md)** | 正式产品评审入口及权威关系。 |
-| **[product/product-scope-baseline.md](product/product-scope-baseline.md)** | 产品定位、非目标、完整度标准、成功指标和待确认决策。 |
+| **[product/product-scope-baseline.md](product/product-scope-baseline.md)** | 产品定位、非目标、完整度标准、成功指标和已冻结产品决策。 |
 | **[product/product-requirements-audit.md](product/product-requirements-audit.md)** | 区分真实缺失、局部存在、冲突、待核验和战略候选。 |
 | **[product/comic-production-requirements.md](product/comic-production-requirements.md)** | 构图、画面层、气泡、拟声词、漫画特效、有限动态和一致性需求。 |
 | **[product/platform-capability-requirements.md](product/platform-capability-requirements.md)** | 用户认证、通知、回收站、配置、审计、导入导出和备份恢复的正式验收附件。 |
@@ -61,6 +61,7 @@
 | **[product/user-journeys.md](product/user-journeys.md)** | 从立项到发布、返工、迁移和恢复的跨岗位旅程。 |
 | **[product/rbac-command-matrix.md](product/rbac-command-matrix.md)** | 系统角色与项目角色分层的命令级授权基线。 |
 | **[product/delivery-roadmap.md](product/delivery-roadmap.md)** | 正式产品 Gate 0～4、整改队列和完成证据。 |
+| **[product/product-document-review-2026-07-28.md](product/product-document-review-2026-07-28.md)** | 两轮产品级交叉 Review、修复记录、覆盖核对与剩余实现证据。 |
 
 ### 领域设计
 
