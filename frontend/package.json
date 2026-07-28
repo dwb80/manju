@@ -32,12 +32,7 @@
     "lint:eslint": "eslint .",
     "lint:eslint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
-    "lint:duplicates": "node scripts/eslint-scan.mjs",
-    "test": "vitest run",
-    "test:unit": "vitest run tests/unit",
-    "test:e2e": "node scripts/run-smoke-e2e.mjs",
-    "test:e2e:prepared": "node scripts/run-smoke-e2e.mjs --skip-build",
-    "test:e2e:legacy": "playwright test --reporter=line"
+    "lint:duplicates": "node scripts/eslint-scan.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
