@@ -55,14 +55,14 @@ export function StatCard({
   const TrendIcon = trend ? trendIcons[trend] : null;
 
   return (
-    <div className="flex flex-col p-4 rounded-lg bg-secondary border border-border">
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex flex-col p-3 rounded-md bg-secondary border border-border">
+      <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs text-muted-foreground">{label}</span>
-        {Icon && <Icon className={`h-4 w-4 ${colorClasses[color]}`} />}
+        {Icon && <Icon className={`h-3.5 w-3.5 ${colorClasses[color]}`} />}
       </div>
 
       <div className="flex items-baseline gap-2">
-        <span className={`text-2xl font-bold ${colorClasses[color]}`}>
+        <span className={`text-xl font-bold ${colorClasses[color]}`}>
           {value}
         </span>
         {change && (
@@ -94,7 +94,7 @@ export function StatCardGrid({ children, columns = 4 }: StatCardGridProps) {
   };
 
   return (
-    <div className={`grid gap-4 ${gridClasses[columns]}`}>
+    <div className={`grid gap-3 ${gridClasses[columns]}`}>
       {children}
     </div>
   );

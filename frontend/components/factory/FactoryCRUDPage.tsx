@@ -893,7 +893,7 @@ export function FactoryCRUDPage<TEntity extends FactoryEntity>(props: FactoryCRU
                         </button>
                       </div>
                     )}
-                    <div className={`grid ${gridClassName} gap-4`}>
+                    <div className={`grid ${gridClassName} gap-3`}>
                       {pagedItems.map((item) => (
                         <Fragment key={item.id}>
                           {renderCard(item, {

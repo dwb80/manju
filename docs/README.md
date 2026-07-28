@@ -53,6 +53,7 @@
 | 文档 | 说明 |
 |------|------|
 | **[product/README.md](product/README.md)** | 正式产品评审入口及权威关系。 |
+| **[delivery-specs/README.md](delivery-specs/README.md)** | 逐功能页面交互、API、数据模型与可执行验收四联件。 |
 | **[product/product-scope-baseline.md](product/product-scope-baseline.md)** | 产品定位、非目标、完整度标准、成功指标和已冻结产品决策。 |
 | **[product/product-requirements-audit.md](product/product-requirements-audit.md)** | 区分真实缺失、局部存在、冲突、待核验和战略候选。 |
 | **[product/comic-production-requirements.md](product/comic-production-requirements.md)** | 构图、画面层、气泡、拟声词、漫画特效、有限动态和一致性需求。 |

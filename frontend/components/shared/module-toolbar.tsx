@@ -31,11 +31,11 @@ interface ModuleToolbarProps {
  */
 export function ModuleToolbar({ left, right }: ModuleToolbarProps) {
   return (
-    <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-      <div className="flex flex-col gap-2 md:flex-row">
+    <div className="mb-3 flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-1.5 md:flex-row">
         {left}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         {right}
       </div>
     </div>
@@ -66,13 +66,13 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <div className={`relative ${className}`}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
       <input
         type="text"
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
-        className="w-full md:w-64 h-9 pl-10 pr-4 rounded-lg border border-border bg-secondary text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
+        className="w-full md:w-56 h-8 pl-9 pr-3 rounded-md border border-border bg-secondary text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
         aria-label={placeholder}
       />
     </div>

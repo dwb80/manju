@@ -13,6 +13,7 @@ frontend/.next-build/
 frontend/.e2e-data/
 frontend/playwright-report/
 frontend/test-results/
+frontend/tests/
 frontend/playwright.config.ts
 frontend/vitest.config.ts
 
