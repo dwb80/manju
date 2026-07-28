@@ -12,7 +12,7 @@
  * 幂等：可重复调用，已存在的表/列/索引跳过。
  */
 
-import { getRawDatabase } from "../../storage/sqlite.js";
+import { getRawDatabase, quoteIdentifier } from "../../storage/sqlite.js";
 
 type RawDatabase = {
   exec(sql: string): void;
@@ -29,12 +29,12 @@ function ensureColumn(
 ): void {
   const columns = new Set(
     database
-      .prepare(`PRAGMA table_info("${table}")`)
+      .prepare(`PRAGMA table_info(${quoteIdentifier(table)})`)
       .all()
       .map((row) => String(row.name)),
   );
   if (!columns.has(column)) {
-    database.exec(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${definition}`);
+    database.exec(`ALTER TABLE ${quoteIdentifier(table)} ADD COLUMN ${quoteIdentifier(column)} ${definition}`);
   }
 }
 

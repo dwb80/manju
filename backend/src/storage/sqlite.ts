@@ -115,7 +115,7 @@ export function getRawDatabase(file: string): DatabaseSync {
 }
 
 /** SQLite 标识符只允许代码内声明的表名和字段名进入，这里做一次双引号转义。 */
-function quoteIdentifier(value: string): string {
+export function quoteIdentifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
 }
 

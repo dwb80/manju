@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import type { AppContext } from "../services/app.js";
-import { getRawDatabase } from "../storage/sqlite.js";
+import { getRawDatabase, quoteIdentifier } from "../storage/sqlite.js";
 import { DEFAULT_IMAGE_MODEL } from "../ai/image-config.js";
 import { findReusableCharacterImage } from "../services/character-image-history.js";
 import { findReusableSceneImage } from "../services/scene-image-history.js";
@@ -211,13 +211,13 @@ export async function matchConsistencyPackRoute(
         : pack.entity_type === "scene" ? "scene_image_history"
         : "prop_image_history";
       const historyInsert = db.prepare(
-        `INSERT INTO ${historyTable} (id,${idCol},project_id,url,ratio,model,size,prompt,negative_prompt,response_format,n,shot_type,angle,view_type,is_applied,applied_at,created_at)
+        `INSERT INTO ${quoteIdentifier(historyTable)} (id,${quoteIdentifier(idCol)},project_id,url,ratio,model,size,prompt,negative_prompt,response_format,n,shot_type,angle,view_type,is_applied,applied_at,created_at)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       );
       const entityTable = pack.entity_type === "character" ? "characters"
         : pack.entity_type === "scene" ? "scenes"
         : "props";
-      const entityUpdate = db.prepare(`UPDATE ${entityTable} SET image=?, updated_at=? WHERE id=?`);
+      const entityUpdate = db.prepare(`UPDATE ${quoteIdentifier(entityTable)} SET image=?, updated_at=? WHERE id=?`);
 
       db.exec("BEGIN");
       try {
