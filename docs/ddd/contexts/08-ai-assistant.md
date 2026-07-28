@@ -2,10 +2,10 @@
 
 > **所属上下文**：智能助手 (AI Assistant)
 > **聚合根**：`Conversation` / `WorkItem`
-> **对应页面**：AI 对话、项目工作台、驾驶舱、我的待办
+> **对应页面**：AI 对话、项目工作台、驾驶舱、我的待办；通知由独立[通知上下文](10-notification.md)负责
 > **配套规范**：[DDD 治理规范](../governance.md)｜[统一语言术语表](../glossary.md)｜[上下文映射](../context-map.md)｜[跨上下文协作契约](../contracts.md)
 
-**边界**：AI 对话、项目工作台建议、跨上下文查询和操作建议。
+**边界**：AI 对话、工作项、项目工作台建议、跨上下文查询和操作建议。通知模板、渠道、投递、已读和升级不属于本上下文。
 
 > **项目工作台说明**：项目工作台页面 = CQRS 读模型（跨上下文投影）+ 写操作入口（Conversation / WorkItem 聚合命令）。读模型展示项目进度汇总，写入口允许直接发起对话和创建工作项。
 
@@ -180,7 +180,7 @@ WorkItem (Aggregate Root)
 | `WorkItemClosed` | workItemId, userId, category | 智能助手 |
 | `WorkItemCancelled` | workItemId, userId | 智能助手 |
 | `WorkItemPriorityUpdated` | workItemId, priority | 智能助手 |
-| `MilestoneDelayed` | workItemId, userId, dueDate | 智能助手（通知负责人） |
+| `MilestoneDelayed` | workItemId, userId, dueDate | 通知上下文（通知负责人并按 SLA 升级） |
 
 ---
 

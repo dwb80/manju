@@ -320,7 +320,7 @@ Audio (Aggregate Root)
 | `AudioShotBound` | audioId, shotId, startTime, endTime | 分镜导演（时间线更新） |
 | `LipSyncStarted` | audioId, lipSyncJobId | AI 任务调度（创建口型任务） |
 | `LipSyncCompleted` | audioId, lipSyncVideoId | 分镜导演（口型视频可用） |
-| `LipSyncFailed` | audioId, lipSyncError | 智能助手（告警） |
+| `LipSyncFailed` | audioId, lipSyncError | 通知（告警配音/剪辑责任人） |
 | `AudioDeleted` | audioId, projectId | 智能助手 |
 
 ### 4.5 跨上下文关系

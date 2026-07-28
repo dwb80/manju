@@ -15,6 +15,9 @@
 | P1 | AITask | AI任务调度 | AI 任务需要统一调度、幂等和重试保护 | 迭代2 |
 | P1 | Review | 审核质量 | 审核流程是交付链路关键环节，无聚合则审核状态、审核人分配和审核决策无保护 | 迭代2 |
 | P1 | QCReport | 审核质量 | 质检报告无聚合，无法防止篡改和保证不可变性 | 迭代2 |
+| P1 | QualityRuleSet | 审核质量 | 正式产品必须冻结规则版本、阈值、超时、重试和人工接管 | 迭代2 |
+| P1 | Notification | 通知 | 审核、预算、SLA、故障和发布均依赖可靠、可去重的用户触达 | 迭代2 |
+| P1 | NotificationPreference | 通知 | 渠道偏好、免打扰和强制 critical 策略必须有一致边界 | 迭代2 |
 | P2 | FinalVideo | 发布交付 | 成片管理需要打包状态保护 | 迭代2 |
 | P2 | PublishPlan | 发布交付 | 发布计划需要状态流转保护 | 迭代2 |
 | P2 | ModelConfig | AI任务调度 | 模型配置含能力标签和路由策略，需要聚合支持"自动选模型" | 迭代2 |
@@ -34,7 +37,7 @@
 ## 建议迭代节奏
 
 - **迭代1**：Project + Script + Storyboard + Character + Scene + Prop（P0 + P1 前半）— 打通"项目→剧本→资产→分镜"的完整创作链路
-- **迭代2**：AITask + Review + QCReport + EditProject + AudioAsset + SubtitleDocument + RenderJob + FinalVideo + PublishPlan + ModelConfig + PromptTemplate + PipelineTemplate — 打通"生成→审核→后期→渲染→成片终审→发布"的交付链路
+- **迭代2**：AITask + Review + QCReport + QualityRuleSet + Notification + NotificationPreference + EditProject + AudioAsset + SubtitleDocument + RenderJob + FinalVideo + PublishPlan + ModelConfig + PromptTemplate + PipelineTemplate — 打通"生成→审核→通知/返工→后期→渲染→成片终审→发布"的交付链路
 - **迭代3**：Conversation + WorkItem + Dataset（P3）— 补全辅助和支撑模块
 - **迭代4**：CapabilityTemplate（P4）— 高级编排能力（串联多模型节点）
 

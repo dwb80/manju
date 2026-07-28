@@ -189,7 +189,7 @@ AITask (Aggregate Root)
 | `AITaskCreated` | taskId, projectId, type, shotId | 调度器（上下文内） |
 | `AITaskDispatched` | taskId, provider, modelConfigId | 调度器（上下文内） |
 | `AITaskCompleted` | taskId, projectId, type, target, output, cost, executionSnapshot | 按 type 和 target 路由（见上表） |
-| `AITaskFailed` | taskId, projectId, type, errorMessage | 分镜导演（标记生成失败）、智能助手（告警） |
+| `AITaskFailed` | taskId, projectId, type, errorMessage | 分镜导演（标记生成失败）、智能助手（重试耗尽后创建工作项）、通知（告警责任人） |
 | `AITaskCancelled` | taskId, projectId, type | 智能助手 |
 | `AITaskRetried` | taskId, retryCount | 调度器（上下文内） |
 
@@ -375,6 +375,35 @@ BudgetResult (Value Object)
 > 预算检查集成点：`PipelineRun.startNode` 和 `AITask.DispatchAITask` 在执行前调用 `BudgetCheckService.checkBeforeDispatch`，`AITask.CompleteAITask` 在完成后调用 `recordConsumption`。
 
 预算检查必须采用“预占—结算—释放”：Dispatch 前原子预占估算成本，完成后按实际成本结算，失败或取消时释放预占，避免并发任务共同穿透预算。
+
+```text
+BudgetReservation
+├── id: string
+├── projectId: string
+├── taskId: string
+├── policyVersion: number
+├── estimatedCost: number
+├── settledCost: number | null
+├── currency: string
+├── status: reserved | settled | released | expired
+├── expiresAt: string
+├── idempotencyKey: string
+└── updatedAt: string
+```
+
+预算闭环规则：
+
+1. 项目预算由项目管控 `ConfigureProjectBudget` 管理；AI任务调度只消费 `ProjectBudgetConfigured` 投影，不反向修改 Project。
+2. `DispatchAITask` 在同一事务内检查可用余额、创建 BudgetReservation、更新预算计数并写 Outbox；预算不足不创建外部 Provider 请求。
+3. 达到 `alertThreshold` 但未达到 hardCap 时返回/发布预算警告；是否需要 owner/admin 确认由 policy 决定。
+4. 达到 hardCap 时使用 `budget_exceeded` 阻断；不得通过换路由、重试或拆分任务绕过。
+5. 完成后按 Provider 账单/计价快照结算；差额释放。失败、取消、创建外部请求失败和预约过期均释放。
+6. 预约释放、结算和过期扫描均以 reservationId 幂等；任何 reservation 不得同时 settled 和 released。
+7. 价格表、币种和汇率版本必须随任务冻结；历史成本不随新价格重算。
+8. 每日执行 reservation—task—cost_records 对账；不一致生成审计告警和人工 WorkItem。
+9. `BudgetThresholdReached`、`BudgetExceeded`、`BudgetReconciliationFailed` 由通知上下文路由给 producer/owner/ai_admin。
+
+配置入口：项目设置“预算与成本”页提供周期、limit、hardCap、alertThreshold、超阈值审批和币种；修改使用乐观锁、命令级权限和 AuditRecord，不能直接编辑 `project_budgets` 投影表。
 
 ### 5.1 跨聚合数据获取方式（CQRS 读模型投影）
 

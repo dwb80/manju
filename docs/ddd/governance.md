@@ -11,7 +11,7 @@
 | 权威层 | 权威文档 | 裁决范围 | 冲突处理规则 |
 |--------|---------|---------|-------------|
 | 领域权威 | `ddd/` 目录全部文档 | 聚合定义、状态机、领域事件、命令、不变量、统一语言术语 | 以 DDD 文档为准，其他文档须对齐 |
-| 需求权威 | `requirements-and-acceptance.md` | 用户故事、验收标准、业务规则、目标 API | 以需求文档为准，差异进入追踪矩阵 |
+| 需求权威 | `requirements-and-acceptance.md` + 其明确声明为权威附件的 `product/*.md` | 用户故事、验收标准、业务规则、目标 API | 以需求正文和被引用附件为准；冲突时正文的显式覆盖优先，差异进入追踪矩阵 |
 | 接口权威 | CI 生成的 OpenAPI（门禁完成前为路由 + 契约测试） | 当前可调用路径、请求、响应和错误 | OpenAPI 与实现漂移时阻断发布 |
 | 状态权威 | `feature-status.md` + 代码/API/测试证据 | 功能实现状态、已实现端点、已创建表 | 无三方证据时一律标记未核验 |
 
@@ -35,8 +35,9 @@ docs/
     ├── module-map.md                             # 模块-上下文映射表
     ├── iteration-priority.md                     # 聚合实现优先级
     ├── infrastructure.md                         # 公共领域基础设施
+    ├── error-contract.md                         # 统一错误与 HTTP 响应契约
     ├── dependency-rules.md                       # 依赖方向约束
-    └── contexts/                                 # 9 个上下文详细规格
+    └── contexts/                                 # 10 个上下文详细规格
         ├── 01-project-management.md
         ├── 02-script-creation.md
         ├── 03-storyboard-direction.md
@@ -44,7 +45,9 @@ docs/
         ├── 05-ai-task-orchestration.md
         ├── 06-review-quality.md
         ├── 07-publish-delivery.md
-        └── 08-ai-assistant.md
+        ├── 08-ai-assistant.md
+        ├── 09-post-production.md
+        └── 10-notification.md
 ```
 
 ### 1.2 文档职责
@@ -54,11 +57,12 @@ docs/
 | `README.md` | DDD 文档索引、读者指引、推荐阅读顺序 |
 | `domain-requirements-spec.md` | 领域需求规格**概述**：文档定位、范围、配套规范清单、阅读入口 |
 | `glossary.md` | 统一语言术语表（业务概念 + 状态术语 + 禁止别名） |
-| `context-map.md` | 9 个限界上下文的边界、关系矩阵、共享内核 |
+| `context-map.md` | 10 个限界上下文的边界、关系矩阵、共享内核 |
 | `contracts.md` | 跨上下文事件链路、消费者注册表、防腐层、CQRS 投影 |
-| `module-map.md` | 26 个页面到上下文和聚合根的对应关系 |
+| `module-map.md` | 页面到上下文和聚合根的对应关系；页面数量随产品信息架构维护，不作为稳定契约 |
 | `iteration-priority.md` | 聚合实现优先级与建议迭代节奏 |
 | `infrastructure.md` | 共享内核代码位置、接口定义、公共错误码 |
+| `error-contract.md` | 稳定字符串错误码、HTTP 映射、响应 envelope 和兼容迁移 |
 | `dependency-rules.md` | 分层依赖图与跨聚合引用规则 |
 | `contexts/0N-*.md` | 单一上下文的完整规格（聚合、命令、状态机、不变量、事件、读模型） |
 
@@ -81,6 +85,8 @@ docs/
 | §3.6 | 审核质量 (Review & Quality) | `contexts/06-review-quality.md` |
 | §3.7 | 发布交付 (Publish & Delivery) | `contexts/07-publish-delivery.md` |
 | §3.8 | 智能助手 (AI Assistant) | `contexts/08-ai-assistant.md` |
+| §3.9 | 后期制作 (Post Production) | `contexts/09-post-production.md` |
+| §3.10 | 通知 (Notification) | `contexts/10-notification.md` |
 
 ---
 
@@ -107,14 +113,14 @@ docs/
 | `docs/README.md` | [DDD 索引](README.md) + [上下文映射](context-map.md) |
 | `docs/product-design-spec.md` | [统一语言术语表](glossary.md) |
 | `docs/architecture-and-development.md` | [上下文映射](context-map.md) + [公共领域基础设施](infrastructure.md) + [依赖方向约束](dependency-rules.md) |
-| `docs/api.md` | [跨上下文协作契约](contracts.md) + 9 个上下文文件（按 API 分组对应） |
-| `docs/sqlite-plan.md` | [依赖方向约束](dependency-rules.md) + 9 个上下文文件（按表归属对应） |
+| `docs/api.md` | [跨上下文协作契约](contracts.md) + 10 个上下文文件（按 API 分组对应） |
+| `docs/sqlite-plan.md` | [依赖方向约束](dependency-rules.md) + 10 个上下文文件（按表归属对应） |
 | `docs/asset-library.md` | [资产库 §3.4](contexts/04-asset-library.md) |
 | `docs/factories-assets-and-image-views.md` | [资产库 §3.4](contexts/04-asset-library.md) |
 | `docs/script-center-guide.md` | [剧本创作 §3.2](contexts/02-script-creation.md) |
 | `docs/model-center-guide.md` | [AI 任务调度 §3.5](contexts/05-ai-task-orchestration.md)（含 Dataset / PromptTemplate 聚合） |
 | `docs/ai-image-config.md` | [AI 任务调度 §3.5](contexts/05-ai-task-orchestration.md) |
-| `docs/requirements-and-acceptance.md` | [模块-上下文映射表](module-map.md) + 9 个上下文文件 |
+| `docs/requirements-and-acceptance.md` | [模块-上下文映射表](module-map.md) + 10 个上下文文件 |
 | `docs/feature-status.md` | [模块-上下文映射表](module-map.md) + [迭代优先级](iteration-priority.md) |
 | `docs/risk-management-plan.md` | [上下文映射](context-map.md) + [跨上下文协作契约](contracts.md) |
 

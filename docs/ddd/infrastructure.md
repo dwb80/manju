@@ -71,6 +71,8 @@ export interface Subscription {
 
 公共错误码：
 
+> 完整响应 envelope、HTTP 映射、错误目录与数字旧码迁移以[统一错误与 HTTP 响应契约](error-contract.md)为准。下表是共享领域错误子集，`DomainError.code` 必须使用同一稳定字符串，禁止另设数字 code 或通过 message 推断状态。
+
 | 错误码 | 含义 |
 |-------|------|
 | `aggregate_not_found` | 聚合不存在 |

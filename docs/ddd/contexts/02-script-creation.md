@@ -93,7 +93,7 @@ Script (Aggregate Root)
 | `ScriptCreated` | scriptId, projectId, episodeId | 智能助手 |
 | `ScriptUpdated` | scriptId, projectId | 智能助手（刷新内容缓存） |
 | `ScriptAnalyzed` | scriptId, projectId, characters[], scenes[], props[], revision | 资产库（创建资产草稿，待人工确认入库） |
-| `ScriptAnalysisFailed` | scriptId, projectId, errorMessage | 智能助手（告警） |
+| `ScriptAnalysisFailed` | scriptId, projectId, errorMessage | 通知（告警编剧/项目负责人） |
 | `ScriptVersionPublished` | scriptId, projectId, version, documentId, revision | 分镜导演（允许创建分镜板） |
 | `ScriptNewVersionCreated` | scriptId, projectId, previousVersionId, newVersion | 智能助手（更新版本列表） |
 | `ScriptDeleted` | scriptId, projectId | 智能助手 |

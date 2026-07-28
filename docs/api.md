@@ -1,6 +1,6 @@
 # 实际 API 接口说明
 
-> **领域归属**：[跨上下文协作契约](ddd/contracts.md) + 9 个上下文文件（按 API 分组对应）
+> **领域归属**：[跨上下文协作契约](ddd/contracts.md) + 10 个上下文文件（按 API 分组对应）
 
 > **权威来源声明**：产品目标以 [requirements-and-acceptance.md §5.6](requirements-and-acceptance.md#56-核心接口契约) 为准；当前可调用接口以运行时生成并经 CI 校验的 OpenAPI 为准。在 OpenAPI 门禁完成前，本文档、路由实现和自动化测试共同描述现状，任何差异必须登记到 [feature-status.md](feature-status.md)，不得用目标需求冒充已实现接口。
 

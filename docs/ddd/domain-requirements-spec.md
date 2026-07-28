@@ -2,7 +2,7 @@
 
 > **文档定位**：DDD 文档体系入口与概述
 > **制定日期**：2026-07-27
-> **适用范围**：全平台 23 个页面/模块的领域设计
+> **适用范围**：全平台页面/模块的领域设计；具体数量以模块映射表为准
 > **目标读者**：架构师、后端开发、前端开发、产品经理
 > **权威性**：本目录（`docs/ddd/`）是平台领域边界、聚合定义、事件契约和统一语言的权威来源。任何代码、API、UI 涉及业务对象时，必须以本目录文档为准。
 >
@@ -21,9 +21,9 @@ DDD 文档已按**职责拆分**为以下子文档：
 | 索引 | [README.md](README.md) | 文档导航、读者指引、推荐阅读顺序 |
 | 规范 | [governance.md](governance.md) | 文档体系、跨文档引用规范、统一语言使用规则、变更管理流程 |
 | 基础规范 | [glossary.md](glossary.md) | 统一语言术语表（业务概念 + 状态术语 + 禁止别名） |
-| 基础规范 | [context-map.md](context-map.md) | 9 个限界上下文的边界、关系矩阵、共享内核 |
+| 基础规范 | [context-map.md](context-map.md) | 10 个限界上下文的边界、关系矩阵、共享内核 |
 | 基础规范 | [contracts.md](contracts.md) | 跨上下文事件链路、消费者注册表、防腐层、CQRS 投影 |
-| 基础规范 | [module-map.md](module-map.md) | 23 个页面到上下文和聚合根的对应关系 |
+| 基础规范 | [module-map.md](module-map.md) | 页面到上下文和聚合根的对应关系 |
 | 基础规范 | [iteration-priority.md](iteration-priority.md) | 聚合实现优先级与建议迭代节奏 |
 | 基础规范 | [infrastructure.md](infrastructure.md) | 共享内核代码位置、接口定义、公共错误码 |
 | 基础规范 | [dependency-rules.md](dependency-rules.md) | 分层依赖图与跨聚合引用规则 |
@@ -31,7 +31,7 @@ DDD 文档已按**职责拆分**为以下子文档：
 
 ---
 
-## 2. 9 个限界上下文一览
+## 2. 10 个限界上下文一览
 
 | 编号 | 上下文 | 聚合根 | 对应页面 | 文件 |
 |------|--------|-------|---------|------|
@@ -44,6 +44,7 @@ DDD 文档已按**职责拆分**为以下子文档：
 | §3.7 | 发布交付 (Publish & Delivery) | `FinalVideo` / `PublishPlan` | 发布准备 | [contexts/07-publish-delivery.md](contexts/07-publish-delivery.md) |
 | §3.8 | 智能助手 (AI Assistant) | `Conversation` / `WorkItem` | AI 对话、项目工作台、驾驶舱、我的待办 | [contexts/08-ai-assistant.md](contexts/08-ai-assistant.md) |
 | §3.9 | 后期制作 (Post Production) | `EditProject` / `AudioAsset` / `SubtitleDocument` / `RenderJob` | 音频中心、剪辑中心 | [contexts/09-post-production.md](contexts/09-post-production.md) |
+| §3.10 | 通知 (Notification) | `Notification` / `NotificationPreference` | 通知中心、通知偏好、投递与升级 | [contexts/10-notification.md](contexts/10-notification.md) |
 
 完整上下文映射图、关系矩阵、共享内核定义见 [context-map.md](context-map.md)。
 

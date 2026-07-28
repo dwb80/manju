@@ -8,7 +8,7 @@
 
 ## 目录
 
-- [一、MVP架构设计](#一mvp架构设计)
+- [一、当前交付架构设计](#一当前交付架构设计)
 - [二、技术栈](#二技术栈)
 - [三、项目结构](#三项目结构)
 - [四、存储方案](#四存储方案)
@@ -20,11 +20,11 @@
 
 ---
 
-## 一、MVP架构设计
+## 一、当前交付架构设计
 
 ### 1.1 范围
 
-本实现覆盖需求规格说明书中的 P0 主流程（以 [requirements-and-acceptance.md](requirements-and-acceptance.md) P0 范围为准）：
+本实现以需求规格说明书的正式产品 P0 范围为目标（以 [requirements-and-acceptance.md](requirements-and-acceptance.md) 为准）。是否已经达到交付标准必须由 `feature-status.md` 的代码、API、Schema 与自动化验收证据逐项确认：
 
 - 项目管理（创建/归档/成员/权限）
 - 剧本创作（文档管理/AI 分析/版本发布）

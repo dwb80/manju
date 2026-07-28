@@ -26,6 +26,8 @@ Project (Aggregate Root)
 ├── dueDate: string               // ISO date
 ├── storagePath: string
 ├── storageMode: string
+├── presentationSpec: ProjectPresentationSpec // 默认9:16、可选16:9/自定义、安全区模板
+├── budgetPolicy: ProjectBudgetPolicy          // 月度/总额、硬上限、告警阈值
 ├── version: number               // 乐观锁
 ├── createdAt: string
 ├── updatedAt: string
@@ -55,7 +57,7 @@ Episode (Entity, within Project aggregate)
 Member (Entity, within Project aggregate)
 ├── userId: string
 ├── roles: ProjectRole[]           // 可组合角色；owner 必须唯一
-├── permissions: string[]          // 细粒度操作权限
+├── permissionOverrides: { allow: string[], deny: string[] } // 细粒度覆盖，deny 优先
 ├── addedAt: string
 └── addedBy: string                // 操作人 UserId
 ```
@@ -77,6 +79,29 @@ Member (Entity, within Project aggregate)
 | `publisher` | 发布员 | 成片/发布计划读写 |
 | `ai_admin` | AI 管理员 | 模型、Prompt、配额与成本策略 |
 
+### 1.3.1 项目配置值对象
+
+```text
+ProjectPresentationSpec
+├── version: number
+├── aspectRatio: "9:16" | "16:9" | string
+├── canvasWidth: number
+├── canvasHeight: number
+├── safeAreaTemplateId: string | null
+└── platformOverlayProfileIds: string[]
+
+ProjectBudgetPolicy
+├── version: number
+├── period: daily | weekly | monthly | total
+├── limit: number
+├── hardCap: number | null
+├── alertThreshold: number
+├── currency: string
+└── effectiveAt: string
+```
+
+项目配置使用有类型值对象和专用命令，不直接以通用 KV 绕过领域校验。
+
 ### 1.4 状态机
 
 ```
@@ -96,6 +121,8 @@ Member (Entity, within Project aggregate)
 |------|---------|---------|------|
 | `CreateProject` | 不存在 | `ProjectCreated`, `EpisodeAdded` | 创建项目，事务内自动创建默认剧集（第 1 集），同时产出 `EpisodeAdded` 事件以确保与手动添加一致 |
 | `UpdateProject` | active | `ProjectUpdated` | 修改名称/描述/截止日期 |
+| `UpdateProjectPresentationSpec` | active | `ProjectPresentationSpecUpdated` | 更新画幅/安全区；返回受影响 Shot，已送审内容不得静默覆盖 |
+| `ConfigureProjectBudget` | active | `ProjectBudgetConfigured` | 设置预算周期、额度、硬上限和告警阈值；仅允许 owner/admin/ai_admin，producer 可提交审批 |
 | `ArchiveProject` | active | `ProjectArchived` | 归档项目，需检查所有关联进行中操作均处于终态 |
 | `RestoreProject` | archived | `ProjectRestored` | 恢复项目 |
 | `SoftDeleteProject` | active | `ProjectDeleted` | 软删除 |
@@ -126,6 +153,10 @@ Member (Entity, within Project aggregate)
 - 软删除的项目不可创建新内容，但可恢复。
 - `version` 每次变更只递增一次。
 - `AddMember` 同一 `userId` 不可重复添加（已存在则抛 `member_already_exists`）。
+- `presentationSpec` 创建后默认 9:16；变更必须递增版本并生成影响报告。已冻结 `PresentationSnapshot` 保留旧规格。
+- 预算阈值必须满足 `0 < alertThreshold < hardCap <= limit`（未启用 hardCap 时只要求告警阈值小于 limit）。
+- 项目角色的默认命令权限以[命令级权限矩阵](../../product/rbac-command-matrix.md)为基线；系统角色与项目角色必须分层计算，前端菜单不是授权依据。
+- 权限覆盖必须能表达 `allow[]` 与 `deny[]`，显式 deny 优先；旧单一 `permissions[]` 仅作为迁移输入，不作为最终模型。
 
 ### 1.7 领域事件
 
@@ -133,6 +164,8 @@ Member (Entity, within Project aggregate)
 |------|---------|-------|
 | `ProjectCreated` | projectId, name, owner, type | 智能助手（初始化工作台） |
 | `ProjectUpdated` | projectId, changedFields | 智能助手（更新项目摘要） |
+| `ProjectPresentationSpecUpdated` | projectId, version, aspectRatio, affectedShotIds | 分镜导演（影响分析）、后期制作、发布交付 |
+| `ProjectBudgetConfigured` | projectId, version, period, limit, hardCap, alertThreshold | AI任务调度（更新预算投影）、智能助手（更新成本看板） |
 | `ProjectArchived` | projectId, archivedAt | 全部上下文（标记关联资源为只读） |
 | `ProjectRestored` | projectId | 全部上下文（解除资源只读）/ 智能助手（恢复工作台） |
 | `ProjectDeleted` | projectId | 智能助手（移除工作台） |
@@ -143,7 +176,7 @@ Member (Entity, within Project aggregate)
 | `MemberRemoved` | projectId, userId | 智能助手（更新团队列表） |
 | `OwnershipTransferred` | projectId, fromUserId, toUserId | 智能助手（更新团队负责人） |
 | `MemberRolesUpdated` | projectId, userId, roles[] | 智能助手（更新团队角色） |
-| `PermissionUpdated` | projectId, userId, permissions | 智能助手 |
+| `PermissionUpdated` | projectId, userId, allow[], deny[] | 智能助手（更新权限展示）、审计投影 |
 
 ---
 

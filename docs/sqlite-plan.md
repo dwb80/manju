@@ -1,6 +1,6 @@
 # SQLite 存储说明
 
-> **领域归属**：[依赖方向约束](ddd/dependency-rules.md) + 9 个上下文文件（按表归属对应）
+> **领域归属**：[依赖方向约束](ddd/dependency-rules.md) + 10 个上下文文件（按表归属对应）
 
 > 领域实体的聚合边界、命名、状态机以 [DDD 领域需求规格](ddd/domain-requirements-spec.md) 为权威来源；本文档描述**物理表**的清单、字段命名约定、媒体文件位置和连接管理。物理表与领域实体的对应关系见 [architecture-and-development.md §6](architecture-and-development.md)。
 

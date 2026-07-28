@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Manju AI漫剧生产平台 — UI 设计改进文档</title>
+<title>Manju AI漫剧生产平台 — 统一 UI 设计规范</title>
 <style>
 /* ============ Design Tokens ============ */
 :root {
@@ -526,17 +526,18 @@ footer {
 <div class="page-wrap">
   <!-- TOC -->
   <aside class="toc">
-    <div class="toc-brand">Manju UI 设计改进</div>
-    <div class="toc-brand-sub">v1.0 · 2026-07-27</div>
+    <div class="toc-brand">Manju 统一 UI 设计规范</div>
+    <div class="toc-brand-sub">v2.0 · 2026-07-28</div>
     <nav>
       <ul>
         <li><a href="#overview">1. 概述</a></li>
-        <li><a href="#goals" class="sub">1.1 改进目标</a></li>
-        <li><a href="#current" class="sub">1.2 当前问题</a></li>
+        <li><a href="#goals" class="sub">1.1 规范目标</a></li>
+        <li><a href="#current" class="sub">1.2 治理基线</a></li>
         <li><a href="#tokens">2. 设计令牌收敛</a></li>
         <li><a href="#color-tokens" class="sub">2.1 颜色令牌统一</a></li>
         <li><a href="#focus-color" class="sub">2.2 聚焦色调整</a></li>
         <li><a href="#spacing" class="sub">2.3 间距与圆角</a></li>
+        <li><a href="#themes" class="sub">2.4 主题模式</a></li>
         <li><a href="#layout">3. 页面布局模式</a></li>
         <li><a href="#list-pattern" class="sub">3.1 标准列表页</a></li>
         <li><a href="#pipeline-flow" class="sub">3.2 Pipeline Flow</a></li>
@@ -544,39 +545,53 @@ footer {
         <li><a href="#density">4. 信息密度提升</a></li>
         <li><a href="#typography" class="sub">4.1 字体规范</a></li>
         <li><a href="#component-density" class="sub">4.2 组件密度</a></li>
-        <li><a href="#roadmap">5. 实施路径</a></li>
-        <li><a href="#priority" class="sub">5.1 优先级排序</a></li>
-        <li><a href="#migration" class="sub">5.2 迁移步骤</a></li>
+        <li><a href="#architecture">5. 组件与架构边界</a></li>
+        <li><a href="#component-ownership" class="sub">5.1 组件归属</a></li>
+        <li><a href="#next-boundary" class="sub">5.2 Server/Client 边界</a></li>
+        <li><a href="#status-mapping" class="sub">5.3 状态视觉映射</a></li>
+        <li><a href="#async-ux">6. 异步状态与可访问性</a></li>
+        <li><a href="#cqrs-state" class="sub">6.1 CQRS 同步状态</a></li>
+        <li><a href="#accessibility" class="sub">6.2 可访问性</a></li>
+        <li><a href="#roadmap">7. 实施与验收</a></li>
+        <li><a href="#priority" class="sub">7.1 维护优先级</a></li>
+        <li><a href="#migration" class="sub">7.2 迁移步骤</a></li>
+        <li><a href="#acceptance" class="sub">7.3 验收清单</a></li>
       </ul>
     </nav>
   </aside>
 
   <!-- Content -->
   <main class="content">
-    <h1>Manju AI漫剧生产平台 — UI 设计改进文档</h1>
+    <h1>Manju AI漫剧生产平台 — 统一 UI 设计规范</h1>
     <div class="meta-bar">
-      <span><span class="tag tag-version">v1.0</span></span>
-      <span><span class="tag tag-status">草案</span></span>
-      <span>日期：2026-07-27</span>
-      <span>范围：前端全局 UI 体系</span>
-      <span>依据：原型对比分析 + 设计规格 v3.0</span>
+      <span><span class="tag tag-version">规范版本 v2.0</span></span>
+      <span><span class="tag tag-status">统一规范</span></span>
+      <span>日期：2026-07-28</span>
+      <span>范围：前端视觉、交互与实现边界</span>
+      <span>视觉基线：设计规格 v3.0</span>
+      <span>工程依据：DDD 文档 + Next.js App Router</span>
     </div>
 
     <p class="lead">
-      本文基于 <code>production-ui-prototype.html</code> 设计原型与当前 Next.js 前端系统的逐项对比，
-      提出三项核心改进方向：收敛设计令牌、统一页面布局模式、提升信息密度。
-      每项改进均包含现状诊断、目标规范与可直接落地的代码示例。
+      本文是 Manju 前端统一 UI 设计与实施规范。它在既有视觉改进方案之上，统一设计令牌、页面模式和信息密度，
+      并补充限界上下文下的组件归属、Next.js Server/Client 边界、CQRS 最终一致性反馈与可访问性要求。
+      视觉规范决定界面如何呈现，领域规范决定业务语义与数据从何而来；两者必须同时满足。
     </p>
+
+    <div class="callout">
+      <div class="callout-title">版本关系</div>
+      <p><code>v2.0</code> 是本文档自身的修订版本；“设计规格 <code>v3.0</code>”是本文采用的上游视觉基线版本。两者属于不同文档、独立演进，不要求版本号相同。</p>
+    </div>
 
     <!-- ========== 1. Overview ========== -->
     <h2 id="overview">1. 概述</h2>
 
-    <h3 id="goals">1.1 改进目标</h3>
+    <h3 id="goals">1.1 规范目标</h3>
 
     <p>
-      当前前端系统拥有 150+ 组件、完整的业务功能与三主题支持，工程成熟度高。
-      但在视觉一致性、信息密度和页面模式统一性上，与设计原型存在系统性差距。
-      三项改进目标如下：
+      当前前端系统拥有 150+ 组件、完整的业务功能，以及 <code>light / dark / system</code> 三种主题选择模式，工程成熟度高。
+      本规范以既有实施成果为基线，持续保证视觉一致性、信息密度和页面模式的可维护性。
+      三项视觉目标如下：
     </p>
 
     <div class="token-grid">
@@ -594,17 +609,17 @@ footer {
       </div>
     </div>
 
-    <h3 id="current">1.2 当前问题诊断</h3>
+    <h3 id="current">1.2 治理基线</h3>
 
-    <p>通过对比原型 <code>globals.css</code> 与当前前端代码，识别出以下核心问题：</p>
+    <p>以下问题是 2026-07-27 视觉改进迭代建立 v1.0 规范时识别出的治理对象。该迭代已经落地的整改项继续作为新增页面和组件的回归基线；表格中标记为“一致”的项目表示当时无需调整，两者含义不同。</p>
 
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>维度</th>
-            <th>原型状态</th>
-            <th>当前前端状态</th>
+            <th>目标规范</th>
+            <th>需要持续防止的反模式</th>
             <th>严重度</th>
           </tr>
         </thead>
@@ -618,7 +633,7 @@ footer {
           <tr>
             <td>页面模式</td>
             <td>StatGrid → Toolbar → Tabs → Table → Pagination 统一节奏</td>
-            <td>部分页面（如驾驶舱）采用三视图切换，跨页面布局不一致</td>
+            <td>管理型列表随意变更节奏，或将驾驶舱、编辑器强行套入列表结构</td>
             <td><span class="badge badge-warning">中</span></td>
           </tr>
           <tr>
@@ -755,6 +770,8 @@ footer {
       </table>
     </div>
 
+    <p class="muted-note">说明：以上仅列出建立规范时发现的常见硬编码值，不是完整清单。新增或整改时必须全局搜索裸 hex、rgb/rgba、任意值 Tailwind 类及同义 CSS 变量，并逐项判断是否应替换为语义令牌。</p>
+
     <h3 id="focus-color">2.2 聚焦色调整</h3>
 
     <p>
@@ -846,6 +863,9 @@ footer {
 
     <pre><code><span class="tok-comment">// tailwind.config.ts</span>
 export default {
+  <span class="tok-comment">// dark 类由 ThemeProvider 根据 light / dark / system 模式维护</span>
+  darkMode: [<span class="tok-string">'class'</span>],
+  content: [<span class="tok-string">'./app/**/*.{ts,tsx}'</span>, <span class="tok-string">'./components/**/*.{ts,tsx}'</span>, <span class="tok-string">'./domains/**/*.{ts,tsx}'</span>, <span class="tok-string">'./shared/**/*.{ts,tsx}'</span>],
   theme: {
     extend: {
       borderRadius: {
@@ -867,6 +887,47 @@ export default {
   }
 }</code></pre>
 
+    <h3 id="themes">2.4 主题模式</h3>
+
+    <p>
+      项目提供 <code>light</code>、<code>dark</code>、<code>system</code> 三种用户选择模式，但只有亮色和暗色两套实际视觉令牌。
+      <code>system</code> 不是第三套配色，它通过 <code>prefers-color-scheme</code> 动态解析为 <code>light</code> 或 <code>dark</code>。
+      当前规范不定义独立高对比度主题；如未来增加，必须作为新的明确模式设计、实现并单独完成 WCAG 对比度验收。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>用户模式</th><th>HTML class</th><th>令牌来源</th><th>行为</th></tr></thead>
+        <tbody>
+          <tr><td><code>light</code></td><td><code>light</code></td><td><code>:root</code> 亮色令牌</td><td>固定使用亮色</td></tr>
+          <tr><td><code>dark</code></td><td><code>dark</code></td><td><code>.dark</code> 暗色令牌</td><td>固定使用暗色</td></tr>
+          <tr><td><code>system</code></td><td><code>light</code> 或 <code>dark</code></td><td>复用对应令牌</td><td>监听系统主题变化并实时切换</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <pre><code><span class="tok-comment">/* globals.css — 两套实际主题必须定义同一组语义令牌 */</span>
+:root {
+  <span class="tok-prop">--bg-app</span>: <span class="tok-val">#ffffff</span>;
+  <span class="tok-prop">--bg-card</span>: <span class="tok-val">#fcfcfc</span>;
+  <span class="tok-prop">--text-primary</span>: <span class="tok-val">#1b1e23</span>;
+  <span class="tok-prop">--text-secondary</span>: <span class="tok-val">#5f6672</span>;
+  <span class="tok-prop">--accent-brand</span>: <span class="tok-val">#10b981</span>;
+}
+
+.dark {
+  <span class="tok-prop">--bg-app</span>: <span class="tok-val">#0d0d0d</span>;
+  <span class="tok-prop">--bg-card</span>: <span class="tok-val">#202020</span>;
+  <span class="tok-prop">--text-primary</span>: <span class="tok-val">#f5f5f5</span>;
+  <span class="tok-prop">--text-secondary</span>: <span class="tok-val">#a3a3a3</span>;
+  <span class="tok-prop">--accent-brand</span>: <span class="tok-val">#10b981</span>;
+}</code></pre>
+
+    <div class="callout warning">
+      <div class="callout-title">主题完整性</div>
+      <p>新增语义令牌时必须同时在 <code>:root</code> 和 <code>.dark</code> 定义，并验证两种实际主题。禁止在 <code>system</code> 下维护第三份令牌；禁止把“高对比度”当作 system 的别名。</p>
+    </div>
+
     <!-- ========== 3. Layout Patterns ========== -->
     <h2 id="layout">3. 页面布局模式统一</h2>
 
@@ -875,7 +936,7 @@ export default {
     <p>
       原型中所有列表页（剧本中心、角色工厂、场景工厂、道具工厂、视频生产线、AI任务队列）均遵循统一的布局节奏。
       当前前端虽拥有 <code>ModuleToolbar</code>、<code>StatCard</code>、<code>Pagination</code> 等共享组件，
-      但并非所有页面都统一使用。以下为标准列表页的强制布局规范。
+      但并非所有页面都统一使用。以下为标准管理型列表页的默认布局规范。
     </p>
 
     <h4>标准布局结构</h4>
@@ -897,7 +958,7 @@ export default {
 
     <h4>实现规范</h4>
 
-    <p>所有列表页组件应遵循以下结构：</p>
+    <p>标准管理型列表页应优先遵循以下结构；没有对应内容时可省略标注为“可选”的区块：</p>
 
     <pre><code><span class="tok-comment">// 标准列表页组件结构</span>
 &lt;PageContainer&gt;
@@ -938,8 +999,13 @@ export default {
 
     <div class="callout">
       <div class="callout-title">设计要点</div>
-      <p>表格行的操作按钮默认隐藏（<code>opacity: 0</code>），hover 时显示（<code>opacity: 1</code>），降低视觉噪音。</p>
+      <p>表格行的次要操作可默认弱化，在 <code>hover</code> 或 <code>focus-within</code> 时显示；触屏环境必须提供始终可发现的操作菜单，关键操作不得仅依赖 hover。</p>
       <p>状态使用色彩 Badge 统一编码：已通过(绿) / 审核中(黄) / 草稿(灰) / 已驳回(红)。</p>
+    </div>
+
+    <div class="callout warning">
+      <div class="callout-title">适用边界</div>
+      <p>驾驶舱、项目工作台、编辑器、剪辑器、画布、AI 对话和 Pipeline DAG 属于专用工作界面，不得为了形式统一强行套用列表页结构。它们仍须复用统一令牌、基础组件和反馈模式。</p>
     </div>
 
     <h3 id="pipeline-flow">3.2 Pipeline Flow 共享组件</h3>
@@ -948,7 +1014,7 @@ export default {
       原型中驾驶舱和分镜导演台均使用流水线可视化组件（Pipeline Flow），
       展示生产阶段进度（剧本 → 分镜 → 资产 → 图片 → 视频 → 审核）。
       当前前端仅在驾驶舱有 DAG 视图（<code>pipeline-dag-view.tsx</code>），
-      列表页缺少这一上下文。应提取为共享组件，在分镜页、视频生产线等页面复用。
+      列表页缺少这一上下文。应拆分为通用视觉组件与领域适配组件，在分镜页、视频生产线等页面复用。
     </p>
 
     <h4>组件规格</h4>
@@ -980,6 +1046,11 @@ export default {
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">组件边界</div>
+      <p><code>shared/ui/PipelineFlowView</code> 只接收中性的步骤展示模型并负责布局、颜色和可访问性；生产阶段定义、业务状态转换和点击后的领域路由放在 <code>domains/ai-task-orchestration/presentation/</code>。共享视觉组件不得内置“剧本、分镜、资产、审核”等领域规则。</p>
     </div>
 
     <h4>视觉规范</h4>
@@ -1157,7 +1228,7 @@ export default {
 
     <div class="callout warning">
       <div class="callout-title">可访问性约束</div>
-      <p>WCAG AA 要求正文最小 12px。原型中 11px 仅用于标签和微文字（非主要内容），符合规范。但 <code>globals.css</code> 中已声明最小工作视口为 1366×768，在此分辨率下 13px 基准完全可读。</p>
+      <p>WCAG AA 没有规定固定的最小字号。13px 正文与 11px 微文字仅可用于信息密集的桌面界面，必须保证足够对比度、文本可缩放至 200%、放大后不丢失内容或功能；关键说明、错误信息和主要操作不得使用 11px。</p>
     </div>
 
     <h4>Tailwind 字体配置</h4>
@@ -1240,12 +1311,179 @@ export default {
       </table>
     </div>
 
-    <!-- ========== 5. Implementation ========== -->
-    <h2 id="roadmap">5. 实施路径</h2>
+    <!-- ========== 5. Architecture Boundaries ========== -->
+    <h2 id="architecture">5. 组件与架构边界</h2>
 
-    <h3 id="priority">5.1 优先级排序</h3>
+    <p>
+      UI 规范不仅约束视觉结果，也约束组件承载业务语义的方式。本项目代码按 <code>docs/ddd/</code> 定义的 9 个限界上下文组织，
+      顶层使用 <code>domains/</code> 与 DDD 文档术语对齐。视觉复用不等于业务规则共享：共享层只承载无领域含义的令牌、布局原语和基础控件。
+    </p>
 
-    <p>改进按影响面和风险度排序，建议分三批落地：</p>
+    <h3 id="component-ownership">5.1 组件归属</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>组件类型</th><th>推荐位置</th><th>示例</th><th>约束</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>设计令牌</td>
+            <td><code>app/globals.css</code> / Tailwind 配置</td>
+            <td>颜色、字号、圆角、间距</td>
+            <td>全站单一来源，业务组件不得另建同义令牌</td>
+          </tr>
+          <tr>
+            <td>基础 UI</td>
+            <td><code>shared/ui/</code></td>
+            <td>Button、Badge、Dialog、Table</td>
+            <td>不得导入任何领域模块或解释业务状态</td>
+          </tr>
+          <tr>
+            <td>通用布局</td>
+            <td><code>shared/ui/layout/</code></td>
+            <td>PageHeader、StatGrid、ModuleToolbar</td>
+            <td>只接收展示数据与插槽，不发起业务请求</td>
+          </tr>
+          <tr>
+            <td>领域展示组件</td>
+            <td><code>domains/[context]/presentation/</code></td>
+            <td>ReviewStatusBadge、PipelineFlow</td>
+            <td>负责业务状态到视觉语义的映射</td>
+          </tr>
+          <tr>
+            <td>页面组合</td>
+            <td><code>app/</code></td>
+            <td>路由页、布局、Metadata</td>
+            <td>组合领域能力，不承载领域规则</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <pre><code><span class="tok-comment">// shared/ui/status-badge.tsx：只理解视觉 tone</span>
+type StatusTone = <span class="tok-string">'neutral'</span> | <span class="tok-string">'info'</span> | <span class="tok-string">'success'</span> | <span class="tok-string">'warning'</span> | <span class="tok-string">'danger'</span>
+
+<span class="tok-comment">// domains/review-quality/presentation/review-status.mapper.ts</span>
+function toReviewTone(status: ReviewStatus): StatusTone {
+  <span class="tok-keyword">switch</span> (status) {
+    case <span class="tok-string">'approved'</span>: return <span class="tok-string">'success'</span>
+    case <span class="tok-string">'pending'</span>: return <span class="tok-string">'warning'</span>
+    case <span class="tok-string">'rejected'</span>: return <span class="tok-string">'danger'</span>
+  }
+}</code></pre>
+
+    <div class="callout warning">
+      <div class="callout-title">禁止事项</div>
+      <p>禁止把含有订单、审核、流水线、资产等领域语义的组件仅因“两个页面都使用”就放入全局 <code>shared</code>；禁止基础 Badge 根据业务状态字符串自行决定颜色；禁止组件绕过领域公共 API 深层导入其他上下文内部代码。</p>
+    </div>
+
+    <h3 id="next-boundary">5.2 Next.js Server/Client 边界</h3>
+
+    <p>App Router 页面默认采用 Server Component。仅当组件需要 React Hook、浏览器事件、Zustand、浏览器 API 或交互状态时才声明 <code>'use client'</code>，避免因局部交互将整页降级为 Client Component。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>场景</th><th>执行位置</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>首屏查询、权限和 Metadata</td><td>Server</td><td>由页面或 Server Composition Root 获取</td></tr>
+          <tr><td>Hook、表单、弹窗和浏览器事件</td><td>Client</td><td>最小化 Client Component 边界</td></tr>
+          <tr><td>数据库、内部服务、服务端凭据</td><td>Server</td><td>模块使用 <code>server-only</code> 保护</td></tr>
+          <tr><td>LocalStorage、IndexedDB、Window</td><td>Client</td><td>模块使用 <code>client-only</code> 保护</td></tr>
+          <tr><td>纯领域计算或环境无关 UseCase</td><td>Server 或 Client</td><td>根据依赖的 Port 和调用场景决定</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <pre><code><span class="tok-comment">// Server Component：服务端加载首屏读模型</span>
+export default async function ProjectsPage() {
+  const projects = await serverProjectQueries.list()
+  return &lt;ProjectListClient initialData={projects} /&gt;
+}
+
+<span class="tok-comment">// Client Component：仅承载交互岛</span>
+<span class="tok-string">'use client'</span>
+export function ProjectListClient({ initialData }: Props) {
+  const { archiveProject } = useArchiveProject()
+  <span class="tok-comment">// ...</span>
+}</code></pre>
+
+    <div class="callout">
+      <div class="callout-title">序列化边界</div>
+      <p>Server Component 传给 Client Component 的 Props 必须可序列化。跨边界传递 DTO、Read Model 或 View Model，不传递领域 Class 实例、Repository、函数、数据库对象或包含服务端密钥的数据。</p>
+    </div>
+
+    <h3 id="status-mapping">5.3 状态视觉映射</h3>
+
+    <p>全局只统一视觉语义，不统一各上下文的业务状态集合。每个上下文在 Presentation Mapper 中把业务状态转换为 <code>tone + label + icon</code>，基础 UI 组件只负责呈现。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tone</th><th>用途</th><th>典型表现</th><th>限制</th></tr></thead>
+        <tbody>
+          <tr><td><code>neutral</code></td><td>草稿、未开始、非活动</td><td>灰色</td><td>不可表示失败</td></tr>
+          <tr><td><code>info</code></td><td>已排期、信息提示</td><td>蓝色</td><td>不可表示成功</td></tr>
+          <tr><td><code>success</code></td><td>完成、通过、可用</td><td>绿色</td><td>不得只显示颜色</td></tr>
+          <tr><td><code>warning</code></td><td>处理中、待确认、同步延迟</td><td>黄色</td><td>与错误状态区分</td></tr>
+          <tr><td><code>danger</code></td><td>失败、驳回、阻断</td><td>红色</td><td>必须提供可理解文案</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========== 6. Async UX & Accessibility ========== -->
+    <h2 id="async-ux">6. 异步状态与可访问性</h2>
+
+    <h3 id="cqrs-state">6.1 CQRS 同步状态</h3>
+
+    <p>
+      驾驶舱、项目工作台和我的待办消费事件投影读模型。根据 <code>docs/ddd/contracts.md</code>，读模型采用最终一致性，常规负载下从事件持久化到投影完成的容忍度为 ≤ 2 秒。
+      命令成功只代表写模型已接受变更，不代表读模型已经刷新。UI 必须显式表达投影追赶状态。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>状态</th><th>触发条件</th><th>UI 表现</th><th>数据策略</th></tr></thead>
+        <tbody>
+          <tr><td><code>fresh</code></td><td>投影已确认追上</td><td>正常展示</td><td>使用最新读模型</td></tr>
+          <tr><td><code>syncing</code></td><td>命令成功后、仍在正常投影窗口</td><td>弱提示“正在同步最新状态…”</td><td>保留旧数据或展示可回滚的乐观数据</td></tr>
+          <tr><td><code>delayed</code></td><td>超过 2.5～3 秒仍未确认</td><td>黄色提示“数据同步稍有延迟”</td><td>保留最后数据并有限重试</td></tr>
+          <tr><td><code>failed</code></td><td>刷新失败或超过重试上限</td><td>错误说明 + “重新加载”</td><td>不清空已有数据</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">交互规则</div>
+      <p>首次无缓存加载使用 Skeleton；后台刷新采用 stale-while-revalidate，不回退为全屏 Loading。建议按“立即、500ms、1000ms、2000ms”有限重试。写响应和读模型应携带 <code>eventId</code>、版本或投影 watermark，以便可靠判断 read-your-writes；若契约暂未提供，只能将定时刷新作为降级方案。</p>
+    </div>
+
+    <h3 id="accessibility">6.2 可访问性</h3>
+
+    <p>所有新增和重构组件必须满足以下最低要求：</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>维度</th><th>强制要求</th></tr></thead>
+        <tbody>
+          <tr><td>键盘</td><td>所有操作可通过键盘到达和触发，焦点顺序符合视觉顺序，焦点样式不可移除</td></tr>
+          <tr><td>触屏</td><td>关键操作不得仅在 hover 时出现；触屏提供常驻按钮或明确的更多菜单</td></tr>
+          <tr><td>颜色</td><td>状态不得只靠颜色区分，必须同时提供文本，并在适合时增加图标</td></tr>
+          <tr><td>表单</td><td>控件必须有可访问名称；错误信息关联到对应字段；提交中状态可被辅助技术识别</td></tr>
+          <tr><td>异步反馈</td><td>重要加载、成功和错误信息使用合适的 <code>aria-live</code>，避免重复播报</td></tr>
+          <tr><td>缩放与布局</td><td>文本放大至 200% 后不丢失信息或功能；支持规范规定的最小工作视口</td></tr>
+          <tr><td>动效</td><td>尊重 <code>prefers-reduced-motion</code>；非必要动画可关闭</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ========== 7. Implementation ========== -->
+    <h2 id="roadmap">7. 实施与验收</h2>
+
+    <h3 id="priority">7.1 维护优先级</h3>
+
+    <p>以下为规范建立时的改造优先级；已完成项转为持续回归守则，发现回退时仍按相同优先级治理：</p>
 
     <ol class="priority-list">
       <li>
@@ -1272,8 +1510,8 @@ export default {
       </li>
       <li>
         <div class="pl-content">
-          <div class="pl-title">Pipeline Flow 共享组件提取</div>
-          <div class="pl-desc">从原型中提取 <code>PipelineFlow</code> 组件，在分镜导演台、视频生产线等页面复用，提供生产阶段上下文。</div>
+          <div class="pl-title">Pipeline Flow 视觉组件与领域适配拆分</div>
+          <div class="pl-desc">提取无业务语义的 <code>PipelineFlowView</code>，由 AI 任务调度上下文负责阶段定义、状态映射和领域导航，在分镜导演台、视频生产线等页面复用。</div>
           <div class="pl-meta">
             <span class="badge badge-warning">P1</span>
             <span class="badge badge-muted">新增组件</span>
@@ -1293,7 +1531,7 @@ export default {
       <li>
         <div class="pl-content">
           <div class="pl-title">列表页模式统一审计</div>
-          <div class="pl-desc">逐页面检查是否符合 StatGrid → Toolbar → Tabs → Table → Pagination 标准模式，不符合的页面重构。</div>
+          <div class="pl-desc">识别标准管理型列表页并检查是否符合 StatGrid → Toolbar → Tabs → Table → Pagination 默认模式；驾驶舱、工作台、编辑器和画布按专用布局审计。</div>
           <div class="pl-meta">
             <span class="badge badge-info">P2</span>
             <span class="badge badge-warning">跨多文件</span>
@@ -1312,7 +1550,7 @@ export default {
       </li>
     </ol>
 
-    <h3 id="migration">5.2 迁移步骤</h3>
+    <h3 id="migration">7.2 迁移步骤</h3>
 
     <p>每批改动建议遵循以下验证流程：</p>
 
@@ -1327,11 +1565,11 @@ export default {
 
     <div class="callout">
       <div class="callout-title">P1 批次（Pipeline Flow + 面包屑）</div>
-      <p>1. 创建 <code>components/shared/pipeline-flow.tsx</code> 共享组件</p>
-      <p>2. 在分镜导演台、视频生产线页面引入</p>
-      <p>3. 创建 <code>Breadcrumb</code> 组件，路由映射表写入 <code>lib/breadcrumb-map.ts</code></p>
-      <p>4. 在 <code>global-top-bar.tsx</code> 中集成面包屑</p>
-      <p>5. 验证所有路由的面包屑显示正确</p>
+      <p>1. 创建 <code>shared/ui/pipeline-flow/PipelineFlowView</code> 通用视觉组件</p>
+      <p>2. 在 <code>domains/ai-task-orchestration/presentation/</code> 创建阶段映射与领域包装组件</p>
+      <p>3. 在分镜导演台、视频生产线页面通过领域公共 API 引入</p>
+      <p>4. 创建 <code>Breadcrumb</code> 组件，路由映射表写入展示层路由配置</p>
+      <p>5. 在 <code>global-top-bar.tsx</code> 中集成，并验证全部路由、键盘和触屏行为</p>
     </div>
 
     <div class="callout">
@@ -1343,8 +1581,35 @@ export default {
       <p>5. 全量回归测试</p>
     </div>
 
+    <div class="callout">
+      <div class="callout-title">架构与异步体验批次</div>
+      <p>1. 为共享组件和领域展示组件建立目录边界及 ESLint 导入约束</p>
+      <p>2. 拆分 Server/Client Composition Root，并使用 <code>server-only</code> / <code>client-only</code> 保护</p>
+      <p>3. 为驾驶舱、项目工作台和我的待办实现 <code>fresh / syncing / delayed / failed</code> 投影状态</p>
+      <p>4. 补齐键盘、触屏、焦点、状态非纯颜色表达和 reduced-motion 验证</p>
+      <p>5. 对关键页面执行视觉回归、单元测试、E2E 与生产构建</p>
+    </div>
+
+    <h3 id="acceptance">7.3 验收清单</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>类别</th><th>验收项</th></tr></thead>
+        <tbody>
+          <tr><td>视觉</td><td>组件不出现未经批准的裸颜色；字体、间距、圆角和焦点样式使用统一令牌；明暗主题均通过目视检查</td></tr>
+          <tr><td>布局</td><td>管理型列表页使用标准模式；专用工作界面有明确例外理由；最小工作视口无功能遮挡</td></tr>
+          <tr><td>组件</td><td>基础 UI 不包含领域语义；业务状态映射位于对应上下文 Presentation；不存在跨上下文深层导入</td></tr>
+          <tr><td>Next.js</td><td>Client 边界保持最小；跨 RSC 边界数据可序列化；服务端凭据和浏览器 API 没有串用</td></tr>
+          <tr><td>异步状态</td><td>首次加载、后台刷新、空状态、命令提交、投影同步、延迟和失败均有明确且不互相混淆的表现</td></tr>
+          <tr><td>性能</td><td>首屏无全屏 Loading 闪烁；Skeleton 与最终布局尺寸接近以减少位移；Client Component 边界保持最小；列表、图片和重型编辑器按需加载；关键页面通过既定 Web Vitals 与包体积预算</td></tr>
+          <tr><td>可访问性</td><td>核心流程可键盘完成；触屏操作可发现；状态不只依赖颜色；焦点、标签、错误关联和动态播报正确</td></tr>
+          <tr><td>质量</td><td><code>npm run lint</code>、<code>npm run test</code>、<code>npm run build</code> 和关键 E2E 通过，并完成关键页面视觉回归</td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <footer>
-      <p>本文档基于 <code>ux-report/prototypes/production-ui-prototype.html</code> 原型与 <code>ux-report/production-uiux-design-spec.md</code> 设计规格 v3.0 生成。改进方案需与前端团队评审后落地。</p>
+      <p>本文档基于 <code>ux-report/prototypes/production-ui-prototype.html</code>、设计规格 v3.0、<code>docs/ddd/</code> 限界上下文与 CQRS 契约，以及 Next.js App Router 实施边界整合而成。它是本项目前端视觉、交互和 UI 实现边界的统一规范。</p>
     </footer>
   </main>
 </div>

@@ -4,6 +4,7 @@
 > **聚合根**：`EditProject` / `AudioAsset` / `SubtitleDocument` / `RenderJob`
 > **对应页面**：音频中心、剪辑中心
 > **配套规范**：[统一语言术语表](../glossary.md)｜[上下文映射](../context-map.md)｜[跨上下文协作契约](../contracts.md)
+> **迁移规范**：历史 `Audio` / `project_clips` 的映射、双读核对、切换和回滚见[数据生命周期与迁移方案](../../product/data-lifecycle-and-migration.md)。新功能不得继续扩展旧模型。
 
 **边界**：视频、配音、BGM、音效和字幕的多轨编辑；时间线版本管理；预览与最终渲染。成片发布仍属于发布交付上下文。
 
@@ -50,7 +51,7 @@ Timeline
 ### 1.2 不变量
 
 - 所有 clip 的时间范围必须位于 `[0, timeline.durationMs]`。
-- 视频 clip 必须引用本剧集 Storyboard 中存在且未归档的 Shot 视频版本。
+- 视频 clip 必须引用本剧集 Storyboard 中存在且未归档的 Shot 视频版本及其 `PresentationSnapshot`；不得只引用可变 URL。
 - 音频和字幕必须引用已发布或当前项目可用的资产版本。
 - `StartRender` 必须冻结 Timeline、Prompt、模型、资产和字幕版本，确保可追溯和可复现。
 - 渲染期间不得修改被冻结的 revision；用户修改时创建新 revision，不覆盖运行中的渲染输入。
@@ -98,7 +99,7 @@ SubtitleDocument
 
 状态机：`queued → running → completed | failed | cancelled`，失败可在最大次数内 `failed → queued`。
 
-渲染成功发布 `RenderCompleted`，由发布交付上下文创建 `FinalVideo(status=draft)`；失败发布 `RenderFailed`，由智能助手创建告警工作项。
+渲染成功发布 `RenderCompleted`，由发布交付上下文创建 `FinalVideo(status=draft)`；失败发布 `RenderFailed`，由智能助手创建告警工作项，并由通知上下文投递给剪辑/制片责任人。
 
 ## 5. 领域事件
 
@@ -107,7 +108,7 @@ SubtitleDocument
 | `EditProjectCreated` | 智能助手 | 更新项目工作台 |
 | `EditRenderRequested` | 后期渲染器 | 创建并调度 RenderJob |
 | `RenderCompleted` | 发布交付、智能助手 | 创建成片草稿、更新导出状态 |
-| `RenderFailed` | 智能助手 | 创建告警工作项 |
+| `RenderFailed` | 智能助手、通知 | 创建告警工作项并通知责任人 |
 | `AudioGenerationRequested` | AI 任务调度 | 创建 `AITask(type=audio)` |
 | `AudioAssetPublished` | 后期制作 | 允许在时间线引用 |
 | `SubtitleDocumentPublished` | 发布交付 | 纳入发布预检 |

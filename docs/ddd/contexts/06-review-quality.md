@@ -20,8 +20,10 @@ Review (Aggregate Root)
 ├── targetType: string               // shot | video | image | audio | final_video | subtitle
 ├── targetId: string                 // 被审核对象 ID
 ├── targetVersion: number            // 审核对象不可变版本
+├── targetSnapshotHash: string        // Shot/FinalVideo 等送审快照哈希
 ├── status: ReviewStatus             // pending | in_review | approved | rejected | needs_fix | closed | cancelled
 ├── stage: ReviewStage               // single | first | second
+├── policyVersion: number             // 冻结的审核策略版本
 ├── round: number                    // 返工重提轮次，从 1 开始
 ├── reviewer: string | null          // 审核人 UserId
 ├── assignedBy: string               // 分配人 UserId
@@ -66,7 +68,7 @@ pending ─StartReview─▶ in_review ─ApproveReview─▶ approved ─CloseR
 | 事件 | Payload | 消费者 |
 |------|---------|-------|
 | `ReviewSubmitted` | reviewId, projectId, targetType, targetId | 智能助手（创建审核工作项） |
-| `ReviewAssigned` | reviewId, projectId, reviewer | 智能助手（通知审核人） |
+| `ReviewAssigned` | reviewId, projectId, reviewer | 通知（通知审核人） |
 | `ReviewApproved` | reviewId, projectId, targetId | 分镜导演（驱动 Shot → approved）、AI任务调度（驱动 Pipeline 审核节点）、智能助手（移除审核工作项） |
 | `ReviewStageApproved` | reviewId, projectId, targetId, completedStage, nextStage | 智能助手（创建下一阶段审核工作项） |
 | `ReviewRejected` | reviewId, projectId, targetId, reason | 分镜导演（驱动 Shot → rejected）、AI任务调度（失败/路由 Pipeline 审核节点）、智能助手（新增返工工作项） |
@@ -81,7 +83,10 @@ pending ─StartReview─▶ in_review ─ApproveReview─▶ approved ─CloseR
 - 驳回必须携带有效原因。
 - FinalVideo 审核必须包含内容合规、版权、质量、剧情连贯性四个 ReviewItem，单项 1-5 分。
 - 配置为两级审核时，只有 second 阶段通过才允许发布 `ReviewApproved`；first 阶段通过不得使目标对象进入 approved。
+- 首个正式产品的审核策略固定为：`final_video=first+second`，shot/image/video/audio/subtitle=`single`；暂不支持用户任意编排会签。策略变化必须创建版本且不影响进行中 Review。
+- FinalVideo 的 first 与 second 阶段不得由同一用户完成；审核人不得批准自己作为主要制作者提交的制品，owner/admin 仅可重新分配或走有审计的紧急覆盖流程。
 - Review 必须固定 `targetVersion`，对象产生新版本后原审核结论不得自动继承。
+- 对支持快照的目标必须同时固定 `targetSnapshotHash`；哈希变化时旧结论立即失效且不得进入发布预检。
 - 重新提交只能从 `needs_fix` 进入。
 - 外部服务（非审核质量上下文）不得修改审核状态，只能通过事件驱动。
 
@@ -95,9 +100,13 @@ QCReport (Aggregate Root)
 ├── projectId: string
 ├── targetType: string             // shot | video | image | audio
 ├── targetId: string               // 被质检对象 ID
-├── status: QCReportStatus         // running | completed | failed
+├── status: QCReportStatus         // running | completed | failed | timed_out
 ├── previousReportId: string | null  // 前序报告 ID（重新生成时链接）
 ├── config: QCConfig               // 质检配置（值对象）
+├── ruleSetId: string
+├── ruleSetVersion: number          // 运行时冻结的规则集版本
+├── deadlineAt: string
+├── attempt: number
 ├── scores: QCScores               // 评分汇总（值对象）
 ├── rules: QCRuleResult[]          // 逐条规则结果
 ├── overallScore: number           // 综合分 0-100
@@ -132,6 +141,7 @@ QCReport (Aggregate Root)
 | `StartQCReport` | 不存在 | `QCReportStarted` | 状态机进入 running（`GenerateQCReport` 创建后内部立即调用） |
 | `CompleteQCReport` | running | `QCReportCompleted` | 质检完成 |
 | `FailQCReport` | running | `QCReportFailed` | 质检异常 |
+| `TimeoutQCReport` | running 且超过 deadlineAt | `QCReportTimedOut` | 定时扫描原子抢占；按策略重试、人工接管或阻断 |
 
 > 重新生成的语义等同于 `GenerateQCReport`（创建新聚合实例），通过 `previousReportId` 链接旧报告。`completed` 和 `failed` 均为终态，原报告保持不变。
 
@@ -141,6 +151,10 @@ QCReport (Aggregate Root)
 - `overallScore` 由各规则得分加权计算，不可直接设置。
 - `passed` 由 `overallScore` 与 `config.threshold` 比较得出。
 - `running` 状态以外的报告不可执行 `CompleteQCReport`。
+- 创建报告时必须冻结已发布 QualityRuleSet 的 ID+版本；运行中配置变化不影响本报告。
+- `deadlineAt` 必须由规则集 timeoutSeconds 计算；Complete 与 Timeout 通过乐观锁只允许一个成功。
+- timeout/failed 重试必须创建新 QCReport 并递增 attempt；达到 maxAttempts 后创建人工质量 WorkItem。
+- `failureStrategy=block` 时，质检 failed/timed_out 均阻止送审或发布；`warn` 需要有权限的审核员填写豁免原因。
 
 ### 2.4 领域事件
 
@@ -149,15 +163,45 @@ QCReport (Aggregate Root)
 | `QCReportGenerationStarted` | reportId, projectId, targetId | 智能助手 |
 | `QCReportStarted` | reportId, projectId, targetId | — |
 | `QCReportCompleted` | reportId, projectId, targetId, overallScore, passed | 分镜导演（质检报告标记）、智能助手（创建质检工作项） |
-| `QCReportFailed` | reportId, projectId, targetId, errorMessage | 智能助手（告警） |
+| `QCReportFailed` | reportId, projectId, targetId, errorMessage | 智能助手（创建质量工作项）、通知（告警质量负责人） |
+| `QCReportTimedOut` | reportId, projectId, targetId, deadlineAt, attempt | 重试调度器、智能助手（耗尽后创建工作项）、通知 |
 
 ---
 
-## 3. 值对象
+## 3. 聚合根：QualityRuleSet
+
+```text
+QualityRuleSet
+├── id: string
+├── projectId: string | null       // null 为系统规则集
+├── name: string
+├── targetTypes: string[]
+├── status: draft | published | archived
+├── rules: QualityRule[]
+├── threshold: number
+├── failureStrategy: block | warn
+├── timeoutSeconds: number
+├── maxAttempts: number
+├── version: number
+└── updatedAt: string
+```
+
+命令：`CreateQualityRuleSet`、`AddOrUpdateQualityRule`、`RemoveQualityRule`、`PublishQualityRuleSet`、`CreateNewQualityRuleSetVersion`、`ArchiveQualityRuleSet`、`AssignProjectQualityRuleSet`。
+
+规则：
+
+- 规则具有稳定 `ruleCode`、实现版本、权重、参数 schema、适用 targetType、严重级别和是否可豁免。
+- 只有 draft 可编辑；published 不可原地修改，只能新建版本。
+- 权重必须非负且合计为 1；阈值 0～100；timeoutSeconds 和 maxAttempts 必须在平台安全范围内。
+- 项目级规则可覆盖系统默认，但不能关闭系统标记为 mandatory 的合规/安全规则。
+- 发布和项目指派使用 `quality_rule.configure` 权限并写 AuditRecord。
+
+## 4. 值对象
 
 | 值对象 | 字段 | 说明 |
 |-------|------|------|
-| `QCConfig` | `checkTypes: string[]`, `threshold: number`, `failureStrategy: "block" \| "warn"` | 质检配置 |
+| `QCConfig` | `checkTypes: string[]`, `threshold: number`, `failureStrategy: "block" \| "warn"`, `timeoutSeconds: number`, `maxAttempts: number` | 从规则集冻结的质检配置 |
+| `QualityRule` | `ruleCode`, `implementationVersion`, `weight`, `parameters`, `severity`, `waivable`, `mandatory` | 可版本化质检规则 |
 | `QCScores` | `technical: number`, `aesthetic: number`, `consistency: number` | 技术分/美学分/一致性分 |
 | `QCRuleResult` | `ruleName: string`, `score: number`, `maxScore: number`, `detail: string` | 单条规则结果 |
 | `RejectionReason` | `code: string`, `description: string` | 驳回原因 |

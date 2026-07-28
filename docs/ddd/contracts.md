@@ -29,7 +29,7 @@
 
 剧本分析失败
   ScriptAnalysisFailed
-    → 智能助手上下文: 告警
+    → 通知上下文: 告警编剧/项目负责人
 
 剧本文档发布
   ScriptVersionPublished
@@ -61,7 +61,7 @@
 
 审核指派
   ReviewAssigned
-    → 智能助手上下文: 通知被指派人
+    → 通知上下文: 通知被指派人
 
 审核关闭/取消
   ReviewClosed / ReviewCancelled
@@ -74,7 +74,7 @@
 
 质检失败
   QCReportFailed
-    → 智能助手上下文: 告警
+    → 通知上下文: 告警任务责任人
 
 分镜通过
   ShotApproved
@@ -219,7 +219,7 @@ Prompt 模板变更
 | `ScriptCreated` | 剧本创作 | 智能助手 | 更新剧本列表 | 跨上下文 |
 | `ScriptUpdated` | 剧本创作 | 智能助手 | 刷新内容缓存 | 跨上下文 |
 | `ScriptAnalyzed` | 剧本创作 | 资产库 | 创建资产草稿 | 跨上下文 |
-| `ScriptAnalysisFailed` | 剧本创作 | 智能助手 | 告警 | 跨上下文 |
+| `ScriptAnalysisFailed` | 剧本创作 | 通知 | 告警编剧/项目负责人 | 跨上下文 |
 | `ScriptVersionPublished` | 剧本创作 | 分镜导演 | 允许创建分镜板 | 跨上下文 |
 | `ScriptNewVersionCreated` | 剧本创作 | 智能助手 | 更新版本列表 | 跨上下文 |
 | `ScriptDeleted` | 剧本创作 | 智能助手 | 移除剧本 | 跨上下文 |
@@ -264,14 +264,16 @@ Prompt 模板变更
 | `ReviewResubmitted` | 审核质量 | 智能助手 | 刷新工作项 | 跨上下文 |
 | `ReviewClosed` | 审核质量 | 智能助手 | 移除审核工作项 | 跨上下文 |
 | `ReviewCancelled` | 审核质量 | 智能助手 | 移除审核工作项 | 跨上下文 |
-| `ReviewAssigned` | 审核质量 | 智能助手 | 通知被指派人 | 跨上下文 |
+| `ReviewAssigned` | 审核质量 | 通知 | 通知被指派人 | 跨上下文 |
 | `QCReportCompleted` | 审核质量 | 分镜导演 | 标记质检报告 | 跨上下文 |
 | `QCReportCompleted` | 审核质量 | 智能助手 | 创建质检工作项（如未通过） | 跨上下文 |
-| `QCReportFailed` | 审核质量 | 智能助手 | 告警 | 跨上下文 |
+| `QCReportFailed` | 审核质量 | 智能助手 | 创建质量工作项 | 跨上下文 |
+| `QCReportFailed` / `QCReportTimedOut` | 审核质量 | 通知 | 告警质量负责人 | 跨上下文 |
 | `PipelineRunStarted` | AI任务调度 | 智能助手 | 流水线状态为运行中 | 跨上下文 |
 | `PipelineRunCompleted` | AI任务调度 | 分镜导演 | 通知分镜生成完成 | 跨上下文 |
 | `PipelineRunCompleted` | AI任务调度 | 智能助手 | 流水线状态为已完成 | 跨上下文 |
 | `PipelineRunFailed` | AI任务调度 | 智能助手 | 创建告警工作项 | 跨上下文 |
+| `PipelineRunFailed` | AI任务调度 | 通知 | 告警任务责任人/ai_admin | 跨上下文 |
 | `PipelineRunCancelled` | AI任务调度 | 分镜导演 | 通知分镜生成取消 | 跨上下文 |
 | `PipelineRunPaused` | AI任务调度 | 智能助手 | 流水线状态为暂停 | 跨上下文 |
 | `PipelineRunResumed` | AI任务调度 | 智能助手 | 流水线状态为运行中 | 跨上下文 |
@@ -280,10 +282,12 @@ Prompt 模板变更
 | `AITaskCompleted` | AI任务调度 | 分镜导演 / 资产库 / 剧本创作 | 按 type 路由绑定生成结果 | 跨上下文 |
 | `AITaskFailed` | AI任务调度 | 分镜导演 | 标记生成失败 | 跨上下文 |
 | `AITaskFailed` | AI任务调度 | 智能助手 | 创建告警工作项 | 跨上下文 |
+| `AITaskFailed` | AI任务调度 | 通知 | 告警任务责任人/ai_admin | 跨上下文 |
 | `AITaskCancelled` | AI任务调度 | 智能助手 | 更新任务状态 | 跨上下文 |
 | `EditRenderRequested` | 后期制作 | 后期渲染器 | 创建并调度 RenderJob | 上下文内 |
 | `RenderCompleted` | 后期制作 | 发布交付 / 智能助手 | 创建成片草稿 / 更新导出状态 | 跨上下文 |
 | `RenderFailed` | 后期制作 | 智能助手 | 创建告警工作项 | 跨上下文 |
+| `RenderFailed` | 后期制作 | 通知 | 告警剪辑/制片责任人 | 跨上下文 |
 | `AudioGenerationRequested` | 后期制作 | AI任务调度 | 创建 audio AI 任务 | 跨上下文 |
 | `FinalVideoReviewSubmitted` | 发布交付 | 审核质量 | 创建 final_video 审核 | 跨上下文 |
 | `FinalVideoApproved` | 发布交付 | 智能助手 | 更新成片终审状态 | 跨上下文 |
@@ -292,7 +296,8 @@ Prompt 模板变更
 | `FinalVideoCreated` | 发布交付 | 智能助手 | 更新成片列表 | 跨上下文 |
 | `PackagingStarted` | 发布交付 | 智能助手 | 更新打包状态 | 跨上下文 |
 | `PackagingCompleted` | 发布交付 | 智能助手 | 更新打包状态 | 跨上下文 |
-| `PackagingFailed` | 发布交付 | 智能助手 | 告警 | 跨上下文 |
+| `PackagingFailed` | 发布交付 | 智能助手 | 创建后期工作项 | 跨上下文 |
+| `PackagingFailed` | 发布交付 | 通知 | 告警剪辑/制片责任人 | 跨上下文 |
 | `FinalVideoPublished` | 发布交付 | 项目管控 | 更新项目进度 | 跨上下文 |
 | `FinalVideoPublished` | 发布交付 | 智能助手 | 创建发布确认工作项 | 跨上下文 |
 | `FinalVideoUnpublished` | 发布交付 | 项目管控 | 更新项目进度 | 跨上下文 |
@@ -302,7 +307,8 @@ Prompt 模板变更
 | `PublishPlanExecutionStarted` | 发布交付 | 智能助手 | 更新执行状态 | 跨上下文 |
 | `PublishPlanCompleted` | 发布交付 | 项目管控 | 标记剧集发布完成 | 跨上下文 |
 | `PublishPlanCompleted` | 发布交付 | 智能助手 | 更新发布状态 | 跨上下文 |
-| `PublishPlanFailed` | 发布交付 | 智能助手 | 告警 | 跨上下文 |
+| `PublishPlanFailed` | 发布交付 | 智能助手 | 创建发布工作项 | 跨上下文 |
+| `PublishPlanFailed` | 发布交付 | 通知 | 告警发布运营/制片人 | 跨上下文 |
 | `PublishPlanCancelled` | 发布交付 | 智能助手 | 更新发布状态 | 跨上下文 |
 | `MemberAdded` | 项目管控 | 智能助手 | 更新团队列表 | 跨上下文 |
 | `MemberRemoved` | 项目管控 | 智能助手 | 更新团队列表 | 跨上下文 |
@@ -325,10 +331,10 @@ Prompt 模板变更
 | `DatasetDeleted` | AI任务调度 | 智能助手 | 移除数据集 | 跨上下文 |
 | `ConversationStarted` | 智能助手 | 智能助手 | 更新对话列表 | 上下文内 |
 | `ConversationArchived` | 智能助手 | 智能助手 | 更新对话列表 | 上下文内 |
-| `WorkItemCreated` | 智能助手 | 智能助手 | 推送通知 | 跨上下文 |
+| `WorkItemCreated` | 智能助手 | 通知 | 推送任务分配/创建通知 | 跨上下文 |
 | `WorkItemCompleted` | 智能助手 | 智能助手 | 更新驾驶舱 | 上下文内 |
 | `WorkItemClosed` | 智能助手 | 智能助手 | 更新工作项列表 | 上下文内 |
-| `MilestoneDelayed` | 智能助手 | 智能助手 | 通知负责人 | 跨上下文 |
+| `MilestoneDelayed` | 智能助手 | 通知 | 通知负责人并按 SLA 升级 | 跨上下文 |
 
 ---
 
@@ -415,3 +421,23 @@ Prompt 模板变更
 | `BindAssetToShot` | PublishedAssetReader | 同项目、已发布、资产版本存在 |
 
 只读端口返回 DTO，不返回对方聚合；需要强一致时由应用层编排事务/锁或采用预留记录，领域层不得直接调用其他上下文 Repository。
+
+### 5.3 通知事件扇出
+
+业务上下文只发布事实事件，不直接发送邮件或修改用户未读数。通知上下文按[通知契约](contexts/10-notification.md)解析接收人、模板、偏好、去重、投递和升级；智能助手仅在需要人工处置时创建 WorkItem。
+
+| 业务事件 | WorkItem 消费 | Notification 消费 |
+|---|---|---|
+| `ReviewAssigned` | — | 通知审核人 |
+| `ReviewChangesRequested` / `ReviewRejected` | 创建返工工作项 | 通知提交人、责任人 |
+| `QCReportFailed` / `QCReportTimedOut` | 重试耗尽后创建质量工作项 | 告警质量负责人 |
+| `AITaskFailed` / `PipelineRunFailed` | 重试耗尽后创建故障工作项 | 告警任务责任人、ai_admin |
+| `BudgetThresholdReached` / `BudgetExceeded` | 需要审批时创建预算工作项 | 通知 producer、owner、ai_admin |
+| `RenderFailed` / `PackagingFailed` | 创建后期工作项 | 通知 editor、producer |
+| `PublishPlanFailed` | 创建发布工作项 | 通知 publisher、producer |
+| `MilestoneDelayed` | 更新/创建延期工作项 | 通知 assignee、producer |
+| 安全、备份、恢复事故 | 由平台运行流程承接 | critical 通知 platform_admin |
+
+### 5.4 同上下文跨聚合原子命令
+
+`AddShot`、`RemoveShot` 等同一上下文内同时修改 Storyboard 和 Shot 的命令不通过异步事件模拟原子性，必须采用[Shot–Storyboard 事务边界](contexts/03-storyboard-direction.md)中的 UnitOfWork。跨上下文事件只在事务提交后从 Outbox 发布。

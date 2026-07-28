@@ -6,6 +6,7 @@
 |---------|------|---------|-------|
 | — | 驾驶舱 | 智能助手（CQRS 读模型） | — |
 | — | 我的待办 | 智能助手 | WorkItem |
+| — | 通知中心 | 通知 | Notification, NotificationPreference |
 | 生产创作 | AI任务队列 | AI任务调度 | AITask |
 | 生产创作 | 剧本中心 | 剧本创作 | Script |
 | 生产创作 | 角色工厂 | 资产库 | Character |
@@ -28,9 +29,9 @@
 | 智能助手 | AI对话 | 智能助手 | Conversation |
 | 智能助手 | 项目工作台 | 智能助手（读模型 + 写入口） | Conversation, WorkItem |
 | 智能助手 | 创意工作室 | 智能助手 + AI任务调度 | Conversation, AITask |
-| 系统管理 | 系统日志 | 跨上下文（审计日志，CQRS 只读） | — |
-| 系统管理 | 系统设置 | —（系统配置 KV） | — |
+| 系统管理 | 系统日志/审计 | 平台审计能力（CQRS 只读） | AuditRecord（追加写证据模型） |
+| 系统管理 | 系统设置 | 平台配置能力 + 项目管控 | TypedSetting, ProjectPresentationSpec, ProjectBudgetPolicy |
 
 > AI 配音调用由 AI 任务调度负责；音频资产、字幕、多轨时间线和渲染由后期制作负责。发布交付只接收已完成的渲染制品。
 >
-> 创意工作室（`/studio`）以会话为载体承载 AI 问答 / 图片 / 视频 / 收藏的统一创作入口，写操作落到智能助手（Conversation）与 AI 任务调度（AITask）；系统日志（`/logs`）只读消费 `app_logs` 审计表，无聚合根；系统设置（`/settings`）读写 `settings` KV 表，不归属任何业务上下文，无聚合根。
+> 创意工作室（`/studio`）以会话为载体承载 AI 问答 / 图片 / 视频 / 收藏的统一创作入口，写操作落到智能助手（Conversation）与 AI 任务调度（AITask）。系统日志与设置现有实现仍包含 `app_logs`/`audit_logs` 和无类型 `settings` KV，但产品目标以[平台基础能力需求](../product/platform-capability-requirements.md)为准：审计收敛为追加写 AuditRecord，配置按 system/project/user 作用域和类型 schema 管理。通知中心由独立通知上下文负责。

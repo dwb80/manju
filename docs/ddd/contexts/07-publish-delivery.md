@@ -92,7 +92,7 @@ FinalVideo (Aggregate Root)
 | `FinalVideoCreated` | finalVideoId, projectId, episodeId | 智能助手 |
 | `PackagingStarted` | finalVideoId, projectId | 智能助手 |
 | `PackagingCompleted` | finalVideoId, projectId, videoUrl | 智能助手 |
-| `PackagingFailed` | finalVideoId, projectId, errorMessage | 智能助手（告警） |
+| `PackagingFailed` | finalVideoId, projectId, errorMessage | 智能助手（创建工作项）、通知（告警剪辑/制片人） |
 | `FinalVideoReviewSubmitted` | finalVideoId, projectId, artifactRevision | 审核质量（创建 final_video Review） |
 | `FinalVideoApproved` | finalVideoId, projectId, reviewId, artifactRevision | 发布交付（允许发布预检）、智能助手 |
 | `FinalVideoPublished` | finalVideoId, projectId | 项目管控（更新项目进度）、智能助手（创建发布确认工作项） |
@@ -110,6 +110,8 @@ PublishPlan (Aggregate Root)
 ├── name: string
 ├── status: PublishPlanStatus       // draft | scheduled | executing | completed | failed | cancelled
 ├── platform: string                // bilibili | douyin | youtube | ...
+├── adapterVersion: string           // 冻结的平台适配器版本
+├── credentialRef: string            // 凭据引用；聚合不持有密钥
 ├── scheduledAt: string             // 计划发布时间
 ├── finalVideoIds: string[]         // 关联成片 ID 列表
 ├── account: PublishAccount         // 发布账号（值对象）
@@ -152,6 +154,8 @@ PublishPlan (Aggregate Root)
 | `CompletePublishPlan` | executing | `PublishPlanCompleted`, `PublishRecordCreated` | 发布完成并保存外部链接和平台响应摘要 |
 | `FailPublishPlan` | executing | `PublishPlanFailed` | 发布失败（记录原因） |
 | `CancelPublishPlan` | draft / scheduled | `PublishPlanCancelled` | 取消发布计划 |
+| `ReconcilePublishResult` | executing / failed | `PublishResultReconciled` | 按平台 requestId 查询最终状态，处理请求超时但平台已成功 |
+| `CapturePublishMetrics` | completed | `PublishMetricsCaptured` | 在授权和合规允许时追加不可变指标快照 |
 
 ### 2.3 不变量
 
@@ -160,6 +164,11 @@ PublishPlan (Aggregate Root)
 - 执行中的计划不可修改关联成片。
 - 失败后可重新排定（`failed → scheduled`）。
 - 每次执行无论成功或失败都创建不可变 PublishRecord；外部请求使用 planId + retryCount 作为幂等键。
+- 一个 PublishPlan 只对应一个平台账号；“多平台同步发布”由应用服务创建同一 batchId 下的多个计划，单平台失败不回滚其他平台成功结果。
+- 聚合只保存 `credentialRef`，密钥由平台安全配置解析，响应、日志和审计均不得写入访问令牌。
+- 适配器错误必须分类为 `retryable/non_retryable/unknown_result`；unknown_result 先对账，禁止直接重发造成重复发布。
+- 自动重试使用指数退避和平台 Retry-After，最多 maxRetry；认证、合规、参数错误不可自动重试。
+- 发布成功必须保存外部内容 ID、URL 和平台回执摘要；平台返回成功但回执持久化失败时，通过幂等查询恢复。
 
 ### 2.4 领域事件
 
@@ -171,7 +180,9 @@ PublishPlan (Aggregate Root)
 | `PublishPlanCompleted` | planId, projectId, platform | 智能助手、项目管控 |
 | `PublishPrecheckCompleted` | planId, projectId, passed, failures[] | 智能助手 |
 | `PublishRecordCreated` | recordId, planId, platform, status, externalUrl | 智能助手（发布历史） |
-| `PublishPlanFailed` | planId, projectId, failReason | 智能助手（告警） |
+| `PublishPlanFailed` | planId, projectId, failReason | 智能助手（创建工作项）、通知（告警发布运营/制片人） |
+| `PublishResultReconciled` | planId, recordId, finalStatus, externalId, externalUrl | 智能助手、通知 |
+| `PublishMetricsCaptured` | planId, recordId, capturedAt, metrics | 发布效果读模型、数据中心 |
 | `PublishPlanCancelled` | planId, projectId | 智能助手 |
 
 ---
@@ -182,4 +193,25 @@ PublishPlan (Aggregate Root)
 |-------|------|------|
 | `PublishAccount` | `platform: string`, `accountId: string`, `accountName: string` | 发布账号 |
 | `PublishPrecheck` | `passed: boolean`, `checkedAt: string`, `failures: PrecheckFailure[]`, `artifactRevisions: Record<string, number>` | 发布预检不可变结果；成片版本变化后自动失效 |
-| `PublishRecord` | `id`, `planId`, `attempt`, `status`, `externalId`, `externalUrl`, `responseCode`, `startedAt`, `completedAt` | 单次外部发布执行记录，不可修改或删除 |
+| `PublishRecord` | `id`, `planId`, `batchId`, `attempt`, `status`, `providerRequestId`, `externalId`, `externalUrl`, `responseCode`, `errorCode`, `startedAt`, `completedAt` | 单次外部发布执行记录，不可修改或删除 |
+| `PublishMetricSnapshot` | `recordId`, `capturedAt`, `views`, `likes`, `comments`, `shares`, `watchTime`, `rawDigest` | 渠道允许时采集的不可变效果快照；缺失保持 null，不伪造 |
+
+## 4. 平台适配器契约
+
+```ts
+interface PublishPlatformAdapter {
+  readonly platform: string;
+  readonly version: string;
+  validateAccount(credentialRef: string): Promise<AccountSummary>;
+  getRules(): Promise<PlatformPublishRules>;
+  precheck(input: PublishArtifactSnapshot): Promise<PlatformPrecheckResult>;
+  publish(input: PublishRequest, idempotencyKey: string): Promise<PublishProviderResult>;
+  query(providerRequestId: string): Promise<PublishProviderResult>;
+  unpublish(externalId: string, idempotencyKey: string): Promise<void>;
+  fetchMetrics(externalId: string, cursor?: string): Promise<MetricPage>;
+}
+```
+
+- 适配器负责平台字段、分辨率/时长/封面、认证、限流和回执翻译；核心域不写死渠道规则。
+- 适配器必须提供契约测试：幂等、限流、超时未知结果、认证过期、平台拒绝、重复内容和回执缺字段。
+- 首发可启用 bilibili/douyin/youtube/self_hosted 中已通过真实沙箱/测试账号验收的适配器；未通过者不在 UI 标记可用。

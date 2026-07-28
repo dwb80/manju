@@ -7,6 +7,7 @@
 >
 > **配套规范**：
 > - [DDD 治理规范](governance.md) — 文档结构、跨文档引用规范、统一语言使用规则、变更管理流程。
+> - [产品级需求基线](../product/README.md) — 产品范围、漫剧专业需求、用户旅程、权限矩阵和交付门禁；产品决策确认后再变更领域契约。
 
 ---
 
@@ -17,11 +18,12 @@
 
 ### 基础规范
 - [统一语言术语表](glossary.md) — 代码、UI、API 中使用的全部业务概念和状态术语
-- [上下文映射](context-map.md) — 9 个限界上下文的边界、上下游关系和共享内核
+- [上下文映射](context-map.md) — 10 个限界上下文的边界、上下游关系和共享内核
 - [跨上下文协作契约](contracts.md) — 事件链、消费者注册表、防腐层、CQRS 投影
-- [模块-上下文映射表](module-map.md) — 23 个页面到上下文和聚合根的对应关系
+- [统一错误与 HTTP 响应契约](error-contract.md) — 字符串错误码、HTTP 映射、响应 envelope 和旧数字码迁移
+- [模块-上下文映射表](module-map.md) — 页面到上下文和聚合根的对应关系
 
-### 上下文规格（9 个限界上下文）
+### 上下文规格（10 个限界上下文）
 
 | 编号 | 上下文 | 文档 |
 |------|--------|------|
@@ -34,6 +36,7 @@
 | §3.7 | 发布交付 (Publish & Delivery) | [contexts/07-publish-delivery.md](contexts/07-publish-delivery.md) |
 | §3.8 | 智能助手 (AI Assistant) | [contexts/08-ai-assistant.md](contexts/08-ai-assistant.md) |
 | §3.9 | 后期制作 (Post Production) | [contexts/09-post-production.md](contexts/09-post-production.md) |
+| §3.10 | 通知 (Notification) | [contexts/10-notification.md](contexts/10-notification.md) |
 
 ### 迭代与基础设施
 - [迭代优先级](iteration-priority.md) — 聚合实现优先级与建议迭代节奏
