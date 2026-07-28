@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { CqrsSyncStatus } from "@/components/shared";
 
 type Mode = "chat" | "image" | "video" | "favorites";
 type Status = "pending" | "processing" | "success" | "failed";
@@ -1333,7 +1334,11 @@ export default function Home() {
             {mode === "video" && "视频生成"}
             {mode === "favorites" && "收藏"}
           </div>
-          <div className="text-xs text-muted-foreground">{notice}</div>
+          <div className="flex items-center gap-2">
+            {/* CQRS 同步状态指示器 —— 待接入真实投影状态数据 */}
+            <CqrsSyncStatus state="fresh" />
+            <div className="text-xs text-muted-foreground">{notice}</div>
+          </div>
         </header>
         {notice && (
           <div className="pointer-events-none fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-full border border-border bg-secondary px-4 py-2 text-sm text-foreground shadow-2xl">

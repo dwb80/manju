@@ -29,6 +29,7 @@ import {
   StatsOverview,
   Alert,
 } from "@/components/layout";
+import { CqrsSyncStatus } from "@/components/shared";
 import { createLogger } from "@/lib/logger";
 import { notify } from "@/lib/notify";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -215,6 +216,8 @@ export default function TodosPage() {
         breadcrumbs={["首页", "我的待办"]}
         extraRight={
           <div className="flex items-center gap-2">
+            {/* CQRS 同步状态指示器 —— 待接入真实投影状态数据 */}
+            <CqrsSyncStatus state="fresh" />
             <button
               type="button"
               onClick={() => {
@@ -674,3 +677,4 @@ function TodoFormDialog({ initial, onClose, onSave }: TodoFormDialogProps) {
     </div>
   );
 }
+

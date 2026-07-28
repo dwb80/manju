@@ -77,6 +77,14 @@ const config: Config = {
         "2xl": "16px",
         "3xl": "20px",
       },
+      spacing: {
+        xs: "2px",
+        sm: "4px",
+        md: "8px",
+        lg: "12px",
+        xl: "16px",
+        "2xl": "24px",
+      },
       fontSize: {
         "page-title": ["18px", { lineHeight: "1.4", fontWeight: "600" }],
         "card-title": ["13px", { lineHeight: "1.5", fontWeight: "500" }],

@@ -24,6 +24,7 @@ import { useProjectWorkbench } from "@/hooks/home/use-project-workbench";
 import { ProjectWorkbenchSection } from "@/components/project/project-workbench-section";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { toast } from "@/components/common/toast";
+import { CqrsSyncStatus } from "@/components/shared";
 
 export default function ProjectWorkbenchPage() {
   return (
@@ -102,6 +103,10 @@ function ProjectWorkbenchPageInner() {
 
   return (
     <>
+      {/* CQRS 同步状态指示器 —— 待接入真实投影状态数据 */}
+      <div className="fixed right-4 top-16 z-50">
+        <CqrsSyncStatus state="fresh" />
+      </div>
       <ProjectWorkbenchSection {...(projectWorkbenchProps as unknown as ComponentProps<typeof ProjectWorkbenchSection>)} />
       {pendingConfirm && (
         <ConfirmDialog

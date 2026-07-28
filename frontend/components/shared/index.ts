@@ -59,3 +59,7 @@ export type { EntityPickerProps } from './entity-picker';
 // 流水线流程组件（多阶段进度可视化）
 export { PipelineFlow } from './pipeline-flow';
 export type { PipelineFlowProps, PipelineFlowStage, PipelineFlowStatus } from './pipeline-flow';
+
+// CQRS 同步状态指示器
+export { CqrsSyncStatus } from './ui/cqrs-sync-status';
+export type { ProjectionState } from './ui/cqrs-sync-status';
