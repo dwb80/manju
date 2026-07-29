@@ -93,7 +93,7 @@ Scenario: US-008-S02 批量归档保留失败明细
 | 方法与路径 | 请求/响应 | 约束与错误 |
 |---|---|---|
 | `POST /api/v1/projects/{id}/style-assets` | `{commandId,name,description,prompt,negativePrompt,referenceVersionIds[],palette,traits,rightsRef}`；201 | 项目写权限；名称唯一 |
-| `POST /api/v1/style-assets/{id}/versions` | 新版本内容；201 | `If-Match`；保留版本链 |
+| `POST /api/v1/style-assets/{id}/versions` | `{commandId,description,prompt,negativePrompt,referenceVersionIds,palette,traits,rightsRef,changeNote}`；201 | `If-Match`；保留版本链 |
 | `POST /api/v1/style-assets/{id}:publish` | `{commandId}` | 授权与完整性预检 |
 | `POST /api/v1/projects/{id}/presentation-spec-impact` | 候选styleVersionId；返回受影响对象 | 只读分析 |
 
@@ -137,6 +137,18 @@ Scenario: US-031-S01 复制资产形成独立版本和血缘
 
 - 资产、生成结果和发布预检统一显示授权状态、安全结论、规则版本、到期日和影响范围；敏感证据仅授权角色可查看。
 - 授权撤销、到期、法务冻结或安全blocker自动产生影响清单和责任人工作项，阻止新的生成、采用或发布。
+
+### API 契约
+
+| 方法与路径 | 请求/响应 | 约束与错误 |
+|---|---|---|
+| `POST /api/v1/rights-impact-assessments` | `{commandId,targetType,targetId,targetVersion,action}`；返回 blockers、warnings、affectedRefs | 只读评估语义；按查看者权限脱敏证据 |
+| `POST /api/v1/rights-metadata/{id}/changes` | `{commandId,status,reason,effectiveAt,evidenceRef,expectedVersion}`；202 返回影响评估任务 | `rights.manage`；幂等；写审计和 Outbox |
+
+### 数据模型
+
+- `rights_metadata_versions(id,subject_type,subject_id,version,status,scope_json,evidence_ref,effective_at,created_by,created_at)` 追加写。
+- `rights_impact_assessments(id,target_type,target_id,target_version,action,blockers_json,warnings_json,affected_refs_json,created_at)` 保存可复查结论。
 
 ### 可执行验收用例
 

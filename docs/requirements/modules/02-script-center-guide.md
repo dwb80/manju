@@ -4793,28 +4793,13 @@ export interface ScriptCategory {
 
 ## C.5 剧本审核流程设计（P1）
 
-### 需求说明
+> **当前 V1 权威口径**：本节历史“任意多级审核模板”和无版本 `/api/approval-workflows` 设计已废止，不得据此建立第二套审核聚合或接口。
 
-管理剧本的审核、批准和发布流程，支持多级审核和流转。
-
-### 审核状态
-
-```
-draft → submitted → reviewing → approved → rejected → revision → archived
-```
-
-### 审核流程模板
-
-```
-[提交] → [编剧审核] → [导演审核] → [制片人批准] → [发布]
-```
-
-### 主要API接口
-
-- `GET /api/approval-workflows` - 获取审核流程模板
-- `POST /api/scripts/:scriptId/approval` - 提交审核申请
-- `POST /api/script-approvals/:id/action` - 审核操作（批准/拒绝/批注/委托）
-- `GET /api/my-approvals` - 获取我的审核列表
+- 剧本发布采用固定单级 Review 策略；首发不提供任意会签编排。成片仍按 PD-004 使用固定 first+second 两级审核。
+- 流程为：冻结 `ScriptDocument` 候选快照 → 自动 QC 门禁 → `Review(stage=single)` → approved 后执行 `PublishScript`；QC blocker 或 Review needs_fix/rejected 返回剧本返工。
+- Review、批注、豁免和审计统一使用[审核质量上下文](../../domain/contexts/06-review-quality.md)，不创建 `ScriptApproval` 或 `ApprovalWorkflowTemplate` 第二事实源。
+- 接口统一位于 `/api/v1/`：`POST /api/v1/scripts/{id}/review-submissions`、`GET /api/v1/review-intakes/{id}`、`POST /api/v1/reviews/{id}/decisions`、`GET /api/v1/reviews?targetType=script`。
+- 旧 `/api/approval-workflows`、`/api/scripts/:scriptId/approval`、`/api/script-approvals/:id/action` 和 `/api/my-approvals` 仅属于历史草案，目标实现与新测试不得引用。
 
 ## C.6 数据备份和恢复设计（P2）
 

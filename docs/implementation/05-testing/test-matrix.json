@@ -7,6 +7,7 @@
       "title": "创建新项目",
       "source": "docs/delivery-specs/02-project-script-storyboard.md",
       "featureFile": "tests/acceptance/features/us-001.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-001-S01",
@@ -29,8 +30,7 @@
       ],
       "pages": [
         "/projects",
-        "/projects/new",
-        "/projects/{projectId}/workspace"
+        "/projects/workbench"
       ],
       "tables": [
         "projects",
@@ -59,6 +59,7 @@
       "title": "创建剧集",
       "source": "docs/delivery-specs/02-project-script-storyboard.md",
       "featureFile": "tests/acceptance/features/us-002.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-002-S01",
@@ -80,12 +81,15 @@
         }
       ],
       "pages": [
+        "/projects/workbench",
         "/projects/{projectId}/episodes"
       ],
       "tables": [
         "episodes",
         "scripts",
-        "storyboards"
+        "storyboards",
+        "script_episodes",
+        "project_episode_id"
       ],
       "operationIds": [
         "us_002_post_projects-projectid-episodes",
@@ -109,6 +113,7 @@
       "title": "剧本文档管理",
       "source": "docs/delivery-specs/02-project-script-storyboard.md",
       "featureFile": "tests/acceptance/features/us-003.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-003-S01",
@@ -161,6 +166,7 @@
       "title": "AI 辅助剧本分析",
       "source": "docs/delivery-specs/02-project-script-storyboard.md",
       "featureFile": "tests/acceptance/features/us-004.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-004-S01",
@@ -207,6 +213,7 @@
       "title": "创建与编排分镜",
       "source": "docs/delivery-specs/02-project-script-storyboard.md",
       "featureFile": "tests/acceptance/features/us-005.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-005-S01",
@@ -259,6 +266,7 @@
       "title": "AI 分镜建议",
       "source": "docs/delivery-specs/02-project-script-storyboard.md",
       "featureFile": "tests/acceptance/features/us-006.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-006-S01",
@@ -276,6 +284,15 @@
             "Given Provider 在120秒内只返回2条建议",
             "When 任务达到截止时间",
             "Then 状态为 timed_out、partial 为 true 且页面允许查看但明确标记不完整"
+          ]
+        },
+        {
+          "id": "US-006-S03",
+          "title": "剧本拆镜候选进入统一建议流",
+          "steps": [
+            "Given US-033 split_shots 任务已完成且目标 Storyboard 可编辑",
+            "When 用户将候选发送到该 Storyboard 并重复提交同一转换请求",
+            "Then 两次请求返回同一 ShotSuggestionJob 且在用户采纳前不创建任何 Shot"
           ]
         }
       ],
@@ -305,6 +322,7 @@
       "title": "项目表现规格",
       "source": "docs/delivery-specs/03-comic-presentation.md",
       "featureFile": "tests/acceptance/features/manga-001.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "MANGA-001-S01",
@@ -353,6 +371,9 @@
       "title": "图层化构图",
       "source": "docs/delivery-specs/03-comic-presentation.md",
       "featureFile": "tests/acceptance/features/manga-002.feature",
+      "requirementIds": [
+        "SHOT-001"
+      ],
       "scenarios": [
         {
           "id": "MANGA-002-S01",
@@ -400,6 +421,7 @@
       "title": "对白气泡与旁白",
       "source": "docs/delivery-specs/03-comic-presentation.md",
       "featureFile": "tests/acceptance/features/manga-003.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "MANGA-003-S01",
@@ -446,6 +468,7 @@
       "title": "拟声词管理",
       "source": "docs/delivery-specs/03-comic-presentation.md",
       "featureFile": "tests/acceptance/features/manga-004.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "MANGA-004-S01",
@@ -493,6 +516,7 @@
       "title": "漫画特效",
       "source": "docs/delivery-specs/03-comic-presentation.md",
       "featureFile": "tests/acceptance/features/manga-005.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "MANGA-005-S01",
@@ -541,6 +565,9 @@
       "title": "有限动态编排",
       "source": "docs/delivery-specs/03-comic-presentation.md",
       "featureFile": "tests/acceptance/features/manga-006.feature",
+      "requirementIds": [
+        "SHOT-002"
+      ],
       "scenarios": [
         {
           "id": "MANGA-006-S01",
@@ -587,6 +614,12 @@
       "title": "一致性检查",
       "source": "docs/delivery-specs/03-comic-presentation.md",
       "featureFile": "tests/acceptance/features/manga-007.feature",
+      "requirementIds": [
+        "CONT-001",
+        "CONT-002",
+        "NFR-QUAL-001",
+        "NFR-QUAL-002"
+      ],
       "scenarios": [
         {
           "id": "MANGA-007-S01",
@@ -621,7 +654,8 @@
       ],
       "requiredTestLayers": [
         "contract",
-        "integration"
+        "integration",
+        "quality-regression"
       ],
       "implementationEvidence": {
         "code": [],
@@ -635,6 +669,10 @@
       "title": "可复现快照与交付",
       "source": "docs/delivery-specs/03-comic-presentation.md",
       "featureFile": "tests/acceptance/features/manga-008.feature",
+      "requirementIds": [
+        "CAND-002",
+        "NFR-DELIVERY-001"
+      ],
       "scenarios": [
         {
           "id": "MANGA-008-S01",
@@ -642,7 +680,7 @@
           "steps": [
             "Given Shot 版本12通过表现预检",
             "When 使用同一输入和幂等键提交两次送审",
-            "Then 返回同一 snapshotId、snapshotHash 和 reviewId"
+            "Then 返回同一 snapshotId、snapshotHash 和 intakeId 且状态为 qc_running"
           ]
         },
         {
@@ -651,23 +689,74 @@
           "steps": [
             "Given snapshot A 已批准",
             "When 用户修改气泡并提交 snapshot B",
-            "Then B 创建新的 Review 且 A 的批准状态保持不变但不适用于 B"
+            "Then B 创建新的 Review Intake 且必须重新 QC，A 的批准状态保持不变但不适用于 B"
+          ]
+        },
+        {
+          "id": "MANGA-008-S03",
+          "title": "QC 通过后才创建审核",
+          "steps": [
+            "Given Review Intake 绑定 Shot 版本12和 snapshotHash A",
+            "When 同版本 QCReport completed 且 passed=true",
+            "Then Intake 进入 review_pending 并创建唯一 Review"
+          ]
+        },
+        {
+          "id": "MANGA-008-S04",
+          "title": "block 规则阻断送审",
+          "steps": [
+            "Given Review Intake 的 QualityRuleSet failureStrategy=block",
+            "When QCReport completed 且 passed=false",
+            "Then Intake 进入 qc_blocked、不创建 Review 且 Shot 进入 needs_fix"
+          ]
+        },
+        {
+          "id": "MANGA-008-S05",
+          "title": "warn 规则经授权豁免后放行",
+          "steps": [
+            "Given QCReport 仅命中可豁免 warning 且审核负责人具有 quality.waive",
+            "When 负责人填写原因并提交 QC 豁免",
+            "Then 产生 QCGateWaived 和 AuditRecord、Intake 进入 review_pending 并创建 Review"
+          ]
+        },
+        {
+          "id": "MANGA-008-S06",
+          "title": "mandatory 规则禁止豁免",
+          "steps": [
+            "Given QCReport 命中 mandatory 规则",
+            "When 任意用户尝试提交 QC 豁免",
+            "Then API 返回 qc_mandatory_rule_not_waivable、Intake 保持 qc_blocked 且不存在 Review"
+          ]
+        },
+        {
+          "id": "MANGA-008-S07",
+          "title": "QC 超时重试耗尽后阻断",
+          "steps": [
+            "Given QCReport 已达到 QualityRuleSet maxAttempts",
+            "When 最后一次执行 timed_out",
+            "Then Intake 进入 qc_blocked、创建质量 WorkItem 并显示可操作失败原因"
           ]
         }
       ],
       "pages": [],
       "tables": [
         "presentation_snapshots",
-        "presentation_snapshot_dependencies"
+        "presentation_snapshot_dependencies",
+        "review_intakes",
+        "qc_gate_waivers"
       ],
       "operationIds": [
         "manga_008_post_shots-id-presentation-precheck",
         "manga_008_post_shots-id-review-submissions",
+        "manga_008_get_review-intakes",
+        "manga_008_get_review-intakes-id",
+        "manga_008_post_review-intakes-id-qc-waivers",
         "manga_008_get_presentation-snapshots-id"
       ],
       "requiredTestLayers": [
         "contract",
-        "integration"
+        "integration",
+        "evidence-audit"
       ],
       "implementationEvidence": {
         "code": [],
@@ -681,6 +770,7 @@
       "title": "角色资产管理",
       "source": "docs/delivery-specs/04-assets-generation-review.md",
       "featureFile": "tests/acceptance/features/us-007.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-007-S01",
@@ -734,6 +824,7 @@
       "title": "场景与道具资产管理",
       "source": "docs/delivery-specs/04-assets-generation-review.md",
       "featureFile": "tests/acceptance/features/us-008.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-008-S01",
@@ -789,10 +880,124 @@
       }
     },
     {
+      "id": "US-030",
+      "title": "风格资产管理",
+      "source": "docs/delivery-specs/04-assets-generation-review.md",
+      "featureFile": "tests/acceptance/features/us-030.feature",
+      "requirementIds": [],
+      "scenarios": [
+        {
+          "id": "US-030-S01",
+          "title": "发布项目默认风格不改写冻结快照",
+          "steps": [
+            "Given 项目已有使用风格版本1的冻结快照",
+            "When 美术发布风格版本2并设为项目默认",
+            "Then 新任务解析到版本2而旧快照仍引用版本1"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [],
+      "operationIds": [
+        "us_030_post_projects-id-style-assets",
+        "us_030_post_style-assets-id-versions",
+        "us_030_post_style-assets-id-publish",
+        "manga_001_post_projects-id-presentation-spec-impact"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-031",
+      "title": "跨项目资产复用",
+      "source": "docs/delivery-specs/04-assets-generation-review.md",
+      "featureFile": "tests/acceptance/features/us-031.feature",
+      "requirementIds": [],
+      "scenarios": [
+        {
+          "id": "US-031-S01",
+          "title": "复制资产形成独立版本和血缘",
+          "steps": [
+            "Given 用户可读取来源资产版本3并可写目标项目",
+            "When 用户确认复制计划",
+            "Then 目标项目产生新资产版本1且记录来源版本3，来源后续修改不改变目标"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [],
+      "operationIds": [
+        "us_031_post_asset-copy-plans",
+        "us_031_post_asset-copy-plans-id-confirm"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-032",
+      "title": "内容安全与权利治理",
+      "source": "docs/delivery-specs/04-assets-generation-review.md",
+      "featureFile": "tests/acceptance/features/us-032.feature",
+      "requirementIds": [
+        "NFR-AUDIO-001",
+        "NFR-SEC-001"
+      ],
+      "scenarios": [
+        {
+          "id": "US-032-S01",
+          "title": "授权到期阻止待发布制品",
+          "steps": [
+            "Given FinalVideo引用的声音授权已到期",
+            "When 发布运营执行目标渠道预检",
+            "Then 预检返回blocker、列出受影响AudioAsset版本且不创建执行中的PublishRecord"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "rights_metadata_versions",
+        "rights_impact_assessments"
+      ],
+      "operationIds": [
+        "us_032_post_rights-impact-assessments",
+        "us_032_post_rights-metadata-id-changes"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "security"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
       "id": "US-009",
       "title": "AI 图片生成",
       "source": "docs/delivery-specs/04-assets-generation-review.md",
       "featureFile": "tests/acceptance/features/us-009.feature",
+      "requirementIds": [
+        "CAND-001"
+      ],
       "scenarios": [
         {
           "id": "US-009-S01",
@@ -841,6 +1046,10 @@
       "title": "图片审核",
       "source": "docs/delivery-specs/04-assets-generation-review.md",
       "featureFile": "tests/acceptance/features/us-010.feature",
+      "requirementIds": [
+        "REV-001",
+        "REV-002"
+      ],
       "scenarios": [
         {
           "id": "US-010-S01",
@@ -887,6 +1096,11 @@
       "title": "AI 视频生成",
       "source": "docs/delivery-specs/04-assets-generation-review.md",
       "featureFile": "tests/acceptance/features/us-011.feature",
+      "requirementIds": [
+        "CAND-001",
+        "CAND-002",
+        "CAND-003"
+      ],
       "scenarios": [
         {
           "id": "US-011-S01",
@@ -935,6 +1149,11 @@
       "title": "视频审核",
       "source": "docs/delivery-specs/04-assets-generation-review.md",
       "featureFile": "tests/acceptance/features/us-012.feature",
+      "requirementIds": [
+        "REV-001",
+        "REV-002",
+        "REV-003"
+      ],
       "scenarios": [
         {
           "id": "US-012-S01",
@@ -980,6 +1199,9 @@
       "title": "音频管理",
       "source": "docs/delivery-specs/05-postproduction-publishing.md",
       "featureFile": "tests/acceptance/features/us-013.feature",
+      "requirementIds": [
+        "NFR-AUDIO-001"
+      ],
       "scenarios": [
         {
           "id": "US-013-S01",
@@ -1017,7 +1239,8 @@
       "requiredTestLayers": [
         "contract",
         "integration",
-        "e2e"
+        "e2e",
+        "security"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1031,6 +1254,7 @@
       "title": "字幕管理",
       "source": "docs/delivery-specs/05-postproduction-publishing.md",
       "featureFile": "tests/acceptance/features/us-014.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-014-S01",
@@ -1079,6 +1303,13 @@
       "title": "视频剪辑与渲染",
       "source": "docs/delivery-specs/05-postproduction-publishing.md",
       "featureFile": "tests/acceptance/features/us-015.feature",
+      "requirementIds": [
+        "EDIT-001",
+        "EDIT-002",
+        "EDIT-003",
+        "NFR-TIMELINE-001",
+        "NFR-DELIVERY-001"
+      ],
       "scenarios": [
         {
           "id": "US-015-S01",
@@ -1116,7 +1347,8 @@
       ],
       "requiredTestLayers": [
         "contract",
-        "integration"
+        "integration",
+        "evidence-audit"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1130,6 +1362,10 @@
       "title": "成片两级审核",
       "source": "docs/delivery-specs/05-postproduction-publishing.md",
       "featureFile": "tests/acceptance/features/us-016.feature",
+      "requirementIds": [
+        "REV-001",
+        "REV-003"
+      ],
       "scenarios": [
         {
           "id": "US-016-S01",
@@ -1158,6 +1394,8 @@
       "operationIds": [
         "us_016_post_final-videos",
         "us_016_post_final-videos-id-review-submissions",
+        "manga_008_get_review-intakes-id",
+        "manga_008_post_review-intakes-id-qc-waivers",
         "us_010_post_reviews-id-decisions",
         "us_016_get_final-videos-id-review-chain"
       ],
@@ -1177,6 +1415,9 @@
       "title": "发布管理",
       "source": "docs/delivery-specs/05-postproduction-publishing.md",
       "featureFile": "tests/acceptance/features/us-017.feature",
+      "requirementIds": [
+        "NFR-DELIVERY-001"
+      ],
       "scenarios": [
         {
           "id": "US-017-S01",
@@ -1212,7 +1453,8 @@
       ],
       "requiredTestLayers": [
         "contract",
-        "integration"
+        "integration",
+        "evidence-audit"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1226,6 +1468,9 @@
       "title": "剪辑片段管理",
       "source": "docs/delivery-specs/05-postproduction-publishing.md",
       "featureFile": "tests/acceptance/features/us-021.feature",
+      "requirementIds": [
+        "EDIT-001"
+      ],
       "scenarios": [
         {
           "id": "US-021-S01",
@@ -1272,6 +1517,10 @@
       "title": "项目任务管理",
       "source": "docs/delivery-specs/06-collaboration.md",
       "featureFile": "tests/acceptance/features/us-018.feature",
+      "requirementIds": [
+        "OPS-003",
+        "COLLAB-003"
+      ],
       "scenarios": [
         {
           "id": "US-018-S01",
@@ -1323,6 +1572,7 @@
       "title": "项目问题管理",
       "source": "docs/delivery-specs/06-collaboration.md",
       "featureFile": "tests/acceptance/features/us-019.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-019-S01",
@@ -1369,6 +1619,7 @@
       "title": "项目里程碑管理",
       "source": "docs/delivery-specs/06-collaboration.md",
       "featureFile": "tests/acceptance/features/us-020.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-020-S01",
@@ -1416,6 +1667,7 @@
       "title": "用户与成员管理",
       "source": "docs/delivery-specs/07-platform-capabilities.md",
       "featureFile": "tests/acceptance/features/us-022.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-022-S01",
@@ -1468,6 +1720,9 @@
       "title": "认证与会话安全",
       "source": "docs/delivery-specs/07-platform-capabilities.md",
       "featureFile": "tests/acceptance/features/us-023.feature",
+      "requirementIds": [
+        "NFR-SEC-001"
+      ],
       "scenarios": [
         {
           "id": "US-023-S01",
@@ -1508,7 +1763,8 @@
       "requiredTestLayers": [
         "contract",
         "integration",
-        "e2e"
+        "e2e",
+        "security"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1522,6 +1778,7 @@
       "title": "通知中心",
       "source": "docs/delivery-specs/07-platform-capabilities.md",
       "featureFile": "tests/acceptance/features/us-024.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-024-S01",
@@ -1576,6 +1833,9 @@
       "title": "统一回收站与数据恢复",
       "source": "docs/delivery-specs/07-platform-capabilities.md",
       "featureFile": "tests/acceptance/features/us-025.feature",
+      "requirementIds": [
+        "NFR-PRIV-001"
+      ],
       "scenarios": [
         {
           "id": "US-025-S01",
@@ -1613,7 +1873,9 @@
       "requiredTestLayers": [
         "contract",
         "integration",
-        "e2e"
+        "e2e",
+        "security",
+        "recovery-drill"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1627,6 +1889,7 @@
       "title": "配置中心",
       "source": "docs/delivery-specs/07-platform-capabilities.md",
       "featureFile": "tests/acceptance/features/us-026.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-026-S01",
@@ -1681,6 +1944,9 @@
       "title": "操作审计",
       "source": "docs/delivery-specs/07-platform-capabilities.md",
       "featureFile": "tests/acceptance/features/us-027.feature",
+      "requirementIds": [
+        "NFR-SEC-001"
+      ],
       "scenarios": [
         {
           "id": "US-027-S01",
@@ -1717,7 +1983,8 @@
       "requiredTestLayers": [
         "contract",
         "integration",
-        "e2e"
+        "e2e",
+        "security"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1731,6 +1998,10 @@
       "title": "版本化数据导入导出",
       "source": "docs/delivery-specs/07-platform-capabilities.md",
       "featureFile": "tests/acceptance/features/us-028.feature",
+      "requirementIds": [
+        "NFR-MIGRATION-001",
+        "NFR-SEC-001"
+      ],
       "scenarios": [
         {
           "id": "US-028-S01",
@@ -1767,7 +2038,9 @@
       ],
       "requiredTestLayers": [
         "contract",
-        "integration"
+        "integration",
+        "migration",
+        "security"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1781,6 +2054,10 @@
       "title": "备份与灾难恢复",
       "source": "docs/delivery-specs/07-platform-capabilities.md",
       "featureFile": "tests/acceptance/features/us-029.feature",
+      "requirementIds": [
+        "NFR-RECOVERY-001",
+        "NFR-PRIV-001"
+      ],
       "scenarios": [
         {
           "id": "US-029-S01",
@@ -1822,7 +2099,9 @@
       "requiredTestLayers": [
         "contract",
         "integration",
-        "e2e"
+        "e2e",
+        "recovery-drill",
+        "security"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1836,6 +2115,7 @@
       "title": "Prompt 模板管理",
       "source": "docs/delivery-specs/08-ai-governance-analytics.md",
       "featureFile": "tests/acceptance/features/us-pm-001.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "US-PM-001-S01",
@@ -1889,6 +2169,11 @@
       "title": "数据统计",
       "source": "docs/delivery-specs/08-ai-governance-analytics.md",
       "featureFile": "tests/acceptance/features/us-ds-001.feature",
+      "requirementIds": [
+        "OPS-001",
+        "OPS-002",
+        "NFR-SCALE-001"
+      ],
       "scenarios": [
         {
           "id": "US-DS-001-S01",
@@ -1930,7 +2215,8 @@
       "requiredTestLayers": [
         "contract",
         "integration",
-        "e2e"
+        "e2e",
+        "performance"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1944,6 +2230,12 @@
       "title": "项目成员与权限管理",
       "source": "docs/delivery-specs/09-operational-capabilities.md",
       "featureFile": "tests/acceptance/features/cap-001.feature",
+      "requirementIds": [
+        "COLLAB-001",
+        "COLLAB-002",
+        "COLLAB-003",
+        "NFR-A11Y-001"
+      ],
       "scenarios": [
         {
           "id": "CAP-001-S01",
@@ -1976,7 +2268,8 @@
       ],
       "requiredTestLayers": [
         "contract",
-        "integration"
+        "integration",
+        "accessibility"
       ],
       "implementationEvidence": {
         "code": [],
@@ -1990,6 +2283,7 @@
       "title": "模型配置与路由",
       "source": "docs/delivery-specs/09-operational-capabilities.md",
       "featureFile": "tests/acceptance/features/cap-002.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "CAP-002-S01",
@@ -2037,6 +2331,7 @@
       "title": "流水线模板管理",
       "source": "docs/delivery-specs/09-operational-capabilities.md",
       "featureFile": "tests/acceptance/features/cap-003.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "CAP-003-S01",
@@ -2084,6 +2379,7 @@
       "title": "数据集管理",
       "source": "docs/delivery-specs/09-operational-capabilities.md",
       "featureFile": "tests/acceptance/features/cap-004.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "CAP-004-S01",
@@ -2132,6 +2428,7 @@
       "title": "AI 对话与创意工作室",
       "source": "docs/delivery-specs/09-operational-capabilities.md",
       "featureFile": "tests/acceptance/features/cap-005.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "CAP-005-S01",
@@ -2184,6 +2481,9 @@
       "title": "AI 任务队列运维",
       "source": "docs/delivery-specs/09-operational-capabilities.md",
       "featureFile": "tests/acceptance/features/cap-006.feature",
+      "requirementIds": [
+        "NFR-OPS-001"
+      ],
       "scenarios": [
         {
           "id": "CAP-006-S01",
@@ -2217,7 +2517,8 @@
       "requiredTestLayers": [
         "contract",
         "integration",
-        "e2e"
+        "e2e",
+        "operation-drill"
       ],
       "implementationEvidence": {
         "code": [],
@@ -2231,6 +2532,7 @@
       "title": "项目预算治理",
       "source": "docs/delivery-specs/09-operational-capabilities.md",
       "featureFile": "tests/acceptance/features/cap-007.feature",
+      "requirementIds": [],
       "scenarios": [
         {
           "id": "CAP-007-S01",
@@ -2280,6 +2582,12 @@
       "title": "质量规则配置",
       "source": "docs/delivery-specs/09-operational-capabilities.md",
       "featureFile": "tests/acceptance/features/cap-008.feature",
+      "requirementIds": [
+        "CONT-001",
+        "CONT-002",
+        "NFR-QUAL-001",
+        "NFR-QUAL-002"
+      ],
       "scenarios": [
         {
           "id": "CAP-008-S01",
@@ -2315,7 +2623,137 @@
       ],
       "requiredTestLayers": [
         "contract",
-        "integration"
+        "integration",
+        "quality-regression"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-009",
+      "title": "生产依赖影响与修复计划",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-009.feature",
+      "requirementIds": [
+        "OPS-002",
+        "NFR-DELIVERY-001"
+      ],
+      "scenarios": [
+        {
+          "id": "CAP-009-S01",
+          "title": "上游版本变化显示递归影响",
+          "steps": [
+            "Given 角色版本3被12个Shot和2个已审核快照引用",
+            "When 用户预评估发布角色版本4",
+            "Then 页面显示直接和递归下游、审核失效范围、预计任务与成本且尚未修改事实"
+          ]
+        },
+        {
+          "id": "CAP-009-S02",
+          "title": "只沿已修复依赖链恢复新鲜度",
+          "steps": [
+            "Given 同一项目存在两条无关 stale 链",
+            "When 第一条链重生成、重审并完成修复计划",
+            "Then 仅第一条链恢复 current 且第二条链保持 stale"
+          ]
+        },
+        {
+          "id": "CAP-009-S03",
+          "title": "投影落后不显示虚假当前状态",
+          "steps": [
+            "Given DEP 投影水位落后于最新领域事件",
+            "When 用户打开项目影响面板",
+            "Then 页面显示 unknown 和水位说明而不是显示 current"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "production_dependency_projections",
+        "dependency_impact_assessments",
+        "dependency_repair_plans"
+      ],
+      "operationIds": [
+        "cap_009_get_projects-id-dependency-impacts",
+        "cap_009_post_projects-id-dependency-impact-assessments",
+        "cap_009_post_projects-id-dependency-repair-plans"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "evidence-audit"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-010",
+      "title": "编辑租约、在线协作与冲突解决",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-010.feature",
+      "requirementIds": [
+        "COLLAB-001",
+        "COLLAB-002",
+        "COLLAB-003",
+        "NFR-A11Y-001",
+        "NFR-SEC-001"
+      ],
+      "scenarios": [
+        {
+          "id": "CAP-010-S01",
+          "title": "编辑租约阻止并发覆盖",
+          "steps": [
+            "Given 用户甲持有Shot租约且用户乙只有查看权限",
+            "When 乙尝试保存同一Shot",
+            "Then 页面显示持有人和到期时间、API返回edit_lease_held且甲的数据不变"
+          ]
+        },
+        {
+          "id": "CAP-010-S02",
+          "title": "版本冲突保留本地草稿",
+          "steps": [
+            "Given 两名剪辑师从EditProject版本8开始编辑",
+            "When 甲保存版本9后乙提交本地修改",
+            "Then 乙看到三方差异并可另存修订，服务端不执行最后写入者覆盖"
+          ]
+        },
+        {
+          "id": "CAP-010-S03",
+          "title": "强制接管完整留痕",
+          "steps": [
+            "Given 原持有人离线但租约仍有效",
+            "When owner填写原因并强制接管",
+            "Then 原持有人收到通知、产生AuditRecord且新租约只有owner持有"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "edit_leases",
+        "presence_projections",
+        "conflict_resolutions"
+      ],
+      "operationIds": [
+        "cap_010_get_collaboration-states",
+        "cap_010_post_edit-leases",
+        "cap_010_post_edit-leases-id-heartbeats",
+        "cap_010_delete_edit-leases-id",
+        "cap_010_post_edit-leases-id-takeovers",
+        "cap_010_post_conflict-resolutions"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "accessibility",
+        "security"
       ],
       "implementationEvidence": {
         "code": [],

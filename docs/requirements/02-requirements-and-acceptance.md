@@ -245,22 +245,23 @@
 - [ ] **AC33.5 预览与采纳机制**：用户可在候选预览面板左右对比原文与候选内容，差异行高亮显示。采纳（`AdoptCreationCandidate`）后候选内容应用回剧本；拒绝（`RejectCreationCandidate`）后任务终结。采纳后不可撤销到候选状态，但可通过剧本版本回退恢复原文。
 - [ ] **AC33.6 Stale 处理**：任务完成时对比发起时的 `sourceScriptVersion` 与当前剧本版本，不一致则标记 `stale = true`。采纳 stale 候选需用户二次确认（"剧本已修改，确认仍要采纳？"）。`inputSnapshot` 在创建时冻结，保证 AI 调用输入可追溯。
 - [ ] **AC33.7 Prompt/模型/费用/来源记录**：每次创作任务记录 `PromptSnapshot`（模板 ID + 版本 + 渲染结果 + 参数）和 `ModelExecutionSnapshot`（模型 / Token / 耗时 / 成本 / requestId），可在创作历史中查看和导出。
-- [ ] **AC33.8 异步任务**：创作任务为异步执行。创建后返回 `202 Accepted` + `taskId`，前端通过 `GET /api/scripts/{id}/creation-tasks/{taskId}` 轮询或 SSE 获取进度。单次超时 120s。
+- [ ] **AC33.8 异步任务**：创作任务为异步执行。创建后返回 `202 Accepted` + `taskId`，前端通过 `GET /api/v1/scripts/{id}/creation-tasks/{taskId}` 轮询或 SSE 获取进度。单次超时 120s。
 - [ ] **AC33.9 超时与取消**：`pending` / `generating` 状态可取消（`CancelCreationTask`）；已 `completed` 的任务不可取消。超时后标记 `failed`，支持重试。
 - [ ] **AC33.10 重试机制**：失败任务支持一键重试（`RetryCreationTask`），最多 3 次，指数退避（10s / 30s / 60s）。超过 3 次后进入 `failed` 终态。
 - [ ] **AC33.11 过期策略**：`completed` 状态任务超过 24h 未处理自动转为 `expired`，由定时任务触发。
 - [ ] **AC33.12 并发控制**：同一 `scriptId + taskType + inputScope` 的 `pending` / `generating` 状态任务不可重复创建，返回 `command_already_processed` 错误。
 - [ ] **AC33.13 内容安全**：生成内容经过敏感词过滤和内容安全检查；命中敏感词时返回 `content_safety_violation` 错误，不产出候选。输入内容同样经过安全校验。
 - [ ] **AC33.14 权限校验**：创建任务需 `script.write` 权限；采纳候选需 `script.write` 权限；查看任务列表和候选需 `script.read` 权限。项目归档后拒绝所有写操作。
-- [ ] **AC33.15 split_shots 特殊流转**：`split_shots` 类型候选被采纳后，产出 `ShotSuggestionsGenerated` 事件，由分镜导演上下文消费创建 Shot 草稿（待人工确认），不直接创建分镜。
+- [ ] **AC33.15 split_shots 与 US-006 边界**：`split_shots` 只负责在剧本创作上下文冻结输入、执行 AI 并形成结构化拆镜候选；不得直接创建或修改 Storyboard/Shot。候选进入分镜阶段时必须关联目标 `storyboardId`，转换为 US-006 的 `ShotSuggestionJob/ShotSuggestion`（或触发同语义的 `ShotSuggestionsGenerated` 事实事件），后续预览、合并、拆分、逐条/批量采纳、排序并发控制和 Shot 创建全部由 US-006 负责。
 - [ ] **AC33.16 采纳后状态联动**：若剧本处于 `analyzed` 状态，采纳候选更新内容后自动回退到 `draft`，原分析结果标记 `stale`（与 `UpdateScript` 行为一致）。
 - [ ] **AC33.17 幂等性**：`AdoptCreationCandidate` 幂等——已 adopted 的任务重复采纳返回原结果引用，不重复修改剧本。
+- [ ] **AC33.18 跨上下文幂等与追踪**：同一 `creationTaskId + targetStoryboardId` 只允许生成一个 US-006 建议任务；转换结果保存 `creationTaskId/sourceScriptVersion/sourceAnalysisId`，重复提交返回原 `shotSuggestionJobId`，不得重复生成建议或 Shot。
 
 **依赖**：US-003、US-004（`split_shots` 依赖分析结果）。
 
 **优先级**：P1
 
-**API 契约**：见 [§5.1.28 `POST /api/scripts/{id}/creation-tasks`](#5118-post-apiscriptsidcreation-tasks)。
+**API 契约**：见 [§5.1.28 `POST /api/v1/scripts/{id}/creation-tasks`](#5128-post-apiv1scriptsidcreation-tasks)。
 
 ---
 
@@ -303,6 +304,7 @@
 **领域归属**：[§3.3 分镜导演](../domain/contexts/03-storyboard-direction.md) - 领域服务 `ScriptToShotSuggester`（依赖 `Script.analysis`）。
 
 **验收条件**：
+- [ ] **AC6.0 上游入口统一**：用户可从分镜板“AI 拆镜”直接创建建议任务，也可从 US-033 的 `split_shots` 候选进入；两种入口必须落到同一 `ShotSuggestionJob/ShotSuggestion` 事实模型和 US-006 应用命令，不得维护第二套候选、采纳状态或 Shot 创建逻辑。
 - [ ] **AC6.1 输入限制**：仅当剧本 `analysisStatus = valid` 时可触发。
 - [ ] **AC6.2 拆解粒度**：按对白句子和场景转换点拆解，输出包含 `{ sceneId, dialogueIndex, suggestedShotType, suggestedDuration }`。
 - [ ] **AC6.3 智能推荐**：基于对白情感和场景类型推荐景别 / 角度 / 运镜方式。
@@ -1643,7 +1645,7 @@
 
 ### 5.1 API 设计原则
 
-- 路径以 `/api/` 为前缀，**不使用**版本号段（兼容性通过字段和路径兼容实现）。
+- 目标契约统一以 `/api/v1/` 为前缀；现有无版本 `/api/` 路径仅作为限时兼容别名，由同一应用命令处理并返回弃用标识，不得形成第二套业务语义或事实源。
 - 资源命名使用复数名词；URL 层级不超过 3 级。
 - 使用 HTTP 标准方法（GET/POST/PUT/PATCH/DELETE）。
 - 统一响应结构：成功为 `{ "data": {}, "meta": {}, "traceId": "trc_..." }`；失败为 `{ "error": { "code": "stable_string_code", "message": "...", "details": {}, "retryable": false, "traceId": "trc_...", "legacyCode": 1001 } }`。`legacyCode`仅兼容期可选返回。
@@ -2633,7 +2635,7 @@
 
 ---
 
-#### 5.1.28 `POST /api/scripts/{id}/creation-tasks`
+#### 5.1.28 `POST /api/v1/scripts/{id}/creation-tasks`
 
 **对应 US**：US-033
 
@@ -2679,17 +2681,17 @@
 }
 ```
 
-**查询进度**：`GET /api/scripts/{id}/creation-tasks/{taskId}` → `{ status, progress, result, stale, modelSnapshot }`
+**查询进度**：`GET /api/v1/scripts/{id}/creation-tasks/{taskId}` → `{ status, progress, result, stale, modelSnapshot }`
 
 **操作端点**：
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| `POST` | `/api/scripts/{id}/creation-tasks/{taskId}/cancel` | 取消任务（pending/generating） |
-| `POST` | `/api/scripts/{id}/creation-tasks/{taskId}/retry` | 重试失败任务 |
-| `POST` | `/api/scripts/{id}/creation-tasks/{taskId}/adopt` | 采纳候选（请求体：`{ confirmStale?: boolean }`） |
-| `POST` | `/api/scripts/{id}/creation-tasks/{taskId}/reject` | 拒绝候选 |
-| `GET` | `/api/scripts/{id}/creation-tasks` | 列出剧本的创作任务（支持 `?status=` 和 `?taskType=` 筛选） |
+| `POST` | `/api/v1/scripts/{id}/creation-tasks/{taskId}/cancel` | 取消任务（pending/generating） |
+| `POST` | `/api/v1/scripts/{id}/creation-tasks/{taskId}/retry` | 重试失败任务 |
+| `POST` | `/api/v1/scripts/{id}/creation-tasks/{taskId}/adopt` | 采纳候选（请求体：`{ confirmStale?: boolean }`） |
+| `POST` | `/api/v1/scripts/{id}/creation-tasks/{taskId}/reject` | 拒绝候选 |
+| `GET` | `/api/v1/scripts/{id}/creation-tasks` | 列出剧本的创作任务（支持 `?status=` 和 `?taskType=` 筛选） |
 
 **错误码**：`command_validation_error` (422) / `invalid_state_transition` (409) / `command_already_processed` (409) / `provider_unavailable` (503) / `quota_exceeded` (429) / `deadline_exceeded` (504)。
 

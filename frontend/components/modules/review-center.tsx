@@ -49,6 +49,7 @@ import { listReviews, createReview, updateReview, deleteReview as deleteReviewAp
 import { clearApiCache } from "@/lib/api-client";
 import { toast } from "@/components/common/toast";
 import type { Review } from "@/lib/module-types";
+import { ReviewIntakeQueue } from "@/components/governance";
 
 /** 审核目标类型中文标签映射 */
 const contentTypeLabels: Record<string, string> = {
@@ -251,6 +252,8 @@ export function ReviewCenterPage() {
             </Tooltip>
           }
         />
+
+        {selectedProjectId && <ReviewIntakeQueue projectId={selectedProjectId} />}
 
         <PageCard title="审核队列">
           {filteredReviews.length > 0 ? (

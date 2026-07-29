@@ -292,3 +292,88 @@ Scenario: CAP-008-S02 项目不能关闭系统必需规则
   When 项目管理员在覆盖中禁用它
   Then API 返回 mandatory_quality_rule 且策略不变
 ```
+
+## CAP-009 生产依赖影响与修复计划
+
+### 页面交互规格
+
+- 项目工作台和所有版本化写入口显示 `current / stale / blocked / unknown`，并可展开直接及递归下游、审核失效范围、预计任务数、成本和不可自动项。
+- 保存前先请求影响预评估；用户确认后才创建版本和修复计划。页面不得直接编辑 DEP 新鲜度，也不得用“全部清除”隐藏无关告警。
+- 受影响对象支持按 Episode、类型、严重度和责任人筛选；每项可打开确切来源版本、目标版本和证据边。
+
+### API 契约
+
+| 方法与路径 | 请求/响应 | 约束与错误 |
+|---|---|---|
+| `GET /api/v1/projects/{id}/dependency-impacts` | 返回 projectionWatermark、items、counts | 支持 freshness/type/episode/cursor 筛选；只读 |
+| `POST /api/v1/projects/{id}/dependency-impact-assessments` | `{commandId,sourceType,sourceId,sourceVersion,proposedChange}`；返回 blockers、warnings、affectedRefs、estimatedTasks、estimatedCost | 只读计划；结果带 TTL 和 inputHash |
+| `POST /api/v1/projects/{id}/dependency-repair-plans` | `{commandId,assessmentId,inputHash,selectedActions}`；202 返回 planId 和逐项状态 | 权限/预算/审核/权利逐项校验；幂等 |
+
+### 数据模型
+
+- `production_dependency_projections(project_id,source_ref,target_ref,dependency_type,freshness,evidence_hash,watermark)` 为事件投影，不接受页面直接写入。
+- `dependency_impact_assessments(id,project_id,input_hash,expires_at,result_json,created_by,created_at)`；`dependency_repair_plans` 与 item 结果追加写。
+
+### 可执行验收用例
+
+```gherkin
+@CAP-009 @integration @p0
+Scenario: CAP-009-S01 上游版本变化显示递归影响
+  Given 角色版本3被12个Shot和2个已审核快照引用
+  When 用户预评估发布角色版本4
+  Then 页面显示直接和递归下游、审核失效范围、预计任务与成本且尚未修改事实
+
+Scenario: CAP-009-S02 只沿已修复依赖链恢复新鲜度
+  Given 同一项目存在两条无关 stale 链
+  When 第一条链重生成、重审并完成修复计划
+  Then 仅第一条链恢复 current 且第二条链保持 stale
+
+Scenario: CAP-009-S03 投影落后不显示虚假当前状态
+  Given DEP 投影水位落后于最新领域事件
+  When 用户打开项目影响面板
+  Then 页面显示 unknown 和水位说明而不是显示 current
+```
+
+## CAP-010 编辑租约、在线协作与冲突解决
+
+### 页面交互规格
+
+- Script、Shot、资产和 EditProject 详情显示查看者、编辑租约持有人、租约到期和最后心跳；在线状态不作为权限或审计依据。
+- 写操作同时校验命令权限、有效租约和 `expectedVersion`。冲突页面保留本地草稿并展示基础版、服务端版和本地版差异。
+- owner/admin 强制接管必须展示未保存风险、填写原因、通知原持有人并生成 AuditRecord；代理到期或角色变化立即重算动作权限。
+
+### API 契约
+
+| 方法与路径 | 请求/响应 | 约束与错误 |
+|---|---|---|
+| `GET /api/v1/collaboration-states` | 返回 target、viewers、lease、effectivePermissions、version | targetType/targetId 必填；个人信息脱敏 |
+| `POST /api/v1/edit-leases` | `{commandId,targetType,targetId,leaseSeconds}`；201 lease | 权限、幂等；已占用返回 `edit_lease_held` |
+| `POST /api/v1/edit-leases/{id}/heartbeats` | `{commandId,leaseToken,expectedVersion}`；返回新 expiresAt | token 仅回显一次且不得写日志 |
+| `DELETE /api/v1/edit-leases/{id}` | `{commandId,leaseToken,reason}`；204 | 持有人或授权接管者 |
+| `POST /api/v1/edit-leases/{id}/takeovers` | `{commandId,reason,expectedVersion}`；返回新 lease | owner/admin；通知和审计 |
+| `POST /api/v1/conflict-resolutions` | `{commandId,targetType,targetId,baseVersion,serverVersion,resolution,localPatch}`；返回新版本或需人工字段 | 禁止自动合并顺序/时间线/删除冲突 |
+
+### 数据模型
+
+- `edit_leases(id,target_type,target_id,holder_id,token_hash,status,expires_at,last_heartbeat_at,version)`；同一 target 仅一个 active lease。
+- `presence_projections` 为短期读模型；`conflict_resolutions` 保存版本、选择、差异摘要和操作者，不保存未脱敏秘密。
+
+### 可执行验收用例
+
+```gherkin
+@CAP-010 @e2e @p0
+Scenario: CAP-010-S01 编辑租约阻止并发覆盖
+  Given 用户甲持有Shot租约且用户乙只有查看权限
+  When 乙尝试保存同一Shot
+  Then 页面显示持有人和到期时间、API返回edit_lease_held且甲的数据不变
+
+Scenario: CAP-010-S02 版本冲突保留本地草稿
+  Given 两名剪辑师从EditProject版本8开始编辑
+  When 甲保存版本9后乙提交本地修改
+  Then 乙看到三方差异并可另存修订，服务端不执行最后写入者覆盖
+
+Scenario: CAP-010-S03 强制接管完整留痕
+  Given 原持有人离线但租约仍有效
+  When owner填写原因并强制接管
+  Then 原持有人收到通知、产生AuditRecord且新租约只有owner持有
+```

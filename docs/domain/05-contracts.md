@@ -66,7 +66,18 @@ AI 辅助剧本创作任务失败
 
 分镜送审
   ShotSubmittedForReview
-    → 审核质量上下文: 创建审核项
+    → 审核质量上下文: 启动 Review Intake，先创建绑定同一 shotVersion + snapshotHash 的 QCReport
+
+质检准入
+  QCReportCompleted(passed=true)
+    → 审核质量上下文: 创建 Review pending
+  QCReportCompleted(passed=false) / QCReportFailed / QCReportTimedOut
+    → 审核质量上下文: 按 QualityRuleSet 的 block/warn 策略阻断、重试或等待显式豁免
+  QCGateWaived
+    → 审核质量上下文: 校验权限、mandatory 规则和 AuditRecord 后创建 Review pending
+  ReviewIntakeBlocked
+    → 目标上下文: 进入 needs_fix
+    → 智能助手上下文: 创建结构化返工工作项
 
 审核通过
   ReviewApproved
@@ -344,10 +355,12 @@ DEP 投影事实
 | `ReviewClosed` | 审核质量 | 智能助手 | 移除审核工作项 | 跨上下文 |
 | `ReviewCancelled` | 审核质量 | 智能助手 | 移除审核工作项 | 跨上下文 |
 | `ReviewAssigned` | 审核质量 | 通知 | 通知被指派人 | 跨上下文 |
-| `QCReportCompleted` | 审核质量 | 分镜导演 | 标记质检报告 | 跨上下文 |
+| `QCReportCompleted` | 审核质量 | Review Intake / 分镜导演 | passed 时创建 Review；否则标记门禁阻断 | 上下文内编排 / 跨上下文 |
 | `QCReportCompleted` | 审核质量 | 智能助手 | 创建质检工作项（如未通过） | 跨上下文 |
 | `QCReportFailed` | 审核质量 | 智能助手 | 创建质量工作项 | 跨上下文 |
 | `QCReportFailed` / `QCReportTimedOut` | 审核质量 | 通知 | 告警质量负责人 | 跨上下文 |
+| `QCGateWaived` | 审核质量 | Review Intake / 智能助手 | 经审计放行并登记证据链 | 上下文内编排 / 跨上下文 |
+| `ReviewIntakeBlocked` | 审核质量 | 目标上下文 / 智能助手 / 通知 | 目标进入 needs_fix，创建返工项并通知 | 跨上下文 |
 | `PipelineRunStarted` | AI任务调度 | 智能助手 | 流水线状态为运行中 | 跨上下文 |
 | `PipelineRunCompleted` | AI任务调度 | 分镜导演 | 通知分镜生成完成 | 跨上下文 |
 | `PipelineRunCompleted` | AI任务调度 | 智能助手 | 流水线状态为已完成 | 跨上下文 |

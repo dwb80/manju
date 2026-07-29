@@ -23,7 +23,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: ${{ matrix.workspace }}/package-lock.json
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
         working-directory: ${{ matrix.workspace }}
       - name: Block high and critical production vulnerabilities
         run: npm audit --omit=dev --audit-level=high

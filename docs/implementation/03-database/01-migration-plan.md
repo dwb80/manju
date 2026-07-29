@@ -54,6 +54,21 @@ Runner 规则：
 
 ## 4. 关键字段映射
 
+### 4.0 API、路由与主生产对象
+
+| 旧实现 | 目标契约/事实 | 迁移规则 |
+|---|---|---|
+| 无版本 `/api/*` | `/api/v1/*` | 兼容别名调用同一应用命令；返回 Deprecation/Sunset/Link；按 operationId 统计旧客户端流量 |
+| `/scripts/{id}` | `/projects/{projectId}/scripts/{scriptId}` | 只读解析归属后 replace；归属冲突拒绝，禁止根据前端当前项目猜测 |
+| `/storyboards` 对象内弹层 | `/projects/{projectId}/storyboards/{storyboardId}` | 列表入口可保留；对象操作迁移到可刷新深链 |
+| 无独立 Shot 页面 | `/shots/{shotId}` | 从 Shot 反查父链并鉴权；不得依赖内存 Store 恢复上下文 |
+| `projects.category/status/episode_count/owner/due_date/storage_path` | Project V1 命令与 Project/PresentationSpec | 按已冻结字段映射回填；owner 从认证主体派生，旧自由文本仅作 provenance，不授予权限 |
+| `script_episodes` 独立生命周期 | Project Episode + ScriptDocument 结构投影 | 建立 `project_episode_id`；孤儿进入冲突报告，不自动猜测归属 |
+| `script_documents.editor_json` | `content_json/content_hash` | 规范化 Tiptap JSON 后计算确定性 hash；无法解析项隔离，禁止以空文档替代 |
+| Shot 资产 ID 数组 | `shot_asset_bindings` | 固定可证明的资产版本；无法证明时记录 legacy provenance 并要求人工核验 |
+
+API 兼容 Cutover 额外门槛：正式深链直接访问/刷新/返回 E2E 通过；旧路由无重定向循环；受支持客户端连续一个发布周期无旧写调用；所有 P0 写命令的 Idempotency-Key、commandId、If-Match（适用时）和 correlationId 契约测试通过。
+
 ### 4.1 Audio
 
 | 旧字段 | 新字段 | 规则 |

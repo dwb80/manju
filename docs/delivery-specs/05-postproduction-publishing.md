@@ -91,7 +91,7 @@ Scenario: US-014-S02 阻止结束早于开始的 cue
 | 方法与路径 | 请求/响应 | 约束与错误 |
 |---|---|---|
 | `GET /api/v1/edit-projects/{id}` | 工程、轨道、clips、version、媒体可用性 | 项目范围 |
-| `PUT /api/v1/edit-projects/{id}/timeline` | `{commandId,tracks,clips,transitions,durationMs}` | `If-Match`；原子替换当前版本 |
+| `PUT /api/v1/edit-projects/{id}/timeline` | `{commandId,timeline,expectedVersion}`；`timeline` 使用 OpenAPI `Timeline` 闭合 Schema | `If-Match`；原子替换当前版本；未知字段拒绝 |
 | `POST /api/v1/edit-projects/{id}/render-precheck` | 返回 blockers/warnings/inputHash | 只读 |
 | `POST /api/v1/edit-projects/{id}/render-jobs` | `{commandId,projectVersion,precheckDigest,renderProfileId}`；202 | 幂等输入哈希 |
 | `GET /api/v1/render-jobs/{id}` | 状态/进度/output/error/deadline | 完整终态 |
@@ -121,7 +121,7 @@ Scenario: US-015-S02 并发保存时间轴不丢失
 
 ### 页面交互规格
 
-- 成片提交页显示 RenderJob、QC、字幕/音频/画幅预检、版本和发布候选信息；存在 blocker 不可提交。
+- 成片提交页显示 RenderJob、QC、字幕/音频/画幅预检、版本和发布候选信息；提交后先进入 Review Intake，显示 `qc_running / qc_blocked / review_pending / reviewing`，存在 blocker 不创建 first Review。
 - first 与 second 两级依次进行，审核人不得是提交人，二审不得与一审为同一人。任何 request_changes 终止当前链并创建返工项。
 - 决策详情不可编辑；重新渲染必须创建新的审核链，旧链保留。
 
@@ -130,14 +130,16 @@ Scenario: US-015-S02 并发保存时间轴不丢失
 | 方法与路径 | 请求/响应 | 约束与错误 |
 |---|---|---|
 | `POST /api/v1/final-videos` | `{commandId,renderJobId,mediaId,mediaDigest,editProjectVersion}`；201 FinalVideo | 只接受成功 RenderJob |
-| `POST /api/v1/final-videos/{id}/review-submissions` | `{commandId,finalVideoVersion,precheckDigest}`；返回 first Review | 幂等 |
+| `POST /api/v1/final-videos/{id}/review-submissions` | `{commandId,finalVideoVersion,precheckDigest}`；202 返回 Review Intake | 幂等；QC 准入后才创建 first Review |
+| `GET /api/v1/review-intakes/{id}` | 返回 QC 门禁、first/second 审核链入口和版本证据 | 与成片版本及 mediaDigest 绑定 |
+| `POST /api/v1/review-intakes/{id}/qc-waivers` | `{commandId,qcReportId,reason,expectedVersion}` | 仅可豁免非 mandatory warning；写 AuditRecord |
 | `POST /api/v1/reviews/{id}/decisions` | 决策；first approve 自动创建/激活 second | `reviewer_separation_required` |
 | `GET /api/v1/final-videos/{id}/review-chain` | 两级状态、决定和时间 | 项目范围 |
 
 ### 数据模型
 
 - `final_videos(id,project_id,episode_id,current_version,status,version)`；`final_video_versions(id,final_video_id,video_version,media_id,media_digest,edit_project_version,qc_report_id,created_at)`。
-- Review `stage=first|second`；唯一 `(target_id,target_version,stage)`；数据库/服务同时校验 submitter、firstReviewer、secondReviewer 不相等。
+- Review Intake 与 QCReport 固定同一 finalVideoVersion+mediaDigest；Review `stage=first|second`，唯一 `(target_id,target_version,stage)`；数据库/服务同时校验 submitter、firstReviewer、secondReviewer 不相等。
 
 ### 可执行验收用例
 

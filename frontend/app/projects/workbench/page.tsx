@@ -25,6 +25,7 @@ import { ProjectWorkbenchSection } from "@/components/project/project-workbench-
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { toast } from "@/components/common/toast";
 import { CqrsSyncStatus } from "@/components/shared";
+import { CollaborationStatePanel, DependencyImpactPanel } from "@/components/governance";
 
 export default function ProjectWorkbenchPage() {
   return (
@@ -106,6 +107,10 @@ function ProjectWorkbenchPageInner() {
       {/* CQRS 同步状态指示器 —— 待接入真实投影状态数据 */}
       <div className="fixed right-4 top-16 z-50">
         <CqrsSyncStatus state="fresh" />
+      </div>
+      <div className="mx-auto grid max-w-7xl gap-4 px-4 pt-4 lg:grid-cols-2">
+        <DependencyImpactPanel projectId={projectId} />
+        <CollaborationStatePanel targetType="project" targetId={projectId} />
       </div>
       <ProjectWorkbenchSection {...(projectWorkbenchProps as unknown as ComponentProps<typeof ProjectWorkbenchSection>)} />
       {pendingConfirm && (

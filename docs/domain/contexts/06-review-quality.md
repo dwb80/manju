@@ -11,6 +11,40 @@
 
 ---
 
+## 0. 质检—审核准入协作协议（权威顺序）
+
+自动质检是人工审核的**送审准入门**，不是审核后的补充步骤。目标上下文提交不可变的 `targetVersion + targetSnapshotHash` 后，审核质量上下文先创建并执行 `QCReport`；只有门禁通过，才允许创建 `Review` 并进入人工审核队列。
+
+```mermaid
+flowchart LR
+    A["目标上下文冻结送审快照"] --> B["提交 Review Intake"]
+    B --> C["生成 QCReport"]
+    C --> D{"QC 执行结果"}
+    D -->|"completed + passed=true"| E["创建 Review pending"]
+    D -->|"completed + passed=false / block"| F["ReviewIntakeBlocked"]
+    D -->|"failed / timed_out / block"| F
+    D -->|"warn + 有权用户显式豁免"| G["QCGateWaived + AuditRecord"]
+    G --> E
+    E --> H["分配并开始人工审核"]
+    H --> I{"人工决定"}
+    I -->|"approved"| J["目标版本通过"]
+    I -->|"needs_fix / rejected"| K["返工并冻结新版本"]
+    F --> K
+    K --> B
+```
+
+权威规则：
+
+1. `ShotSubmittedForReview`、`FinalVideoReviewSubmitted` 等送审事实只启动 Review Intake 和 `GenerateQCReport`，不得直接创建 `Review`。
+2. `QCReportCompleted(passed=true)` 才自动执行 `SubmitReview`。`passed=false` 且 `failureStrategy=block` 时发布 `ReviewIntakeBlocked`，不创建 Review。
+3. `QCReportFailed` / `QCReportTimedOut` 按策略重试；重试耗尽后，`block` 阻断送审，`warn` 也不能自动放行。
+4. `warn` 仅允许拥有 `quality.waive` 权限且不是该制品主要制作者的用户执行 `GrantQCGateWaiver`；必须记录 `qcReportId`、规则结果、原因、操作者和 AuditRecord，之后才执行 `SubmitReview`。mandatory 规则永不可豁免。
+5. QC 与 Review 必须绑定同一 `targetType + targetId + targetVersion + targetSnapshotHash`。任一字段变化都必须创建新的 QCReport 并重新过门，旧 QC/Review 仅保留为证据。
+6. 人工审核不能反向修改 QCReport；审核员可以在 Review 中引用 QC 发现并追加人工判断，但不能把人工批准当作 mandatory/blocking QC 的替代。
+7. 目标上下文在 Review Intake 开始后可显示 `in_review`，其子阶段由读模型区分 `qc_running | qc_blocked | review_pending | reviewing`；收到 `ReviewIntakeBlocked` 后进入 `needs_fix`。
+
+---
+
 ## 1. 聚合根：Review
 
 ```
@@ -21,6 +55,9 @@ Review (Aggregate Root)
 ├── targetId: string                 // 被审核对象 ID
 ├── targetVersion: number            // 审核对象不可变版本
 ├── targetSnapshotHash: string        // Shot/FinalVideo 等送审快照哈希
+├── qcReportId: string                // 同一目标版本的最终准入 QCReport
+├── qcGateDecision: passed | waived   // 人审准入依据
+├── qcWaiverReason: string | null     // waived 时必填；passed 时必须为空
 ├── status: ReviewStatus             // pending | in_review | approved | rejected | needs_fix | closed | cancelled
 ├── stage: ReviewStage               // single | first | second
 ├── policyVersion: number             // 冻结的审核策略版本
@@ -54,7 +91,7 @@ pending ─StartReview─▶ in_review ─ApproveReview─▶ approved ─CloseR
 
 | 命令 | 前置状态 | 产出事件 | 说明 |
 |------|---------|---------|------|
-| `SubmitReview` | 不存在 | `ReviewSubmitted` | 创建审核（由 `ShotSubmittedForReview` 事件触发） |
+| `SubmitReview` | 不存在；同版本 QC 门禁为 passed/waived | `ReviewSubmitted` | 由 Review Intake 在 QC 准入后创建，禁止直接由目标送审事件创建 |
 | `AssignReviewer` | pending | `ReviewAssigned` | 分配审核人 |
 | `StartReview` | pending | `ReviewStarted` | 开始审核 |
 | `ApproveReview` | in_review | `ReviewStageApproved` / `ReviewApproved` | first 阶段通过后创建 second 阶段待审；single/second 通过才发布 ReviewApproved |
@@ -71,7 +108,7 @@ pending ─StartReview─▶ in_review ─ApproveReview─▶ approved ─CloseR
 
 | 事件 | Payload | 消费者 |
 |------|---------|-------|
-| `ReviewSubmitted` | reviewId, projectId, targetType, targetId, targetVersion, snapshotHash, stage | 智能助手（创建审核工作项、DEP 审核依赖） |
+| `ReviewSubmitted` | reviewId, projectId, targetType, targetId, targetVersion, snapshotHash, qcReportId, qcGateDecision, stage | 智能助手（创建审核工作项、DEP 审核依赖） |
 | `ReviewAssigned` | reviewId, projectId, reviewer | 通知（通知审核人） |
 | `ReviewApproved` | reviewId, projectId, targetType, targetId, targetVersion, snapshotHash, stage, decisionId | 分镜导演（驱动 Shot → approved）、AI任务调度（驱动 Pipeline 审核节点）、智能助手（工作项与 DEP 审核证据） |
 | `ReviewStageApproved` | reviewId, projectId, targetId, completedStage, nextStage | 智能助手（创建下一阶段审核工作项） |
@@ -100,6 +137,8 @@ pending ─StartReview─▶ in_review ─ApproveReview─▶ approved ─CloseR
 - `RequestReviewChanges` 必须至少存在一条 open/reopened 批注或结构化原因；阻断批注未解决时 `ApproveReview` 被拒绝。
 - 修复者只能提交解决说明和修复版本，不能替审核员批准；新版本中的复制批注默认为待复核。
 - Review closed 后批注只读；批注软删除仅隐藏正文并保留作者、时间和审计占位。
+- Review 必须引用同一 `targetVersion + targetSnapshotHash` 的 QCReport，且 `qcGateDecision` 只能为 `passed` 或经审计的 `waived`；不存在 QC 准入证据时拒绝 `SubmitReview`。
+- `qcGateDecision=waived` 时必须存在非空 `qcWaiverReason` 和对应 AuditRecord；mandatory 规则命中时禁止豁免。
 
 ---
 
@@ -109,8 +148,10 @@ pending ─StartReview─▶ in_review ─ApproveReview─▶ approved ─CloseR
 QCReport (Aggregate Root)
 ├── id: string
 ├── projectId: string
-├── targetType: string             // shot | video | image | audio
+├── targetType: string             // shot | video | image | audio | subtitle | final_video
 ├── targetId: string               // 被质检对象 ID
+├── targetVersion: number          // 被质检对象不可变版本
+├── targetSnapshotHash: string     // 与后续 Review 完全相同的快照哈希
 ├── status: QCReportStatus         // running | completed | failed | timed_out
 ├── previousReportId: string | null  // 前序报告 ID（重新生成时链接）
 ├── config: QCConfig               // 质检配置（值对象）
@@ -173,9 +214,11 @@ QCReport (Aggregate Root)
 |------|---------|-------|
 | `QCReportGenerationStarted` | reportId, projectId, targetId | 智能助手 |
 | `QCReportStarted` | reportId, projectId, targetId | — |
-| `QCReportCompleted` | reportId, projectId, targetId, overallScore, passed | 分镜导演（质检报告标记）、智能助手（创建质检工作项） |
-| `QCReportFailed` | reportId, projectId, targetId, errorMessage | 智能助手（创建质量工作项）、通知（告警质量负责人） |
-| `QCReportTimedOut` | reportId, projectId, targetId, deadlineAt, attempt | 重试调度器、智能助手（耗尽后创建工作项）、通知 |
+| `QCReportCompleted` | reportId, projectId, targetType, targetId, targetVersion, targetSnapshotHash, ruleSetVersion, overallScore, passed, failureStrategy | Review Intake（门禁判定）、目标上下文（质检标记）、智能助手（未通过时创建工作项） |
+| `QCReportFailed` | reportId, projectId, targetType, targetId, targetVersion, targetSnapshotHash, errorMessage, attempt | Review Intake（重试/阻断判定）、智能助手（创建质量工作项）、通知 |
+| `QCReportTimedOut` | reportId, projectId, targetType, targetId, targetVersion, targetSnapshotHash, deadlineAt, attempt | Review Intake/重试调度器、智能助手（耗尽后创建工作项）、通知 |
+| `QCGateWaived` | reportId, projectId, targetType, targetId, targetVersion, targetSnapshotHash, waivedBy, reason, auditRecordId | Review Intake（创建 Review）、智能助手（证据链） |
+| `ReviewIntakeBlocked` | reportId, projectId, targetType, targetId, targetVersion, targetSnapshotHash, reason, failedRuleCodes[] | 目标上下文（进入 needs_fix）、智能助手（返工工作项）、通知 |
 
 ---
 

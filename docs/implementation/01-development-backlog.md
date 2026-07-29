@@ -10,6 +10,7 @@
 | 0.2 | DEV-GATE-002 Migration Runner | schema_migrations、事务与 checksum | 空库和旧库副本可重复执行，失败不留下半迁移 |
 | 0.3 | DEV-GATE-003 测试基线 | Fixtures、契约/集成/E2E 目录 | 可在无外部 Provider 环境运行 smoke tests |
 | 0.4 | DEV-GATE-004 API 兼容层 | `/api/v1` 路由入口和旧 `/api` deprecation | 同一应用服务承载两路径，不产生双事实源 |
+| 0.5 | DEV-GATE-005 客户端命令契约 | 公共请求封装生成/透传 `X-Correlation-Id`、`Idempotency-Key`、`If-Match`、`commandId` | US-001～006 契约测试证明必填、重放和冲突行为；禁止各页面自行拼装不一致 Header |
 
 ## 阶段 1：身份、权限与治理底座
 
@@ -43,6 +44,14 @@
 | 2.11 | MANGA-006 有限动态 | P0 | MANGA-002,US-013 | MANGA-006-S01/S02 |
 | 2.12 | MANGA-008 表现快照 | P0 | MANGA-002..006 | MANGA-008-S01/S02 |
 
+### 阶段 2 迁移卡（不新增产品范围）
+
+| 顺序 | 迁移卡 | 优先级 | 主要工作 | 完成证据 |
+|---:|---|---:|---|---|
+| 2.M1 | MIG-PROJECT-EPISODE 项目/剧集收敛 | P0/上线阻断 | 旧项目字段映射；owner/status 服务端派生；Project Episode 单一事实源；deletion-precheck；创建时原子初始化 Script/Storyboard | US-001/002 契约、幂等、回滚与孤儿核对报告 |
+| 2.M2 | MIG-SCRIPT-CONTRACT 剧本契约收敛 | P0/上线阻断 | 正式深链；编辑锁租约与只读降级；显式发布和发布后不可变；`/compare` 迁移到版本 diff；`editor_json` 规范化迁移 | US-003-S01/S02、深链 E2E、content hash 对账 |
+| 2.M3 | MIG-STORYBOARD-CONTRACT 分镜契约收敛 | P0 | 项目级分镜深链和 Shot 导演台；shot-order + If-Match；batch-duration；资产绑定表迁移 | US-005-S01/S02、并发排序、批量逐项结果、绑定核对 |
+
 ## 阶段 3：资产、生成、质检与审核
 
 | 顺序 | 切片 | 优先级 | 依赖 | 主要证据 |
@@ -58,6 +67,14 @@
 | 3.9 | US-011 视频生成 | P0 | US-010,CAP-003 | US-011-S01/S02 |
 | 3.10 | US-012 视频审核 | P0 | US-011 | US-012-S01/S02 |
 | 3.11 | MANGA-007 一致性检查 | P0 | CAP-008,MANGA-008 | MANGA-007-S01/S02 |
+
+### 阶段 3 迁移卡（不新增产品范围）
+
+| 顺序 | 迁移卡 | 优先级 | 主要工作 | 完成证据 |
+|---:|---|---:|---|---|
+| 3.M1 | MIG-SCRIPT-ANALYSIS 同步分析迁移 | P1 | `/api/ai/script-analyze` 迁移到 analysis-jobs；真实队列/阶段/attempt/cost；stale 与最多3次重试 | US-004-S01/S02、超时/重试/成本契约测试 |
+| 3.M2 | MIG-SHOT-SUGGESTION US-006 落地 | P1 | 建议任务、部分结果、人工采纳；承接 US-033 split_shots，去除前端模拟进度和直接建 Shot 路径 | US-006-S01/S02/S03、跨上下文幂等测试 |
+| 3.M3 | MIG-LEGACY-FEATURE-MAP 旧增强端点归并 | P1 | 将审批/评分/连续性/标签/统计/评论、自动拆分、复制、生成视频、局部回收站逐项映射到正式 Review/QC/统计/US-006/US-011/US-025 命令；无归属端点先停止新增调用 | 每个旧端点有 retain/merge/deprecate 决定、owner、successor operationId 和删除门槛 |
 
 ## 阶段 4：后期、协作与发布
 
@@ -84,6 +101,7 @@
 | 5.3 | US-029 备份与灾难恢复 | 上线阻断 | 所有 migration | US-029-S01/S02 |
 | 5.4 | MIG-AUDIO Audio/Clip 切换 | 上线阻断 | US-013,US-021 | inventory、shadow read、核对、回滚演练 |
 | 5.5 | MIG-API 错误与 `/api/v1` 切换 | 上线阻断 | 全部 v1 operation | 兼容期指标、弃用头、无旧客户端阻断 |
+| 5.6 | MIG-ROUTES 正式深链切换 | 上线阻断 | Script/Storyboard/Shot 正式详情路由、旧链接 replace、父链鉴权 | 直接访问/刷新/返回/分享/404/403/归属冲突 E2E；无重定向循环 |
 
 ## 卡片统一字段
 

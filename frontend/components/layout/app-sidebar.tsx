@@ -29,6 +29,9 @@ import {
   Bot,
   ShieldCheck,
   MessageSquare,
+  Bell,
+  FileCode2,
+  ArchiveRestore,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useProjectStore } from "@/lib/stores/project-store";
@@ -97,8 +100,9 @@ const MENU_GROUPS: MenuGroup[] = [
       { id: "storyboard", name: "分镜导演台", icon: Film, href: "/storyboards" },
       { id: "video-production", name: "视频生产线", icon: Video, href: "/video-production" },
       { id: "audio", name: "音频中心", icon: Music, href: "/audio" },
-      { id: "clip", name: "剪辑中心", icon: Scissors, href: "/clips" },
+      { id: "clip", name: "剪辑中心", icon: Scissors, href: "/edit-projects" },
       { id: "models", name: "模型中心", icon: Cpu, href: "/models" },
+      { id: "prompts", name: "Prompt 中心", icon: FileCode2, href: "/prompt-templates" },
     ],
   },
   // 第二组：资产与数据（沉淀层）
@@ -121,6 +125,8 @@ const MENU_GROUPS: MenuGroup[] = [
       { id: "review", name: "审核中心", icon: CheckCircle, href: "/review" },
       { id: "quality", name: "质检中心", icon: ShieldCheck, href: "/quality" },
       { id: "publish", name: "发布准备", icon: Rocket, href: "/publish" },
+      { id: "notifications", name: "通知中心", icon: Bell, href: "/notifications" },
+      { id: "operation-jobs", name: "数据作业与恢复", icon: ArchiveRestore, href: "/operations/jobs" },
     ],
   },
   // 第四组：智能助手（含项目工作台快捷入口）

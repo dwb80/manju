@@ -16,6 +16,61 @@ const specFiles = fs.readdirSync(deliveryDir)
 const featurePattern = /^(US-(?:\d{3}|PM-001|DS-001)|MANGA-\d{3}|CAP-\d{3})\b/;
 const features = [];
 
+// 专业工作台需求复用现有交付功能，但必须保留直接、机器可读的需求追溯。
+// 一个专项需求可以由多个 feature 协同实现；检查器会验证 19 个 ID 均至少被引用一次。
+const requirementIdsByFeature = new Map(Object.entries({
+  "US-DS-001": ["OPS-001", "OPS-002"],
+  "US-018": ["OPS-003", "COLLAB-003"],
+  "MANGA-002": ["SHOT-001"],
+  "MANGA-006": ["SHOT-002"],
+  "US-009": ["CAND-001"],
+  "US-011": ["CAND-001", "CAND-002", "CAND-003"],
+  "MANGA-008": ["CAND-002"],
+  "MANGA-007": ["CONT-001", "CONT-002"],
+  "CAP-008": ["CONT-001", "CONT-002"],
+  "US-010": ["REV-001", "REV-002"],
+  "US-012": ["REV-001", "REV-002", "REV-003"],
+  "US-016": ["REV-001", "REV-003"],
+  "US-015": ["EDIT-001", "EDIT-002", "EDIT-003"],
+  "US-021": ["EDIT-001"],
+  "CAP-001": ["COLLAB-001", "COLLAB-002", "COLLAB-003"],
+  "CAP-009": ["OPS-002"],
+  "CAP-010": ["COLLAB-001", "COLLAB-002", "COLLAB-003"],
+}));
+
+const nonFunctionalRequirementIdsByFeature = new Map(Object.entries({
+  "MANGA-007": ["NFR-QUAL-001", "NFR-QUAL-002"],
+  "CAP-008": ["NFR-QUAL-001", "NFR-QUAL-002"],
+  "US-013": ["NFR-AUDIO-001"],
+  "US-032": ["NFR-AUDIO-001", "NFR-SEC-001"],
+  "US-015": ["NFR-TIMELINE-001", "NFR-DELIVERY-001"],
+  "US-017": ["NFR-DELIVERY-001"],
+  "MANGA-008": ["NFR-DELIVERY-001"],
+  "US-DS-001": ["NFR-SCALE-001"],
+  "US-029": ["NFR-RECOVERY-001", "NFR-PRIV-001"],
+  "US-028": ["NFR-MIGRATION-001", "NFR-SEC-001"],
+  "US-023": ["NFR-SEC-001"],
+  "US-027": ["NFR-SEC-001"],
+  "CAP-006": ["NFR-OPS-001"],
+  "US-025": ["NFR-PRIV-001"],
+  "CAP-001": ["NFR-A11Y-001"],
+  "CAP-009": ["NFR-DELIVERY-001"],
+  "CAP-010": ["NFR-A11Y-001", "NFR-SEC-001"],
+}));
+
+const testLayersByRequirement = new Map(Object.entries({
+  "NFR-QUAL-002": ["quality-regression"],
+  "NFR-AUDIO-001": ["security"],
+  "NFR-DELIVERY-001": ["evidence-audit"],
+  "NFR-SCALE-001": ["performance"],
+  "NFR-RECOVERY-001": ["recovery-drill"],
+  "NFR-MIGRATION-001": ["migration"],
+  "NFR-SEC-001": ["security"],
+  "NFR-OPS-001": ["operation-drill"],
+  "NFR-A11Y-001": ["accessibility"],
+  "NFR-PRIV-001": ["security", "recovery-drill"],
+}));
+
 function splitBlocks(text) {
   const matches = [...text.matchAll(/^## (.+)$/gm)];
   return matches.map((match, index) => ({
@@ -134,6 +189,9 @@ function schemaFromFieldList(fieldList, note) {
 }
 
 function requestSchema(note, method, apiPath) {
+  if (method === "put" && apiPath === "/api/v1/edit-projects/{id}/timeline") {
+    return { $ref: "#/components/schemas/TimelineUpdateRequest" };
+  }
   const codeObjects = [...note.matchAll(/`(\{[^`]+\})`/g)];
   const firstObject = codeObjects[0];
   const prefix = firstObject ? note.slice(0, firstObject.index) : "";
@@ -226,7 +284,18 @@ for (const file of specFiles) {
     }));
     const pages = [...pageSection.matchAll(/`(\/[^`]+)`/g)].map((m) => m[1]).filter((v) => !v.startsWith("/api/"));
     const tables = [...dataSection.matchAll(/`([a-z][a-z0-9_]+)(?:\([^`]+\))?`/g)].map((m) => m[1]).filter((v) => v.includes("_") || /^[a-z]+s$/.test(v));
-    const feature = { id, title, file, scenarios, pages: [...new Set(pages)], tables: [...new Set(tables)] };
+    const feature = {
+      id,
+      title,
+      file,
+      scenarios,
+      pages: [...new Set(pages)],
+      tables: [...new Set(tables)],
+      requirementIds: [
+        ...(requirementIdsByFeature.get(id) ?? []),
+        ...(nonFunctionalRequirementIdsByFeature.get(id) ?? []),
+      ],
+    };
     feature.operations = extractOperations(apiSection, feature);
     features.push(feature);
   }
@@ -261,6 +330,7 @@ for (const feature of features) {
       description: `${op.requestNote}\n\n约束：${op.constraintNote}`.trim(),
       "x-feature-id": feature.id,
       "x-feature-ids": [feature.id],
+      "x-requirement-ids": feature.requirementIds,
       "x-source": `docs/delivery-specs/${feature.file}`,
       "x-sources": [`docs/delivery-specs/${feature.file}`],
       "x-idempotency-required": isWrite && /幂等|commandId|Idempotency/i.test(`${op.requestNote} ${op.constraintNote}`),
@@ -290,6 +360,91 @@ for (const feature of features) {
 }
 
 const errorResponse = (description) => ({ description, content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } } });
+const timelineComponentSchemas = {
+  NormalizedPoint: {
+    type: "object", additionalProperties: false, required: ["x", "y"],
+    properties: { x: { type: "number", minimum: 0, maximum: 1 }, y: { type: "number", minimum: 0, maximum: 1 } },
+  },
+  Timebase: {
+    type: "object", additionalProperties: false, required: ["fpsNumerator", "fpsDenominator", "dropFrame"],
+    properties: { fpsNumerator: { type: "integer", minimum: 1 }, fpsDenominator: { type: "integer", minimum: 1 }, dropFrame: { type: "boolean" } },
+  },
+  EffectInstance: {
+    type: "object", additionalProperties: false,
+    required: ["id", "effectType", "implementationId", "implementationVersion", "enabled", "parameters", "parameterSchemaVersion"],
+    properties: {
+      id: { type: "string", minLength: 1 }, effectType: { type: "string", minLength: 1 }, implementationId: { type: "string", minLength: 1 },
+      implementationVersion: { type: "string", minLength: 1 }, enabled: { type: "boolean" }, parameters: { type: "object", additionalProperties: true },
+      parameterSchemaVersion: { type: "integer", minimum: 1 },
+    },
+  },
+  ClipTransform: {
+    type: "object", additionalProperties: false, required: ["position", "scale", "rotationDegrees", "anchor", "crop"],
+    properties: {
+      position: { $ref: "#/components/schemas/NormalizedPoint" }, anchor: { $ref: "#/components/schemas/NormalizedPoint" }, rotationDegrees: { type: "number" },
+      scale: { type: "object", additionalProperties: false, required: ["x", "y"], properties: { x: { type: "number", exclusiveMinimum: 0 }, y: { type: "number", exclusiveMinimum: 0 } } },
+      crop: { type: "object", additionalProperties: false, required: ["top", "right", "bottom", "left"], properties: {
+        top: { type: "number", minimum: 0, maximum: 1 }, right: { type: "number", minimum: 0, maximum: 1 }, bottom: { type: "number", minimum: 0, maximum: 1 }, left: { type: "number", minimum: 0, maximum: 1 },
+      } },
+    },
+  },
+  VideoClip: {
+    type: "object", additionalProperties: false,
+    required: ["id", "trackId", "sourceType", "sourceId", "sourceVersion", "sourceContentHash", "sourceInMs", "sourceOutMs", "timelineStartMs", "playbackRate", "opacity", "transform", "effects", "sortKey"],
+    properties: {
+      id: { type: "string", minLength: 1 }, trackId: { type: "string", minLength: 1 }, sourceType: { enum: ["shot_video", "uploaded_video", "rendered_video"] },
+      sourceId: { type: "string", minLength: 1 }, sourceVersion: { type: "integer", minimum: 1 }, sourceContentHash: { type: "string", minLength: 1 }, presentationSnapshotId: { type: ["string", "null"] },
+      sourceInMs: { type: "integer", minimum: 0 }, sourceOutMs: { type: "integer", minimum: 1 }, timelineStartMs: { type: "integer", minimum: 0 }, playbackRate: { type: "number", exclusiveMinimum: 0 },
+      opacity: { type: "number", minimum: 0, maximum: 1 }, transform: { $ref: "#/components/schemas/ClipTransform" }, effects: { type: "array", items: { $ref: "#/components/schemas/EffectInstance" } }, sortKey: { type: "string" },
+    },
+  },
+  AudioClip: {
+    type: "object", additionalProperties: false,
+    required: ["id", "trackId", "audioAssetId", "sourceVersion", "sourceContentHash", "sourceInMs", "sourceOutMs", "timelineStartMs", "playbackRate", "gainDb", "pan", "fadeInMs", "fadeOutMs", "channelMapping", "effects"],
+    properties: {
+      id: { type: "string", minLength: 1 }, trackId: { type: "string", minLength: 1 }, audioAssetId: { type: "string", minLength: 1 }, sourceVersion: { type: "integer", minimum: 1 }, sourceContentHash: { type: "string", minLength: 1 },
+      sourceInMs: { type: "integer", minimum: 0 }, sourceOutMs: { type: "integer", minimum: 1 }, timelineStartMs: { type: "integer", minimum: 0 }, playbackRate: { type: "number", exclusiveMinimum: 0 },
+      gainDb: { type: "number" }, pan: { type: "number", minimum: -1, maximum: 1 }, fadeInMs: { type: "integer", minimum: 0 }, fadeOutMs: { type: "integer", minimum: 0 },
+      channelMapping: { type: "array", items: { type: "string" } }, effects: { type: "array", items: { $ref: "#/components/schemas/EffectInstance" } },
+    },
+  },
+  TimelineSubtitleCue: {
+    type: "object", additionalProperties: false, required: ["id", "trackId", "textSnapshot", "startMs", "endMs"],
+    properties: {
+      id: { type: "string", minLength: 1 }, trackId: { type: "string", minLength: 1 }, subtitleDocumentId: { type: ["string", "null"] }, subtitleDocumentVersion: { type: ["integer", "null"], minimum: 1 },
+      sourceCueId: { type: ["string", "null"] }, textSnapshot: { type: "string", minLength: 1 }, speakerId: { type: ["string", "null"] }, startMs: { type: "integer", minimum: 0 }, endMs: { type: "integer", minimum: 1 },
+      styleOverride: { type: ["object", "null"], additionalProperties: false, properties: { fontFamily: { type: "string" }, fontSize: { type: "number", exclusiveMinimum: 0 }, color: { type: "string" }, background: { type: "string" }, align: { enum: ["left", "center", "right"] } } },
+      positionOverride: { anyOf: [{ $ref: "#/components/schemas/NormalizedPoint" }, { type: "null" }] },
+    },
+  },
+  Transition: {
+    type: "object", additionalProperties: false, required: ["id", "trackId", "fromClipId", "toClipId", "type", "durationMs", "implementationId", "implementationVersion", "parameters"],
+    properties: {
+      id: { type: "string", minLength: 1 }, trackId: { type: "string", minLength: 1 }, fromClipId: { type: "string", minLength: 1 }, toClipId: { type: "string", minLength: 1 },
+      type: { enum: ["cut", "dissolve", "fade", "wipe", "custom"] }, durationMs: { type: "integer", minimum: 0 }, implementationId: { type: "string", minLength: 1 }, implementationVersion: { type: "string", minLength: 1 }, parameters: { type: "object", additionalProperties: true },
+    },
+  },
+  VideoTrack: {
+    type: "object", additionalProperties: false, required: ["id", "name", "order", "locked", "muted", "hidden", "compositingMode", "clips"],
+    properties: { id: { type: "string", minLength: 1 }, name: { type: "string" }, order: { type: "integer", minimum: 0 }, locked: { type: "boolean" }, muted: { type: "boolean" }, hidden: { type: "boolean" }, compositingMode: { enum: ["normal", "multiply", "screen", "overlay"] }, clips: { type: "array", items: { $ref: "#/components/schemas/VideoClip" } } },
+  },
+  AudioTrack: {
+    type: "object", additionalProperties: false, required: ["id", "name", "order", "role", "locked", "muted", "solo", "gainDb", "clips"],
+    properties: { id: { type: "string", minLength: 1 }, name: { type: "string" }, order: { type: "integer", minimum: 0 }, role: { enum: ["dialogue", "bgm", "sfx", "ambience", "custom"] }, locked: { type: "boolean" }, muted: { type: "boolean" }, solo: { type: "boolean" }, gainDb: { type: "number" }, clips: { type: "array", items: { $ref: "#/components/schemas/AudioClip" } } },
+  },
+  SubtitleTrack: {
+    type: "object", additionalProperties: false, required: ["id", "name", "order", "language", "locked", "hidden", "defaultStyle", "cues"],
+    properties: { id: { type: "string", minLength: 1 }, name: { type: "string" }, order: { type: "integer", minimum: 0 }, language: { type: "string", minLength: 2 }, locked: { type: "boolean" }, hidden: { type: "boolean" }, defaultStyle: { type: "object", additionalProperties: false, properties: { fontFamily: { type: "string" }, fontSize: { type: "number" }, color: { type: "string" }, background: { type: "string" }, align: { enum: ["left", "center", "right"] } }, required: ["fontFamily", "fontSize", "color", "align"] }, cues: { type: "array", items: { $ref: "#/components/schemas/TimelineSubtitleCue" } } },
+  },
+  Timeline: {
+    type: "object", additionalProperties: false, required: ["timebase", "durationMs", "videoTracks", "audioTracks", "subtitleTracks", "transitions"],
+    properties: { timebase: { $ref: "#/components/schemas/Timebase" }, durationMs: { type: "integer", minimum: 0 }, videoTracks: { type: "array", items: { $ref: "#/components/schemas/VideoTrack" } }, audioTracks: { type: "array", items: { $ref: "#/components/schemas/AudioTrack" } }, subtitleTracks: { type: "array", items: { $ref: "#/components/schemas/SubtitleTrack" } }, transitions: { type: "array", items: { $ref: "#/components/schemas/Transition" } } },
+  },
+  TimelineUpdateRequest: {
+    type: "object", additionalProperties: false, required: ["commandId", "timeline", "expectedVersion"],
+    properties: { commandId: { type: "string", format: "uuid" }, timeline: { $ref: "#/components/schemas/Timeline" }, expectedVersion: { type: "integer", minimum: 0 } },
+  },
+};
 const openapi = {
   openapi: "3.1.0",
   info: {
@@ -306,6 +461,7 @@ const openapi = {
       DataEnvelope: { type: "object", additionalProperties: false, required: ["data"], properties: { data: { type: ["object", "array", "null"], additionalProperties: true }, page: { $ref: "#/components/schemas/PageInfo" } } },
       PageInfo: { type: "object", additionalProperties: false, required: ["hasMore"], properties: { cursor: { type: ["string", "null"] }, nextCursor: { type: ["string", "null"] }, hasMore: { type: "boolean" } } },
       ErrorEnvelope: { type: "object", additionalProperties: false, required: ["error"], properties: { error: { type: "object", additionalProperties: false, required: ["code", "message", "retryable", "traceId"], properties: { code: { type: "string", pattern: "^[a-z][a-z0-9_]*$" }, message: { type: "string" }, details: { type: ["object", "array", "null"], additionalProperties: true }, retryable: { type: "boolean" }, traceId: { type: "string", minLength: 1 } } } } },
+      ...timelineComponentSchemas,
     },
     responses: {
       BadRequest: errorResponse("请求或业务校验失败"),
@@ -323,9 +479,14 @@ const openapi = {
 const testMatrix = {
   version: 1,
   sourceRevision: 1,
-  features: features.map(({ id, title, file, scenarios, pages, tables, operationIds }) => ({
-    id, title, source: `docs/delivery-specs/${file}`, featureFile: `tests/acceptance/features/${id.toLowerCase()}.feature`, scenarios, pages, tables, operationIds,
-    requiredTestLayers: ["contract", "integration", ...(pages.length ? ["e2e"] : [])],
+  features: features.map(({ id, title, file, scenarios, pages, tables, operationIds, requirementIds }) => ({
+    id, title, source: `docs/delivery-specs/${file}`, featureFile: `tests/acceptance/features/${id.toLowerCase()}.feature`, requirementIds, scenarios, pages, tables, operationIds,
+    requiredTestLayers: [...new Set([
+      "contract",
+      "integration",
+      ...(pages.length ? ["e2e"] : []),
+      ...requirementIds.flatMap((requirementId) => testLayersByRequirement.get(requirementId) ?? []),
+    ])],
     implementationEvidence: { code: [], migrations: [], tests: [], status: "unverified" },
   })),
 };

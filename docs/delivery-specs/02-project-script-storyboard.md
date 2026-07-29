@@ -212,6 +212,13 @@ Scenario: US-004-S02 阻止应用过期分析
 - 卡片支持键盘/拖拽排序；批量调时长最多 100 项。角色/道具多选、场景单选，只可绑定已发布资产版本。
 - approved Shot 删除入口不可用；返工后创建新版本。排序冲突时保留本地顺序草稿并提供加载最新/重新应用。
 
+### 正式深链与旧入口迁移
+
+- 剧本详情正式路由为 `/projects/{projectId}/scripts/{scriptId}`，分镜板详情为 `/projects/{projectId}/storyboards/{storyboardId}`，Shot 导演台为 `/shots/{shotId}`。三类路由均须支持直接访问、刷新、复制分享和浏览器返回。
+- 现行 `/scripts/{id}` 在兼容期解析资源所属项目后以 replace 方式迁移到正式剧本深链；现行 `/storyboards` 保留列表入口，但打开具体对象必须进入项目级分镜详情。不存在独立 Shot 页面时不得以弹窗状态冒充可分享导演台。
+- `projectId` 与 Script/Storyboard 实际归属不一致时拒绝加载；Shot 导演台必须从 Shot 反查并展示所属 Project、Episode、Storyboard 面包屑。无权读取父级时不得通过面包屑、标题或错误详情泄露名称。
+- 旧链接迁移保留对象 ID 和安全的页签/面板参数，不保留一次性 Token、本地文件路径或未保存编辑内容。
+
 ### API 契约
 
 | 方法与路径 | 请求/响应 | 约束与错误 |
@@ -249,6 +256,8 @@ Scenario: US-005-S02 并发排序不覆盖
 - 入口位于分镜板“AI 拆镜”；必须选择有效剧本分析版本，显示模型、预算估算和覆盖范围。
 - 建议进入独立待确认区，不直接改 Storyboard；支持逐条/批量采纳、忽略、合并和拆分，并显示来源对白。
 - 120 秒后任务标为 timed_out；若存在部分结果仍可查看和选择，但必须明确“不完整”。采纳操作预览将新增/重排的 Shot。
+- US-033 `split_shots` 是上游剧本创作入口，只负责冻结剧本输入并生成拆镜候选；进入分镜板后必须转换为本 US 的 `ShotSuggestionJob/ShotSuggestion`。US-006 是建议状态、人工处理和写入 Storyboard/Shot 的唯一事实源。
+- 从 US-033 转换时保存 `creationTaskId/sourceScriptVersion/sourceAnalysisId`；同一 `creationTaskId + storyboardId` 重放返回原 job。转换和采纳分为两个显式动作，转换完成不得自动创建 Shot。
 
 ### API 契约
 
@@ -277,4 +286,9 @@ Scenario: US-006-S02 超时后保留部分结果
   Given Provider 在120秒内只返回2条建议
   When 任务达到截止时间
   Then 状态为 timed_out、partial 为 true 且页面允许查看但明确标记不完整
+
+Scenario: US-006-S03 剧本拆镜候选进入统一建议流
+  Given US-033 split_shots 任务已完成且目标 Storyboard 可编辑
+  When 用户将候选发送到该 Storyboard 并重复提交同一转换请求
+  Then 两次请求返回同一 ShotSuggestionJob 且在用户采纳前不创建任何 Shot
 ```

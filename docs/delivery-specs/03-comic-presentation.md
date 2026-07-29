@@ -262,7 +262,7 @@ Scenario: MANGA-007-S02 豁免必须留痕且不删除原问题
 ### 页面交互规格
 
 - “送审”前显示快照清单：资产、剧本、构图、文字、特效、动态、音频、字体、模型和预检结论；阻断项必须归零。
-- 确认后生成不可变快照并进入审核；后续任何编辑创建新 Shot version，旧审核结论只绑定旧 snapshotHash。
+- 确认后生成不可变快照并进入 Review Intake；页面依次显示 `qc_running / qc_blocked / review_pending / reviewing`。只有同版本 QC 通过或合法豁免后才创建 Review；后续任何编辑创建新 Shot version，旧 QC/审核结论只绑定旧 snapshotHash。
 - 快照详情支持查看依赖版本和差异，但不允许编辑；相同输入重复提交返回同一结果。
 
 ### API 契约
@@ -270,13 +270,18 @@ Scenario: MANGA-007-S02 豁免必须留痕且不删除原问题
 | 方法与路径 | 请求/响应 | 约束与错误 |
 |---|---|---|
 | `POST /api/v1/shots/{id}/presentation-precheck` | `{shotVersion}`；返回 blockers/warnings/inputDigest | 只读 |
-| `POST /api/v1/shots/{id}/review-submissions` | `{commandId,shotVersion,expectedPrecheckDigest}`；201 `{snapshotId,snapshotHash,reviewId,eventId}` | 幂等；`precheck_changed` |
+| `POST /api/v1/shots/{id}/review-submissions` | `{commandId,shotVersion,expectedPrecheckDigest}`；202 `{snapshotId,snapshotHash,intakeId,status,eventId}` | 幂等；status 初始为 `qc_running`；`precheck_changed` |
+| `GET /api/v1/review-intakes` | 按 projectId/targetType/status 返回 Intake 列表和水位 | 审核/提交人按权限看到不同范围 |
+| `GET /api/v1/review-intakes/{id}` | 返回目标版本、snapshotHash、qcReportId、status、blockers、warnings、reviewId? | status=`qc_running|qc_blocked|review_pending|reviewing|needs_fix|completed` |
+| `POST /api/v1/review-intakes/{id}/qc-waivers` | `{commandId,qcReportId,reason,expectedVersion}`；返回更新后的 Intake | `quality.waive`；制作者隔离；mandatory 命中返回 `qc_mandatory_rule_not_waivable` |
 | `GET /api/v1/presentation-snapshots/{id}` | 规范化快照、hash、依赖和来源 | 不可变、按权限脱敏 Prompt 私密变量 |
 
 ### 数据模型
 
 - `presentation_snapshots(id,shot_id,shot_version,schema_version,canonical_json,snapshot_hash,created_by,created_at)`；唯一 `(shot_id,shot_version,snapshot_hash)`，不可更新/删除。
 - `presentation_snapshot_dependencies(snapshot_id,dependency_type,dependency_id,dependency_version,digest)`；Review/RenderJob 均保存 snapshot_id+snapshot_hash。
+- `review_intakes(id,project_id,target_type,target_id,target_version,snapshot_hash,status,qc_report_id,review_id,version,created_at,updated_at)`；唯一 `(target_type,target_id,target_version,snapshot_hash)`。
+- `qc_gate_waivers(id,intake_id,qc_report_id,waived_by,reason,audit_record_id,created_at)`；追加写，mandatory 规则不得产生记录。
 - 哈希算法和规范化版本显式保存；相同规范化输入必须得到相同哈希。
 
 ### 可执行验收用例
@@ -286,10 +291,35 @@ Scenario: MANGA-007-S02 豁免必须留痕且不删除原问题
 Scenario: MANGA-008-S01 重复送审相同输入保持幂等
   Given Shot 版本12通过表现预检
   When 使用同一输入和幂等键提交两次送审
-  Then 返回同一 snapshotId、snapshotHash 和 reviewId
+  Then 返回同一 snapshotId、snapshotHash 和 intakeId 且状态为 qc_running
 
 Scenario: MANGA-008-S02 新版本不继承旧审核结论
   Given snapshot A 已批准
   When 用户修改气泡并提交 snapshot B
-  Then B 创建新的 Review 且 A 的批准状态保持不变但不适用于 B
+  Then B 创建新的 Review Intake 且必须重新 QC，A 的批准状态保持不变但不适用于 B
+
+Scenario: MANGA-008-S03 QC 通过后才创建审核
+  Given Review Intake 绑定 Shot 版本12和 snapshotHash A
+  When 同版本 QCReport completed 且 passed=true
+  Then Intake 进入 review_pending 并创建唯一 Review
+
+Scenario: MANGA-008-S04 block 规则阻断送审
+  Given Review Intake 的 QualityRuleSet failureStrategy=block
+  When QCReport completed 且 passed=false
+  Then Intake 进入 qc_blocked、不创建 Review 且 Shot 进入 needs_fix
+
+Scenario: MANGA-008-S05 warn 规则经授权豁免后放行
+  Given QCReport 仅命中可豁免 warning 且审核负责人具有 quality.waive
+  When 负责人填写原因并提交 QC 豁免
+  Then 产生 QCGateWaived 和 AuditRecord、Intake 进入 review_pending 并创建 Review
+
+Scenario: MANGA-008-S06 mandatory 规则禁止豁免
+  Given QCReport 命中 mandatory 规则
+  When 任意用户尝试提交 QC 豁免
+  Then API 返回 qc_mandatory_rule_not_waivable、Intake 保持 qc_blocked 且不存在 Review
+
+Scenario: MANGA-008-S07 QC 超时重试耗尽后阻断
+  Given QCReport 已达到 QualityRuleSet maxAttempts
+  When 最后一次执行 timed_out
+  Then Intake 进入 qc_blocked、创建质量 WorkItem 并显示可操作失败原因
 ```

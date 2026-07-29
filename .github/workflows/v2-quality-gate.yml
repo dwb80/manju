@@ -20,9 +20,9 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
         working-directory: backend
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
         working-directory: frontend
       - name: Architecture boundaries
         run: npm run check:architecture

@@ -2,7 +2,7 @@
 
 > **建立日期**：2026-07-28  
 > **适用目标**：正式可交付产品，不采用“先按 MVP 降格、以后再补齐”的验收口径。  
-> **当前状态**：产品基线 v0.1，待产品负责人逐项确认决策清单。
+> **当前状态**：产品基线 v1.0，PD-001～PD-007 已于 2026-07-28 冻结；2026-07-29 本轮整改再次确认其为 DDD 与交付设计输入。后续变更必须走决策变更规则，不再以“待确认”表述。
 
 本目录回答“产品为什么存在、服务谁、必须完整到什么程度”。领域聚合与状态机仍以 `docs/domain/` 为权威来源，当前实现状态仍以 `docs/implementation/02-feature-status.md` 及代码/API/测试证据为准。
 
@@ -22,7 +22,11 @@
 12. [音频、后期与渠道交付基线](12-audio-postproduction-and-delivery-baseline.md)
 13. [商业模式、客户画像与规模假设基线](13-commercial-customer-and-scale-baseline.md)
 14. [专业漫剧生产工作台需求](14-professional-production-workstations.md)
-15. [逐功能交付规格](../../delivery-specs/README.md)
+15. [需求完整性与可验收性评审（2026-07-29）](15-requirements-completeness-and-acceptance-review-2026-07-29.md)
+16. [UI 覆盖度及需求—页面—状态追溯评审（2026-07-29）](16-ui-requirement-page-state-trace-review-2026-07-29.md)
+17. [非功能与运行门禁需求目录](17-nonfunctional-requirement-catalog.md)
+18. [UI 设计权威与版本基线](18-ui-design-authority.md)
+19. [逐功能交付规格](../../delivery-specs/README.md)
 
 阶段性产品 Review 已归档至 [历史 Review](../../archive/reviews/2026-07-28/README.md)。
 

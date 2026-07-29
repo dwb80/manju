@@ -31,7 +31,7 @@ PipelineRun
 PipelineNode
 ├── id: string
 ├── type: ai_task | review_gate | render | transform
-├── status: pending | running | completed | failed | skipped | stale
+├── status: pending | running | completed | failed | skipped | retrying | paused
 ├── dependencyIds: string[]
 ├── inputContract: DataContract
 ├── outputContract: DataContract
@@ -80,6 +80,9 @@ pending ──start──▶ running ──finalize──▶ completed
 - 重复执行结果通过幂等键去重。
 - `cancelRun` 后已完成的节点结果保留不可回滚。
 - `retryRun` 仅允许从 `failed` 状态触发，回退到 `pending`；重试次数耗尽后拒绝执行。
+- `PipelineNodeStatus` 在本上下文中唯一合法取值为 `pending | running | completed | failed | skipped | retrying | paused`，与 §1.6 及代码状态机保持一致。
+- `stale` 不是节点执行状态，而是节点输入或产出相对当前上游版本的**新鲜度**。新鲜度由 DEP/追溯读模型表达；发现过期时不得把节点状态改成 `stale`，而应保留原终态并创建重跑计划或新节点执行。
+- 节点转换为：`pending → running`；`running → completed | failed`；`failed → retrying → running`；`pending | retrying → paused → pending`；`pending | retrying | paused → skipped`。`completed | failed | skipped` 为终态，其中 `failed` 只有经显式 `retryNode` 才进入 `retrying`。
 - 项目归档后（收到 `ProjectArchived` 事件），本上下文所有 PipelineRun / AITask / PipelineTemplate / 项目级 PromptTemplate 资源标记为只读，拒绝执行 `createRun` / `startRun` / `CreateAITask` / `DispatchAITask` / `InstantiateTemplate` / `retryRun` / `CreatePromptTemplate` / `UpdatePromptTemplate` / `PublishPromptTemplate` / `CreateNewPromptVersion` / `ArchivePromptTemplate` 等写命令（全局 PromptTemplate 不受影响）；进行中的 Run 允许完成或取消，但不可新建；项目恢复后（`ProjectRestored`）解除只读。
 
 ### 1.6 值对象 / 内部实体

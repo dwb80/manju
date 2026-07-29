@@ -49,7 +49,8 @@ for (const [apiPath, methods] of Object.entries(api.paths ?? {})) {
     assert(operation["x-feature-id"], `${operation.operationId} missing x-feature-id`);
     assert(operation.responses?.["400"] && operation.responses?.["401"] && operation.responses?.["403"] && operation.responses?.["409"], `${operation.operationId} missing standard error responses`);
     if (["post", "put", "patch"].includes(method)) assert(operation.requestBody, `${operation.operationId} missing requestBody`);
-    const bodySchema = operation.requestBody?.content?.["application/json"]?.schema;
+    const declaredBodySchema = operation.requestBody?.content?.["application/json"]?.schema;
+    const bodySchema = declaredBodySchema?.$ref ? resolveRef(api, declaredBodySchema.$ref) : declaredBodySchema;
     if (bodySchema) {
       assert(!bodySchema.allOf?.some((item) => item.$ref === "#/components/schemas/CommandMeta"), `${operation.operationId} uses a fallback request schema`);
       assert(bodySchema.additionalProperties === false, `${operation.operationId} request body must reject undeclared top-level fields`);
@@ -92,6 +93,10 @@ for (const name of usedEnvironmentNames) {
 const operationIds = operations.map(({ operation }) => operation.operationId);
 assert(new Set(operationIds).size === operationIds.length, "duplicate operationId found");
 assert(operations.length >= 180, `expected at least 180 target operations, got ${operations.length}`);
+assert(api.components?.schemas?.Timeline?.additionalProperties === false, "Timeline schema must reject undeclared fields");
+assert(api.components?.schemas?.VideoClip?.additionalProperties === false, "VideoClip schema must reject undeclared fields");
+assert(api.components?.schemas?.AudioClip?.additionalProperties === false, "AudioClip schema must reject undeclared fields");
+assert(api.components?.schemas?.TimelineSubtitleCue?.additionalProperties === false, "TimelineSubtitleCue schema must reject undeclared fields");
 
 walk(api, (value) => {
   if (typeof value.$ref === "string" && value.$ref.startsWith("#/")) {
@@ -100,17 +105,38 @@ walk(api, (value) => {
 });
 
 const features = matrix.features ?? [];
-assert(features.length === 47, `expected 47 features, got ${features.length}`);
+assert(features.length === 52, `expected 52 features, got ${features.length}`);
 const featureIds = features.map((feature) => feature.id);
 assert(new Set(featureIds).size === featureIds.length, "duplicate feature ID in test matrix");
 const scenarios = features.flatMap((feature) => feature.scenarios ?? []);
-assert(scenarios.length === 94, `expected 94 scenarios, got ${scenarios.length}`);
+assert(scenarios.length >= 109, `expected at least 109 scenarios, got ${scenarios.length}`);
 assert(new Set(scenarios.map((scenario) => scenario.id)).size === scenarios.length, "duplicate scenario ID in test matrix");
+
+const expectedProfessionalRequirementIds = [
+  "OPS-001", "OPS-002", "OPS-003",
+  "SHOT-001", "SHOT-002",
+  "CAND-001", "CAND-002", "CAND-003",
+  "CONT-001", "CONT-002",
+  "REV-001", "REV-002", "REV-003",
+  "EDIT-001", "EDIT-002", "EDIT-003",
+  "COLLAB-001", "COLLAB-002", "COLLAB-003",
+];
+const expectedNonFunctionalRequirementIds = [
+  "NFR-QUAL-001", "NFR-QUAL-002", "NFR-AUDIO-001", "NFR-TIMELINE-001",
+  "NFR-DELIVERY-001", "NFR-SCALE-001", "NFR-RECOVERY-001", "NFR-MIGRATION-001",
+  "NFR-SEC-001", "NFR-OPS-001", "NFR-A11Y-001", "NFR-PRIV-001",
+];
+const expectedRequirementIds = [...expectedProfessionalRequirementIds, ...expectedNonFunctionalRequirementIds];
+const tracedRequirementIds = new Set(features.flatMap((feature) => feature.requirementIds ?? []));
+for (const requirementId of expectedRequirementIds) {
+  assert(tracedRequirementIds.has(requirementId), `requirement is not traced: ${requirementId}`);
+}
 
 for (const feature of features) {
   assert(fs.existsSync(path.join(root, feature.source)), `${feature.id} source missing: ${feature.source}`);
   assert(fs.existsSync(path.join(root, feature.featureFile)), `${feature.id} acceptance feature missing: ${feature.featureFile}`);
   assert(feature.operationIds?.length > 0, `${feature.id} has no OpenAPI operation`);
+  for (const requirementId of feature.requirementIds ?? []) assert(expectedRequirementIds.includes(requirementId), `${feature.id} has unknown requirement ${requirementId}`);
   for (const operationId of feature.operationIds ?? []) assert(operationIds.includes(operationId), `${feature.id} references missing operationId ${operationId}`);
   assert(feature.implementationEvidence?.status === "unverified", `${feature.id} must remain unverified before implementation`);
   assert(feature.requiredTestLayers?.includes("contract"), `${feature.id} missing contract test layer`);

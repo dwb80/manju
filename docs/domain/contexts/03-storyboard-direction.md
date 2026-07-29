@@ -101,7 +101,7 @@ softDelete 命令: draft / needs_fix（非 approved）→ deleted（软删除，
 | `StartShotGeneration` | ready | `ShotGenerationStarted` | 冻结生成输入（当前构图/图层/文字/特效/动态、Prompt、模型与资产版本）并触发 AI 图片或视频生成 |
 | `AttachGeneratedVideo` | generating | `ShotVideoCandidateAttached` | 附加生成的视频候选 |
 | `AdoptVideoCandidate` | generating / ready / needs_fix | `VideoAdopted` | 采纳一个视频候选确切版本并冻结 AI 执行与表现快照来源 |
-| `SubmitShotForReview` | ready | `ShotPresentationFrozen`, `ShotSubmittedForReview` | 同一聚合事务内生成不可变表现快照并提交审核 |
+| `SubmitShotForReview` | ready | `ShotPresentationFrozen`, `ShotSubmittedForReview` | 同一聚合事务内生成不可变表现快照并启动 QC→人工审核准入流程；不得直接创建 Review |
 | `ApproveShot` | in_review | `ShotApproved` | 审核通过（由审核质量上下文 `ReviewApproved` 事件驱动） |
 | `RejectShot` | in_review | `ShotRejected` | 审核驳回（由审核质量上下文 `ReviewRejected` 事件驱动） |
 | `RequestShotFix` | in_review / approved | `ShotFixRequested` | 请求返工，回退到 needs_fix |
@@ -124,7 +124,7 @@ softDelete 命令: draft / needs_fix（非 approved）→ deleted（软删除，
 | `ShotAssetBound` | shotId, projectId, assetType, assetId, assetVersion | 资产库（引用计数 +1） |
 | `ShotAssetUnbound` | shotId, projectId, assetType, assetId, assetVersion | 资产库（引用计数 -1） |
 | `ShotPresentationFrozen` | shotId, snapshotId, snapshotHash, shotVersion, dependencyRefs[] | 审核质量、后期制作（只引用冻结快照）、智能助手（DEP 依赖投影） |
-| `ShotSubmittedForReview` | shotId, storyboardId, projectId, snapshotId, snapshotHash | 审核质量（创建 Review 聚合） |
+| `ShotSubmittedForReview` | shotId, storyboardId, projectId, shotVersion, snapshotId, snapshotHash | 审核质量（启动 Review Intake 并先创建 QCReport） |
 | `ShotApproved` | shotId, storyboardId, projectId, reviewId | 分镜导演（更新 Storyboard 派生状态）、智能助手 |
 | `ShotRejected` | shotId, storyboardId, projectId, reviewId, reason | 智能助手（创建返工工作项） |
 | `ShotFixRequested` | shotId, storyboardId | 智能助手 |
@@ -148,6 +148,8 @@ softDelete 命令: draft / needs_fix（非 approved）→ deleted（软删除，
 - 拟声词可关联 SFX AudioAsset 版本；修改时间范围时必须同步更新或显式解除关联。
 - MotionCue 的目标图层必须存在；同一图层同一属性的重叠区间必须有确定优先级，否则拒绝保存。
 - 光敏风险特效超过项目策略阈值时阻止送审；人工豁免必须有权限、原因和 AuditRecord。
+- `in_review` 覆盖 `qc_running | review_pending | reviewing` 三个只读子阶段；QC 未通过、执行失败/超时且阻断或 mandatory 规则命中时，收到 `ReviewIntakeBlocked` 并执行 `RequestShotFix` 进入 `needs_fix`，不会创建 Review。
+- 只有审核质量上下文确认相同 `shotVersion + snapshotHash` 的 QC 门禁为 `passed` 或合法 `waived` 后，才能创建 Review；修改或重新冻结 Shot 必须重新执行 QC。
 - 送审和渲染只能引用 `PresentationSnapshot`；快照不可变，任一依赖改变必须生成新快照并使旧审核结论失效。
 - 已审核分镜不能通过普通删除入口删除。
 - 审核结果必须关联有效 `reviewId`。
