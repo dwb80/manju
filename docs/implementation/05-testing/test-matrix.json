@@ -1,0 +1,2328 @@
+{
+  "version": 1,
+  "sourceRevision": 1,
+  "features": [
+    {
+      "id": "US-001",
+      "title": "创建新项目",
+      "source": "docs/delivery-specs/02-project-script-storyboard.md",
+      "featureFile": "tests/acceptance/features/us-001.feature",
+      "scenarios": [
+        {
+          "id": "US-001-S01",
+          "title": "创建项目且重复提交幂等",
+          "steps": [
+            "Given 活跃用户具有 project.create 权限",
+            "When 使用同一 Idempotency-Key 连续两次提交合法项目",
+            "Then 两次响应返回同一 projectId 且数据库只有一个项目和一个第1集"
+          ]
+        },
+        {
+          "id": "US-001-S02",
+          "title": "拒绝同所有者重名项目",
+          "steps": [
+            "Given 所有者已有规范化名称为“山海”的未删除项目",
+            "When 创建名称为“ 山海 ”的项目",
+            "Then API 返回 409 duplicate_project_name 且页面保留输入并聚焦名称"
+          ]
+        }
+      ],
+      "pages": [
+        "/projects",
+        "/projects/new",
+        "/projects/{projectId}/workspace"
+      ],
+      "tables": [
+        "projects",
+        "project_members",
+        "episodes"
+      ],
+      "operationIds": [
+        "us_001_post_projects",
+        "us_001_get_projects",
+        "us_001_get_projects-id"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-002",
+      "title": "创建剧集",
+      "source": "docs/delivery-specs/02-project-script-storyboard.md",
+      "featureFile": "tests/acceptance/features/us-002.feature",
+      "scenarios": [
+        {
+          "id": "US-002-S01",
+          "title": "自动分配剧集序号并初始化子资源",
+          "steps": [
+            "Given 项目已有第1集且操作者为 admin",
+            "When 创建未指定 episodeNumber 的剧集",
+            "Then 返回第2集并存在一个空 Script 和一个空 Storyboard"
+          ]
+        },
+        {
+          "id": "US-002-S02",
+          "title": "阻止删除有成片依赖的剧集",
+          "steps": [
+            "Given 第2集关联一个 FinalVideo",
+            "When 管理员执行删除预检",
+            "Then allowed 为 false 且 blockers 包含可导航的 finalVideoId"
+          ]
+        }
+      ],
+      "pages": [
+        "/projects/{projectId}/episodes"
+      ],
+      "tables": [
+        "episodes",
+        "scripts",
+        "storyboards"
+      ],
+      "operationIds": [
+        "us_002_post_projects-projectid-episodes",
+        "us_002_get_projects-projectid-episodes",
+        "us_002_post_episodes-id-deletion-precheck"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-003",
+      "title": "剧本文档管理",
+      "source": "docs/delivery-specs/02-project-script-storyboard.md",
+      "featureFile": "tests/acceptance/features/us-003.feature",
+      "scenarios": [
+        {
+          "id": "US-003-S01",
+          "title": "发布不可变剧本版本",
+          "steps": [
+            "Given 编剧持有有效编辑锁并保存了合法草稿",
+            "When 编剧发布剧本",
+            "Then 产生不可变 ScriptDocument 且后续编辑不改变其 contentHash"
+          ]
+        },
+        {
+          "id": "US-003-S02",
+          "title": "编辑锁冲突安全降级为只读",
+          "steps": [
+            "Given 用户甲持有未过期编辑锁",
+            "When 用户乙打开同一剧本并尝试保存",
+            "Then 页面为只读且保存 API 返回 409 script_locked"
+          ]
+        }
+      ],
+      "pages": [
+        "/projects/{projectId}/scripts/{scriptId}"
+      ],
+      "tables": [
+        "scripts",
+        "script_documents",
+        "script_edit_locks"
+      ],
+      "operationIds": [
+        "us_003_post_episodes-episodeid-scripts",
+        "us_003_post_scripts-id-edit-lock",
+        "us_003_put_scripts-id-draft",
+        "us_003_post_scripts-id-publish",
+        "us_003_get_scripts-id-versions-a-diffto-b"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-004",
+      "title": "AI 辅助剧本分析",
+      "source": "docs/delivery-specs/02-project-script-storyboard.md",
+      "featureFile": "tests/acceptance/features/us-004.feature",
+      "scenarios": [
+        {
+          "id": "US-004-S01",
+          "title": "分析并选择性创建资产草稿",
+          "steps": [
+            "Given 已发布剧本版本包含角色阿青和场景码头",
+            "When 分析完成并只应用角色项",
+            "Then 仅创建阿青的 Character 草稿且保留 sourceAnalysisId"
+          ]
+        },
+        {
+          "id": "US-004-S02",
+          "title": "阻止应用过期分析",
+          "steps": [
+            "Given 分析完成后剧本发布了新版本",
+            "When 用户应用旧分析项",
+            "Then API 返回 409 analysis_stale 且不创建资产"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "script_analyses",
+        "ai_tasks"
+      ],
+      "operationIds": [
+        "us_004_post_scripts-id-analysis-jobs",
+        "us_004_get_scripts-id-analysis-jobs-jobid",
+        "us_004_post_scripts-id-analysis-jobs-jobid-apply"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-005",
+      "title": "创建与编排分镜",
+      "source": "docs/delivery-specs/02-project-script-storyboard.md",
+      "featureFile": "tests/acceptance/features/us-005.feature",
+      "scenarios": [
+        {
+          "id": "US-005-S01",
+          "title": "原子创建并排序 Shot",
+          "steps": [
+            "Given 空 Storyboard 版本为1",
+            "When 导演创建一个时长5秒的近景 Shot",
+            "Then Shot 与 Storyboard 引用同时存在且编号为 SCENE-001"
+          ]
+        },
+        {
+          "id": "US-005-S02",
+          "title": "并发排序不覆盖",
+          "steps": [
+            "Given 两个客户端都读取 Storyboard 版本7",
+            "When 客户端甲排序成功后客户端乙提交不同顺序",
+            "Then 客户端乙收到 409 version_conflict 且服务端保留甲的完整顺序"
+          ]
+        }
+      ],
+      "pages": [
+        "/projects/{projectId}/storyboards/{storyboardId}",
+        "/shots/{shotId}"
+      ],
+      "tables": [
+        "storyboards",
+        "shots",
+        "shot_asset_bindings"
+      ],
+      "operationIds": [
+        "us_005_post_storyboards-id-shots",
+        "us_005_put_storyboards-id-shot-order",
+        "us_005_patch_shots-batch-duration",
+        "us_005_delete_storyboards-id-shots-shotid"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-006",
+      "title": "AI 分镜建议",
+      "source": "docs/delivery-specs/02-project-script-storyboard.md",
+      "featureFile": "tests/acceptance/features/us-006.feature",
+      "scenarios": [
+        {
+          "id": "US-006-S01",
+          "title": "部分采纳建议且不覆盖已有 Shot",
+          "steps": [
+            "Given Storyboard 已有2个 Shot 且任务返回3条建议",
+            "When 用户采纳第1和第3条",
+            "Then Storyboard 共有4个 Shot 且原有 Shot 内容未被修改"
+          ]
+        },
+        {
+          "id": "US-006-S02",
+          "title": "超时后保留部分结果",
+          "steps": [
+            "Given Provider 在120秒内只返回2条建议",
+            "When 任务达到截止时间",
+            "Then 状态为 timed_out、partial 为 true 且页面允许查看但明确标记不完整"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "shot_suggestion_jobs",
+        "shot_suggestions"
+      ],
+      "operationIds": [
+        "us_006_post_storyboards-id-shot-suggestion-jobs",
+        "us_006_get_storyboards-id-shot-suggestion-jobs-jobid",
+        "us_006_post_storyboards-id-shot-suggestions-apply"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "MANGA-001",
+      "title": "项目表现规格",
+      "source": "docs/delivery-specs/03-comic-presentation.md",
+      "featureFile": "tests/acceptance/features/manga-001.feature",
+      "scenarios": [
+        {
+          "id": "MANGA-001-S01",
+          "title": "变更画幅前展示影响并版本化",
+          "steps": [
+            "Given 项目包含1个已批准 Shot 和2个草稿 Shot",
+            "When 管理员把画幅从9:16改为16:9并确认创建新版本",
+            "Then 影响页显示3项且已批准 Shot 保留旧快照并产生新草稿版本"
+          ]
+        },
+        {
+          "id": "MANGA-001-S02",
+          "title": "拒绝越界安全区",
+          "steps": [
+            "Given 用户正在编辑项目表现规格",
+            "When 提交右边界为1.1的文字安全区",
+            "Then API 返回 validation_failed 且页面标出该边界"
+          ]
+        }
+      ],
+      "pages": [
+        "/projects/{projectId}/settings/presentation"
+      ],
+      "tables": [
+        "project_presentation_specs"
+      ],
+      "operationIds": [
+        "manga_001_get_projects-id-presentation-spec",
+        "manga_001_post_projects-id-presentation-spec-impact",
+        "manga_001_put_projects-id-presentation-spec"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "MANGA-002",
+      "title": "图层化构图",
+      "source": "docs/delivery-specs/03-comic-presentation.md",
+      "featureFile": "tests/acceptance/features/manga-002.feature",
+      "scenarios": [
+        {
+          "id": "MANGA-002-S01",
+          "title": "创建可复现角色图层",
+          "steps": [
+            "Given Character char_1 的版本3已发布",
+            "When 导演把该版本加入 Shot 并设置位置、层级和时间范围",
+            "Then 图层保存 assetId=char_1、assetVersion=3 且刷新后变换一致"
+          ]
+        },
+        {
+          "id": "MANGA-002-S02",
+          "title": "阻止绑定未发布资产",
+          "steps": [
+            "Given Character char_2 仍为 draft",
+            "When 用户把它拖入画布",
+            "Then API 返回 409 asset_version_unavailable 且 Shot version 不变"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "shot_visual_layers"
+      ],
+      "operationIds": [
+        "manga_002_put_shots-id-composition",
+        "manga_002_post_shots-id-visual-layers",
+        "manga_002_put_shots-id-visual-layers-layerid",
+        "manga_002_delete_shots-id-visual-layers-layerid",
+        "manga_002_post_shots-id-composition-templates-templateid-apply"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "MANGA-003",
+      "title": "对白气泡与旁白",
+      "source": "docs/delivery-specs/03-comic-presentation.md",
+      "featureFile": "tests/acceptance/features/manga-003.feature",
+      "scenarios": [
+        {
+          "id": "MANGA-003-S01",
+          "title": "对白气泡绑定剧本行并通过预检",
+          "steps": [
+            "Given 已发布剧本行由角色阿青说“快走”且字体已授权",
+            "When 导演创建对白气泡并放在文字安全区内",
+            "Then overlay 保存剧本行、说话人和字体版本且预检无阻断项"
+          ]
+        },
+        {
+          "id": "MANGA-003-S02",
+          "title": "剧本变化不覆盖人工排版",
+          "steps": [
+            "Given 气泡引用的对白源文本已变化",
+            "When 用户重新打开 Shot",
+            "Then 页面显示差异且数据库中的排版文本在用户确认前不变"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "shot_text_overlays"
+      ],
+      "operationIds": [
+        "manga_003_post_shots-id-text-overlays",
+        "manga_003_put_shots-id-text-overlays-overlayid",
+        "manga_003_delete_shots-id-text-overlays-overlayid",
+        "manga_003_post_shots-id-text-layout-precheck"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "MANGA-004",
+      "title": "拟声词管理",
+      "source": "docs/delivery-specs/03-comic-presentation.md",
+      "featureFile": "tests/acceptance/features/manga-004.feature",
+      "scenarios": [
+        {
+          "id": "MANGA-004-S01",
+          "title": "同步调整拟声词和音效",
+          "steps": [
+            "Given 拟声词“砰”关联2至3秒的已发布音效",
+            "When 用户把拟声词移动到4至5秒并选择同步音效",
+            "Then overlay 与 AudioClip 都为4至5秒且快照引用同一音频版本"
+          ]
+        },
+        {
+          "id": "MANGA-004-S02",
+          "title": "自定义词不污染受控词库",
+          "steps": [
+            "Given 普通导演无词库管理权限",
+            "When 创建自定义拟声词“咻啪”",
+            "Then Shot 保存该 overlay 但全局词库无新增记录"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "shot_text_overlays",
+        "onomatopoeia_json",
+        "onomatopoeia_lexicon"
+      ],
+      "operationIds": [
+        "manga_004_get_onomatopoeia-lexicon",
+        "manga_003_post_shots-id-text-overlays",
+        "manga_004_put_shots-id-text-overlays-id-timing"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "MANGA-005",
+      "title": "漫画特效",
+      "source": "docs/delivery-specs/03-comic-presentation.md",
+      "featureFile": "tests/acceptance/features/manga-005.feature",
+      "scenarios": [
+        {
+          "id": "MANGA-005-S01",
+          "title": "按 schema 保存受控特效",
+          "steps": [
+            "Given 速度线 schema v2 要求 direction 和 density",
+            "When 用户提交合法参数",
+            "Then 特效保存 schemaVersion=2 且预览与渲染读取同一参数"
+          ]
+        },
+        {
+          "id": "MANGA-005-S02",
+          "title": "光敏风险阻断发布预检",
+          "steps": [
+            "Given 项目禁用高频闪烁且 Shot 含超阈值闪白",
+            "When 执行发布预检",
+            "Then 返回 photic_risk_blocked 并定位到 effectId 和时间段"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "shot_comic_effects",
+        "comic_effect_schemas"
+      ],
+      "operationIds": [
+        "manga_005_get_comic-effect-types",
+        "manga_005_post_shots-id-comic-effects",
+        "manga_005_put_shots-id-comic-effects-effectid",
+        "manga_005_delete_shots-id-comic-effects-effectid",
+        "manga_005_post_shots-id-effect-safety-precheck"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "MANGA-006",
+      "title": "有限动态编排",
+      "source": "docs/delivery-specs/03-comic-presentation.md",
+      "featureFile": "tests/acceptance/features/manga-006.feature",
+      "scenarios": [
+        {
+          "id": "MANGA-006-S01",
+          "title": "代理预览与最终参数一致",
+          "steps": [
+            "Given Shot 有0至2秒的缩放 cue",
+            "When 分别生成代理预览和最终渲染",
+            "Then 两者输入快照中的 cue 规范化 JSON 和时间完全相同"
+          ]
+        },
+        {
+          "id": "MANGA-006-S02",
+          "title": "阻止无优先级的重叠动作",
+          "steps": [
+            "Given 同一图层 x 属性已有0至2秒动作",
+            "When 新增1至3秒且无优先级的 x 动作",
+            "Then API 返回 409 motion_overlap_conflict 且给出冲突 cueId"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "shot_motion_cues"
+      ],
+      "operationIds": [
+        "manga_006_post_shots-id-motion-cues",
+        "manga_006_put_shots-id-motion-cues-cueid",
+        "manga_006_delete_shots-id-motion-cues-cueid",
+        "manga_006_post_shots-id-previews"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "MANGA-007",
+      "title": "一致性检查",
+      "source": "docs/delivery-specs/03-comic-presentation.md",
+      "featureFile": "tests/acceptance/features/manga-007.feature",
+      "scenarios": [
+        {
+          "id": "MANGA-007-S01",
+          "title": "质检问题定位到具体图层",
+          "steps": [
+            "Given 相邻 Shot 的同一角色服装版本不一致",
+            "When 一致性检查完成",
+            "Then 报告包含两个 Shot 和角色图层 ID 且点击可打开对应时间点"
+          ]
+        },
+        {
+          "id": "MANGA-007-S02",
+          "title": "豁免必须留痕且不删除原问题",
+          "steps": [
+            "Given reviewer 看到一个 warning 问题",
+            "When 具有 waive 权限的用户填写原因并豁免",
+            "Then 原 issue 保留、状态显示 waived 且存在 AuditRecord"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "qc_reports",
+        "qc_issues",
+        "qc_waivers"
+      ],
+      "operationIds": [
+        "manga_007_post_qc-reports",
+        "manga_007_get_qc-reports-id",
+        "manga_007_post_qc-reports-id-waivers",
+        "manga_007_post_qc-reports-id-retry"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "MANGA-008",
+      "title": "可复现快照与交付",
+      "source": "docs/delivery-specs/03-comic-presentation.md",
+      "featureFile": "tests/acceptance/features/manga-008.feature",
+      "scenarios": [
+        {
+          "id": "MANGA-008-S01",
+          "title": "重复送审相同输入保持幂等",
+          "steps": [
+            "Given Shot 版本12通过表现预检",
+            "When 使用同一输入和幂等键提交两次送审",
+            "Then 返回同一 snapshotId、snapshotHash 和 reviewId"
+          ]
+        },
+        {
+          "id": "MANGA-008-S02",
+          "title": "新版本不继承旧审核结论",
+          "steps": [
+            "Given snapshot A 已批准",
+            "When 用户修改气泡并提交 snapshot B",
+            "Then B 创建新的 Review 且 A 的批准状态保持不变但不适用于 B"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "presentation_snapshots",
+        "presentation_snapshot_dependencies"
+      ],
+      "operationIds": [
+        "manga_008_post_shots-id-presentation-precheck",
+        "manga_008_post_shots-id-review-submissions",
+        "manga_008_get_presentation-snapshots-id"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-007",
+      "title": "角色资产管理",
+      "source": "docs/delivery-specs/04-assets-generation-review.md",
+      "featureFile": "tests/acceptance/features/us-007.feature",
+      "scenarios": [
+        {
+          "id": "US-007-S01",
+          "title": "发布角色版本并保持 Shot 引用稳定",
+          "steps": [
+            "Given 角色阿青具有主图和完整描述",
+            "When 美术发布版本2并随后编辑草稿",
+            "Then 已绑定版本2的 Shot 仍引用相同 contentHash"
+          ]
+        },
+        {
+          "id": "US-007-S02",
+          "title": "阻止发布缺少主图的角色",
+          "steps": [
+            "Given 角色草稿没有主图",
+            "When 用户点击发布",
+            "Then API 返回 409 asset_incomplete 且页面导航到图片区"
+          ]
+        }
+      ],
+      "pages": [
+        "/projects/{projectId}/characters",
+        "/characters/{id}"
+      ],
+      "tables": [
+        "characters",
+        "character_versions",
+        "character_images"
+      ],
+      "operationIds": [
+        "us_007_post_projects-projectid-characters",
+        "us_007_put_characters-id",
+        "us_007_post_characters-id-images",
+        "us_007_post_characters-id-publish",
+        "us_007_post_characters-id-archive"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-008",
+      "title": "场景与道具资产管理",
+      "source": "docs/delivery-specs/04-assets-generation-review.md",
+      "featureFile": "tests/acceptance/features/us-008.feature",
+      "scenarios": [
+        {
+          "id": "US-008-S01",
+          "title": "创建并发布夜景码头",
+          "steps": [
+            "Given 美术具有 asset.scene.write 权限",
+            "When 填写地点、夜晚、雨天、光照并设置主图后发布",
+            "Then Scene 产生不可变版本1且可被 Shot 选择"
+          ]
+        },
+        {
+          "id": "US-008-S02",
+          "title": "批量归档保留失败明细",
+          "steps": [
+            "Given 3个道具中1个被活动生成任务锁定",
+            "When 批量归档这3个道具",
+            "Then 2项成功、1项返回 asset_in_use 且页面保留逐项结果"
+          ]
+        }
+      ],
+      "pages": [
+        "/projects/{projectId}/scenes|props"
+      ],
+      "tables": [
+        "scenes",
+        "scene_versions",
+        "props",
+        "prop_versions",
+        "scene_images",
+        "prop_images",
+        "media_objects",
+        "assets"
+      ],
+      "operationIds": [
+        "us_008_post_projects-projectid-scenes",
+        "us_008_post_projects-projectid-props",
+        "us_008_put_scenes-id",
+        "us_008_put_props-id",
+        "us_008_post_scenes-id-publish",
+        "us_008_post_props-id-publish",
+        "us_008_post_assets-batch"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-009",
+      "title": "AI 图片生成",
+      "source": "docs/delivery-specs/04-assets-generation-review.md",
+      "featureFile": "tests/acceptance/features/us-009.feature",
+      "scenarios": [
+        {
+          "id": "US-009-S01",
+          "title": "生成候选图片并人工采用",
+          "steps": [
+            "Given Shot 版本5通过预算预检",
+            "When 用户生成2张图片并采用第2张",
+            "Then 任务完成、成本结算且 Shot 只绑定第2张媒体版本"
+          ]
+        },
+        {
+          "id": "US-009-S02",
+          "title": "重复提交不重复扣费",
+          "steps": [
+            "Given 客户端因超时重放相同 Idempotency-Key",
+            "When 服务端接收第二次生成请求",
+            "Then 返回原 taskId 且只有一个 BudgetReservation"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "ai_tasks",
+        "generated_images",
+        "generated_asset_adoptions"
+      ],
+      "operationIds": [
+        "us_009_post_image-generation-jobs",
+        "us_009_get_ai-tasks-id",
+        "us_009_post_ai-tasks-id-cancel",
+        "us_009_post_generated-images-id-adopt"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-010",
+      "title": "图片审核",
+      "source": "docs/delivery-specs/04-assets-generation-review.md",
+      "featureFile": "tests/acceptance/features/us-010.feature",
+      "scenarios": [
+        {
+          "id": "US-010-S01",
+          "title": "审核通过冻结图片版本",
+          "steps": [
+            "Given reviewer 被分配一个非本人提交的图片 Review",
+            "When 选择通过并提交",
+            "Then Review 为 approved、产生 ReviewApproved 且决定记录不可编辑"
+          ]
+        },
+        {
+          "id": "US-010-S02",
+          "title": "阻止自审",
+          "steps": [
+            "Given 图片提交人也是当前 reviewer",
+            "When 尝试调用决策 API",
+            "Then 返回 403 self_review_forbidden 且无 decision 记录"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "reviews",
+        "review_decisions"
+      ],
+      "operationIds": [
+        "us_010_post_reviews",
+        "us_010_get_reviews",
+        "us_010_post_reviews-id-decisions"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-011",
+      "title": "AI 视频生成",
+      "source": "docs/delivery-specs/04-assets-generation-review.md",
+      "featureFile": "tests/acceptance/features/us-011.feature",
+      "scenarios": [
+        {
+          "id": "US-011-S01",
+          "title": "从冻结快照生成并绑定视频",
+          "steps": [
+            "Given PresentationSnapshot 已通过图片审核和预算预检",
+            "When 视频任务成功回调且 inputHash 匹配",
+            "Then 视频绑定该 snapshotHash、预算结算且 Pipeline 节点完成"
+          ]
+        },
+        {
+          "id": "US-011-S02",
+          "title": "隔离迟到的旧版本回调",
+          "steps": [
+            "Given Shot 已从快照A返工为快照B",
+            "When 快照A任务的回调迟到",
+            "Then 结果归档到A且不得更新B的当前视频"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "pipeline_runs",
+        "ai_tasks",
+        "generated_videos"
+      ],
+      "operationIds": [
+        "us_011_post_video-generation-jobs",
+        "us_011_get_pipeline-runs-id",
+        "us_011_post_ai-tasks-id-retry",
+        "us_011_post_generated-videos-id-adopt"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-012",
+      "title": "视频审核",
+      "source": "docs/delivery-specs/04-assets-generation-review.md",
+      "featureFile": "tests/acceptance/features/us-012.feature",
+      "scenarios": [
+        {
+          "id": "US-012-S01",
+          "title": "带时间码要求修改并创建返工项",
+          "steps": [
+            "Given reviewer 在视频1.2秒发现角色闪烁",
+            "When 添加1.0至1.5秒评论并选择要求修改",
+            "Then Review 为 changes_requested 且 WorkItem 链接到该评论和 Shot"
+          ]
+        },
+        {
+          "id": "US-012-S02",
+          "title": "媒体不可播放时禁止决策",
+          "steps": [
+            "Given 视频完整性校验失败",
+            "When reviewer 打开审核详情",
+            "Then 页面显示媒体错误且决策 API 返回 media_not_reviewable"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "review_comments"
+      ],
+      "operationIds": [
+        "us_010_post_reviews",
+        "us_012_post_reviews-id-comments",
+        "us_010_post_reviews-id-decisions"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-013",
+      "title": "音频管理",
+      "source": "docs/delivery-specs/05-postproduction-publishing.md",
+      "featureFile": "tests/acceptance/features/us-013.feature",
+      "scenarios": [
+        {
+          "id": "US-013-S01",
+          "title": "发布音效并绑定时间轴",
+          "steps": [
+            "Given 已上传音效通过扫描和响度检查",
+            "When 音频编辑发布版本1并加入 Shot 时间轴",
+            "Then AudioClip 保存 audioAssetId 和 assetVersion=1"
+          ]
+        },
+        {
+          "id": "US-013-S02",
+          "title": "新音频版本不改写已冻结快照",
+          "steps": [
+            "Given snapshot A 引用旁白版本2",
+            "When 用户发布旁白版本3",
+            "Then snapshot A 仍引用版本2且页面只提示可升级"
+          ]
+        }
+      ],
+      "pages": [
+        "/projects/{projectId}/audio"
+      ],
+      "tables": [
+        "audio_assets",
+        "audio_asset_versions",
+        "ai_tasks"
+      ],
+      "operationIds": [
+        "us_013_post_projects-id-audio-assets",
+        "us_013_post_audio-generation-jobs",
+        "us_013_post_audio-assets-id-publish",
+        "us_013_get_projects-id-audio-assets"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-014",
+      "title": "字幕管理",
+      "source": "docs/delivery-specs/05-postproduction-publishing.md",
+      "featureFile": "tests/acceptance/features/us-014.feature",
+      "scenarios": [
+        {
+          "id": "US-014-S01",
+          "title": "导入预览后发布字幕",
+          "steps": [
+            "Given 合法 UTF-8 SRT 和60秒成片",
+            "When 用户预览、确认并发布",
+            "Then 所有 cue 位于0至60秒且产生不可变字幕版本"
+          ]
+        },
+        {
+          "id": "US-014-S02",
+          "title": "阻止结束早于开始的 cue",
+          "steps": [
+            "Given 用户编辑一个 cue",
+            "When 提交 startMs=5000 endMs=4000",
+            "Then API 返回 validation_failed 并包含 cueId 和字段路径"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "subtitle_documents",
+        "subtitle_cues",
+        "subtitle_document_versions"
+      ],
+      "operationIds": [
+        "us_014_post_projects-id-subtitle-documents",
+        "us_014_post_subtitle-documents-id-imports",
+        "us_014_put_subtitle-documents-id-cues",
+        "us_014_post_subtitle-documents-id-publish"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-015",
+      "title": "视频剪辑与渲染",
+      "source": "docs/delivery-specs/05-postproduction-publishing.md",
+      "featureFile": "tests/acceptance/features/us-015.feature",
+      "scenarios": [
+        {
+          "id": "US-015-S01",
+          "title": "从冻结工程版本渲染",
+          "steps": [
+            "Given 工程版本8所有媒体可用且预检通过",
+            "When 用户发起正式渲染后继续编辑工程",
+            "Then RenderJob 仍使用版本8且新编辑成为版本9"
+          ]
+        },
+        {
+          "id": "US-015-S02",
+          "title": "并发保存时间轴不丢失",
+          "steps": [
+            "Given 两个剪辑师都打开版本6",
+            "When 甲保存版本7后乙保存",
+            "Then 乙收到 version_conflict 并可比较本地修改与版本7"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "edit_projects",
+        "edit_project_versions",
+        "edit_tracks",
+        "edit_clips",
+        "render_jobs"
+      ],
+      "operationIds": [
+        "us_015_get_edit-projects-id",
+        "us_015_put_edit-projects-id-timeline",
+        "us_015_post_edit-projects-id-render-precheck",
+        "us_015_post_edit-projects-id-render-jobs",
+        "us_015_get_render-jobs-id"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-016",
+      "title": "成片两级审核",
+      "source": "docs/delivery-specs/05-postproduction-publishing.md",
+      "featureFile": "tests/acceptance/features/us-016.feature",
+      "scenarios": [
+        {
+          "id": "US-016-S01",
+          "title": "两名审核人依次批准成片",
+          "steps": [
+            "Given 成片由剪辑师提交并通过QC",
+            "When 审核人甲通过初审且审核人乙通过复审",
+            "Then FinalVideo 状态为 approved 且审核链保留两条独立决定"
+          ]
+        },
+        {
+          "id": "US-016-S02",
+          "title": "阻止同一人完成两级审核",
+          "steps": [
+            "Given 审核人甲已完成初审",
+            "When 甲尝试提交复审决定",
+            "Then API 返回 reviewer_separation_required 且复审保持 pending"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "final_videos",
+        "final_video_versions"
+      ],
+      "operationIds": [
+        "us_016_post_final-videos",
+        "us_016_post_final-videos-id-review-submissions",
+        "us_010_post_reviews-id-decisions",
+        "us_016_get_final-videos-id-review-chain"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-017",
+      "title": "发布管理",
+      "source": "docs/delivery-specs/05-postproduction-publishing.md",
+      "featureFile": "tests/acceptance/features/us-017.feature",
+      "scenarios": [
+        {
+          "id": "US-017-S01",
+          "title": "多平台发布保持结果隔离",
+          "steps": [
+            "Given 同一成片创建B站和抖音两个计划",
+            "When B站成功而抖音返回不可重试版权错误",
+            "Then B站记录为 succeeded、抖音为 failed 且成功记录不回滚"
+          ]
+        },
+        {
+          "id": "US-017-S02",
+          "title": "未知结果先对账再决定重试",
+          "steps": [
+            "Given Provider 接收请求后网络断开且记录为 unknown_result",
+            "When 用户点击重试",
+            "Then 系统先执行 reconcile 且在确认远端不存在前不创建新发布请求"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "publish_plans",
+        "publish_records",
+        "publish_metric_snapshots"
+      ],
+      "operationIds": [
+        "us_017_post_publish-plans",
+        "us_017_post_publish-plans-id-precheck",
+        "us_017_post_publish-plans-id-execute",
+        "us_017_post_publish-records-id-reconcile",
+        "us_017_get_publish-records-id-metrics"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-021",
+      "title": "剪辑片段管理",
+      "source": "docs/delivery-specs/05-postproduction-publishing.md",
+      "featureFile": "tests/acceptance/features/us-021.feature",
+      "scenarios": [
+        {
+          "id": "US-021-S01",
+          "title": "分割片段保持连续源范围",
+          "steps": [
+            "Given Clip 源范围0至10秒位于时间线5秒",
+            "When 在源4秒处分割",
+            "Then 两个 Clip 源范围分别0至4秒和4至10秒且时间线连续"
+          ]
+        },
+        {
+          "id": "US-021-S02",
+          "title": "删除 Clip 不删除源媒体",
+          "steps": [
+            "Given 两个工程引用同一视频版本",
+            "When 在其中一个工程删除 Clip",
+            "Then 另一工程引用和源媒体仍可用"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "edit_clips"
+      ],
+      "operationIds": [
+        "us_021_post_edit-projects-id-clips",
+        "us_021_put_edit-projects-id-clips-clipid",
+        "us_021_delete_edit-projects-id-clips-clipid",
+        "us_021_post_edit-projects-id-clips-clipid-split"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-018",
+      "title": "项目任务管理",
+      "source": "docs/delivery-specs/06-collaboration.md",
+      "featureFile": "tests/acceptance/features/us-018.feature",
+      "scenarios": [
+        {
+          "id": "US-018-S01",
+          "title": "指派任务并通知负责人",
+          "steps": [
+            "Given 项目成员甲可管理任务且成员乙可被指派",
+            "When 甲创建高优先级任务并指派乙",
+            "Then WorkItem 为 open 且乙收到一条可跳转的去重通知"
+          ]
+        },
+        {
+          "id": "US-018-S02",
+          "title": "阻止指派项目外用户",
+          "steps": [
+            "Given 用户丙不是项目成员",
+            "When 创建任务并把 assigneeId 设置为丙",
+            "Then API 返回 assignee_not_project_member 且不创建任务"
+          ]
+        }
+      ],
+      "pages": [
+        "/work-items?type=task"
+      ],
+      "tables": [
+        "work_items",
+        "work_item_collaborators",
+        "work_item_labels"
+      ],
+      "operationIds": [
+        "us_018_post_projects-id-work-items",
+        "us_018_get_projects-id-work-items",
+        "us_018_post_work-items-id-transitions",
+        "us_018_put_work-items-id"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-019",
+      "title": "项目问题管理",
+      "source": "docs/delivery-specs/06-collaboration.md",
+      "featureFile": "tests/acceptance/features/us-019.feature",
+      "scenarios": [
+        {
+          "id": "US-019-S01",
+          "title": "从审核意见创建可追踪问题",
+          "steps": [
+            "Given Review 有1.0至1.5秒的闪烁评论",
+            "When reviewer 创建问题",
+            "Then 问题包含 Review、Shot 和时间段链接且可从两端导航"
+          ]
+        },
+        {
+          "id": "US-019-S02",
+          "title": "解决人不能验证本人修复",
+          "steps": [
+            "Given 用户甲把问题标记为 resolved",
+            "When 甲尝试标记 verified",
+            "Then API 返回 verification_separation_required"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "issue_json",
+        "work_item_links"
+      ],
+      "operationIds": [
+        "us_018_post_projects-id-work-items",
+        "us_018_post_work-items-id-transitions",
+        "us_019_post_work-items-id-links"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-020",
+      "title": "项目里程碑管理",
+      "source": "docs/delivery-specs/06-collaboration.md",
+      "featureFile": "tests/acceptance/features/us-020.feature",
+      "scenarios": [
+        {
+          "id": "US-020-S01",
+          "title": "任务完成驱动里程碑进度",
+          "steps": [
+            "Given 里程碑关联4个任务且已有3个完成",
+            "When 第4个任务完成",
+            "Then 里程碑完成率最终一致为100%并允许负责人确认达成"
+          ]
+        },
+        {
+          "id": "US-020-S02",
+          "title": "普通成员不能强制达成未满足里程碑",
+          "steps": [
+            "Given mandatory 条件仍有1项未满足",
+            "When member 提交 achieved 和 overrideReason",
+            "Then API 返回 permission_denied 且状态不变"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "milestone_json",
+        "work_item_links",
+        "milestone_progress"
+      ],
+      "operationIds": [
+        "us_018_post_projects-id-work-items",
+        "us_020_get_projects-id-milestones",
+        "us_018_post_work-items-id-transitions"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-022",
+      "title": "用户与成员管理",
+      "source": "docs/delivery-specs/07-platform-capabilities.md",
+      "featureFile": "tests/acceptance/features/us-022.feature",
+      "scenarios": [
+        {
+          "id": "US-022-S01",
+          "title": "停用用户立即撤销会话",
+          "steps": [
+            "Given 活跃用户拥有两个会话且不是最后一名管理员",
+            "When platform_admin 停用该用户",
+            "Then 两个会话均不可继续访问且历史审核署名仍显示"
+          ]
+        },
+        {
+          "id": "US-022-S02",
+          "title": "阻止停用最后一名平台管理员",
+          "steps": [
+            "Given 组织只有一名 active platform_admin",
+            "When 尝试停用该用户",
+            "Then API 返回 409 last_platform_admin 且用户状态不变"
+          ]
+        }
+      ],
+      "pages": [
+        "/admin/users"
+      ],
+      "tables": [
+        "users",
+        "user_system_roles",
+        "invitations"
+      ],
+      "operationIds": [
+        "us_022_post_admin-users",
+        "us_022_post_admin-invitations",
+        "us_022_patch_admin-users-id-status",
+        "us_022_put_admin-users-id-roles",
+        "us_022_post_admin-users-id-revoke-sessions"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-023",
+      "title": "认证与会话安全",
+      "source": "docs/delivery-specs/07-platform-capabilities.md",
+      "featureFile": "tests/acceptance/features/us-023.feature",
+      "scenarios": [
+        {
+          "id": "US-023-S01",
+          "title": "改密撤销其他会话",
+          "steps": [
+            "Given 用户在浏览器A和B登录",
+            "When 用户在A改密并选择撤销其他会话",
+            "Then A保持有效、B下次请求返回401且产生审计记录"
+          ]
+        },
+        {
+          "id": "US-023-S02",
+          "title": "SSO state 不可重放",
+          "steps": [
+            "Given 一个 SSO state 已成功消费",
+            "When 攻击者再次使用相同 state 回调",
+            "Then API 拒绝且不创建新会话并生成安全审计"
+          ]
+        }
+      ],
+      "pages": [
+        "/login",
+        "/account/security"
+      ],
+      "tables": [
+        "sessions",
+        "auth_attempts",
+        "sso_states"
+      ],
+      "operationIds": [
+        "us_023_post_auth-login",
+        "us_023_post_auth-sso-provider-start",
+        "us_023_get_auth-sso-provider-callback",
+        "us_023_get_auth-sessions",
+        "us_023_delete_auth-sessions-id",
+        "us_023_post_auth-change-password"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-024",
+      "title": "通知中心",
+      "source": "docs/delivery-specs/07-platform-capabilities.md",
+      "featureFile": "tests/acceptance/features/us-024.feature",
+      "scenarios": [
+        {
+          "id": "US-024-S01",
+          "title": "SSE 断线后无丢失且无重复",
+          "steps": [
+            "Given 用户已收到游标100并断线",
+            "When 游标101和102产生后用户重连",
+            "Then 页面补拉两条且 dedupeKey 不产生重复通知"
+          ]
+        },
+        {
+          "id": "US-024-S02",
+          "title": "禁止关闭全部安全通知渠道",
+          "steps": [
+            "Given security 类别要求站内必开",
+            "When 用户关闭站内和邮件",
+            "Then API 返回 mandatory_notification_channel 且偏好不变"
+          ]
+        }
+      ],
+      "pages": [
+        "/notifications",
+        "/account/notification-preferences"
+      ],
+      "tables": [
+        "notifications",
+        "notification_preferences",
+        "notification_delivery_attempts"
+      ],
+      "operationIds": [
+        "us_024_get_notifications",
+        "us_024_get_notifications-stream",
+        "us_024_post_notifications-read-batch",
+        "us_024_post_notifications-id-archive",
+        "us_024_get_notification-preferences",
+        "us_024_put_notification-preferences"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-025",
+      "title": "统一回收站与数据恢复",
+      "source": "docs/delivery-specs/07-platform-capabilities.md",
+      "featureFile": "tests/acceptance/features/us-025.feature",
+      "scenarios": [
+        {
+          "id": "US-025-S01",
+          "title": "恢复项目及依赖组",
+          "steps": [
+            "Given 已删除项目和其剧集仍在保留期且无名称冲突",
+            "When owner 生成计划并按相同 digest 执行",
+            "Then 项目和依赖组恢复且所有引用核对通过"
+          ]
+        },
+        {
+          "id": "US-025-S02",
+          "title": "法务冻结阻止永久删除",
+          "steps": [
+            "Given Shot 存在活动 retention hold",
+            "When 管理员提交永久删除",
+            "Then API 返回 retention_hold_active 且文件和记录均保留"
+          ]
+        }
+      ],
+      "pages": [
+        "/projects/{projectId}/recycle-bin"
+      ],
+      "tables": [
+        "recovery_plans",
+        "retention_holds",
+        "cleanup_batches"
+      ],
+      "operationIds": [
+        "us_025_get_recycle-bin",
+        "us_025_post_recycle-bin-restore-plans",
+        "us_025_post_recycle-bin-restores",
+        "us_025_post_recycle-bin-permanent-deletions"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-026",
+      "title": "配置中心",
+      "source": "docs/delivery-specs/07-platform-capabilities.md",
+      "featureFile": "tests/acceptance/features/us-026.feature",
+      "scenarios": [
+        {
+          "id": "US-026-S01",
+          "title": "正确解析三层配置",
+          "steps": [
+            "Given system=A、project=B、当前用户无覆盖",
+            "When 用户读取生效值",
+            "Then 返回B且 source=project；删除项目覆盖后返回A"
+          ]
+        },
+        {
+          "id": "US-026-S02",
+          "title": "敏感值保持原值不被掩码覆盖",
+          "steps": [
+            "Given 页面读取凭据只得到掩码",
+            "When 用户更新其他字段并对凭据提交 valueAction=keep",
+            "Then 密文摘要不变且响应不包含明文"
+          ]
+        }
+      ],
+      "pages": [
+        "/admin/settings",
+        "/projects/{id}/settings",
+        "/account/preferences"
+      ],
+      "tables": [
+        "setting_definitions",
+        "typed_settings",
+        "setting_versions"
+      ],
+      "operationIds": [
+        "us_026_get_settings-effective",
+        "us_026_get_settings-scope-key",
+        "us_026_put_settings-scope-key",
+        "us_026_delete_settings-scope-key",
+        "us_026_post_settings-scope-key-rollbacks"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-027",
+      "title": "操作审计",
+      "source": "docs/delivery-specs/07-platform-capabilities.md",
+      "featureFile": "tests/acceptance/features/us-027.feature",
+      "scenarios": [
+        {
+          "id": "US-027-S01",
+          "title": "高风险命令在审计不可用时失败关闭",
+          "steps": [
+            "Given 审计持久化不可用且用户尝试永久删除",
+            "When 命令执行",
+            "Then 返回 audit_unavailable、对象未删除且产生运维告警"
+          ]
+        },
+        {
+          "id": "US-027-S02",
+          "title": "项目管理员无法查询其他项目",
+          "steps": [
+            "Given 用户仅为项目A admin",
+            "When 过滤 projectId=项目B",
+            "Then API 返回 permission_denied 且不泄露记录数量"
+          ]
+        }
+      ],
+      "pages": [
+        "/admin/audit"
+      ],
+      "tables": [
+        "audit_records",
+        "audit_export_jobs"
+      ],
+      "operationIds": [
+        "us_027_get_audit-records",
+        "us_027_get_audit-records-id",
+        "us_027_post_audit-record-exports",
+        "us_027_get_audit-record-exports-id"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-028",
+      "title": "版本化数据导入导出",
+      "source": "docs/delivery-specs/07-platform-capabilities.md",
+      "featureFile": "tests/acceptance/features/us-028.feature",
+      "scenarios": [
+        {
+          "id": "US-028-S01",
+          "title": "导出后导入保持引用完整",
+          "steps": [
+            "Given 项目包含剧本、Shot、资产、音频和快照",
+            "When 导出为当前 schema 包并以 create_new 导入",
+            "Then 核对报告对象数和文件哈希一致且所有内部引用指向新 ID"
+          ]
+        },
+        {
+          "id": "US-028-S02",
+          "title": "校验失败不产生半成品",
+          "steps": [
+            "Given 项目包中一个媒体文件哈希错误",
+            "When 用户创建导入计划",
+            "Then 返回 package_checksum_mismatch 且正式表和媒体区无新增对象"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "export_jobs",
+        "import_jobs",
+        "import_object_mappings",
+        "staging_files"
+      ],
+      "operationIds": [
+        "us_028_post_project-exports",
+        "us_028_get_project-exports-id",
+        "us_028_post_project-imports-plans",
+        "us_028_post_project-imports-id-confirm",
+        "us_028_get_project-imports-id"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-029",
+      "title": "备份与灾难恢复",
+      "source": "docs/delivery-specs/07-platform-capabilities.md",
+      "featureFile": "tests/acceptance/features/us-029.feature",
+      "scenarios": [
+        {
+          "id": "US-029-S01",
+          "title": "通过验证的备份完成隔离恢复",
+          "steps": [
+            "Given 一个覆盖数据库、媒体和事件位点且哈希通过的 BackupSet",
+            "When 执行已批准的隔离恢复并通过抽样旅程",
+            "Then RestoreJob 为 verified 且记录实际RTO和引用核对报告"
+          ]
+        },
+        {
+          "id": "US-029-S02",
+          "title": "未验证备份不能执行恢复",
+          "steps": [
+            "Given BackupSet 仅完成文件写入但未验证",
+            "When 管理员执行 RestorePlan",
+            "Then API 返回 backup_not_verified 且目标环境未改变"
+          ]
+        }
+      ],
+      "pages": [
+        "/admin/backups"
+      ],
+      "tables": [
+        "backup_sets",
+        "backup_artifacts",
+        "backup_verifications",
+        "restore_jobs",
+        "restore_approvals",
+        "restore_verifications"
+      ],
+      "operationIds": [
+        "us_029_post_admin-backups",
+        "us_029_post_admin-backups-id-verify",
+        "us_029_post_admin-restore-plans",
+        "us_029_post_admin-restores-id-approvals",
+        "us_029_post_admin-restores-id-execute"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-PM-001",
+      "title": "Prompt 模板管理",
+      "source": "docs/delivery-specs/08-ai-governance-analytics.md",
+      "featureFile": "tests/acceptance/features/us-pm-001.feature",
+      "scenarios": [
+        {
+          "id": "US-PM-001-S01",
+          "title": "发布模板后历史任务可复现",
+          "steps": [
+            "Given 模板草稿包含变量 characterName 且校验通过",
+            "When 管理员发布版本3并用它创建任务",
+            "Then 任务保存 templateVersion=3 和 resolvedPromptDigest 且后续草稿编辑不改变任务"
+          ]
+        },
+        {
+          "id": "US-PM-001-S02",
+          "title": "私密变量不出现在预览和审计",
+          "steps": [
+            "Given apiHint 变量被标记 sensitive",
+            "When 用户校验并执行模板",
+            "Then 页面和 AuditRecord 只显示掩码且日志不包含原值"
+          ]
+        }
+      ],
+      "pages": [
+        "/prompt-templates",
+        "/prompt-templates/{id}"
+      ],
+      "tables": [
+        "prompt_templates",
+        "prompt_template_versions"
+      ],
+      "operationIds": [
+        "us_pm_001_post_prompt-templates",
+        "us_pm_001_put_prompt-templates-id-draft",
+        "us_pm_001_post_prompt-templates-id-validate",
+        "us_pm_001_post_prompt-templates-id-publish",
+        "us_pm_001_post_prompt-templates-id-test-runs",
+        "us_pm_001_post_prompt-templates-id-archive"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "US-DS-001",
+      "title": "数据统计",
+      "source": "docs/delivery-specs/08-ai-governance-analytics.md",
+      "featureFile": "tests/acceptance/features/us-ds-001.feature",
+      "scenarios": [
+        {
+          "id": "US-DS-001-S01",
+          "title": "项目权限限制统计和导出",
+          "steps": [
+            "Given 用户只可访问项目A且请求项目A和B",
+            "When 打开仪表盘并导出",
+            "Then 响应和导出仅包含A且记录有效数据范围"
+          ]
+        },
+        {
+          "id": "US-DS-001-S02",
+          "title": "成本对账后指标可重建",
+          "steps": [
+            "Given 某任务预占100、结算80并调整加5",
+            "When 成本投影重建",
+            "Then 指标显示 reserved=100、settled=80、adjusted=5、actual=85且 sampleCount=1"
+          ]
+        }
+      ],
+      "pages": [
+        "/dashboard",
+        "/data-center/metrics"
+      ],
+      "tables": [
+        "daily_ai_cost_metrics",
+        "daily_production_metrics",
+        "daily_review_metrics",
+        "publish_metric_snapshots",
+        "cost_adjustments"
+      ],
+      "operationIds": [
+        "us_ds_001_get_metrics-project-overview",
+        "us_ds_001_get_metrics-ai-cost",
+        "us_ds_001_get_metrics-production-efficiency",
+        "us_ds_001_get_metrics-review-quality",
+        "us_ds_001_post_metric-exports"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-001",
+      "title": "项目成员与权限管理",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-001.feature",
+      "scenarios": [
+        {
+          "id": "CAP-001-S01",
+          "title": "deny 覆盖角色默认权限",
+          "steps": [
+            "Given producer 角色默认允许 publish.execute 但该成员 deny 包含此权限",
+            "When 成员尝试执行发布",
+            "Then API 返回 permission_denied 且权限解释显示 deny 来源"
+          ]
+        },
+        {
+          "id": "CAP-001-S02",
+          "title": "转移所有权保持唯一 owner",
+          "steps": [
+            "Given 项目甲的 owner 为用户A且用户B为active成员",
+            "When A把所有权转移给B",
+            "Then 同一事务后B为owner、A降为admin且始终不存在两个owner"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "project_members"
+      ],
+      "operationIds": [
+        "cap_001_post_projects-id-members",
+        "cap_001_put_projects-id-members-userid",
+        "cap_001_delete_projects-id-members-userid",
+        "cap_001_post_projects-id-ownership-transfers"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-002",
+      "title": "模型配置与路由",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-002.feature",
+      "scenarios": [
+        {
+          "id": "CAP-002-S01",
+          "title": "激活模型并切换默认路由",
+          "steps": [
+            "Given 模型通过连接和能力测试",
+            "When ai_admin 把它设为 image.storyboard 默认",
+            "Then 旧默认取消且新任务解析到新配置版本"
+          ]
+        },
+        {
+          "id": "CAP-002-S02",
+          "title": "凭据不经 API 回显",
+          "steps": [
+            "Given 模型配置引用有效凭据",
+            "When 管理员读取或导出配置",
+            "Then 响应只含 credentialRef 和掩码且无密钥内容"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "model_configs",
+        "model_route_defaults"
+      ],
+      "operationIds": [
+        "cap_002_post_model-configs",
+        "cap_002_put_model-configs-id",
+        "cap_002_post_model-configs-id-connection-tests",
+        "cap_002_post_model-configs-id-activate"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-003",
+      "title": "流水线模板管理",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-003.feature",
+      "scenarios": [
+        {
+          "id": "CAP-003-S01",
+          "title": "发布后运行固定模板版本",
+          "steps": [
+            "Given 模板版本2已发布",
+            "When 创建运行后管理员发布版本3",
+            "Then 既有运行仍执行版本2且新运行使用版本3"
+          ]
+        },
+        {
+          "id": "CAP-003-S02",
+          "title": "拒绝非法循环依赖",
+          "steps": [
+            "Given 草稿节点A依赖B且B依赖A",
+            "When 执行模板校验",
+            "Then 返回 pipeline_cycle_detected 且禁止发布"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "pipeline_templates",
+        "pipeline_template_versions"
+      ],
+      "operationIds": [
+        "cap_003_post_pipeline-templates",
+        "cap_003_put_pipeline-templates-id-draft",
+        "cap_003_post_pipeline-templates-id-validate",
+        "cap_003_post_pipeline-templates-id-publish"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-004",
+      "title": "数据集管理",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-004.feature",
+      "scenarios": [
+        {
+          "id": "CAP-004-S01",
+          "title": "导入通过扫描后发布版本",
+          "steps": [
+            "Given staging 文件授权完整且质量检查通过",
+            "When 管理员确认导入并发布",
+            "Then 产生不可变 DatasetVersion 且 manifestHash 可核对"
+          ]
+        },
+        {
+          "id": "CAP-004-S02",
+          "title": "阻止导出受限数据集",
+          "steps": [
+            "Given Dataset classification=restricted 且用户无 export_sensitive 权限",
+            "When 请求导出",
+            "Then API 返回 permission_denied 且不创建文件"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "datasets",
+        "dataset_versions",
+        "dataset_items"
+      ],
+      "operationIds": [
+        "cap_004_post_datasets",
+        "cap_004_post_datasets-id-imports",
+        "cap_004_post_datasets-id-versions-v-publish",
+        "cap_004_post_dataset-exports"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-005",
+      "title": "AI 对话与创意工作室",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-005.feature",
+      "scenarios": [
+        {
+          "id": "CAP-005-S01",
+          "title": "停止流式回答并刷新恢复",
+          "steps": [
+            "Given 助手正在流式生成回复",
+            "When 用户停止并刷新页面",
+            "Then 消息状态为 stopped 且已接收内容完整恢复"
+          ]
+        },
+        {
+          "id": "CAP-005-S02",
+          "title": "重新生成不覆盖原回复",
+          "steps": [
+            "Given 一条 completed 助手回复",
+            "When 用户点击重新生成",
+            "Then 创建 sibling 回复且原回复内容和模型快照不变"
+          ]
+        }
+      ],
+      "pages": [
+        "/chat",
+        "/studio"
+      ],
+      "tables": [
+        "conversations",
+        "messages"
+      ],
+      "operationIds": [
+        "cap_005_post_conversations",
+        "cap_005_get_conversations-id-messages",
+        "cap_005_post_conversations-id-messages",
+        "cap_005_post_messages-id-stop",
+        "cap_005_post_messages-id-regenerations"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-006",
+      "title": "AI 任务队列运维",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-006.feature",
+      "scenarios": [
+        {
+          "id": "CAP-006-S01",
+          "title": "仅重试可重试失败",
+          "steps": [
+            "Given 任务因临时限流失败且 retryable=true",
+            "When 操作员重试",
+            "Then 新建 attempt=2、输入哈希不变且不重复创建业务目标"
+          ]
+        },
+        {
+          "id": "CAP-006-S02",
+          "title": "不重试永久安全失败",
+          "steps": [
+            "Given 任务因内容安全拒绝且 retryable=false",
+            "When 调用重试 API",
+            "Then 返回 task_not_retryable 且 attempt 数不变"
+          ]
+        }
+      ],
+      "pages": [
+        "/ai-tasks"
+      ],
+      "tables": [],
+      "operationIds": [
+        "cap_006_get_ai-tasks",
+        "us_009_post_ai-tasks-id-cancel",
+        "us_011_post_ai-tasks-id-retry",
+        "cap_006_post_ai-tasks-id-manual-resolutions"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration",
+        "e2e"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-007",
+      "title": "项目预算治理",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-007.feature",
+      "scenarios": [
+        {
+          "id": "CAP-007-S01",
+          "title": "并发任务通过预占防止超额",
+          "steps": [
+            "Given 剩余额度100且两个任务各需80",
+            "When 两个任务并发预占",
+            "Then 仅一个成功且另一个返回 budget_exceeded"
+          ]
+        },
+        {
+          "id": "CAP-007-S02",
+          "title": "失败任务释放预占",
+          "steps": [
+            "Given 任务已预占80后在Provider调用前失败",
+            "When 失败处理完成",
+            "Then reservation 为 released 且可用余额恢复"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "project_budgets",
+        "budget_reservations",
+        "cost_records",
+        "cost_adjustments"
+      ],
+      "operationIds": [
+        "cap_007_get_projects-id-budget",
+        "cap_007_put_projects-id-budget",
+        "cap_007_get_projects-id-budget-reconciliation",
+        "cap_007_post_projects-id-budget-reconciliation-runs"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    },
+    {
+      "id": "CAP-008",
+      "title": "质量规则配置",
+      "source": "docs/delivery-specs/09-operational-capabilities.md",
+      "featureFile": "tests/acceptance/features/cap-008.feature",
+      "scenarios": [
+        {
+          "id": "CAP-008-S01",
+          "title": "QC 固定规则版本",
+          "steps": [
+            "Given 项目规则集版本4且 QC 开始运行",
+            "When 管理员发布版本5",
+            "Then 既有报告仍使用版本4且新报告使用版本5"
+          ]
+        },
+        {
+          "id": "CAP-008-S02",
+          "title": "项目不能关闭系统必需规则",
+          "steps": [
+            "Given 字体授权检查被标记 mandatory",
+            "When 项目管理员在覆盖中禁用它",
+            "Then API 返回 mandatory_quality_rule 且策略不变"
+          ]
+        }
+      ],
+      "pages": [],
+      "tables": [
+        "quality_rule_sets",
+        "quality_rule_set_versions",
+        "project_quality_policies"
+      ],
+      "operationIds": [
+        "cap_008_post_quality-rule-sets",
+        "cap_008_put_quality-rule-sets-id-draft",
+        "cap_008_post_quality-rule-sets-id-sample-runs",
+        "cap_008_post_quality-rule-sets-id-publish",
+        "cap_008_put_projects-id-quality-policy"
+      ],
+      "requiredTestLayers": [
+        "contract",
+        "integration"
+      ],
+      "implementationEvidence": {
+        "code": [],
+        "migrations": [],
+        "tests": [],
+        "status": "unverified"
+      }
+    }
+  ]
+}

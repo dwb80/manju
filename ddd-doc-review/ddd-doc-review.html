@@ -194,7 +194,7 @@
       <h1>AI漫剧生产平台 DDD文档体系评审报告</h1>
       <p class="subtitle">基于领域驱动设计（DDD）视角的全量文档评审 — 需求清晰度 / 开发规范完整性 / 逻辑闭环验证</p>
       <p class="meta">评审日期：2026-07-28 ｜ 评审范围：docs/ 全部文档（16份DDD规格 + 7份核心文档 + 5份模块指南）｜ 评审角色：产品经理视角</p>
-      <p style="margin-top:16px;padding:12px 16px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px"><strong>历史评审快照：</strong>本报告中的部分问题已在 2026-07-28 文档整改中修复，不再作为当前权威结论。请以 <code>docs/ddd/remediation-report-2026-07-28.md</code>、<code>docs/feature-status.md</code> 和当前 <code>docs/ddd/</code> 为准。</p>
+      <p style="margin-top:16px;padding:12px 16px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px"><strong>历史评审快照：</strong>本报告中的部分问题已在 2026-07-28 文档整改中修复，不再作为当前权威结论。整改记录已归档至 <code>docs/archive/reviews/2026-07-28/04-ddd-remediation-report.md</code>；当前结论以 <code>docs/implementation/02-feature-status.md</code> 和 <code>docs/domain/</code> 为准。</p>
     </header>
 
     <!-- ==================== TOC ==================== -->
@@ -254,7 +254,7 @@
       </div>
 
       <div class="card card-danger">
-        <p><strong>文档与代码一致性 — 严重偏离</strong>：<code>feature-status.md</code> 声称已完成的功能（三工厂资产图片多视图 18 端点、前端 AssetImageManager 组件等）在实际代码中大面积缺失或实现不完整，文档与代码的差距已达<strong>不可接受</strong>程度。</p>
+        <p><strong>文档与代码一致性 — 严重偏离</strong>：<code>03-feature-status.md</code> 声称已完成的功能（三工厂资产图片多视图 18 端点、前端 AssetImageManager 组件等）在实际代码中大面积缺失或实现不完整，文档与代码的差距已达<strong>不可接受</strong>程度。</p>
       </div>
     </section>
 
@@ -448,43 +448,43 @@
           </thead>
           <tbody>
             <tr>
-              <td>governance.md</td>
+              <td>02-governance.md</td>
               <td><span class="score-badge score-a">A</span></td>
               <td>治理体系完善，引用矩阵+纠正表+变更分级</td>
               <td>引用矩阵与 spec §5 文档清单不一致；轻微变更要求"记录在文档头部"但实际未执行</td>
             </tr>
             <tr>
-              <td>glossary.md</td>
+              <td>03-glossary.md</td>
               <td><span class="score-badge score-b">B</span></td>
               <td>27条业务概念+26条状态术语，覆盖面广</td>
               <td>遗漏 <code>stale</code>/<code>delayed</code>/<code>analyzed</code>/<code>analyzing</code> 状态；缺角色术语；缺 <code>ConsistencyPack</code></td>
             </tr>
             <tr>
-              <td>contracts.md</td>
+              <td>05-contracts.md</td>
               <td><span class="score-badge score-c">C</span></td>
               <td>100+条事件映射，6个ACL适配器，19条CQRS投影</td>
               <td>§1链路描述与§2注册表5+处不一致；缺3个ACL适配器；≤2s滞后容忍度过严</td>
             </tr>
             <tr>
-              <td>module-map.md</td>
+              <td>06-module-map.md</td>
               <td><span class="score-badge score-b">B</span></td>
               <td>23页面映射清晰，一级分组合理</td>
               <td>音频/工作台/剪辑聚合根标注不准确；缺 <code>/studio</code>/<code>/logs</code>/<code>/settings</code> 页面</td>
             </tr>
             <tr>
-              <td>iteration-priority.md</td>
+              <td>10-iteration-priority.md</td>
               <td><span class="score-badge score-c">C</span></td>
               <td>17聚合 P0-P4 分级，6步执行流程</td>
               <td><strong>Review聚合遗漏</strong>（严重）；"写路径适配"与 project_memory "旧写路径迁移"用词不统一</td>
             </tr>
             <tr>
-              <td>infrastructure.md</td>
+              <td>07-infrastructure.md</td>
               <td><span class="score-badge score-c">C</span></td>
               <td>3个核心接口+8个公共错误码</td>
               <td>缺6+个错误码；缺 <code>EventStore</code>/<code>DomainCommand</code>/<code>IdempotencyKeyProvider</code> 接口；DomainEvent缺version字段</td>
             </tr>
             <tr>
-              <td>dependency-rules.md</td>
+              <td>09-dependency-rules.md</td>
               <td><span class="score-badge score-b">B</span></td>
               <td>分层依赖图清晰，12条跨聚合引用规则</td>
               <td>缺5条跨聚合引用关系；缺 Application Query Handler 层；BudgetCheckService 数据获取方式不明</td>
@@ -495,17 +495,17 @@
 
       <div class="card card-danger">
         <p class="callout-title"><span class="tag tag-p0">P0</span> Review 聚合在迭代优先级表中完全缺失</p>
-        <p><code>iteration-priority.md</code> 列出了 17 个聚合的优先级分级，但<strong>审核质量上下文的核心聚合 Review 完全未出现</strong>。Review 是交付链路的关键环节（审核通过才能发布），缺失迭代优先级意味着审核功能的开发节奏无法被计划。建议补充 Review 聚合为 P1，与 QCReport 同迭代。</p>
+        <p><code>10-iteration-priority.md</code> 列出了 17 个聚合的优先级分级，但<strong>审核质量上下文的核心聚合 Review 完全未出现</strong>。Review 是交付链路的关键环节（审核通过才能发布），缺失迭代优先级意味着审核功能的开发节奏无法被计划。建议补充 Review 聚合为 P1，与 QCReport 同迭代。</p>
       </div>
 
       <div class="card card-warn">
         <p class="callout-title"><span class="tag tag-p1">P1</span> 跨上下文协作契约内部不一致</p>
-        <p><code>contracts.md</code> 的 §1 链路描述与 §2 消费者注册表存在 5+ 处不一致：<code>ReviewApproved</code>/<code>ReviewRejected</code> 链路遗漏智能助手消费者；<code>DatasetDeleted</code> 事件在 §1 未提及；团队成员变更事件（<code>MemberAdded</code> 等）在 §1 完全缺失。建议以 §2 注册表为权威，反向补全 §1 链路描述。</p>
+        <p><code>05-contracts.md</code> 的 §1 链路描述与 §2 消费者注册表存在 5+ 处不一致：<code>ReviewApproved</code>/<code>ReviewRejected</code> 链路遗漏智能助手消费者；<code>DatasetDeleted</code> 事件在 §1 未提及；团队成员变更事件（<code>MemberAdded</code> 等）在 §1 完全缺失。建议以 §2 注册表为权威，反向补全 §1 链路描述。</p>
       </div>
 
       <div class="card card-warn">
         <p class="callout-title"><span class="tag tag-p1">P1</span> 公共基础设施缺少关键接口定义</p>
-        <p><code>infrastructure.md</code> 定义了 <code>AggregateRoot</code>、<code>AggregateRepository</code>、<code>DomainEvent</code> 三个接口，但缺少：<code>EventStore</code>（事件存储，contracts.md 提到"支持从事件存储全量重放"）、<code>DomainCommand</code>（命令公共接口）、<code>IdempotencyKeyProvider</code>（幂等键接口，project_memory 记录了 SHA-256 方案）。同时缺少 <code>budget_exceeded</code>、<code>quota_exhausted</code>、<code>dag_has_cycle</code>、<code>name_duplicate_in_project</code> 等 6+ 个公共错误码。</p>
+        <p><code>07-infrastructure.md</code> 定义了 <code>AggregateRoot</code>、<code>AggregateRepository</code>、<code>DomainEvent</code> 三个接口，但缺少：<code>EventStore</code>（事件存储，05-contracts.md 提到"支持从事件存储全量重放"）、<code>DomainCommand</code>（命令公共接口）、<code>IdempotencyKeyProvider</code>（幂等键接口，project_memory 记录了 SHA-256 方案）。同时缺少 <code>budget_exceeded</code>、<code>quota_exhausted</code>、<code>dag_has_cycle</code>、<code>name_duplicate_in_project</code> 等 6+ 个公共错误码。</p>
       </div>
     </section>
 
@@ -515,7 +515,7 @@
     <section id="sec5">
       <h2>五、需求描述清晰度评审</h2>
 
-      <h3>5.1 产品设计规格（product-design-spec.md）</h3>
+      <h3>5.1 产品设计规格（01-product-design-spec.md）</h3>
 
       <div class="card">
         <p><strong>优点</strong>：产品愿景清晰（"AI生产流水线管理平台"），8阶段业务流程完整，优先级评分公式（业务价值40%+用户影响30%+替代难度20%+开发成本10%）提供量化依据，NFR覆盖全面。</p>
@@ -531,7 +531,7 @@
         </ul>
       </div>
 
-      <h3>5.2 需求与验收标准（requirements-and-acceptance.md）</h3>
+      <h3>5.2 需求与验收标准（02-requirements-and-acceptance.md）</h3>
 
       <div class="card">
         <p><strong>优点</strong>：21 个 US 覆盖完整业务流程，每个 US 有 6-14 个 AC，§2.10 跨模块数据流设计完善，§6 业务规则清单（35条BR）有效避免重复定义。</p>
@@ -558,17 +558,17 @@
         <ul>
           <li><strong>数据字典表名与物理表不一致</strong>：§9.1 列出 <code>shots</code>/<code>clips</code>/<code>timelines</code>/<code>audios</code>/<code>subtitles</code> 表，但 sqlite-plan.md 中这些表不存在。</li>
           <li><strong>AC9.6 引用 WebSocket</strong>：描述"通过 WebSocket / SSE 推送"，但项目约束明确禁止 WebSocket。</li>
-          <li><strong>Review状态机与glossary不一致</strong>：§4.9 列出7态不含 <code>archived</code>，但 glossary.md 有此状态。</li>
+          <li><strong>Review状态机与glossary不一致</strong>：§4.9 列出7态不含 <code>archived</code>，但 03-glossary.md 有此状态。</li>
           <li><strong>缺失US</strong>：Prompt模板管理和数据统计没有对应的用户故事。</li>
           <li><strong>US-018字段名不一致</strong>：§5.1.22 使用 <code>type</code>，§3.14 定义为 <code>category</code>。</li>
         </ul>
       </div>
 
-      <h3>5.3 功能状态基线（feature-status.md）</h3>
+      <h3>5.3 功能状态基线（03-feature-status.md）</h3>
 
       <div class="card card-danger">
         <p class="callout-title"><span class="tag tag-p0">P0</span> 功能完成状态严重虚报</p>
-        <p><code>feature-status.md</code> 声称"主功能187项，175项完成"，并声称三工厂模块"后端18端点 + 前端 AssetImageManager 抽屉 + AI对话框双模式 + 筛选三维度 + 主图晋升"均已完成。但实际代码审查发现：</p>
+        <p><code>03-feature-status.md</code> 声称"主功能187项，175项完成"，并声称三工厂模块"后端18端点 + 前端 AssetImageManager 抽屉 + AI对话框双模式 + 筛选三维度 + 主图晋升"均已完成。但实际代码审查发现：</p>
         <ul>
           <li>后端图片 API 端点只有约 12 个（非 18），且路径与文档不一致</li>
           <li>前端 <code>AssetImageManager</code> 组件<strong>完全不存在</strong></li>
@@ -584,7 +584,7 @@
     <section id="sec6">
       <h2>六、开发规范完整性评审</h2>
 
-      <h3>6.1 架构与开发指南（architecture-and-development.md）</h3>
+      <h3>6.1 架构与开发指南（01-architecture-and-development.md）</h3>
 
       <div class="card card-warn">
         <p class="callout-title">缺失的关键开发规范</p>
@@ -603,7 +603,7 @@
       <div class="card card-warn">
         <p class="callout-title">API规范缺失项</p>
         <ul>
-          <li><strong>视频状态术语不一致</strong>：api.md 使用 <code>pending/processing/success/failed</code>，glossary.md 定义为 <code>queued/running/completed/failed/cancelled</code>。</li>
+          <li><strong>视频状态术语不一致</strong>：api.md 使用 <code>pending/processing/success/failed</code>，03-glossary.md 定义为 <code>queued/running/completed/failed/cancelled</code>。</li>
           <li><strong>文档不自包含</strong>：声明"详细字段以TypeScript类型为准"，作为API文档应提供完整入参/出参/错误码。</li>
           <li><strong>缺少分页规范</strong>：没有统一的 page/pageSize 命名和默认值说明。</li>
           <li><strong>缺少API版本管理策略</strong>：虽声明"不使用版本号段"，但缺少向后兼容的变更管理策略。</li>
@@ -623,7 +623,7 @@
         </ul>
       </div>
 
-      <h3>6.4 模型中心指南（model-center-guide.md）</h3>
+      <h3>6.4 模型中心指南（03-model-center-guide.md）</h3>
 
       <div class="card card-danger">
         <p class="callout-title"><span class="tag tag-p0">P0</span> 模型中心6张核心表仅3张存在且表名不一致</p>
@@ -891,8 +891,8 @@
             <tbody>
               <tr><td>product-design-spec 附录二</td><td>P0/P1/P2 三级</td><td>→ V1.0/V1.1/V1.2+V2.0</td></tr>
               <tr><td>requirements §1.6</td><td>P0(MVP核心)/P1(重要)/P2(增强)</td><td>—</td></tr>
-              <tr><td>ddd/iteration-priority.md</td><td>P0/P1/P2/P3/P4 五级</td><td>→ 迭代1-4</td></tr>
-              <tr><td>feature-status.md</td><td>P3 MOAT</td><td>—</td></tr>
+              <tr><td>ddd/10-iteration-priority.md</td><td>P0/P1/P2/P3/P4 五级</td><td>→ 迭代1-4</td></tr>
+              <tr><td>03-feature-status.md</td><td>P3 MOAT</td><td>—</td></tr>
             </tbody>
           </table>
         </div>
@@ -935,9 +935,9 @@
 
       <div class="card card-warn">
         <ul>
-          <li><strong>视频状态</strong>：api.md 用 <code>pending/processing/success/failed</code>，glossary.md 定义 <code>queued/running/completed/failed/cancelled</code></li>
+          <li><strong>视频状态</strong>：api.md 用 <code>pending/processing/success/failed</code>，03-glossary.md 定义 <code>queued/running/completed/failed/cancelled</code></li>
           <li><strong>通信协议</strong>：requirements AC9.6 提到 "WebSocket"，但项目约束明确禁止 WebSocket</li>
-          <li><strong>Review状态</strong>：requirements §4.9 列7态不含 <code>archived</code>，glossary.md 有此状态</li>
+          <li><strong>Review状态</strong>：requirements §4.9 列7态不含 <code>archived</code>，03-glossary.md 有此状态</li>
         </ul>
       </div>
 
@@ -968,7 +968,7 @@
       <div class="card card-danger">
         <ol>
           <li><strong>修正发布交付上下文状态机矛盾</strong>：将 <code>StartPackaging</code> 前置状态修改为 <code>draft / failed / ready</code>，消除"撤销发布后无法重新打包"的业务流程死锁。</li>
-          <li><strong>修正 feature-status.md 虚报状态</strong>：如实反映三工厂资产图片多视图模块的实现状态，移除"后端18端点""前端AssetImageManager"等不实声明。</li>
+          <li><strong>修正 03-feature-status.md 虚报状态</strong>：如实反映三工厂资产图片多视图模块的实现状态，移除"后端18端点""前端AssetImageManager"等不实声明。</li>
           <li><strong>统一 API 路径</strong>：以 requirements 契约或 api.md 为权威（二选一），统一全部 API 路径，消除接口路径不匹配。</li>
           <li><strong>补充 Review 聚合到迭代优先级表</strong>：建议 P1，与 QCReport 同迭代。</li>
           <li><strong>统一 03/06 上下文命名风格</strong>：将小写驼峰命令名全部改为 PascalCase。</li>
@@ -988,11 +988,11 @@
           <li><strong>补充 03/06 上下文字段定义</strong>：Shot 和 Review 聚合的完整字段列表、命令详情表（四列）、事件详情表（三列）。</li>
           <li><strong>补充 glossary 遗漏术语</strong>：<code>stale</code>、<code>delayed</code>、<code>analyzed</code>、<code>analyzing</code>、角色术语、<code>ConsistencyPack</code>。</li>
           <li><strong>补充 infrastructure 公共接口</strong>：<code>EventStore</code>、<code>DomainCommand</code>、<code>IdempotencyKeyProvider</code> 接口定义 + 6+ 个缺失错误码。</li>
-          <li><strong>修正 contracts.md 链路描述</strong>：以 §2 注册表为权威，反向补全 §1 链路中遗漏的消费者和事件。</li>
+          <li><strong>修正 05-contracts.md 链路描述</strong>：以 §2 注册表为权威，反向补全 §1 链路中遗漏的消费者和事件。</li>
           <li><strong>补充 3 个 ACL 适配器</strong>：<code>ScriptSummaryAdapter</code>、<code>AssetSummaryAdapter</code>、<code>FinalVideoSummaryAdapter</code>。</li>
           <li><strong>修正资产库状态机图</strong>：补充 <code>draft→published</code> 直接箭头或调整命令前置状态。</li>
           <li><strong>补充缺失值对象/实体字段定义</strong>：ScriptDocument/ScriptAnalysis、TemplateNode/TemplateEdge/TemplateVariable、Message 实体。</li>
-          <li><strong>统一视频状态术语</strong>：api.md 与 glossary.md 对齐。</li>
+          <li><strong>统一视频状态术语</strong>：api.md 与 03-glossary.md 对齐。</li>
           <li><strong>补充缺失开发规范</strong>：前端架构设计、并发控制策略、错误处理中间件、索引策略。</li>
           <li><strong>修正 AC9.6 WebSocket 引用</strong>：移除 WebSocket，改为 SSE。</li>
           <li><strong>补充缺失 US</strong>：Prompt 模板管理和数据统计的用户故事。</li>
@@ -1010,10 +1010,10 @@
 
       <div class="card">
         <ol>
-          <li>补充 module-map.md 缺失页面（<code>/studio</code>、<code>/logs</code>、<code>/settings</code>）。</li>
+          <li>补充 06-module-map.md 缺失页面（<code>/studio</code>、<code>/logs</code>、<code>/settings</code>）。</li>
           <li>补充 API 分页规范和版本管理策略。</li>
           <li>明确 <code>published</code> 状态的语义区分（资产发布 vs 成片发布）。</li>
-          <li>补充 dependency-rules.md 缺失的 5 条跨聚合引用关系。</li>
+          <li>补充 09-dependency-rules.md 缺失的 5 条跨聚合引用关系。</li>
           <li>补充 application Query Handler 层到分层依赖图。</li>
           <li>明确 <code>BudgetCheckService</code> 的跨聚合数据获取方式。</li>
           <li>统一 Gate 0 流程描述用词（"写路径适配" → "旧写路径迁移"）。</li>
@@ -1028,9 +1028,9 @@
       <div class="card card-accent">
         <p><strong>建议执行路径</strong>：</p>
         <ol>
-          <li><strong>第一步 — 冻结权威来源</strong>：以 DDD 文档（<code>ddd/</code> 目录）为术语和领域模型的权威来源，以 <code>requirements-and-acceptance.md</code> 为需求验收的权威来源，以实际代码为功能状态的权威来源。</li>
+          <li><strong>第一步 — 冻结权威来源</strong>：以 DDD 文档（<code>ddd/</code> 目录）为术语和领域模型的权威来源，以 <code>02-requirements-and-acceptance.md</code> 为需求验收的权威来源，以实际代码为功能状态的权威来源。</li>
           <li><strong>第二步 — P0 批量修复</strong>：启动 Gate 0 契约冻结流程，集中修复 11 个 P0 问题，重点是状态机矛盾、虚报状态、API路径统一。</li>
-          <li><strong>第三步 — 文档与代码对齐</strong>：以实际代码为准，修正 feature-status.md 和模块指南中的不实声明；对确实需要实现但尚未实现的功能，明确标注为"规划中"而非"已完成"。</li>
+          <li><strong>第三步 — 文档与代码对齐</strong>：以实际代码为准，修正 03-feature-status.md 和模块指南中的不实声明；对确实需要实现但尚未实现的功能，明确标注为"规划中"而非"已完成"。</li>
           <li><strong>第四步 — P1 逐项修复</strong>：按上下文逐个补充缺失的字段定义、命令详情、事件详情，确保每个聚合形成完整的命令→状态→事件闭环。</li>
           <li><strong>第五步 — 验证闭环</strong>：对每个上下文执行"状态机闭环验证 + 事件链路闭环验证 + 命令-事件一致性验证"三项检查，确认无断裂。</li>
         </ol>
@@ -1042,13 +1042,13 @@
       <div class="sources">
         <h2>评审依据文档</h2>
         <ol>
-          <li><span class="src-title">docs/ddd/ 目录 — 16份DDD规格文档（8份公共规范 + 8份上下文规格）</span><span class="src-url">项目内部文档</span></li>
-          <li><span class="src-title">docs/product-design-spec.md — 产品设计规格总纲</span><span class="src-url">项目内部文档</span></li>
-          <li><span class="src-title">docs/requirements-and-acceptance.md — 需求规格与验收标准</span><span class="src-url">项目内部文档</span></li>
-          <li><span class="src-title">docs/architecture-and-development.md — 架构设计与开发指南</span><span class="src-url">项目内部文档</span></li>
-          <li><span class="src-title">docs/feature-status.md — 功能状态基线</span><span class="src-url">项目内部文档</span></li>
-          <li><span class="src-title">docs/risk-management-plan.md — 风险预案</span><span class="src-url">项目内部文档</span></li>
-          <li><span class="src-title">docs/api.md, docs/sqlite-plan.md — API接口说明与SQLite存储方案</span><span class="src-url">项目内部文档</span></li>
+          <li><span class="src-title">docs/domain/ 目录 — 16份DDD规格文档（8份公共规范 + 8份上下文规格）</span><span class="src-url">项目内部文档</span></li>
+          <li><span class="src-title">docs/requirements/01-product-design-spec.md — 产品设计规格总纲</span><span class="src-url">项目内部文档</span></li>
+          <li><span class="src-title">docs/requirements/02-requirements-and-acceptance.md — 需求规格与验收标准</span><span class="src-url">项目内部文档</span></li>
+          <li><span class="src-title">docs/engineering/01-architecture-and-development.md — 架构设计与开发指南</span><span class="src-url">项目内部文档</span></li>
+          <li><span class="src-title">docs/implementation/02-feature-status.md — 功能状态基线</span><span class="src-url">项目内部文档</span></li>
+          <li><span class="src-title">docs/governance/01-risk-management-plan.md — 风险预案</span><span class="src-url">项目内部文档</span></li>
+          <li><span class="src-title">docs/engineering/03-api.md, docs/engineering/04-sqlite-plan.md — API接口说明与SQLite存储方案</span><span class="src-url">项目内部文档</span></li>
           <li><span class="src-title">docs/ 模块指南（script-center/model-center/factories-assets/ai-image-config/asset-library）</span><span class="src-url">项目内部文档</span></li>
           <li><span class="src-title">backend/src/, frontend/ — 后端与前端实际代码结构</span><span class="src-url">项目源代码</span></li>
         </ol>
@@ -1058,7 +1058,7 @@
   </article>
 
   <!-- ==================== JS ==================== -->
-  <script src="./_shared/js/echarts.min.js"></script>
+  <script src="_shared/js/echarts.min.js"></script>
   <script>
   (function() {
     var style = getComputedStyle(document.documentElement);

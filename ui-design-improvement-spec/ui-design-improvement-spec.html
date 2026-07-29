@@ -1315,7 +1315,7 @@ export default {
     <h2 id="architecture">5. 组件与架构边界</h2>
 
     <p>
-      UI 规范不仅约束视觉结果，也约束组件承载业务语义的方式。本项目代码按 <code>docs/ddd/</code> 定义的 9 个限界上下文组织，
+      UI 规范不仅约束视觉结果，也约束组件承载业务语义的方式。本项目代码按 <code>docs/domain/</code> 定义的 9 个限界上下文组织，
       顶层使用 <code>domains/</code> 与 DDD 文档术语对齐。视觉复用不等于业务规则共享：共享层只承载无领域含义的令牌、布局原语和基础控件。
     </p>
 
@@ -1438,7 +1438,7 @@ export function ProjectListClient({ initialData }: Props) {
     <h3 id="cqrs-state">6.1 CQRS 同步状态</h3>
 
     <p>
-      驾驶舱、项目工作台和我的待办消费事件投影读模型。根据 <code>docs/ddd/contracts.md</code>，读模型采用最终一致性，常规负载下从事件持久化到投影完成的容忍度为 ≤ 2 秒。
+      驾驶舱、项目工作台和我的待办消费事件投影读模型。根据 <code>docs/domain/05-contracts.md</code>，读模型采用最终一致性，常规负载下从事件持久化到投影完成的容忍度为 ≤ 2 秒。
       命令成功只代表写模型已接受变更，不代表读模型已经刷新。UI 必须显式表达投影追赶状态。
     </p>
 
@@ -1609,7 +1609,7 @@ export function ProjectListClient({ initialData }: Props) {
     </div>
 
     <footer>
-      <p>本文档基于 <code>ux-report/prototypes/production-ui-prototype.html</code>、设计规格 v3.0、<code>docs/ddd/</code> 限界上下文与 CQRS 契约，以及 Next.js App Router 实施边界整合而成。它是本项目前端视觉、交互和 UI 实现边界的统一规范。</p>
+      <p>本文档基于 <code>ux-report/prototypes/production-ui-prototype.html</code>、设计规格 v3.0、<code>docs/domain/</code> 限界上下文与 CQRS 契约，以及 Next.js App Router 实施边界整合而成。它是本项目前端视觉、交互和 UI 实现边界的统一规范。</p>
     </footer>
   </main>
 </div>

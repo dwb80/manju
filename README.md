@@ -2,7 +2,7 @@
 
 Manju（历史名称 Agnes AI Studio）是一套本地优先的 AI 漫剧生产工作台，覆盖项目、剧本、分镜、角色/场景/道具资产、图片、视频、音频、剪辑、审核、发布准备、数据分析、模型配置和任务监控。
 
-当前 V2 发布范围已提供登录认证、项目成员与角色权限、资源所有权校验和核心生产链路；发布模块负责成片、计划、平台物料和发布包，不代表已接入第三方平台自动投放。准确能力、验收证据与已知边界见 [功能状态基线](docs/feature-status.md)，目标产品设计见 [产品设计规格总纲](docs/product-design-spec.md)。
+当前 V2 发布范围已提供登录认证、项目成员与角色权限、资源所有权校验和核心生产链路；发布模块负责成片、计划、平台物料和发布包，不代表已接入第三方平台自动投放。准确能力、验收证据与已知边界见 [功能状态基线](docs/implementation/02-feature-status.md)，目标产品设计见 [产品设计规格总纲](docs/requirements/01-product-design-spec.md)。
 
 ## 核心能力
 
@@ -67,10 +67,10 @@ npm run test:all
 ## 推荐文档
 
 - [文档索引](docs/README.md)
-- [功能状态基线](docs/feature-status.md)
-- [产品设计规格总纲](docs/product-design-spec.md)
-- [架构与开发指南](docs/architecture-and-development.md)
-- [实际 API 说明](docs/api.md)
+- [功能状态基线](docs/implementation/02-feature-status.md)
+- [产品设计规格总纲](docs/requirements/01-product-design-spec.md)
+- [架构与开发指南](docs/engineering/01-architecture-and-development.md)
+- [实际 API 说明](docs/engineering/03-api.md)
 
 ## 已知边界
 

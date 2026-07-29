@@ -12,8 +12,8 @@
  * - 两者一一对应：`MODEL_CATALOG` 里 capabilities 含 "image" 的模型，必须在本文件注册 Provider
  *
  * ## 文档基线
- * - 冻结于 `docs/ai-image-config.md §6.2 / §6.3 / §6.4`（V1.1）
- * - 工厂侧使用约束：`docs/factories-assets-and-image-views.md §13`
+ * - 冻结于 `docs/requirements/modules/05-ai-image-config.md §6.2 / §6.3 / §6.4`（V1.1）
+ * - 工厂侧使用约束：`docs/requirements/modules/04-factories-assets-and-image-views.md §13`
  *
  * ## 使用方式
  * ```ts
@@ -43,7 +43,7 @@ import { rootLogger } from "../logger.js";
 /**
  * Provider 能力声明。
  *
- * 字段说明（与 `ai-image-config.md §6.2` 冻结）：
+ * 字段说明（与 `05-ai-image-config.md §6.2` 冻结）：
  * - text2Image：文生图
  * - image2Image：图生图（接收 referenceImages）
  * - negativePrompt：支持负面提示词

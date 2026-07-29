@@ -1,0 +1,79 @@
+# 功能交付共享契约
+
+## 1. 页面交互基线
+
+所有业务页必须实现以下状态，不得只实现有数据的理想状态：
+
+| 状态 | 必须行为 |
+|---|---|
+| 首次加载 | 使用接近最终布局的 Skeleton；不展示伪造业务数据 |
+| 有数据 | 展示最后更新时间和作用域；操作按权限与对象状态决定 |
+| 空状态 | 解释为空原因；有创建权限时提供唯一主操作，无权限时不伪造入口 |
+| 后台刷新 | 保留旧数据并显示弱同步提示；不得回退为全屏 Loading |
+| 提交中 | 禁止重复提交；允许取消的任务提供取消入口 |
+| 投影追赶 | 命令成功后按 eventId/watermark 追读；超时转 delayed，可手动刷新 |
+| 校验失败 | 字段旁显示错误，焦点移动到首个错误；保留用户输入 |
+| 401 | 记录原目标地址，完成登录后安全返回 |
+| 403 | 保留页面上下文，解释缺少的权限；隐藏敏感数据 |
+| 404/已删除 | 展示对象不存在或已删除；有权限时提供回收站/父页面入口 |
+| 409 | 展示冲突原因与最新版本；禁止静默覆盖，可重载或复制修改 |
+| 429/服务不可用 | 展示可重试时间；自动重试仅用于幂等查询或带幂等键命令 |
+| 部分失败 | 保留成功部分，逐项列出失败原因和重试入口 |
+
+通用规则：
+
+- 桌面 Web 为首发环境；关键操作不得仅依赖 hover，所有功能可用键盘完成。
+- 列表默认稳定排序为 `updatedAt desc, id desc`，URL 保存筛选、排序和分页状态。
+- 离开含未保存更改的编辑页必须二次确认；自动保存必须展示最近成功时间和失败状态。
+- 删除、撤销、发布、永久删除、恢复和凭据变更使用与风险匹配的确认，不以颜色作为唯一提示。
+- 服务端权限是事实源；前端隐藏/禁用只用于体验，不能替代授权。
+
+## 2. API 基线
+
+### 2.1 路径与响应
+
+- 本目录定义的目标路径统一使用 `/api/v1`；现有无版本 `/api` 路径视为兼容别名，迁移期不得产生第二套业务语义。
+- 成功使用 HTTP 2xx 和 `{ "data": ... }`；列表使用 `{ "data": [...], "page": { "cursor", "nextCursor", "hasMore" } }`。
+- 失败遵循 [`../domain/08-error-contract.md`](../domain/08-error-contract.md)：`{ "error": { "code", "message", "details", "retryable", "traceId" } }`。
+- 时间使用 UTC ISO-8601；金额使用整数最小货币单位或明确 decimal 字符串；ID 为不透明字符串。
+
+### 2.2 请求控制
+
+| Header/字段 | 规则 |
+|---|---|
+| `Authorization`/安全 Cookie | 按认证策略使用；浏览器写请求必须通过 CSRF 防护 |
+| `X-Correlation-Id` | 客户端可传，服务端缺失时生成并回传 |
+| `Idempotency-Key` | 创建、执行、导入、发布、生成等可重放写命令必填；作用域为 actor+route，至少保留 24h |
+| `If-Match` | 修改聚合时传当前版本，例如 `"7"`；不匹配返回 `version_conflict` |
+| `commandId` | 命令体稳定 ID，用于审计、Outbox 和端到端追踪 |
+
+列表查询统一支持 `cursor/pageSize(1..100)/sort/filter`；搜索文本最长 100 字符。批量命令最多 100 项，返回逐项结果。
+
+### 2.3 通用错误
+
+`validation_failed`(400)、`unauthenticated`(401)、`permission_denied`(403)、`resource_not_found`(404)、`version_conflict`(409)、`duplicate_resource`(409)、`invalid_state_transition`(409)、`idempotency_conflict`(409)、`rate_limited`(429)、`dependency_unavailable`(503)、`internal_error`(500)。领域错误在各功能中补充。
+
+## 3. 数据模型基线
+
+- 逻辑模型使用 `snake_case` 物理字段；主键 `id TEXT`，外键显式声明。
+- 可变聚合包含 `version INTEGER NOT NULL`，每次成功命令递增；更新必须以旧 version 为条件。
+- 通用字段：`created_at/created_by/updated_at/updated_by`；支持软删的对象增加 `deleted_at/deleted_by/deletion_reason`。
+- 不可变快照、审核、发布记录、审计记录不得原地改写；纠正使用新版本或追加记录。
+- 同一概念只允许一个可写事实源；JSON 字段必须有 `schema_version`、服务端校验和确定性规范化规则。
+- 文件只保存受控引用、大小、MIME、哈希和存储键；数据库不得保存本地绝对路径或公开长期下载 URL。
+- 所有跨聚合事件与状态写入同一事务 Outbox；消费者按 eventId 幂等。
+- 敏感值加密存储并按字段脱敏；密码、Token、密钥和 SSO 授权码不得进入日志、事件或审计 metadata。
+
+## 4. 验收自动化基线
+
+场景采用 Gherkin，可直接转换为 Playwright/Cucumber 或等价测试：
+
+```gherkin
+@REQ-ID @e2e @p0
+Scenario: REQ-ID-S01 场景名称
+  Given 明确的用户、权限、数据和版本
+  When 执行唯一可观察动作
+  Then 页面、API、数据库/事件出现可验证结果
+```
+
+每个功能至少包含：正常路径、字段/状态负向、权限或跨项目负向、并发/幂等（适用时）、异步失败/恢复（适用时）。测试不得直接依赖实现内部函数判定成功；应验证用户可见结果、HTTP 契约和持久化/事件证据。

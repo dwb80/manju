@@ -20,8 +20,8 @@
  * - V3.x：接 Jimeng / Flux 等其他 Provider，本类扩展为 `AgnesAdapter` 实现多 Provider 路由。
  *
  * ## 文档基线
- * - 冻结于 `docs/ai-image-config.md §6.4`（V1.1）
- * - 工厂侧使用约束：`docs/factories-assets-and-image-views.md §13`
+ * - 冻结于 `docs/requirements/modules/05-ai-image-config.md §6.4`（V1.1）
+ * - 工厂侧使用约束：`docs/requirements/modules/04-factories-assets-and-image-views.md §13`
  */
 
 import { RealAgnesClient, AgnesRateLimitError, isAgnesRateLimitError } from "./agnes-client.js";
@@ -45,7 +45,7 @@ import { rootLogger } from "../logger.js";
  * Agnes 图片能力。
  * 与 `model-capabilities.ts` 中 `agnes-image-2.1-flash.image` 参数约束保持一致。
  *
- * 字段说明（与 `ai-image-config.md §6.2` 冻结）：
+ * 字段说明（与 `05-ai-image-config.md §6.2` 冻结）：
  * - text2Image: ✅ 文生图
  * - image2Image: ✅ 图生图（接收 referenceImages）
  * - negativePrompt: ✅ 支持负面提示词

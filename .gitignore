@@ -18,6 +18,7 @@ frontend/playwright.config.ts
 frontend/vitest.config.ts
 
 # 测试文件、测试用例及测试基础设施不入库
+tests/
 backend/tests/
 backend/scripts/create-test-data.ts
 backend/scripts/create-module-test-data.ts

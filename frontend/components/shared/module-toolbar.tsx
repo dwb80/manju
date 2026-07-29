@@ -107,7 +107,7 @@ export function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
-      className={`h-9 px-3 rounded-lg border border-border bg-secondary text-sm text-foreground focus:border-primary/50 focus:outline-none ${className}`}
+      className={`h-8 px-3 rounded-md border border-border bg-secondary text-sm text-foreground focus:border-primary/50 focus:outline-none ${className}`}
       aria-label={placeholder}
     >
       <option value="">{placeholder}</option>

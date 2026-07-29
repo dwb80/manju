@@ -3,20 +3,20 @@
 > 范围：`/characters` `/scenes` `/props` 三个工厂模块
 > 评审视角：Lead PM + 前端架构师（结合 `git log` 跨版本对比 + 现行代码 + `docs/` 文档 + 项目记忆）
 > 评审日期：2026-07-24
-> 基准报告：[`ux-report/frontend-ux-review-2026-07-23.md`](./ux-report/frontend-ux-review-2026-07-23.md)、[`ux-report/script-center-ux-review-2026-07-24.md`](./ux-report/script-center-ux-review-2026-07-24.md)
+> 基准报告：[`ux-report/frontend-ux-review-2026-07-23.md`](ux-report/frontend-ux-review-2026-07-23.md)、[`ux-report/script-center-ux-review-2026-07-24.md`](ux-report/script-center-ux-review-2026-07-24.md)
 > 涉及代码（新版）：
-> - [`frontend/components/factory/FactoryCRUDPage.tsx`](./frontend/components/factory/FactoryCRUDPage.tsx)（1231 行）
-> - [`frontend/components/factory/useFactoryEntity.ts`](./frontend/components/factory/useFactoryEntity.ts)
-> - [`frontend/components/factory/types.ts`](./frontend/components/factory/types.ts)
-> - [`frontend/components/factory/index.ts`](./frontend/components/factory/index.ts)
-> - [`frontend/components/factory/UsageDialog.tsx`](./frontend/components/factory/UsageDialog.tsx)
-> - [`frontend/components/factory/filter-tabs-bar.tsx`](./frontend/components/factory/filter-tabs-bar.tsx)
-> - [`frontend/components/factory/parts/`](./frontend/components/factory/parts/)（5 个部件）
-> - [`frontend/components/shared/ai-generate-dialog.tsx`](./frontend/components/shared/ai-generate-dialog.tsx)
-> - [`frontend/components/modules/character-factory.tsx`](./frontend/components/modules/character-factory.tsx)（536 行）
-> - [`frontend/components/modules/scene-factory.tsx`](./frontend/components/modules/scene-factory.tsx)
-> - [`frontend/components/modules/prop-factory.tsx`](./frontend/components/modules/prop-factory.tsx)
-> - [`frontend/app/characters/page.tsx`](./frontend/app/characters/page.tsx)、[`/scenes/page.tsx`](./frontend/app/scenes/page.tsx)、[`/props/page.tsx`](./frontend/app/props/page.tsx)
+> - [`frontend/components/factory/FactoryCRUDPage.tsx`](frontend/components/factory/FactoryCRUDPage.tsx)（1231 行）
+> - [`frontend/components/factory/useFactoryEntity.ts`](frontend/components/factory/useFactoryEntity.ts)
+> - [`frontend/components/factory/types.ts`](frontend/components/factory/types.ts)
+> - [`frontend/components/factory/index.ts`](frontend/components/factory/index.ts)
+> - [`frontend/components/factory/UsageDialog.tsx`](frontend/components/factory/UsageDialog.tsx)
+> - [`frontend/components/factory/filter-tabs-bar.tsx`](frontend/components/factory/filter-tabs-bar.tsx)
+> - [`frontend/components/factory/parts/`](frontend/components/factory/parts)（5 个部件）
+> - [`frontend/components/shared/ai-generate-dialog.tsx`](frontend/components/shared/ai-generate-dialog.tsx)
+> - [`frontend/components/modules/character-factory.tsx`](frontend/components/modules/character-factory.tsx)（536 行）
+> - [`frontend/components/modules/scene-factory.tsx`](frontend/components/modules/scene-factory.tsx)
+> - [`frontend/components/modules/prop-factory.tsx`](frontend/components/modules/prop-factory.tsx)
+> - [`frontend/app/characters/page.tsx`](frontend/app/characters/page.tsx)、[`/scenes/page.tsx`](frontend/app/scenes/page.tsx)、[`/props/page.tsx`](frontend/app/props/page.tsx)
 > - [`frontend/app/characters/[id]/edit/page.tsx`](./frontend/app/characters/[id]/edit/page.tsx)（独立编辑页）
 
 ---
@@ -27,9 +27,9 @@
 |------|:---:|----------|
 | 列表页可用性 | 4 / 5 | 通用 `FactoryCRUDPage` 工作正常；UI 与之前大体一致 |
 | 编辑页体验 | 3 / 5 | 角色图片生成被拆到独立路由 `/characters/[id]/edit`，但场景/道具仍使用 `window.open` 跳到占位页；新旧两套交互并存 |
-| AI 生成图片 | 2.5 / 5 | 与 [`images.txt`](./images.txt) 文档严重不符：模型名、size、ratio、response_format 全部走自定义，未与 Agnes Image 2.1 Flash 规范对齐 |
+| AI 生成图片 | 2.5 / 5 | 与 [`images.txt`](images.txt) 文档严重不符：模型名、size、ratio、response_format 全部走自定义，未与 Agnes Image 2.1 Flash 规范对齐 |
 | 架构 | 2.5 / 5 | 上一版（`e798a57~1`）已经拆好的 `useFactoryActions` / `useRecycleBin` / `parts/factory-*` 被回退为单体 1231 行文件，与 7-23 UX 评审"P1-7 拆 hooks"建议相悖 |
-| 文档一致性 | 1.5 / 5 | 旧版功能文档（[`docs/asset-library.md`](./docs/asset-library.md) 角色/场景字段 5 项）与新版 AI 扩展 17 字段不匹配，文档与代码漂移 |
+| 文档一致性 | 1.5 / 5 | 旧版功能文档（[`docs/requirements/modules/06-asset-library.md`](docs/requirements/modules/06-asset-library.md) 角色/场景字段 5 项）与新版 AI 扩展 17 字段不匹配，文档与代码漂移 |
 | 数据所有权 | 2 / 5 | 工具栏"全选"与各 factory 卡片自己实现的"checkbox 浮窗"重复；selectedIds 既写入本地 state 又写入 `useFactorySelectionStore`，无收敛协议 |
 
 **总体结论**：三个工厂的"列表页 + 编辑页 + AI 生图"在最近一次重构里发生了**三处主要变化**：(1) 角色编辑从模态弹窗改为独立路由，(2) AI 生成对话框与 `images.txt` 文档脱节，(3) 上一版已经拆好的 FactoryCRUDPage 子模块被回退为单体。**P0 集中在 AI 生图与文档/契约不一致**，会导致按 docs 写的 prompt 与实际生成结果不一致（用户感知最明显），并埋下数据漂移隐患。
@@ -116,8 +116,8 @@ response_format: "url"                // 顶层 ❌ 文档要求放 extra_body
 
 **结论**：字段是按"AI 剧本分析扩展字段"要求加的，**功能上有价值**（配合 AI 剧本分析模块自动填表），但：
 - 表单字段也同步加了 17 项（characterFields 从 7 → **24**），新建/编辑对话框滚动很长
-- [`docs/asset-library.md`](./docs/asset-library.md) 仍然写"角色特征、风格关键词"5 字段版本
-- [`docs/product-design-spec.md`](./docs/product-design-spec.md) §3.4 描述"角色资产包含：基础设定、参考图、Prompt、LoRA、三视图、表情库、动作库"——**没有 costume_* 等字段**
+- [`docs/requirements/modules/06-asset-library.md`](docs/requirements/modules/06-asset-library.md) 仍然写"角色特征、风格关键词"5 字段版本
+- [`docs/requirements/01-product-design-spec.md`](docs/requirements/01-product-design-spec.md) §3.4 描述"角色资产包含：基础设定、参考图、Prompt、LoRA、三视图、表情库、动作库"——**没有 costume_* 等字段**
 - 文档与代码完全漂移
 
 ### 2.5 选中状态的双重实现（潜在 bug 风险）
@@ -169,8 +169,8 @@ useEffect(() => {
 **严重度：P0 — 阻塞主流程**
 
 **位置**：
-- [`scene-factory.tsx:179-185`](./frontend/components/modules/scene-factory.tsx#L179-L185) `handleEdit = () => window.open('/scenes/${id}/edit')`
-- [`prop-factory.tsx:189-196`](./frontend/components/modules/prop-factory.tsx#L189-L196) `handleEdit = () => window.open('/props/${id}/edit')`
+- [`scene-factory.tsx:179-185`](frontend/components/modules/scene-factory.tsx#L179-L185) `handleEdit = () => window.open('/scenes/${id}/edit')`
+- [`prop-factory.tsx:189-196`](frontend/components/modules/prop-factory.tsx#L189-L196) `handleEdit = () => window.open('/props/${id}/edit')`
 
 **路由现状**：
 - ✅ [`app/characters/[id]/edit/page.tsx`](./frontend/app/characters/[id]/edit/page.tsx) — 完整实现
@@ -190,7 +190,7 @@ useEffect(() => {
 
 **严重度：P0 — 契约不一致**
 
-**位置**：[`ai-generate-dialog.tsx:175-183`](./frontend/components/shared/ai-generate-dialog.tsx#L175-L183)
+**位置**：[`ai-generate-dialog.tsx:175-183`](frontend/components/shared/ai-generate-dialog.tsx#L175-L183)
 
 **当前代码**：
 ```ts
@@ -206,7 +206,7 @@ const task = await api<ImageTask>("/api/images/generate", {
 });
 ```
 
-**应改为**（按 [`images.txt`](./images.txt) §"文生图：URL 输出"）：
+**应改为**（按 [`images.txt`](images.txt) §"文生图：URL 输出"）：
 ```ts
 body: JSON.stringify({
   model: "agnes-image-2.1-flash",                       // ✅ 必填
@@ -256,7 +256,7 @@ body: JSON.stringify({
 
 **严重度：P0 — 跨工厂选择隔离可能失效**
 
-**位置**：[`useFactoryEntity.ts:46`](./frontend/components/factory/useFactoryEntity.ts#L46) + [`FactoryCRUDPage.tsx:301`](./frontend/components/factory/FactoryCRUDPage.tsx#L301)
+**位置**：[`useFactoryEntity.ts:46`](frontend/components/factory/useFactoryEntity.ts#L46) + [`FactoryCRUDPage.tsx:301`](frontend/components/factory/FactoryCRUDPage.tsx#L301)
 
 ```ts
 // useFactoryEntity.ts
@@ -287,7 +287,7 @@ const { ... } = useFactoryEntity(
 
 **严重度：P1 — 阻碍单测 + 增大 PR 冲突面**
 
-**位置**：[`FactoryCRUDPage.tsx` 全文 1231 行](./frontend/components/factory/FactoryCRUDPage.tsx)
+**位置**：[`FactoryCRUDPage.tsx` 全文 1231 行](frontend/components/factory/FactoryCRUDPage.tsx)
 
 **建议拆分**（与旧版 `e798a57~1` 对齐）：
 
@@ -321,7 +321,7 @@ components/factory/
 
 **严重度：P1 — 计数过期误导用户**
 
-**位置**：[`FactoryCRUDPage.tsx:321-327`](./frontend/components/factory/FactoryCRUDPage.tsx#L321-L327)
+**位置**：[`FactoryCRUDPage.tsx:321-327`](frontend/components/factory/FactoryCRUDPage.tsx#L321-L327)
 
 **问题**：删除 / 恢复时 `setDeletedItems` 已更新，但 `items`（正常视图的列表）没有同步更新——如果用户在"回收站" Tab 看到的是 `{deletedItems.length} = 5` 但正常列表已经少了 5 个，**用户预期是删除即时反馈，但实际要切回正常 Tab 才能看到。**
 
@@ -355,7 +355,7 @@ components/factory/
 
 **严重度：P1 — 文生图 n 参数文档约束**
 
-**位置**：[`ai-generate-dialog.tsx:174`](./frontend/components/shared/ai-generate-dialog.tsx#L174)
+**位置**：[`ai-generate-dialog.tsx:174`](frontend/components/shared/ai-generate-dialog.tsx#L174)
 
 ```ts
 const n = Math.max(1, Math.min(4, Number(count) || 4));
@@ -402,7 +402,7 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 
 **严重度：P1 — 4 张候选图同时加载慢**
 
-**位置**：[`ai-generate-dialog.tsx:337-372`](./frontend/components/shared/ai-generate-dialog.tsx#L337-L372)
+**位置**：[`ai-generate-dialog.tsx:337-372`](frontend/components/shared/ai-generate-dialog.tsx#L337-L372)
 
 **问题**：4 张 1024×1024 图片同时加载，首屏白屏 + LCP 慢
 
@@ -415,7 +415,7 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 
 **严重度：P1 — 键盘可达性**
 
-**位置**：[`character-factory.tsx:302`](./frontend/components/modules/character-factory.tsx#L302) / [`scene-factory.tsx:258`](./frontend/components/modules/scene-factory.tsx#L258) / [`prop-factory.tsx:269`](./frontend/components/modules/prop-factory.tsx#L269)
+**位置**：[`character-factory.tsx:302`](frontend/components/modules/character-factory.tsx#L302) / [`scene-factory.tsx:258`](frontend/components/modules/scene-factory.tsx#L258) / [`prop-factory.tsx:269`](frontend/components/modules/prop-factory.tsx#L269)
 
 **与 UX 评审 §4.6 一致**：键盘 tab 不到悬浮按钮。修复方案同基准报告。
 
@@ -423,7 +423,7 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 
 **严重度：P1 — UX 差**
 
-**位置**：[`character-factory.tsx:89-135`](./frontend/components/modules/character-factory.tsx#L89-L135) `characterFields` 24 项 / [`scene-factory.tsx:85-120`](./frontend/components/modules/scene-factory.tsx#L85-L120) 21 项 / [`prop-factory.tsx:91-126`](./frontend/components/modules/prop-factory.tsx#L91-L126) 18 项
+**位置**：[`character-factory.tsx:89-135`](frontend/components/modules/character-factory.tsx#L89-L135) `characterFields` 24 项 / [`scene-factory.tsx:85-120`](frontend/components/modules/scene-factory.tsx#L85-L120) 21 项 / [`prop-factory.tsx:91-126`](frontend/components/modules/prop-factory.tsx#L91-L126) 18 项
 
 **问题**：新建角色对话框滚动 3 屏，核心字段（name、role、image）藏在最上面 5 个里。
 
@@ -436,9 +436,9 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 
 ## 五、P2：长期（季度内）
 
-### 5.1 P2-1：文档同步（`docs/asset-library.md` + `product-design-spec.md`）
+### 5.1 P2-1：文档同步（`docs/requirements/modules/06-asset-library.md` + `01-product-design-spec.md`）
 
-`docs/asset-library.md` §"角色资产建议"只有 5 字段，代码已经有 17+ 字段。需重写：
+`docs/requirements/modules/06-asset-library.md` §"角色资产建议"只有 5 字段，代码已经有 17+ 字段。需重写：
 - 角色资产字段表（基础 6 + 外貌 7 + 服装 5 + 动作 1 + 关系 1 + 提示词 1 = 21 字段）
 - 场景资产字段表
 - 道具资产字段表
@@ -456,13 +456,13 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 
 **严重度：P2 — 长期维护性**
 
-**位置**：[`useFactoryEntity.ts`](./frontend/components/factory/useFactoryEntity.ts)
+**位置**：[`useFactoryEntity.ts`](frontend/components/factory/useFactoryEntity.ts)
 
 **问题**：自己写的 useEffect + useState + setIsLoading + reload 模式，每次需要手动 `clearApiCache()` + `reload()`，容易出现"乐观更新与后端不一致"的 bug（如 4.2 回收站计数问题）。
 
 **建议**：引入 SWR 或 React Query，自动处理缓存、revalidate、乐观更新。
 
-### 5.4 P2-4：与 [`images.txt`](./images.txt) 双向同步（CI 检查）
+### 5.4 P2-4：与 [`images.txt`](images.txt) 双向同步（CI 检查）
 
 **建议**：在 CI 增加契约测试——
 - 前端 `image-config.ts` 必填字段与 `images.txt` "请求参数" 表一致
@@ -471,7 +471,7 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 
 ### 5.5 P2-5：AI 生成的"风格" 与 "角色类型 / 场景类型 / 道具类别" 联动
 
-**位置**：[`ai-generate-dialog.tsx:81-89`](./frontend/components/shared/ai-generate-dialog.tsx#L81-L89)
+**位置**：[`ai-generate-dialog.tsx:81-89`](frontend/components/shared/ai-generate-dialog.tsx#L81-L89)
 
 **建议**：根据 `typeFieldValue`（如 "古装主角"）自动建议"古风"风格，减少用户输入。
 
@@ -494,7 +494,7 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 | P1-7 | 候选图 lazy + skeleton | `ai-generate-dialog.tsx` | **2h** | 性能 |
 | P1-8 | 键盘可达性 | 三个 factory 卡片按钮 | **4h** | WCAG |
 | P1-9 | 表单字段分组 / 折叠 | 三个 factory `*Fields` 配置 | **6h** | UX |
-| P2-1 | 文档同步 | `docs/asset-library.md` + `product-design-spec.md` | **6h** | 文档 |
+| P2-1 | 文档同步 | `docs/requirements/modules/06-asset-library.md` + `01-product-design-spec.md` | **6h** | 文档 |
 | P2-2 | E2E 测试覆盖 | 新建 `tests/e2e-factories.mjs` + vitest | **16h** | 回归 |
 | P2-3 | 引入 SWR / React Query | 替换 `useFactoryEntity` | **8h** | 长期 |
 | P2-4 | 契约 CI | 新增 `.github/workflows/image-contract.yml` | **4h** | 长期 |
@@ -512,9 +512,9 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 | [`project_memory.md`](file:///c:/Users/Administrator/.trae-cn/memory/projects/-d-trae-manju/project_memory.md) "Pipeline node action HTTP methods" | `e2e-p1-batch.mjs` 24/24 全过（**未覆盖三个工厂的 P0 行为变更**） |
 | [`ux-report/frontend-ux-review-2026-07-23.md`](file:///d:/trae/manju/ux-report/frontend-ux-review-2026-07-23.md) §4.1 P0-1 / §5.2 P0 | 假数据、alert/confirm 全站收敛，三个工厂在新版本中没有引入新 alert/confirm，**符合** |
 | [`ux-report/script-center-ux-review-2026-07-24.md`](file:///d:/trae/manju/ux-report/script-center-ux-review-2026-07-24.md) §3 P0-1 | BackupManager `setPendingDeleteId` 未声明，**已识别但未修复**；三个工厂的"删除"在 toast 后立即调用 `setSelectedIds` 删除选中项，没这个问题 |
-| [`docs/feature-status.md`](file:///d:/trae/manju/docs/feature-status.md) "MOD- 100%" | V2 实施状态文档说三个工厂"100% 完整"——但本评审发现的 P0-1 跳转 404 与文档 100% 自相矛盾，**应触发状态文档重新校准** |
-| [`docs/asset-library.md`](file:///d:/trae/manju/docs/asset-library.md) §"角色资产建议" 5 字段 | 文档 5 字段，代码 24 字段，**文档严重过期** |
-| [`docs/product-design-spec.md`](file:///d:/trae/manju/docs/product-design-spec.md) §3.4 角色资产包含 | 文档"基础设定、参考图、Prompt、LoRA、三视图、表情库、动作库"——代码新增的 costume_* 字段不在文档中 |
+| [`docs/implementation/02-feature-status.md`](file:///d:/trae/manju/docs/implementation/02-feature-status.md) "MOD- 100%" | V2 实施状态文档说三个工厂"100% 完整"——但本评审发现的 P0-1 跳转 404 与文档 100% 自相矛盾，**应触发状态文档重新校准** |
+| [`docs/requirements/modules/06-asset-library.md`](file:///d:/trae/manju/docs/requirements/modules/06-asset-library.md) §"角色资产建议" 5 字段 | 文档 5 字段，代码 24 字段，**文档严重过期** |
+| [`docs/requirements/01-product-design-spec.md`](file:///d:/trae/manju/docs/requirements/01-product-design-spec.md) §3.4 角色资产包含 | 文档"基础设定、参考图、Prompt、LoRA、三视图、表情库、动作库"——代码新增的 costume_* 字段不在文档中 |
 | [`chat.txt`](file:///d:/trae/manju/chat.txt) "Agnes 2.0 Flash" | 模型是 agnes-2.0-flash（语言），不是 agnes-image-2.1-flash（图像），但 AI 生成对话框没有传 `model` 字段——**隐式依赖后端默认值** |
 | [`images.txt`](file:///d:/trae/manju/images.txt) "文生图：URL 输出" | 3 处参数与代码不一致（P0-2） |
 | [`ux-report/frontend-ux-review-2026-07-23.md`](file:///d:/trae/manju/ux-report/frontend-ux-review-2026-07-23.md) §2.2 P1 侧边栏密度 | 三个工厂入口 4 个（一级菜单"角色/场景/道具"+"资产中心"）——**与本评审 P0 无关但建议合并** |
@@ -536,17 +536,17 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 ## 九、参考
 
 - 上版（模块化）FactoryCRUDPage：`git show e798a57~1:frontend/components/factory/FactoryCRUDPage.tsx`
-- Agnes Image 2.1 Flash 接口文档：[`images.txt`](./images.txt)
-- Agnes 2.0 Flash 语言模型接口：[`chat.txt`](./chat.txt)
-- Agnes Video V2.0：[`video.txt`](./video.txt)
-- V2 实施状态：[`docs/requirements/v2-implementation-status.md`](./docs/requirements/v2-implementation-status.md)
-- V2 强制原则整改：[`docs/requirements/v2-mandatory-principles-remediation-2026-07-23.md`](./docs/requirements/v2-mandatory-principles-remediation-2026-07-23.md)
+- Agnes Image 2.1 Flash 接口文档：[`images.txt`](images.txt)
+- Agnes 2.0 Flash 语言模型接口：[`chat.txt`](chat.txt)
+- Agnes Video V2.0：[`video.txt`](video.txt)
+- V2 实施状态：[`docs/requirements/v2-implementation-status.md`](docs/requirements/v2-implementation-status.md)
+- V2 强制原则整改：[`docs/requirements/v2-mandatory-principles-remediation-2026-07-23.md`](docs/requirements/v2-mandatory-principles-remediation-2026-07-23.md)
 - UX 评审报告：
-  - [`ux-report/frontend-ux-review-2026-07-23.md`](./ux-report/frontend-ux-review-2026-07-23.md)
-  - [`ux-report/script-center-ux-review-2026-07-24.md`](./ux-report/script-center-ux-review-2026-07-24.md)
+  - [`ux-report/frontend-ux-review-2026-07-23.md`](ux-report/frontend-ux-review-2026-07-23.md)
+  - [`ux-report/script-center-ux-review-2026-07-24.md`](ux-report/script-center-ux-review-2026-07-24.md)
 - WCAG 2.1 AA 标准：https://www.w3.org/WAI/WCAG21/quickref/?versions=2.1&levels=aa
-- shadcn/ui：[`components/ui/`](./frontend/components/ui/)
-- Radix UI：[`components/shared/`](./frontend/components/shared/)
+- shadcn/ui：[`components/ui/`](frontend/components/ui)
+- Radix UI：[`components/shared/`](frontend/components/shared)
 
 **研究证据**：
 - `git log --oneline --all -- frontend/components/factory` (10 个 commit)
@@ -557,4 +557,4 @@ const n = Math.max(1, Math.min(4, Number(count) || 4));
 - `images.txt` 文档 §"文生图：URL 输出" 与 `ai-generate-dialog.tsx:175-183` 字段对比
 - `app/characters/[id]/edit/page.tsx` 与 `app/scenes/[id]/edit`/`app/props/[id]/edit` 路由存在性 LS 对比
 - `project_memory.md` "2026-07-16 构建重复修复" 交叉引用
-- `docs/asset-library.md` 5 字段 vs 代码 24 字段文档漂移
+- `docs/requirements/modules/06-asset-library.md` 5 字段 vs 代码 24 字段文档漂移

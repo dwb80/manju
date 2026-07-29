@@ -7,7 +7,7 @@
  * - `image-config.ts`（本文件）：参数合法值集中表（"所有图片 API 共用的 ratio / size 枚举"）
  * - `image-provider.ts`：执行层（"调哪个 SDK、payload 怎么组装"）
  *
- * 工厂侧使用约束：见 `docs/factories-assets-and-image-views.md §13` 与 `docs/ai-image-config.md §6.1`。
+ * 工厂侧使用约束：见 `docs/requirements/modules/04-factories-assets-and-image-views.md §13` 与 `docs/requirements/modules/05-ai-image-config.md §6.1`。
  *
  * ## S1 阶段
  * 单一文件承载，**不依赖 DB**，可被前端/后端/测试三方 import。
@@ -75,7 +75,7 @@ export function isValidSize(size: unknown): size is string {
  * 工厂侧默认图片模型（V1.1 锁定 agnes-image-2.1-flash）。
  * 任何"未指定 model"的回退值都必须引用本常量，禁止各处硬编码。
  * V2 接入新 Provider 后，本常量会变成"默认首选 model"而非"唯一 model"——届时
- * 业务方应优先用 `model-center` 推过来的 model 选择（参见 ai-image-config.md §6.5）。
+ * 业务方应优先用 `model-center` 推过来的 model 选择（参见 05-ai-image-config.md §6.5）。
  */
 export const DEFAULT_IMAGE_MODEL = "agnes-image-2.1-flash";
 
@@ -91,7 +91,7 @@ export const DEFAULT_SIZE: string = recommendedSizeForRatio(DEFAULT_RATIO);
 
 /**
  * 工厂侧默认 n（候选数）。
- * 与 `docs/ai-image-config.md` 单一真相源对齐：默认生成 4 张候选图（范围 1~4，见 `MAX_N`/`MIN_N` 语义）。
+ * 与 `docs/requirements/modules/05-ai-image-config.md` 单一真相源对齐：默认生成 4 张候选图（范围 1~4，见 `MAX_N`/`MIN_N` 语义）。
  * 调用方未显式传 n 时回退到此值；越界由路由层 clamp 到 [1,4]。
  */
 export const DEFAULT_N = 4;

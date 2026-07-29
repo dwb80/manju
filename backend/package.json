@@ -20,7 +20,9 @@
     "check:architecture": "node scripts/check-v2-architecture.mjs",
     "ops:backup": "node scripts/backup-database.mjs",
     "ops:acceptance": "node scripts/business-acceptance-report.mjs",
-    "test:all": "npm run check:encoding && npm run check:secrets && npm run check:architecture && npm run build && npm run frontend:build",
+    "test:all": "npm run check:encoding && npm run check:secrets && npm run check:architecture && npm run check:readiness && npm run test:readiness && npm run build && npm run frontend:build",
+    "check:readiness": "node ../scripts/check-implementation-readiness.mjs",
+    "test:readiness": "node --test ../tests/readiness/implementation-readiness.test.mjs",
     "frontend:dev": "npm --prefix ../frontend run dev",
     "frontend:build": "npm --prefix ../frontend run build",
     "frontend:start": "npm --prefix ../frontend run start"
