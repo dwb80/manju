@@ -140,6 +140,13 @@ for (const feature of features) {
   for (const operationId of feature.operationIds ?? []) assert(operationIds.includes(operationId), `${feature.id} references missing operationId ${operationId}`);
   assert(feature.implementationEvidence?.status === "unverified", `${feature.id} must remain unverified before implementation`);
   assert(feature.requiredTestLayers?.includes("contract"), `${feature.id} missing contract test layer`);
+  assert(Array.isArray(feature.pageRoutes), `${feature.id} missing pageRoutes`);
+  for (const state of ["loading", "empty", "ready", "forbidden", "conflict", "error_retry"]) {
+    assert(feature.uiStates?.includes(state), `${feature.id} missing UI state ${state}`);
+  }
+  for (const roleVariant of ["authorized", "read_only", "forbidden"]) {
+    assert(feature.roleVariants?.includes(roleVariant), `${feature.id} missing role variant ${roleVariant}`);
+  }
   for (const scenario of feature.scenarios ?? []) {
     assert((scenario.steps ?? []).some((step) => step.startsWith("Given ")), `${scenario.id} missing Given step`);
     assert((scenario.steps ?? []).some((step) => step.startsWith("When ")), `${scenario.id} missing When step`);

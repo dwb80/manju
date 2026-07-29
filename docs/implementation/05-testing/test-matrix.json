@@ -32,6 +32,10 @@
         "/projects",
         "/projects/workbench"
       ],
+      "pageRoutes": [
+        "/projects",
+        "/projects/workbench"
+      ],
       "tables": [
         "projects",
         "project_members",
@@ -41,6 +45,19 @@
         "us_001_post_projects",
         "us_001_get_projects",
         "us_001_get_projects-id"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -84,6 +101,10 @@
         "/projects/workbench",
         "/projects/{projectId}/episodes"
       ],
+      "pageRoutes": [
+        "/projects/workbench",
+        "/projects/{projectId}/episodes"
+      ],
       "tables": [
         "episodes",
         "scripts",
@@ -95,6 +116,19 @@
         "us_002_post_projects-projectid-episodes",
         "us_002_get_projects-projectid-episodes",
         "us_002_post_episodes-id-deletion-precheck"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -137,6 +171,9 @@
       "pages": [
         "/projects/{projectId}/scripts/{scriptId}"
       ],
+      "pageRoutes": [
+        "/projects/{projectId}/scripts/{scriptId}"
+      ],
       "tables": [
         "scripts",
         "script_documents",
@@ -148,6 +185,19 @@
         "us_003_put_scripts-id-draft",
         "us_003_post_scripts-id-publish",
         "us_003_get_scripts-id-versions-a-diffto-b"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -188,6 +238,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "script_analyses",
         "ai_tasks"
@@ -196,6 +247,27 @@
         "us_004_post_scripts-id-analysis-jobs",
         "us_004_get_scripts-id-analysis-jobs-jobid",
         "us_004_post_scripts-id-analysis-jobs-jobid-apply"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -238,6 +310,10 @@
         "/projects/{projectId}/storyboards/{storyboardId}",
         "/shots/{shotId}"
       ],
+      "pageRoutes": [
+        "/projects/{projectId}/storyboards/{storyboardId}",
+        "/shots/{shotId}"
+      ],
       "tables": [
         "storyboards",
         "shots",
@@ -248,6 +324,19 @@
         "us_005_put_storyboards-id-shot-order",
         "us_005_patch_shots-batch-duration",
         "us_005_delete_storyboards-id-shots-shotid"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -297,6 +386,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "shot_suggestion_jobs",
         "shot_suggestions"
@@ -305,6 +395,27 @@
         "us_006_post_storyboards-id-shot-suggestion-jobs",
         "us_006_get_storyboards-id-shot-suggestion-jobs-jobid",
         "us_006_post_storyboards-id-shot-suggestions-apply"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -346,6 +457,9 @@
       "pages": [
         "/projects/{projectId}/settings/presentation"
       ],
+      "pageRoutes": [
+        "/projects/{projectId}/settings/presentation"
+      ],
       "tables": [
         "project_presentation_specs"
       ],
@@ -353,6 +467,19 @@
         "manga_001_get_projects-id-presentation-spec",
         "manga_001_post_projects-id-presentation-spec-impact",
         "manga_001_put_projects-id-presentation-spec"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -395,6 +522,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "shot_visual_layers"
       ],
@@ -404,6 +532,19 @@
         "manga_002_put_shots-id-visual-layers-layerid",
         "manga_002_delete_shots-id-visual-layers-layerid",
         "manga_002_post_shots-id-composition-templates-templateid-apply"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -443,6 +584,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "shot_text_overlays"
       ],
@@ -451,6 +593,19 @@
         "manga_003_put_shots-id-text-overlays-overlayid",
         "manga_003_delete_shots-id-text-overlays-overlayid",
         "manga_003_post_shots-id-text-layout-precheck"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -490,6 +645,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "shot_text_overlays",
         "onomatopoeia_json",
@@ -499,6 +655,19 @@
         "manga_004_get_onomatopoeia-lexicon",
         "manga_003_post_shots-id-text-overlays",
         "manga_004_put_shots-id-text-overlays-id-timing"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -538,6 +707,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "shot_comic_effects",
         "comic_effect_schemas"
@@ -548,6 +718,19 @@
         "manga_005_put_shots-id-comic-effects-effectid",
         "manga_005_delete_shots-id-comic-effects-effectid",
         "manga_005_post_shots-id-effect-safety-precheck"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -589,6 +772,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "shot_motion_cues"
       ],
@@ -597,6 +781,19 @@
         "manga_006_put_shots-id-motion-cues-cueid",
         "manga_006_delete_shots-id-motion-cues-cueid",
         "manga_006_post_shots-id-previews"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -641,6 +838,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "qc_reports",
         "qc_issues",
@@ -651,6 +849,19 @@
         "manga_007_get_qc-reports-id",
         "manga_007_post_qc-reports-id-waivers",
         "manga_007_post_qc-reports-id-retry"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -739,6 +950,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "presentation_snapshots",
         "presentation_snapshot_dependencies",
@@ -752,6 +964,19 @@
         "manga_008_get_review-intakes-id",
         "manga_008_post_review-intakes-id-qc-waivers",
         "manga_008_get_presentation-snapshots-id"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -795,6 +1020,10 @@
         "/projects/{projectId}/characters",
         "/characters/{id}"
       ],
+      "pageRoutes": [
+        "/projects/{projectId}/characters",
+        "/characters/{id}"
+      ],
       "tables": [
         "characters",
         "character_versions",
@@ -806,6 +1035,19 @@
         "us_007_post_characters-id-images",
         "us_007_post_characters-id-publish",
         "us_007_post_characters-id-archive"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -848,6 +1090,9 @@
       "pages": [
         "/projects/{projectId}/scenes|props"
       ],
+      "pageRoutes": [
+        "/projects/{projectId}/scenes|props"
+      ],
       "tables": [
         "scenes",
         "scene_versions",
@@ -866,6 +1111,19 @@
         "us_008_post_scenes-id-publish",
         "us_008_post_props-id-publish",
         "us_008_post_assets-batch"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -897,12 +1155,26 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [],
       "operationIds": [
         "us_030_post_projects-id-style-assets",
         "us_030_post_style-assets-id-versions",
         "us_030_post_style-assets-id-publish",
         "manga_001_post_projects-id-presentation-spec-impact"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -933,10 +1205,24 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [],
       "operationIds": [
         "us_031_post_asset-copy-plans",
         "us_031_post_asset-copy-plans-id-confirm"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -970,6 +1256,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "rights_metadata_versions",
         "rights_impact_assessments"
@@ -977,6 +1264,19 @@
       "operationIds": [
         "us_032_post_rights-impact-assessments",
         "us_032_post_rights-metadata-id-changes"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1019,6 +1319,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "ai_tasks",
         "generated_images",
@@ -1029,6 +1330,27 @@
         "us_009_get_ai-tasks-id",
         "us_009_post_ai-tasks-id-cancel",
         "us_009_post_generated-images-id-adopt"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1071,6 +1393,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "reviews",
         "review_decisions"
@@ -1079,6 +1402,19 @@
         "us_010_post_reviews",
         "us_010_get_reviews",
         "us_010_post_reviews-id-decisions"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1122,6 +1458,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "pipeline_runs",
         "ai_tasks",
@@ -1132,6 +1469,27 @@
         "us_011_get_pipeline-runs-id",
         "us_011_post_ai-tasks-id-retry",
         "us_011_post_generated-videos-id-adopt"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1175,6 +1533,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "review_comments"
       ],
@@ -1182,6 +1541,19 @@
         "us_010_post_reviews",
         "us_012_post_reviews-id-comments",
         "us_010_post_reviews-id-decisions"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1225,6 +1597,9 @@
       "pages": [
         "/projects/{projectId}/audio"
       ],
+      "pageRoutes": [
+        "/projects/{projectId}/audio"
+      ],
       "tables": [
         "audio_assets",
         "audio_asset_versions",
@@ -1235,6 +1610,27 @@
         "us_013_post_audio-generation-jobs",
         "us_013_post_audio-assets-id-publish",
         "us_013_get_projects-id-audio-assets"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1276,6 +1672,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "subtitle_documents",
         "subtitle_cues",
@@ -1286,6 +1683,19 @@
         "us_014_post_subtitle-documents-id-imports",
         "us_014_put_subtitle-documents-id-cues",
         "us_014_post_subtitle-documents-id-publish"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1331,6 +1741,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "edit_projects",
         "edit_project_versions",
@@ -1344,6 +1755,27 @@
         "us_015_post_edit-projects-id-render-precheck",
         "us_015_post_edit-projects-id-render-jobs",
         "us_015_get_render-jobs-id"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1387,6 +1819,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "final_videos",
         "final_video_versions"
@@ -1398,6 +1831,19 @@
         "manga_008_post_review-intakes-id-qc-waivers",
         "us_010_post_reviews-id-decisions",
         "us_016_get_final-videos-id-review-chain"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1439,6 +1885,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "publish_plans",
         "publish_records",
@@ -1450,6 +1897,27 @@
         "us_017_post_publish-plans-id-execute",
         "us_017_post_publish-records-id-reconcile",
         "us_017_get_publish-records-id-metrics"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1492,6 +1960,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "edit_clips"
       ],
@@ -1500,6 +1969,19 @@
         "us_021_put_edit-projects-id-clips-clipid",
         "us_021_delete_edit-projects-id-clips-clipid",
         "us_021_post_edit-projects-id-clips-clipid-split"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1544,6 +2026,9 @@
       "pages": [
         "/work-items?type=task"
       ],
+      "pageRoutes": [
+        "/work-items?type=task"
+      ],
       "tables": [
         "work_items",
         "work_item_collaborators",
@@ -1554,6 +2039,19 @@
         "us_018_get_projects-id-work-items",
         "us_018_post_work-items-id-transitions",
         "us_018_put_work-items-id"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1594,6 +2092,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "issue_json",
         "work_item_links"
@@ -1602,6 +2101,19 @@
         "us_018_post_projects-id-work-items",
         "us_018_post_work-items-id-transitions",
         "us_019_post_work-items-id-links"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1641,6 +2153,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "milestone_json",
         "work_item_links",
@@ -1650,6 +2163,19 @@
         "us_018_post_projects-id-work-items",
         "us_020_get_projects-id-milestones",
         "us_018_post_work-items-id-transitions"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1691,6 +2217,9 @@
       "pages": [
         "/admin/users"
       ],
+      "pageRoutes": [
+        "/admin/users"
+      ],
       "tables": [
         "users",
         "user_system_roles",
@@ -1702,6 +2231,19 @@
         "us_022_patch_admin-users-id-status",
         "us_022_put_admin-users-id-roles",
         "us_022_post_admin-users-id-revoke-sessions"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1747,6 +2289,10 @@
         "/login",
         "/account/security"
       ],
+      "pageRoutes": [
+        "/login",
+        "/account/security"
+      ],
       "tables": [
         "sessions",
         "auth_attempts",
@@ -1759,6 +2305,19 @@
         "us_023_get_auth-sessions",
         "us_023_delete_auth-sessions-id",
         "us_023_post_auth-change-password"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1803,6 +2362,10 @@
         "/notifications",
         "/account/notification-preferences"
       ],
+      "pageRoutes": [
+        "/notifications",
+        "/account/notification-preferences"
+      ],
       "tables": [
         "notifications",
         "notification_preferences",
@@ -1815,6 +2378,19 @@
         "us_024_post_notifications-id-archive",
         "us_024_get_notification-preferences",
         "us_024_put_notification-preferences"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1859,6 +2435,9 @@
       "pages": [
         "/projects/{projectId}/recycle-bin"
       ],
+      "pageRoutes": [
+        "/projects/{projectId}/recycle-bin"
+      ],
       "tables": [
         "recovery_plans",
         "retention_holds",
@@ -1869,6 +2448,19 @@
         "us_025_post_recycle-bin-restore-plans",
         "us_025_post_recycle-bin-restores",
         "us_025_post_recycle-bin-permanent-deletions"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1915,6 +2507,11 @@
         "/projects/{id}/settings",
         "/account/preferences"
       ],
+      "pageRoutes": [
+        "/admin/settings",
+        "/projects/{id}/settings",
+        "/account/preferences"
+      ],
       "tables": [
         "setting_definitions",
         "typed_settings",
@@ -1926,6 +2523,19 @@
         "us_026_put_settings-scope-key",
         "us_026_delete_settings-scope-key",
         "us_026_post_settings-scope-key-rollbacks"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -1970,6 +2580,9 @@
       "pages": [
         "/admin/audit"
       ],
+      "pageRoutes": [
+        "/admin/audit"
+      ],
       "tables": [
         "audit_records",
         "audit_export_jobs"
@@ -1979,6 +2592,19 @@
         "us_027_get_audit-records-id",
         "us_027_post_audit-record-exports",
         "us_027_get_audit-record-exports-id"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2023,6 +2649,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "export_jobs",
         "import_jobs",
@@ -2035,6 +2662,27 @@
         "us_028_post_project-imports-plans",
         "us_028_post_project-imports-id-confirm",
         "us_028_get_project-imports-id"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2081,6 +2729,9 @@
       "pages": [
         "/admin/backups"
       ],
+      "pageRoutes": [
+        "/admin/backups"
+      ],
       "tables": [
         "backup_sets",
         "backup_artifacts",
@@ -2095,6 +2746,27 @@
         "us_029_post_admin-restore-plans",
         "us_029_post_admin-restores-id-approvals",
         "us_029_post_admin-restores-id-execute"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2140,6 +2812,10 @@
         "/prompt-templates",
         "/prompt-templates/{id}"
       ],
+      "pageRoutes": [
+        "/prompt-templates",
+        "/prompt-templates/{id}"
+      ],
       "tables": [
         "prompt_templates",
         "prompt_template_versions"
@@ -2151,6 +2827,19 @@
         "us_pm_001_post_prompt-templates-id-publish",
         "us_pm_001_post_prompt-templates-id-test-runs",
         "us_pm_001_post_prompt-templates-id-archive"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2198,6 +2887,10 @@
         "/dashboard",
         "/data-center/metrics"
       ],
+      "pageRoutes": [
+        "/dashboard",
+        "/data-center/metrics"
+      ],
       "tables": [
         "daily_ai_cost_metrics",
         "daily_production_metrics",
@@ -2211,6 +2904,27 @@
         "us_ds_001_get_metrics-production-efficiency",
         "us_ds_001_get_metrics-review-quality",
         "us_ds_001_post_metric-exports"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2257,6 +2971,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "project_members"
       ],
@@ -2265,6 +2980,19 @@
         "cap_001_put_projects-id-members-userid",
         "cap_001_delete_projects-id-members-userid",
         "cap_001_post_projects-id-ownership-transfers"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2305,6 +3033,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "model_configs",
         "model_route_defaults"
@@ -2314,6 +3043,19 @@
         "cap_002_put_model-configs-id",
         "cap_002_post_model-configs-id-connection-tests",
         "cap_002_post_model-configs-id-activate"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2353,6 +3095,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "pipeline_templates",
         "pipeline_template_versions"
@@ -2362,6 +3105,19 @@
         "cap_003_put_pipeline-templates-id-draft",
         "cap_003_post_pipeline-templates-id-validate",
         "cap_003_post_pipeline-templates-id-publish"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2401,6 +3157,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "datasets",
         "dataset_versions",
@@ -2411,6 +3168,19 @@
         "cap_004_post_datasets-id-imports",
         "cap_004_post_datasets-id-versions-v-publish",
         "cap_004_post_dataset-exports"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2453,6 +3223,10 @@
         "/chat",
         "/studio"
       ],
+      "pageRoutes": [
+        "/chat",
+        "/studio"
+      ],
       "tables": [
         "conversations",
         "messages"
@@ -2463,6 +3237,27 @@
         "cap_005_post_conversations-id-messages",
         "cap_005_post_messages-id-stop",
         "cap_005_post_messages-id-regenerations"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2507,12 +3302,36 @@
       "pages": [
         "/ai-tasks"
       ],
+      "pageRoutes": [
+        "/ai-tasks"
+      ],
       "tables": [],
       "operationIds": [
         "cap_006_get_ai-tasks",
         "us_009_post_ai-tasks-id-cancel",
         "us_011_post_ai-tasks-id-retry",
         "cap_006_post_ai-tasks-id-manual-resolutions"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2554,6 +3373,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "project_budgets",
         "budget_reservations",
@@ -2565,6 +3385,19 @@
         "cap_007_put_projects-id-budget",
         "cap_007_get_projects-id-budget-reconciliation",
         "cap_007_post_projects-id-budget-reconciliation-runs"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2609,6 +3442,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "quality_rule_sets",
         "quality_rule_set_versions",
@@ -2620,6 +3454,19 @@
         "cap_008_post_quality-rule-sets-id-sample-runs",
         "cap_008_post_quality-rule-sets-id-publish",
         "cap_008_put_projects-id-quality-policy"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2672,6 +3519,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "production_dependency_projections",
         "dependency_impact_assessments",
@@ -2681,6 +3529,27 @@
         "cap_009_get_projects-id-dependency-impacts",
         "cap_009_post_projects-id-dependency-impact-assessments",
         "cap_009_post_projects-id-dependency-repair-plans"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry",
+        "queued",
+        "running",
+        "cancelling",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "unknown_result"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",
@@ -2736,6 +3605,7 @@
         }
       ],
       "pages": [],
+      "pageRoutes": [],
       "tables": [
         "edit_leases",
         "presence_projections",
@@ -2748,6 +3618,19 @@
         "cap_010_delete_edit-leases-id",
         "cap_010_post_edit-leases-id-takeovers",
         "cap_010_post_conflict-resolutions"
+      ],
+      "uiStates": [
+        "loading",
+        "empty",
+        "ready",
+        "forbidden",
+        "conflict",
+        "error_retry"
+      ],
+      "roleVariants": [
+        "authorized",
+        "read_only",
+        "forbidden"
       ],
       "requiredTestLayers": [
         "contract",

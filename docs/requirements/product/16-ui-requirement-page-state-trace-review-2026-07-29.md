@@ -4,6 +4,21 @@
 > **评审类型**：设计/源码静态追溯评审；未把页面存在视为功能已交付，也未替代真实浏览器视觉回归与可用性测试  
 > **结论**：**No-Go（不能认定 UI 已完整满足需求）**。信息架构和主要 CRUD 页面可继续迭代，但工业化生产所需的状态闭环仍存在 P0 缺口。
 
+> **2026-07-29 整改复核**：本报告所列 P0/P1 已在目标 UI 设计、路由承载和机器追溯层关闭，结论升级为 **Go for DDD Review / Conditional Go for implementation**。真实后端联调、浏览器视觉回归和全量可访问性结果仍属于实现证据，不得据此宣称产品 UI 已验收。
+
+### 整改证据
+
+| 问题 | 状态 | 关闭证据 |
+|---|---|---|
+| UI-P0-001 | 已关闭 | 审核中心新增统一 Review Intake 队列，呈现 qc_running/qc_blocked/review_pending/reviewing 与合法豁免 |
+| UI-P0-002 | 已关闭 | 项目工作台新增 DEP current/stale/blocked/unknown、影响证据与修复计划面板 |
+| UI-P0-003 | 已关闭 | 项目工作台新增租约、在线成员、只读/接管和版本冲突状态承载 |
+| UI-P0-004 | 已关闭 | 52 个功能均生成 pageRoutes、标准 uiStates、roleVariants；新增路由 loading/error/not-found boundary |
+| UI-P1-001/002 | 已关闭 | 新增通知、Prompt、数据作业与恢复中心路由 |
+| UI-P1-003 | 已关闭 | 剪辑入口切换到 EditProject/Revision/闭合 Timeline，多轨与来源版本可见 |
+| UI-P1-004 | 已关闭 | 新增 `18-ui-design-authority.md`，冻结唯一权威顺序并降级历史原型 |
+| UI-P1-005 | 已关闭（自动化基线） | 新增代表性路由的语义、可访问名称、图片替代文本和键盘焦点 Playwright 契约；完整视觉/读屏验收仍待实现阶段执行 |
+
 ## 1. 执行摘要
 
 - 前端存在 34 个 Next.js `page.tsx` 路由页面。
@@ -122,4 +137,3 @@
 4. 补通知中心、Prompt 中心及统一后台作业中心。
 5. 对齐新 Timeline 并补剪辑工作台原型与场景。
 6. 运行真实浏览器视觉回归、axe、键盘流和最低分辨率测试，证据入库后再复评。
-

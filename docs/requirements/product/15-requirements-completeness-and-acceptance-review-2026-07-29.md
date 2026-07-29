@@ -4,6 +4,21 @@
 > **评审目标**：判断需求是否范围完整、语义一致、可实现、可验证，并能否作为全面开发准入依据  
 > **结论**：**Conditional Go（附条件通过）**。可继续 DDD/接口细化并启动边界稳定模块；在关闭下列 P0 项前，不得宣称“全部需求均已开发就绪”。
 
+> **2026-07-29 整改复核**：本报告所列 3 个 P0、3 个 P1 已在目标需求/交付设计层关闭，结论升级为 **Go for DDD Review**。这不代表代码已实现；`test-matrix.json` 的 `implementationEvidence.status` 继续保持 `unverified`。
+
+### 整改证据
+
+| 问题 | 状态 | 关闭证据 |
+|---|---|---|
+| RQ-P0-001 | 已关闭 | Shot/FinalVideo 送审统一返回 Review Intake；新增 intake 查询、QC 豁免、mandatory 禁止豁免和超时场景 |
+| RQ-P0-002 | 已关闭 | 19 个专业工作台 ID 已进入机器可读 `requirementIds` 追溯 |
+| RQ-P0-003 | 已关闭 | 产品基线统一为 v1.0 frozen，并记录 2026-07-29 确认 |
+| RQ-P1-001 | 已关闭 | Timeline、Track、Clip、Cue、Transition、Effect、Timebase 已形成关闭额外字段的 OpenAPI Schema |
+| RQ-P1-002 | 已关闭 | 剧本指南改为固定 V1 审核策略和 `/api/v1` Review Intake 契约，旧接口标为历史非权威 |
+| RQ-P1-003 | 已关闭 | 12 个 NFR 稳定 ID 及必需测试层已进入测试矩阵 |
+
+复核门禁：`52 features / 208 operations / 109 scenarios`，`node scripts/check-implementation-readiness.mjs` 通过。
+
 ## 1. 执行摘要
 
 当前需求基线已经具备正式产品级骨架：产品决策、31 个模块、主生产旅程、RBAC、数据生命周期、质量/成本/发布/规模基线均有明确入口。自动化设计门禁执行结果为：

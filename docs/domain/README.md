@@ -43,6 +43,7 @@
 - [公共领域基础设施](07-infrastructure.md) — 聚合根接口、仓储接口、领域事件接口、公共错误码
 - [依赖方向约束](09-dependency-rules.md) — 分层依赖图、跨聚合引用规则
 - [需求—领域—实现追踪矩阵](11-traceability-matrix.md) — 用户故事到领域与实现证据的闭环
+- [DDD 设计评审（2026-07-29）](12-ddd-design-review-2026-07-29.md) — 本轮准入结论、风险与关闭条件
 - [开发与交付规范](../engineering/02-development-standards.md) — Definition of Done、事件可靠性、迁移与测试门禁
 
 ---

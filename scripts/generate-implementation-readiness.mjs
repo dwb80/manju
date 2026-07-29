@@ -476,11 +476,20 @@ const openapi = {
   "x-generated-from": specFiles.map((file) => `docs/delivery-specs/${file}`),
 };
 
+const STANDARD_UI_STATES = ["loading", "empty", "ready", "forbidden", "conflict", "error_retry"];
+const LONG_TASK_STATES = ["queued", "running", "cancelling", "completed", "failed", "cancelled", "timed_out", "unknown_result"];
+const LONG_TASK_FEATURE_IDS = new Set([
+  "US-004", "US-006", "US-009", "US-011", "US-013", "US-015", "US-017",
+  "US-028", "US-029", "US-DS-001", "CAP-005", "CAP-006", "CAP-009",
+]);
+
 const testMatrix = {
   version: 1,
   sourceRevision: 1,
   features: features.map(({ id, title, file, scenarios, pages, tables, operationIds, requirementIds }) => ({
-    id, title, source: `docs/delivery-specs/${file}`, featureFile: `tests/acceptance/features/${id.toLowerCase()}.feature`, requirementIds, scenarios, pages, tables, operationIds,
+    id, title, source: `docs/delivery-specs/${file}`, featureFile: `tests/acceptance/features/${id.toLowerCase()}.feature`, requirementIds, scenarios, pages, pageRoutes: pages, tables, operationIds,
+    uiStates: [...STANDARD_UI_STATES, ...(LONG_TASK_FEATURE_IDS.has(id) ? LONG_TASK_STATES : [])],
+    roleVariants: ["authorized", "read_only", "forbidden"],
     requiredTestLayers: [...new Set([
       "contract",
       "integration",
